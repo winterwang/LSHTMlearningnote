@@ -1,0 +1,558 @@
+\mainmatter
+
+# (PART) 概率論 Probability {-} 
+
+# 概率論入門：定義與公理 {#intro}
+
+## 三個概率公理：
+
+1. 對於任意事件 $A$，它發生的概率 $P(A)$ 滿足這樣的不等式： $0 \leqslant P(A) \leqslant 1$
+2. $P(\Omega)=1$ , $\Omega$ 是全樣本空間 (total sample space)
+2. 對於互斥（相互獨立）的事件 $A_1, A_2, \dots, A_n$ 有如下的等式關係： $P(A_1\cup A_2 \cup \cdots \cup A_n)=P(A_1)+P(A_2)+\cdots+P(A_n)$
+
+
+你是不是覺得上面三條公理都是**廢話**。
+不用擔心，我也是這麼覺得的。因爲所有人都認同的道理，才能成爲公理 (axiom)，因爲它們是不需要證明的自然而然形成的人人都接受的觀念。`(axiom: a saying that is widely accepted on its own merits; its truth is assumed to be self-evident)`
+
+然而，正是這樣顯而易見的道理，確是拿來建築理論的基石，千萬不能小看了他們。例如，我們看下面這個看似也應該成爲公理的公式，你能證明嗎：
+
+$P(A_1\cup A_2) = P(A_1) + P(A_2) - P(A_1 \cap A_2)$
+
+```{r vennDiagram, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+## 生成 Venn Diagram 的 R 代碼
+library(limma)
+g <- cbind(
+  A1 = c(rep(0, 4), rep(1, 5)),
+  A2 = c(rep(1, 6), rep(0, 5)))
+d <- vennCounts(g)
+vennDiagram(d)
+```
+
+```{r echo=FALSE, fig.asp=.7, fig.width=6, fig.align='center', out.width='90%'}
+knitr::include_graphics("img/venngram.png")
+```
+
+
+**證明：**
+
+先考慮 $A_1 \cup A_2$ 是什麼（拆分成三個互斥事件）
+
+$A_1 \cup A_2 = (A_1\cap \bar{A_2})\cup(\bar{A_1}\cap A_2)\cup(A_1\cap A_2)$
+
+運用上面的公理~~2~~ 3
+
+$\therefore P(A_1 \cup A_2) = P(A_1\cap \bar{A_2}) + P(\bar{A_1}\cap A_2) + P(A_1\cap A_2) \;\;\;\;\;\;(1)$
+
+再考慮 $A_1=(A_1\cap A_2)\cup(A_1\cap\bar{A_2})$ 繼續拆分成兩個互斥事件
+
+$\therefore P(A_1)=P(A_1\cap A_2)+P(A_1\cap\bar{A_2})$ 整理一下：
+
+$P(A_1\cap\bar{A_2})=P(A_1)-P(A_1\cap A_2)$
+
+同理可得: $P(\bar{A_1}\cap A_2)=P(A_2)-P(A_1\cap A_2)$
+
+代入上面第(1)式可得：
+
+$P(A_1 \cup A_2) =P(A_1)-P(A_1\cap A_2)\\
+\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;+P(A_2)-P(A_1\cap A_2)\\
+\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;+P(A_1\cap A_2)\\
+\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;=P(A_1) + P(A_2) - P(A_1 \cap A_2)$
+
+
+## 條件概率 Conditional probability
+
+- $P(A|S)=\frac{P(A\cap S)}{P(S)}$
+- $P(A\cap S) = P(A|S)P(S)$
+
+## 獨立 (independence) 的定義
+
+- 兩個事件定義爲互爲獨立時 ($A$ and $B$ are said to be independent **if and only if**)
+$$P(A\cap B)=P(A)P(B)$$
+- 因爲從條件概率的概念我們已知<br> $P(A\cap B) = P(A|B)P(B)$ <br>所以$P(A|B)=P(A)$ 即：事件 $B$ 無法提供事件 $A$ 的任何有效訊息 (**$A, B$ 互相獨立**)
+
+## 賭博問題
+終於來到本次話題的"重點"了。
+
+```{r echo=FALSE, fig.asp=.7, fig.width=6, fig.align='center', out.width='90%'}
+knitr::include_graphics("img/Selection_071.png")
+```
+
+
+
+
+假設你在一個電視遊戲節目。有上圖一樣的三扇門。其中一扇門後面有一輛保時捷，另兩扇門後面則是[(味道奇特的)山羊](https://winterwang.github.io/post/black-meal/)。遊戲規則是主持人會讓你先選擇其中一扇門（先不打開你選的這扇門）。主持人隨後打開另外兩扇門中的一扇沒有保時捷的門。主持人問你，你要堅持選擇之前選中的那扇門，還是要改變主意換一扇門去猜是否可以猜中保時捷。
+請問，堅持選擇之前選中的門猜中保時捷的概率高，還是主持人打開一扇門以後改變主意猜中保時捷的概率更高呢？
+
+
+## 賭博問題的答案
+
+
+**答案是：必須改變主意才能提高中獎概率。**
+
+
+上述情況下，最簡單的是用概率樹 (probability tree) 來做決定：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=6, fig.align='center', out.width='90%'}
+knitr::include_graphics("img/Selection_072.png")
+```
+
+
+解說一下：
+
+- 假定保時捷在1號門後，你第一次選擇了1號門，那麼此時主持人可以任意打開2號或者三號門（因爲他們後面都沒有保時捷）。
+- 假定保時捷在1號門後，你第一次選了2號門，那麼此時主持人只能打開3號門（因爲一號門後是保時捷，按照遊戲規則主持人不能打開）。
+- 假定保時捷在1號門後，你第一次選了3號門，那麼此時主持人只能打開2號門（因爲一號門後是保時捷，按照遊戲規則主持人不能打開）。
+
+所以按照圖中給出的計算概率樹的過程可以得到:
+
+$$P[change]=\frac{1}{3}+\frac{1}{3}=\frac{2}{3}\\
+P[not\; change]=\frac{1}{6}+\frac{1}{6}=\frac{1}{3}$$
+
+你是否選擇了改變主意了呢？
+
+
+
+
+# Bayes 貝葉斯理論的概念
+
+許多時候，我們需要將概率中的條件相互對調。
+例如：
+在已知該人羣中有20%的人有吸菸習慣($P(S)$)，吸菸的人有9%的概率有哮喘($P(A|S)$)，不吸菸的人有7%的概率有哮喘($P(A|\bar{S})$)的前提下，有個人前來門診，發現是哮喘患者，那麼這個人有多大的概率是一個菸民？也就是要求 $P(S|A)$
+
+這裏先引入貝葉斯的概念：
+
+我們可以將 $P(A\cap S)$ 寫成：
+$$P(A\cap S)=P(A|S)P(S)\\or\\
+P(A\cap S)=P(S|A)P(A)$$
+這兩個等式是完全等價的。我們將他們連起來：
+
+$$P(S|A)P(A)=P(A|S)P(S)\\
+\Rightarrow P(S|A)=\frac{P(A|S)P(S)}{P(A)}$$
+
+是不是看起來又像是寫了一堆**廢話**？
+沒錯，你看出來是一堆廢話的時候，證明你也同意這背後的簡單邏輯。
+
+再繼續，我們可以利用另外一個**廢話**：$\because S+\bar{S}=1\\ \therefore P(A)=P(A\cap S)+P(A\cap\bar{S})$
+
+用上面的公式替換掉 $P(A\cap S)+P(A\cap\bar{S}） \\
+\therefore P(A)=P(A|S)P(S)+P(A|\bar{S})P(\bar{S})$
+
+可以得到**貝葉斯理論公式**：
+
+$$P(S|A)=\frac{P(A|S)P(S)}{P(A|S)P(S)+P(A|\bar{S})P(\bar{S})}$$
+
+回到上面說到的哮喘人中有多少比例吸菸的問題。可以繼續使用概率樹來方便的計算：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=6, fig.align='center', out.width='90%'}
+knitr::include_graphics("img/Selection_073.png")
+```
+
+
+
+\begin{align}
+P(S|A) &= \frac{P(A|S)P(S)}{P(A|S)P(S)+P(A|\bar{S})P(\bar{S})} \\
+        &= \frac{0.09\times0.2}{0.09\times0.2+0.07\times0.8} \\
+        &= 0.24
+\end{align}
+
+所以我們的結論就是，在已知該人羣中有20%的人有吸菸習慣($P(S)$)，吸菸的人有9%的概率有哮喘($P(A|S)$)，不吸菸的人有7%的概率有哮喘($P(A|\bar{S})$)的前提下，有個人前來門診，發現是哮喘患者，那麼這個人有24% 的概率是一個菸民($P(S|A)$)。
+
+
+# 期望 Expectation (或均值 or mean) 和 方差 Variance
+
+
+期望（或均值）是用來描述一組數據中心位置的指標（另一個是中位數 Median）。
+對於離散型隨機變量 $X$ (discrete random variables)，它的期望被定義爲：
+
+$$E(X)=\sum_x xP(X=x)$$
+
+所以就是將所有 $X$ 可能取到的值乘以相應的概率後求和。這個期望（或均值）常常用希臘字母 $\mu$ 來標記。
+
+方差 Variance 是衡量一組數據變化幅度(dispersion/variability)的指標之一。 方差的定義是：
+
+$$Var(X)=E((X-\mu)^2)\\其中，\mu=E(x)$$
+
+實際上我們更加常用的是它的另外一個公式：
+
+$$Var(X)=E(X^2)-E(X)^2$$
+
+**證明 上面兩個方差公式相等**
+
+\begin{align}
+Var(x)  &= E((X-\mu)^2) \\
+        &= E(X^2-2X\mu+\mu^2)\\
+        &= E(X^2) - 2\mu E(X) + \mu^2\\
+        &= E(X^2) - 2\mu^2 + \mu^2 \\
+        &= E(X^2) - \mu^2 \\
+        &= E(X^2) - E(X)^2
+\end{align}
+
+
+## 方差的性質：
+
+1. $Var(X+b)=Var(X)$
+2. $Var(aX)=a^2Var(X)$
+3. $Var(aX+b)=a^2Var(X)$
+
+
+# 伯努利分佈 Bernoulli distribution
+
+伯努利分佈，說的就是一個簡單的二分變量 (1, 0)，它取1時的概率如果是 $\pi$。那麼我們可以計算這個分佈的期望值:
+
+\begin{align}
+E(X) &=\sum_x xP(X=x) \\
+     &=1\times\pi + 0\times(1-\pi)\\
+     &=\pi
+\end{align}
+
+由於 $x=x^2$，因爲 $x=0,1$, 所以 $E[X^2]=E[X]$，那麼方差爲：
+
+\begin{align}
+Var(X) &=E[X^2]-E[X]^2 \\
+       &=E[X]-E[X]^2 \\
+       &=\pi - \pi^2 \\
+       &=\pi(1-\pi)
+\end{align}
+
+
+**證明，$X,Y$ 爲互爲獨立的隨機離散變量時，<br>a) $E(XY)=E(X)E(Y)$ ; <br>b) $Var(X+Y)=Var(X)+Var(Y)$**
+
+- a) **證明**
+
+\begin{align}
+E(XY) &= \sum_x\sum_y xyP(X=x, Y=y) \\
+\because &\; X,Y are\;independent\;to\;each\;other \\
+\therefore &= \sum_x\sum_y xyP(X=x)P(Y=y)\\
+      &=\sum_x xP(X=x)\sum_y yP(Y=y)\\
+      &=E(X)E(Y)
+\end{align}
+
+- b) **證明**
+根據方差的定義：
+\begin{align}
+Var(X+Y) &= E((X+Y)^2)-E(X+Y)^2 \\
+         & \; Expand \\
+         &=E(X^2+2XY+Y^2)-(E(X)+E(Y))^2\\
+         &=E(X^2)+E(Y^2)+2E(XY)\\
+         &\;\;\; - E(X)^2-E(Y)^2-2E(X)E(Y)\\
+         &\; We\;just\;showed\; E(XY)=E(X)E(Y)\\
+         &=E(X^2)-E(X)^2+E(Y^2)-E(Y)^2 \\
+         &=Var(X)+Var(Y)
+\end{align}
+
+
+
+# 二項分佈的概念 Binomial distribution
+
+二項分佈在醫學研究中至關重要，一組二項分佈的數據，指的通常是 $n$ 次相互獨立的[成功率爲 $\pi$ 的伯努利實驗](https://winterwang.github.io/post/probability2-4/) ($n$ independent Bernoulli trials) 中成功的次數。
+
+當 $X$ 服從二項分佈，記爲 $X \sim binomial(n, \pi)$ 或$X \sim bin(n, \pi)$。它的(第 $x$ 次實驗的)概率被定義爲：
+
+\begin{align}
+P(X=x) &= ^nC_x\pi^x(1-\pi)^{n-x} \\
+       &= \binom{n}{x}\pi^x(1-\pi)^{n-x} \\
+       & for\;\; x = 0,1,2,\dots,n
+\end{align}
+
+## 二項分佈的期望和方差
+
+- 期望 $E(X)$
+    - 若 $X \sim bin(n,\pi)$，那麼 $X$ 就是這一系列獨立伯努利實驗中成功的次數。
+    - 用 $X_i, i =1,\dots, n$ 標記每個相互獨立的伯努利實驗。
+    - 那麼我們可以知道 $X=\sum_{i=1}^nX_i$。
+      \begin{align} E(X) &= E(\sum_{i=1}^nX_i)\\
+                         &= E(X_1+X_2+\cdots+X_n) \\
+                         &= E(X_1)+E(X_2)+\cdots+E(X_n)\\
+                         &= \sum_{i=1}^nE(X_i)\\
+                         &= \sum_{i=1}^n\pi \\
+                         &= n\pi
+      \end{align}
+- 方差 $Var(X)$
+\begin{align}
+Var(X) &= Var(\sum_{i=1}^nX_i) \\
+        &= Var(X_i+X_2+\cdots+X_n) \\
+        &= Var(X_i)+Var(X_2)+\cdots+Var(X_n) \\
+        &= \sum_{i=1}^nVar(X_i) \\
+        &= n\pi(1-\pi) \\
+\end{align}
+
+
+## 超幾何分佈 hypergeometric distribution
+
+假設我們從總人數爲 $N$ 的人羣中，採集一個樣本 $n$。假如已知在總體人羣中($N$)有 $M$ 人患有某種疾病。請問採集的樣本 $X=n$ 中患有這種疾病的人，服從怎樣的分佈？
+
+- 從人羣($N$)中取出樣本($n$)，有 $^NC_n$ 種方法。
+- 從患病人羣($M$)中取出患有該病的人($x$)有 $^MC_x$ 種方法。
+- 樣本中不患病的人($n-x$)被採樣的方法有 $^{N-M}C_{n-x}$ 種。
+- 採集一次 $n$ 人作爲樣本的概率都一樣。因此：
+
+$$P(X=x)=\frac{\binom{M}{x}\binom{N-M}{n-x}}{\binom{N}{n}}$$
+
+
+## 樂透中獎概率問題：
+
+- 從數字 $1\sim59$ 中選取 $6$ 個任意號碼
+- 開獎時從 $59$ 個號碼球中隨機抽取 $6$ 個
+- 如果六個號碼全部猜中(不分順序)，你可以成爲百萬富翁。請問一次猜中全部 $6$ 個號碼的概率是多少？
+
+從 $59$ 個號碼中隨機取出任意 $6$ 個號碼的方法有 $^{59}C_6$ 種。
+$$^{59}C_6=\frac{59!}{6!(59-6)!}=45,057,474$$
+
+每次選取六個號碼做爲一組的可能性相同，所以，你買了一組樂透號碼，能中獎的概率就是 $1/45,057,474 = 0.00000002219$。你還會再去買彩票麼？
+
+### 如果我只想中其中的 $3$ 個號碼，概率有多大？
+
+用超幾何分佈的概率公式：
+
+\begin{align}
+P(X=3) &= \frac{^6C_3\times ^{53}C_3}{^{59}C_6} \\
+       &= 0.010
+\end{align}
+
+你有 $1\%$ 的可能中獎。換句話說，如果中三個以上的數字算中獎的話，你買的彩票中獎的概率低於 $1\%$。是不是覺得下次送錢給博彩公司的時候還不如跟我一起喝一杯咖啡划算？
+
+
+# 泊松分佈 Poisson Distribution
+
+- 當一個事件，在一段時間 ($T$) 中可能發生的次數是 $\lambda$ 。那麼我們可以認爲，經過時間 $T$，該時間發生的期望次數是 $E(X)=\lambda T$。
+- 利用微分思想，將這段時間 $T$ 等分成 $n$ 個時間段，當 $n\rightarrow\infty$ 直到每個微小的時間段內最多發生一次該事件。
+
+那麼
+
+- 每個微小的時間段，可以視爲是一個伯努利實驗（有事件發生或者沒有）
+- 那麼這整段時間 $T$ 內發生的事件可以視爲是一個二項分佈實驗。
+
+令 $X=$ 一次事件發生時所經過的所有時間段。
+
+- $X \sim Bin(n, \pi)$，其中 $n\rightarrow\infty$，$n$ 爲時間段。
+- 在每個分割好的時間段內，事件發生的概率都是：$\pi=\frac{\lambda T}{n}$
+- 期望 $\mu=\lambda T \Rightarrow \pi=\mu/n$
+- 所以 $X$ 的概率方程就是：
+\begin{align}
+P(X=x) &= \binom{n}{x}\pi^x(1-\pi)^{n-x} \\
+       &= \binom{n}{x}(\frac{\mu}{n})^x(1-\frac{\mu}{n})^{n-x} \\
+       &= \frac{n!}{x!(n-x)!}(\frac{\mu}{n})^x(1-\frac{\mu}{n})^{n-x} \\
+       &=\frac{n!}{n^x(n-x)!}\frac{\mu^x}{x!}(1-\frac{\mu}{n})^{n-x}\\
+when\; n\rightarrow\infty   &\; x \ll n\\
+\frac{n!}{n^x(n-x)!} &=\frac{n(n-1)\dots(n-x+1)}{n^x} \rightarrow 1\\
+(1-\frac{\mu}{n})^{n-x} &\approx  (1-\frac{\mu}{n})^n \rightarrow e^{-\mu}\\
+the\;probability\;function&\;of\;a\;Poisson\;distribution   \\
+P(X=x) &\rightarrow \frac{\mu^x}{x!}e^{-\mu}
+\end{align}
+
+當數據服從泊松分佈時，記爲 $X\sim Poisson(\mu=\lambda T)\;\; or\;\; X\sim Poi(\mu)$
+
+**證明泊松分佈的參數特徵：**
+
+1. $E(X)=\mu$
+
+\begin{align}
+E(X)  &=  \sum_{x=0}^\infty xP(X=x) \\
+      &=  \sum_{x=0}^\infty x\frac{\mu^x}{x!}e^{-\mu} \\
+      &= 0+ \sum_{x=1}^\infty x\frac{\mu^x}{x!}e^{-\mu} \\
+      &=  \sum_{x=1}^\infty \frac{\mu^x}{(x-1)!}e^{-\mu} \\
+      &=  \mu\sum_{x=1}^\infty \frac{\mu^{x-1}}{(x-1)!}e^{-\mu} \\
+replace\; &x\; with\; all\; i=x-1 \\
+      &=  \mu\sum_{i=0}^\infty \frac{\mu^{i}}{i!}e^{-\mu} \\
+notice\; that\; &the\; right\; side \sum_{i=0}^\infty \frac{\mu^{i}}{i!}e^{-\mu}=1 is \\
+the\;sum\;of\;all\;&probability\;of\;a\;Poisson\;distribution\\
+      &= \mu
+\end{align}
+
+
+2. $Var(x)=\mu$
+爲了找到 $Var(X)$，我們用公式 $Var(X)=E(X^2)-E(X)^2$
+
+我們需要找到 $E(X^2)$
+
+\begin{align}
+E(X^2) &= \sum_{x=0}^\infty x^2\frac{\mu^x}{x!}e^{-\mu} \\
+       &= \mu \sum_{x=1}^\infty x\frac{\mu^{x-1}}{(x-1)!}e^{-\mu} \\
+replace\; &x\; with\; all\; i=x-1 \\
+       &= \mu \sum_{i=0}^\infty (i+1)\frac{\mu^{i}}{i!}e^{-\mu} \\
+       &= \mu(\sum_{i=0}^\infty i\frac{\mu^i}{i!}e^{-\mu} + \sum_{i=0}^\infty \frac{\mu^i}{i!}e^{-\mu}) \\
+       &= \mu(E(X)+1) \\
+       &= \mu^2+\mu \\
+Var(X) &= E(X^2) - E(X)^2 \\
+       &= \mu^2 + \mu -\mu^2 \\
+       &= \mu
+\end{align}
+
+
+
+# 正態分佈
+
+## 概率密度曲線 probability density function， PDF
+- 一個隨機連續型變量 $X$ 它的性質由一個對應的**概率密度方程 (probability density function, PDF)** 決定。
+
+- 在給定的範圍區間內，如 $a\sim b, (a < b)$，它的概率滿足:
+
+$$P(a\leqslant X \leqslant b) = \int_a^bf(x)dx$$
+
+- 這個相關的方程，在 $a\sim b$ 區間內的積分，就是這個連續變量在這個區間內取值的概率。
+
+```{r PDF-standard, fig.asp=.7, fig.width=6, fig.cap='Probability Density Function of a Standard Normal Distribution', fig.align='center', out.width='90%'}
+# R codes for drawing a standard normal distribution by using ggplot2
+library(ggplot2)
+p <- ggplot(data.frame(x=c(-3,3)), aes(x=x)) +
+  stat_function(fun = dnorm)
+p + annotate("text", x=2, y=0.3, parse=TRUE, label="frac(1, sqrt(2*pi)) * e ^(-z^2/2)") +
+  theme(plot.subtitle = element_text(vjust = 1),
+        plot.caption = element_text(vjust = 1),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        panel.background = element_rect(fill = "ivory")) +
+  labs(title = "Probability density functions \n for standard normal distribution",
+       x = NULL, y = NULL) +
+  stat_function(fun = dnorm,
+                xlim = c(-1.3,0.4),
+                geom = "area",fill="#00688B", alpha= 0.2)
+```
+
+注意：整個方程的曲線下面積等於 $1$：
+$$\int_{-\infty}^\infty f(x)dx=1$$
+
+
+- 期望 $E(X)=\int_{-\infty}^\infty xf(x)dx$
+- 方差 $Var(X)=\int_{-\infty}^\infty (x-\mu)^2f(x)dx$
+
+
+## 正態分佈
+
+如果一組數據服從正態分佈，我們通常用它的期望（或者叫平均值）$\mu$，和它的方差 $\sigma^2$，來描述這組數據。記爲：
+
+$$X \sim N(\mu, \sigma^2)$$
+
+- 它的概率密度方程可以表述爲：
+
+$$f(x)=\frac{1}{\sqrt{2\pi\sigma^2}}exp(-\frac{(x-\mu)^2}{2\sigma^2})$$
+
+- $E(x) =\mu$
+- $Var(x)=\sigma^2$
+
+## 標準正態分佈
+標準正態分佈的期望（或者均值）爲 $0$，方差爲 $1$
+
+- 記爲：$Z \sim N(0,1)$
+- 它的概率密度方程表述爲：
+
+$$\frac{1}{\sqrt{2\pi}}exp(-\frac{z^2}{2})$$
+
+- 它的累積分佈方程 (cumulative distribution function， CDF)，是將概率密度方程 (PDF) 積分以後獲得的方程。通常我們記爲 $\Phi(z)$
+
+再看一下標準正態分佈的概率密度方程曲線：
+
+```{r PDF-standard2, echo=FALSE, fig.asp=.7, fig.width=6, fig.cap='Probability Density function of a Standard Normal Distribution', fig.align='center', out.width='90%'}
+# R codes for drawing a standard normal distribution by using ggplot2
+library(ggplot2)
+p <- ggplot(data.frame(x=c(-3,3)), aes(x=x)) +
+  stat_function(fun = dnorm)
+p + annotate("text", x=2, y=0.3, parse=TRUE, label="frac(1, sqrt(2*pi)) * e ^(-z^2/2)") +
+  annotate("text", x=2.6, y=0.08, parse=TRUE, label=" Phi(1.96) == 0.975 ") +
+  annotate("text", x=-2.8, y=0.08, parse=TRUE, label=" Phi(-1.96) == 0.025 ") +
+  theme(plot.subtitle = element_text(vjust = 1),
+        plot.caption = element_text(vjust = 1),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        panel.background = element_rect(fill = "ivory")) +
+  labs(title = "Probability density function \n for standard normal distribution",
+       x = NULL, y = NULL) +
+  stat_function(fun = dnorm,
+                xlim = c(-3.5,-1.96),
+                geom = "area",fill="#00688B", alpha= 0.2) +
+  stat_function(fun = dnorm,
+                xlim = c(1.96, 3.5),
+                geom = "area",fill="#00688B", alpha= 0.2)
+```
+
+- 95% 的曲線下面積在標準差 standard deviation $-1.96\sim1.96$ 之間的區域。
+- 而且，$\phi(-x)=1-\phi(x)$
+- 任何一個正態分佈都可以通過下面的公式，標準化成爲標準正態分佈：
+
+$$Z=\frac{X-\mu}{\sigma}$$
+
+
+# 中心極限定理  the Central Limit Theorem
+
+最近明顯可以感覺到課程的步驟開始加速。看我的課表：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=6, fig.align='center', out.width='90%'}
+knitr::include_graphics("img/IMG_0522.png")
+```
+
+手機畫面太小了。早上都是9點半開始，下午基本都是到5點。週一更慘，到7點。週二-週五中午都被統計中心的講座佔據。簡直是非人的生活。
+
+這周概率論基礎結束。中心極限定理講完以後我們正式進入了 Inference 統計推斷的課程。我們花了一天時間講什麼是樣本估計 (Estimation)，什麼是參數精確度 (Precision)，什麼是自由度 (degree of freedom)，怎樣進行不偏的估計 (unbiased inference)。然後還有似然方程 (likelihood function)。
+
+今天的更新還是簡單的把概率論掃尾一下。感受一下中心極限定理的偉大。
+
+## 協方差 Covariance
+
+[之前我們定義過](https://winterwang.github.io/post/probability2-4/)，兩個獨立連續隨機變量 $X,Y$ 之和的方差 Variance ：
+
+$$Var(X+Y)=Var(X)+Var(Y)$$
+
+然而如果他們並不相互獨立的話：
+
+\begin{aligned}
+Var(X+Y) &= E[((X+Y)-E(X+Y))^2] \\
+         &= E[(X+Y)-(E(X)+E(Y))^2] \\
+         &= E[(X-E(X)) - (Y-E(Y))^2] \\
+         &= E[(X-E(X))^2+(Y-E(Y))^2 \\
+         & \;\;\; +2(X-E(X))(Y-E(Y))] \\
+         &= Var(X)+Var(Y)+2E[(X-E(X))(Y-E(Y))]
+\end{aligned}
+
+可以發現在兩者和的方差公式展開之後多了一部分 $E[(X-E(X))(Y-E(Y))]$。 這個多出來的一部分就說明了二者 $(X, Y)$ 之間的關係。它被定義爲協方差 (Covariance):
+$$Cov(X,Y) = E[(X-E(X))(Y-E(Y))]$$
+
+所以：
+
+$$Var(X+Y)=Var(X)+Var(Y)+2Cov(X,Y)$$
+
+
+
+<u>要記住，協方差只能用於評價$X,Y$之間的線性關係 (Linear Association)。</u>
+
+
+
+以下是協方差 (Covariance) 的一些特殊性質：
+
+1. $Cov(X,X)=Var(X)$
+2. $Cov(X,Y)=Cov(Y,X)$
+3. $Cov(aX,bY)=ab\:Cov(X,Y)$
+4. $Cov(aR+bS,cX+dY)=ac\:Cov(R,X)+ad\:Cov(R,Y)\\
+\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;+bc\:Cov(S,X)+bd\:Cov(S,Y)$
+5. $Cov(aX+bY,cX+dY)=ac\:Var(X)+ad\:Var(Y)\\
+\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;+(ad+bc)Cov(X,Y)$
+6. $Cov(X+Y,X-Y)=Var(X)-Var(Y)$
+7. If $X, Y$ are independent. $Cov(X,Y)=0$ <span class="diff_alert">But not vise-versa !</span>
+
+## 相關 Correlation
+
+- 協方差雖然$Cov(X,Y)$ 的大小很大程度上會被他們各自的單位和波動大小左右。
+- 我們將協方差標準化(除以各自的標準差 s.d.) (standardization) 之後，就可以得到相關係數 Corr ($-1\sim1$):
+$$Corr(X,Y)=\frac{Cov(X,Y)}{SD(X)SD(Y)}=\frac{Cov(X,Y)}{\sqrt{Var(X)Var(Y)}}$$
+
+## 中心極限定理 the Central Limit Theorem
+
+**如果從人羣中多次選出樣本量爲 $n$ 的樣本，並計算樣本均值, $\bar{X}_n$。那麼這個樣本均值 $\bar{X}_n$ 的分佈，會隨着樣本量增加 $n\rightarrow\infty$，而接近正態分佈。**
+
+
+偉大的中心極限定理告訴我們：
+
+**當樣本量足夠大時，樣本均值 $\bar{X}_n$ 的分佈爲正態分佈，這個特性與樣本來自的人羣的分佈 $X_i$ 無關。**
+
+**再說一遍：**
+
+如果對象是獨立同分佈 i.i.d (identically and independently distributed)。那麼它的總體期望和方差分別是: $E(X)=\mu;\;Var(X)=\sigma^2$。
+根據中心極限定理，可以得到：
+
+- 當樣本量增加，樣本均值的分佈服從正態分佈：
+$$\bar{X}_n\sim N(\mu, \frac{\sigma^2}{n})$$
+- 也可以寫作，當樣本量增加：
+$$\sum_{i=1}^nX_i \sim N(n\mu,n\sigma^2)$$
+- 有了這個定理，我們可以拋開樣本空間($X$)的分佈，也不用假定它服從正態分佈。
+- 但是樣本的均值，卻總是服從正態分佈的。簡直是太完美了！！！！！！
