@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="chi-square-distribution.html">
-<link rel="next" href="-log-likelihood-ratio.html">
+<link rel="prev" href="section-7.html">
+<link rel="next" href="section-9.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -232,428 +232,324 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="-likelihood" class="section level1">
-<h1><span class="header-section-number">第 12 章</span> 似然 Likelihood</h1>
-<div id="-vs.-probability-vs.inference" class="section level2">
-<h2><span class="header-section-number">12.1</span> 概率 vs. 推斷 Probability vs. Inference</h2>
-<p>在概率論的環境下，我們常常被告知的前提是：某某事件發生的概率是多少。例如： 一枚硬幣正面朝上的概率是 <span class="math inline">\(0.5\; Prob(coin\;landing\;heads)=0.5\)</span>。然後在這個前提下，我們又繼續去計算複雜的事件發生的概率（例如，10次投擲硬幣以後4次正面朝上的概率是多少？）。</p>
-<p><span class="math display">\[
-\binom{10}{4}\times(0.5^4)\times(0.5^{10-4}) = 0.205
-\]</span></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbinom</span>(<span class="dv">4</span>, <span class="dv">10</span>, <span class="fl">0.5</span>)</code></pre></div>
-<pre><code>## [1] 0.2051</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># or you can calculate by hand:</span>
-<span class="kw">factorial</span>(<span class="dv">10</span>)<span class="op">*</span>(<span class="fl">0.5</span><span class="op">^</span><span class="dv">10</span>)<span class="op">/</span>(<span class="kw">factorial</span>(<span class="dv">4</span>)<span class="op">*</span>(<span class="kw">factorial</span>(<span class="dv">6</span>)))</code></pre></div>
-<pre><code>## [1] 0.2051</code></pre>
-<p>在統計推斷的理論中，我們考慮實際的情況，這樣的實際情況就是，我們通過觀察獲得數據，然而我們並不知道某事件發生的概率到底是多少（神如果存在話，只有神知道）。故這個 <span class="math inline">\(Prob(coin\;landing\;heads)\)</span> 的概率大小對於“人類”來說是未知的。我們可能觀察到投擲了10次硬幣，其中有4次是正面朝上的。那麼我們從這一次觀察實驗中，需要計算的是能夠符合觀察結果的“最佳”概率估計 (best estimate)。在這種情況下，<strong>似然法 (likelihood)</strong> 就是我們進行參數估計的最佳手段。</p>
+<div id="CLT" class="section level1">
+<h1><span class="header-section-number">第 8 章</span> 中心極限定理 the Central Limit Theorem</h1>
+<p>最近明顯可以感覺到課程的步驟開始加速。看我的課表：</p>
+<p><img src="img/IMG_0522.png" width="90%" style="display: block; margin: auto;" /></p>
+<p>手機畫面太小了。早上都是9點半開始，下午基本都是到5點。週一更慘，到7點。週二-週五中午都被統計中心的講座佔據。簡直是非人的生活。</p>
+<p>這周概率論基礎結束。中心極限定理講完以後我們正式進入了 Inference 統計推斷的課程。我們花了一天時間講什麼是樣本估計 (Estimation)，什麼是參數精確度 (Precision)，什麼是自由度 (degree of freedom)，怎樣進行不偏的估計 (unbiased inference)。然後還有似然方程 (likelihood function)。</p>
+<p>今天的更新還是簡單的把概率論掃尾一下。感受一下中心極限定理的偉大。</p>
+<div id="-covariance" class="section level2">
+<h2><span class="header-section-number">8.1</span> 協方差 Covariance</h2>
+<p><a href="https://winterwang.github.io/post/probability2-4/">之前我們定義過</a>，兩個獨立連續隨機變量 <span class="math inline">\(X,Y\)</span> 之和的方差 Variance ：</p>
+<p><span class="math display">\[Var(X+Y)=Var(X)+Var(Y)\]</span></p>
+<p>然而如果他們並不相互獨立的話：</p>
+<span class="math display">\[\begin{aligned}
+Var(X+Y) &amp;= E[((X+Y)-E(X+Y))^2] \\
+         &amp;= E[(X+Y)-(E(X)+E(Y))^2] \\
+         &amp;= E[(X-E(X)) - (Y-E(Y))^2] \\
+         &amp;= E[(X-E(X))^2+(Y-E(Y))^2 \\
+         &amp; \;\;\; +2(X-E(X))(Y-E(Y))] \\
+         &amp;= Var(X)+Var(Y)+2E[(X-E(X))(Y-E(Y))]
+\end{aligned}\]</span>
+<p>可以發現在兩者和的方差公式展開之後多了一部分 <span class="math inline">\(E[(X-E(X))(Y-E(Y))]\)</span>。 這個多出來的一部分就說明了二者 <span class="math inline">\((X, Y)\)</span> 之間的關係。它被定義爲協方差 (Covariance): <span class="math display">\[Cov(X,Y) = E[(X-E(X))(Y-E(Y))]\]</span></p>
+<p>所以：</p>
+<p><span class="math display">\[Var(X+Y)=Var(X)+Var(Y)+2Cov(X,Y)\]</span></p>
+<p><u>要記住，協方差只能用於評價<span class="math inline">\(X,Y\)</span>之間的線性關係 (Linear Association)。</u></p>
+<p>以下是協方差 (Covariance) 的一些特殊性質：</p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(Cov(X,X)=Var(X)\)</span></li>
+<li><span class="math inline">\(Cov(X,Y)=Cov(Y,X)\)</span></li>
+<li><span class="math inline">\(Cov(aX,bY)=ab\:Cov(X,Y)\)</span></li>
+<li><span class="math inline">\(Cov(aR+bS,cX+dY)=ac\:Cov(R,X)+ad\:Cov(R,Y)\\ \;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;+bc\:Cov(S,X)+bd\:Cov(S,Y)\)</span></li>
+<li><span class="math inline">\(Cov(aX+bY,cX+dY)=ac\:Var(X)+ad\:Var(Y)\\ \;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;+(ad+bc)Cov(X,Y)\)</span></li>
+<li><span class="math inline">\(Cov(X+Y,X-Y)=Var(X)-Var(Y)\)</span></li>
+<li>If <span class="math inline">\(X, Y\)</span> are independent. <span class="math inline">\(Cov(X,Y)=0\)</span> <span class="diff_alert">But not vise-versa !</span></li>
+</ol>
 </div>
-<div id="-likelihood-and-maximum-likelihood-estimators" class="section level2">
-<h2><span class="header-section-number">12.2</span> 似然和極大似然估計 Likelihood and maximum likelihood estimators</h2>
-<p>此處用二項分佈的例子來理解似然法的概念：假設我們觀察到10個對象中有4個患<del>中二</del>病，我們假定這個患病的概率爲 <span class="math inline">\(\pi\)</span>。於是我們就有了下面的模型：</p>
-<p><strong>模型：</strong> 我們假定患病與否是一個服從<strong>二項分佈的隨機變量</strong>，<span class="math inline">\(X\sim Bin(10,\pi)\)</span>。同時也默認每個人之間是否患病是相互獨立的。</p>
-<p><strong>數據：</strong> 觀察到的數據是，10人中有4人患病。於是 <span class="math inline">\(x=4\)</span>。</p>
-<p>現在按照觀察到的數據，參數 <span class="math inline">\(\pi\)</span> 變成了未知數：</p>
-<p><span class="math display">\[Prob(X=4|\pi)=\binom{10}{4}\pi^4(1-\pi)^{10-4}\]</span></p>
-<p>此時我們會很自然的考慮，當 <span class="math inline">\(\pi\)</span> 是未知數的時候，<strong>它取值爲多大的時候才能讓這個事件（即：10人中4人患病）發生的概率最大？</strong> 所以我們可以將不同的數值代入 <span class="math inline">\(\pi\)</span> 來計算該事件在不同概率的情況下發生的可能性到底是多少：</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-Table 12.1: The probability of observing <span class="math inline">\(X=4\)</span>
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-<span class="math inline">\(\pi\)</span>
-</th>
-<th style="text-align:center;">
-事件 <span class="math inline">\(X=4\)</span> 發生的概率
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-0.0
-</td>
-<td style="text-align:center;">
-0.000
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-0.2
-</td>
-<td style="text-align:center;">
-0.088
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-<strong>0.4</strong>
-</td>
-<td style="text-align:center;">
-<strong>0.251</strong>
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-0.5
-</td>
-<td style="text-align:center;">
-0.205
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-0.6
-</td>
-<td style="text-align:center;">
-0.111
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-0.8
-</td>
-<td style="text-align:center;">
-0.006
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-1.0
-</td>
-<td style="text-align:center;">
-0.000
-</td>
-</tr>
-</tbody>
-</table>
-<p>很顯然，如果 <span class="math inline">\(\pi=0.4\)</span> 時，我們觀察到的事件發生的概率要比 <span class="math inline">\(\pi\)</span> 取其它值時更大。於是小總結一下目前爲止的步驟如下：</p>
+<div id="-correlation" class="section level2">
+<h2><span class="header-section-number">8.2</span> 相關 Correlation</h2>
 <ul>
-<li>觀察到實驗數據（10人中4個患病）；</li>
-<li>假定這數據服從二項分佈的概率模型，計算不同（<span class="math inline">\(\pi\)</span> 的取值不同的）情況下，該事件按照假定模型發生的概率；</li>
-<li>通過比較，我們選擇了能夠讓觀察事件發生概率最高的參數取值 (<span class="math inline">\(\pi=0.4\)</span>)。</li>
+<li>協方差雖然<span class="math inline">\(Cov(X,Y)\)</span> 的大小很大程度上會被他們各自的單位和波動大小左右。</li>
+<li>我們將協方差標準化(除以各自的標準差 s.d.) (standardization) 之後，就可以得到相關係數 Corr (<span class="math inline">\(-1\sim1\)</span>): <span class="math display">\[Corr(X,Y)=\frac{Cov(X,Y)}{SD(X)SD(Y)}=\frac{Cov(X,Y)}{\sqrt{Var(X)Var(Y)}}\]</span></li>
 </ul>
-<p>至此，我們可以知道，似然方程，是一個關於未知參數 <span class="math inline">\(\pi\)</span> 的函數，我們目前位置做的就是找到這個函數的最大值 (maximised)，和使之成爲最大值時的 <span class="math inline">\(\pi\)</span> ：</p>
-<p><span class="math display">\[L(\pi|X=4)=\binom{10}{4}\pi^4(1-\pi)^{10-4}\]</span></p>
-<p>我們可以畫出這個似然方程的形狀， <span class="math inline">\(\pi\in[0,1]\)</span></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dt">by=</span><span class="fl">0.001</span>)
-y &lt;-<span class="st"> </span>(<span class="kw">factorial</span>(<span class="dv">10</span>)<span class="op">/</span>(<span class="kw">factorial</span>(<span class="dv">4</span>)<span class="op">*</span>(<span class="kw">factorial</span>(<span class="dv">6</span>))))<span class="op">*</span>(x<span class="op">^</span><span class="dv">4</span>)<span class="op">*</span>((<span class="dv">1</span><span class="op">-</span>x)<span class="op">^</span><span class="dv">6</span>)
-<span class="kw">plot</span>(x, y, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="fl">0.3</span>), <span class="dt">ylab =</span> <span class="st">&quot;L(\U03C0)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)
-<span class="co">#title(&quot;Figure 1. Binomial Likelihood&quot;)</span>
-<span class="kw">abline</span>(<span class="dt">h=</span><span class="fl">0.251</span>, <span class="dt">lty=</span><span class="dv">2</span>)
-<span class="kw">abline</span>(<span class="dt">v=</span><span class="fl">0.4</span>, <span class="dt">lty=</span><span class="dv">2</span>)</code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:binomial-likelihood"></span>
-<img src="bookdown_files/figure-html/binomial-likelihood-1.png" alt="Binomial Likelihood" width="90%" />
+</div>
+<div id="-the-central-limit-theorem" class="section level2">
+<h2><span class="header-section-number">8.3</span> 中心極限定理 the Central Limit Theorem</h2>
+<p><strong>如果從人羣中多次選出樣本量爲 <span class="math inline">\(n\)</span> 的樣本，並計算樣本均值, <span class="math inline">\(\bar{X}_n\)</span>。那麼這個樣本均值 <span class="math inline">\(\bar{X}_n\)</span> 的分佈，會隨着樣本量增加 <span class="math inline">\(n\rightarrow\infty\)</span>，而接近正態分佈。</strong></p>
+<p>偉大的中心極限定理告訴我們：</p>
+<p><strong>當樣本量足夠大時，樣本均值 <span class="math inline">\(\bar{X}_n\)</span> 的分佈爲正態分佈，這個特性與樣本來自的人羣的分佈 <span class="math inline">\(X_i\)</span> 無關。</strong></p>
+<p><strong>再說一遍：</strong></p>
+<p>如果對象是獨立同分佈 i.i.d (identically and independently distributed)。那麼它的總體期望和方差分別是: <span class="math inline">\(E(X)=\mu;\;Var(X)=\sigma^2\)</span>。 根據中心極限定理，可以得到：</p>
+<ul>
+<li>當樣本量增加，樣本均值的分佈服從正態分佈： <span class="math display">\[\bar{X}_n\sim N(\mu, \frac{\sigma^2}{n})\]</span></li>
+<li>也可以寫作，當樣本量增加： <span class="math display">\[\sum_{i=1}^nX_i \sim N(n\mu,n\sigma^2)\]</span></li>
+<li>有了這個定理，我們可以拋開樣本空間(<span class="math inline">\(X\)</span>)的分佈，也不用假定它服從正態分佈。</li>
+<li>但是樣本的均值，卻總是服從正態分佈的。簡直是太完美了！！！！！！</li>
+</ul>
+</div>
+<div id="section-8.4" class="section level2">
+<h2><span class="header-section-number">8.4</span> 二項分佈的正態分佈近似</h2>
+<ul>
+<li>假設我們有大量(<span class="math inline">\(n\rightarrow\infty\)</span>)的二項分佈實驗 <span class="math inline">\(X\sim Bin(n, \pi)\)</span></li>
+<li>根據<a href="https://winterwang.github.io/post/probability3/">二項分佈的概率公式</a>，計算將會變得很繁瑣複雜。</li>
+<li>解決辦法：應用中心極限定理。</li>
+<li><p><a href="https://winterwang.github.io/post/probability3/">中心極限定理</a>告訴我們，當樣本量足夠大時: <span class="math display">\[X\sim N（n\pi, n\pi(1-\pi))\]</span></p></li>
+<li>問題在於，多大的 <span class="math inline">\(n\)</span> 才能算大樣本呢？
+<ul>
+<li>當且僅當 (only and if only) <span class="math inline">\(n&gt;20\)</span> AND <span class="math inline">\(n\pi&gt;5\)</span> AND <span class="math inline">\(n(1-\pi)&gt;5\)</span></li>
+</ul></li>
+</ul>
+</div>
+<div id="section-8.5" class="section level2">
+<h2><span class="header-section-number">8.5</span> 泊松分佈的正態分佈近似</h2>
+<ul>
+<li>假設時間 <span class="math inline">\(t\)</span> 內某事件的發生次數服從泊松分佈 <span class="math inline">\(X\sim Po(\mu)\)</span>。</li>
+<li>考慮將這段時間 <span class="math inline">\(t\)</span> 等分成 <span class="math inline">\(n\)</span> 個時間段。那麼第 <span class="math inline">\(i\)</span> 時間段內事件發生次數依舊服從泊松分佈 <span class="math inline">\(X_i\sim Po(\frac{\mu}{n})\)</span>。且 <span class="math inline">\(E(X_i)=\mu/n, Var(X_i)=\mu/n\)</span>。</li>
+<li><p>那麼原先的 <span class="math inline">\(X\)</span> 可以被視爲是將這無數的小時間段的 <span class="math inline">\(X_i\)</span> 相加。應用中心極限定理： <span class="math display">\[X=\sum_{i=1}^nX_i\sim N(\frac{n\mu}{n}, \frac{n\mu}{n})\]</span></p></li>
+<li><p>需要注意的是，這段時間 (<span class="math inline">\(t\)</span>) 內發生的事件次數 (<span class="math inline">\(\lambda\)</span>) : <span class="math inline">\(\lambda t =\mu&gt;10\)</span> ，這樣的正態分佈模擬才能成立。</p></li>
+</ul>
+</div>
+<div id="continuity-corrections" class="section level2">
+<h2><span class="header-section-number">8.6</span> 正態分佈模擬的校正：continuity corrections</h2>
+<ul>
+<li>如果我們使用正態分佈來模擬離散變量的分佈，常常需要用到正態分佈模擬的矯正。</li>
+<li>例如：我們如果用正態分佈模擬來計算 <span class="math inline">\(P(X=15)\)</span>，那麼實際上我們應該計算的是 <span class="math inline">\(P(14.5&lt;X&lt;15.5)\)</span>。</li>
+</ul>
+<div id="section-8.6.1" class="section level3">
+<h3><span class="header-section-number">8.6.1</span> 例題</h3>
+<ol style="list-style-type: decimal">
+<li>已知 <span class="math inline">\(X\sim Bin(100,0.5)\)</span>，求 <span class="math inline">\(P(X&gt;60)\)</span></li>
+</ol>
+<p><strong>解</strong></p>
+<p><span class="math display">\[\begin{aligned}
+\because X&amp;\sim Bin(100, 0.5) \\ \therefore E(X) &amp;=n\pi=50 \\
+Var(X) &amp;= n\pi(1-\pi) =25=5^2\\
+P(X&gt;60)  &amp;= 1-P(X\leqslant60) \\
+         &amp;= 1-P(Z\leqslant\frac{60.5-50}{\sqrt{25}}) \\
+         &amp;= 1-P(Z\leqslant2.1) \\
+         &amp;= 1-\Phi(2.1) \\
+         &amp;= 1-0.982 = 0.018
+\end{aligned}\]</span></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看實際用傻瓜算法計算獲得的概率：</span>
+<span class="dv">1</span><span class="op">-</span><span class="kw">pbinom</span>(<span class="dv">60</span>, <span class="dt">size=</span><span class="dv">100</span>, <span class="dt">prob=</span><span class="fl">0.5</span>)</code></pre></div>
+<pre><code>## [1] 0.0176</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看用中心極限定理模擬正態分佈獲得的概率：</span>
+<span class="dv">1</span><span class="op">-</span><span class="kw">pnorm</span>((<span class="fl">60.5</span><span class="op">-</span><span class="dv">50</span>)<span class="op">/</span><span class="kw">sqrt</span>(<span class="dv">25</span>))</code></pre></div>
+<pre><code>## [1] 0.01786</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:bin-normal-approx"></span>
+<img src="bookdown_files/figure-html/bin-normal-approx-1.png" alt="Probability of 60 successes out of 100 Binomial trials, probability of success = 0.75" width="90%" />
 <p class="caption">
-图 12.1: Binomial Likelihood
+图 8.1: Probability of 60 successes out of 100 Binomial trials, probability of success = 0.75
 </p>
 </div>
-<p>從圖形上我們也能確認，<span class="math inline">\(\pi=0.4\)</span> 時能夠讓這個似然方程取得最大值。</p>
-</div>
-<div id="section-12.3" class="section level2">
-<h2><span class="header-section-number">12.3</span> 似然方程的一般化定義</h2>
-<p>對於一個概率模型，如果其參數爲 <span class="math inline">\(\theta\)</span>，那麼在給定觀察數據 <span class="math inline">\(\underline{x}\)</span> 時，該參數的似然方程被定義爲：</p>
-<p><span class="math inline">\(L(\theta|\underline{x})=P(\underline{x}|\theta)\)</span></p>
-<p>注意：</p>
-<ol style="list-style-type: decimal">
-<li><span class="math inline">\(P(\underline{x}|\theta)\)</span> 可以是概率（離散分佈）方程，也可以是概率密度（連續型變量）方程。對於此方程，<span class="math inline">\(\theta\)</span> 是給定的，然後再計算某些事件發生的概率。</li>
-<li><span class="math inline">\(L(\theta|\underline{x})\)</span> 是一個關於參數 <span class="math inline">\(\theta\)</span> 的方程，此時，<span class="math inline">\(\underline{x}\)</span> 是固定不變的（觀察值）。我們希望通過這個方程求出能夠使觀察到的事件發生概率最大的參數值。</li>
-<li>似然方程<strong>不是</strong>一個概率密度方程。</li>
+<ol start="2" style="list-style-type: decimal">
+<li>已知 <span class="math inline">\(X\sim Bin(48, 0.75)\)</span>, 求 <span class="math inline">\(P(30&lt;X&lt;39)\)</span></li>
 </ol>
-<p>另一個例子：</p>
-<p>有一組觀察數據是離散型隨機變量 <span class="math inline">\(X\)</span>，它符合概率方程 <span class="math inline">\(f(x|\theta)\)</span>。下表羅列了當 <span class="math inline">\(\theta\)</span> 分別取值 <span class="math inline">\(1,2,3\)</span> 時的概率方程的值，試求每個觀察值 <span class="math inline">\(X = 0,1,2,3,4\)</span> 的最大似然參數估計：</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-Exercise 12.3
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-<span class="math inline">\(x\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(f(x|1)\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(f(x|2)\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(f(x|3)\)</span>
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-1/3
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-0
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-1
-</td>
-<td style="text-align:center;">
-1/3
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-0
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-2
-</td>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-1/6
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-3
-</td>
-<td style="text-align:center;">
-1/6
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-1/2
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-4
-</td>
-<td style="text-align:center;">
-1/6
-</td>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-1/3
-</td>
-</tr>
-</tbody>
-</table>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-Exercise 12.3 answer
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-<span class="math inline">\(x\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(f(x|1)\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(f(x|2)\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(f(x|3)\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(\theta\)</span>
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-1/3
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-<strong>1</strong>
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-1
-</td>
-<td style="text-align:center;">
-1/3
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-<strong>1</strong>
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-2
-</td>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-1/6
-</td>
-<td style="text-align:center;">
-<strong>2</strong>
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-3
-</td>
-<td style="text-align:center;">
-1/6
-</td>
-<td style="text-align:center;">
-1/4
-</td>
-<td style="text-align:center;">
-1/2
-</td>
-<td style="text-align:center;">
-<strong>3</strong>
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-4
-</td>
-<td style="text-align:center;">
-1/6
-</td>
-<td style="text-align:center;">
-0
-</td>
-<td style="text-align:center;">
-1/3
-</td>
-<td style="text-align:center;">
-<strong>3</strong>
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div id="-log-likelihood" class="section level2">
-<h2><span class="header-section-number">12.4</span> 對數似然方程 log-likelihood</h2>
-<p>似然方程的最大值，可通過求 <span class="math inline">\(L(\theta|data)\)</span> 的最大值獲得，也可以通過求該方程的對數方程 <span class="math inline">\(\ell(\theta|data)\)</span> 的最大值獲得。傳統上，我們估計最大方程的最大值的時候，會給參數戴一頂“帽子”（因爲這是觀察獲得的數據告訴我們的參數）： <span class="math inline">\(\hat{\theta}\)</span>。並且我們發現對數似然方程比一般的似然方程更加容易微分，因此求似然方程的最大值就變成了求對數似然方程的最大值：</p>
-<p><span class="math display">\[\frac{d\ell}{d\theta}=\ell^\prime(\theta)=0\\
-AND\\
-\frac{d^2\ell}{d\theta^2}&lt;0\]</span></p>
-<p>要注意的是，微分不一定總是能幫助我們求得似然方程的最大值。如果說參數本身的定義域是有界限的話，微分就行不通了：</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">3</span>,<span class="dt">by=</span><span class="fl">0.001</span>)
-y &lt;-<span class="st"> </span>(x<span class="op">-</span><span class="dv">1</span>)<span class="op">^</span><span class="dv">2</span><span class="op">-</span><span class="dv">5</span>
-<span class="kw">plot</span>(x, y, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">5</span>,<span class="dv">0</span><span class="op">-</span><span class="dv">1</span>), <span class="dt">ylab =</span> <span class="st">&quot;L(\U03B8)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03B8&quot;</span>)
-<span class="co">#title(&quot;Figure 2. Likelihood function with \n a limited domain&quot;)</span>
-<span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">3</span>, <span class="dt">lty=</span><span class="dv">2</span>)</code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:likelihood-limited"></span>
-<img src="bookdown_files/figure-html/likelihood-limited-1.png" alt="Likelihood function with a limited domain" width="90%" />
+<p><strong>解</strong></p>
+<p><span class="math display">\[
+\begin{aligned}
+\because B &amp;\; \sim Bin(48, 0.75) \\
+\therefore E(X) &amp;\; =n\pi=36 \\
+           Var(X) &amp;\; =n\pi(1-\pi)=9=3^2 \\
+P(30&lt;X&lt;39) &amp;\; = P(31\leqslant X\leqslant 38)\\
+     &amp;\; = P(30.5\leqslant Y \leqslant 38.5) \\
+     Y\;is\;the&amp;\;normal\;approximation \\
+     &amp;\;= P(Y&lt;38.5) - P(Y&lt;30.5) \\
+     &amp;\;= P(Z\leqslant\frac{38.5-36}{3})-
+          P(Z\leqslant\frac{30.5-36}{3}) \\
+     &amp;\;= P(Z\leqslant0.833) - P(Z\leqslant-1.833) \\
+     &amp;\;= \Phi(0.833)-\Phi(-1.833) \\
+     &amp;\;= 0.798-0.033 = 0.764
+\end{aligned}
+\]</span></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看實際用傻瓜算法計算獲得的概率：</span>
+<span class="kw">pbinom</span>(<span class="dv">38</span>, <span class="dt">size=</span><span class="dv">48</span>, <span class="dt">prob=</span><span class="fl">0.75</span>)<span class="op">-</span><span class="kw">pbinom</span>(<span class="dv">30</span>, <span class="dt">size=</span><span class="dv">48</span>, <span class="dt">prob=</span><span class="fl">0.75</span>)</code></pre></div>
+<pre><code>## [1] 0.7578</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看用中心極限定理模擬正態分佈獲得的概率：</span>
+<span class="kw">pnorm</span>((<span class="fl">38.5</span><span class="op">-</span><span class="dv">36</span>)<span class="op">/</span><span class="kw">sqrt</span>(<span class="dv">9</span>)) <span class="op">-</span><span class="st"> </span><span class="kw">pnorm</span>((<span class="fl">30.5</span><span class="op">-</span><span class="dv">36</span>)<span class="op">/</span><span class="kw">sqrt</span>(<span class="dv">9</span>))</code></pre></div>
+<pre><code>## [1] 0.7643</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:bin-normal-approx2"></span>
+<img src="bookdown_files/figure-html/bin-normal-approx2-1.png" alt="Probability of 30-39 successes out of 48 Binomial trials, probability of success = 0.75" width="90%" />
 <p class="caption">
-图 12.2: Likelihood function with a limited domain
+图 8.2: Probability of 30-39 successes out of 48 Binomial trials, probability of success = 0.75
 </p>
 </div>
-<p><strong>證明：當 <span class="math inline">\(L(\theta|data)\)</span> 取最大值時，該方程的對數方程 <span class="math inline">\(\ell(\theta|data)\)</span> 也是最大值：</strong></p>
-<p>如果似然方程是連續可導，只有一個最大值，且可以二次求導，假設 <span class="math inline">\(\hat{\theta}\)</span> 使該方程取最大值，那麼：</p>
-<p><span class="math display">\[\frac{dL}{d\theta}=0, \frac{d^2L}{d\theta^2}&lt;0 \Rightarrow \theta=\hat{\theta}\]</span></p>
-<p>令 <span class="math inline">\(\ell=logL\)</span> 那麼 <span class="math inline">\(\frac{d\ell}{dL}=\ell^\prime=\frac{1}{L}\)</span>：</p>
-<p><span class="math display">\[\frac{d\ell}{d\theta}=\frac{d\ell}{dL}\cdot\frac{dL}{d\theta}=\frac{1}{L}\cdot\frac{dL}{d\theta}\]</span></p>
-<p>當 <span class="math inline">\(\ell(\theta|data)\)</span> 取最大值時：</p>
-<p><span class="math display">\[\frac{d\ell}{d\theta}=0\Leftrightarrow\frac{1}{L}\cdot\frac{dL}{d\theta}=0\\
-\because \frac{1}{L}\neq0 \\
-\therefore \frac{dL}{d\theta}=0\\
-\Leftrightarrow \theta=\hat{\theta}\]</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-\frac{d^2\ell}{d\theta^2} &amp;= \frac{d}{d\theta}(\frac{d\ell}{dL}\cdot\frac{dL}{d\theta})\\
- &amp;= \frac{d\ell}{dL}\cdot\frac{d^2L}{d\theta^2} + \frac{dL}{d\theta}\cdot\frac{d}{d\theta}(\frac{d\ell}{dL})
-\end{aligned}
-\]</span></p>
-<p>當 <span class="math inline">\(\theta=\hat{\theta}\)</span> 時，<span class="math inline">\(\frac{dL}{d\theta}=0\)</span> 且 <span class="math inline">\(\frac{d^2L}{d\theta^2}&lt;0 \Rightarrow \frac{d^2\ell}{d\theta^2}&lt;0\)</span></p>
-<p>所以，求獲得 <span class="math inline">\(\ell(\theta|data)\)</span> 最大值的 <span class="math inline">\(\theta\)</span> 即可令 <span class="math inline">\(L(\theta|data)\)</span> 獲得最大值。</p>
-</div>
-<div id="-maximum-likelihood-estimator-mle-" class="section level2">
-<h2><span class="header-section-number">12.5</span> 極大似然估計 (maximum likelihood estimator, MLE) 的性質：</h2>
-<ol style="list-style-type: decimal">
-<li>漸進無偏 Asymptotically unbiased: <br> <span class="math inline">\(n\rightarrow \infty \Rightarrow E(\hat{\Theta}) \rightarrow \theta\)</span></li>
-<li>漸進最高效能 Asymptotically efficient: <br> <span class="math inline">\(n\rightarrow \infty \Rightarrow Var(\hat{\Theta})\)</span> 是所有參數中方差最小的估計</li>
-<li>漸進正態分佈 Asymptotically normal: <br> <span class="math inline">\(n\rightarrow \infty \Rightarrow \hat{\Theta} \sim N(\theta, Var(\hat{\Theta}))\)</span></li>
-<li>變形後依然保持不變 Transformation invariant: <br> <span class="math inline">\(\hat{\Theta}\)</span> 是 <span class="math inline">\(\theta\)</span> 的MLE時 <span class="math inline">\(\Rightarrow g(\hat{\Theta})\)</span> 是 <span class="math inline">\(g(\theta)\)</span> 的 MLE</li>
-<li>信息足夠充分 Sufficient：<br> <span class="math inline">\(\hat{\Theta}\)</span> 包含了觀察數據中所有的能夠用於估計參數的信息</li>
-<li>始終不變 consistent: <br> <span class="math inline">\(n\rightarrow\infty\Rightarrow\hat{\Theta}\rightarrow\theta\)</span> 或者可以寫成：<span class="math inline">\(\varepsilon&gt;0, lim_{n\rightarrow\infty}P(|\hat{\Theta}-\theta|&gt;\varepsilon)=0\)</span></li>
+<p>從上面兩個例題也能看出，<span class="math inline">\(n\)</span> 越小，正態分佈模擬的誤差就越大。</p>
+<ol start="3" style="list-style-type: decimal">
+<li>已知 <span class="math inline">\(X \sim Poisson(30)\)</span> 求 <span class="math inline">\(P(X\leqslant20)\)</span>。</li>
 </ol>
+<p><strong>解</strong></p>
+<p><span class="math display">\[\because E(X)=\mu=30, \;Var(X)=\mu=30=(\sqrt{30})^2 \\
+ \begin{aligned}
+ Pr(X\leqslant20) &amp;= P(Z\leqslant\frac{20.5-30}{\sqrt{30}}) \\
+                  &amp;= P(Z\leqslant-1.734) \\
+                  &amp;= \Phi(-1.734) \\
+                  &amp;= 0.0414
+ \end{aligned}
+ \]</span></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看實際用傻瓜算法計算獲得的概率：</span>
+<span class="kw">ppois</span>(<span class="dv">20</span>, <span class="dt">lambda=</span><span class="dv">30</span>)</code></pre></div>
+<pre><code>## [1] 0.03528</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看用中心極限定理模擬正態分佈獲得的概率：</span>
+<span class="kw">pnorm</span>((<span class="fl">20.5</span><span class="op">-</span><span class="dv">30</span>)<span class="op">/</span><span class="kw">sqrt</span>(<span class="dv">30</span>))</code></pre></div>
+<pre><code>## [1] 0.04142</code></pre>
+<p>這兩個其實有些小差距。不過看下圖，其模擬還是很到位的。只是正態分佈的面積明顯確實比泊松分佈的小柱子面積要大一些。</p>
+<div class="figure" style="text-align: center"><span id="fig:bin-poi-approx"></span>
+<img src="bookdown_files/figure-html/bin-poi-approx-1.png" alt="Probability of less than 20 events happen when the expectation is 30" width="90%" />
+<p class="caption">
+图 8.3: Probability of less than 20 events happen when the expectation is 30
+</p>
 </div>
-<div id="-likelihood-for-a-rate" class="section level2">
-<h2><span class="header-section-number">12.6</span> 率的似然估計 Likelihood for a rate</h2>
-<p>如果在一項研究中，參與者有各自不同的追蹤隨訪時間（長度），那麼我們應該把事件（疾病）的發病率用率的形式（多少事件每單位人年, e.g. per person year of observation）。如果這個發病率的參數用 <span class="math inline">\(\lambda\)</span> 來表示，所有參與對象的隨訪時間之和爲 <span class="math inline">\(p\)</span> 人年。那麼這段時間內的期望事件（疾病發病）次數爲：<span class="math inline">\(\mu=\lambda p\)</span>。假設事件（疾病發病）發生是相互獨立的，可以使用泊松分佈來模擬期望事件（疾病發病）次數 <span class="math inline">\(D\)</span>：</p>
-<p><span class="math display">\[D\sim Poi(\mu)\]</span></p>
-<p>假設我們觀察到了 <span class="math inline">\(D=d\)</span> 個事件，我們獲得這個觀察值的概率應該用以下的模型：</p>
-<p><span class="math display">\[Prob(D=d)=e^{-\mu}\frac{\mu^d}{d!}=e^{-\lambda p}\frac{\lambda^dp^d}{d!}\]</span></p>
-<p>因此，<span class="math inline">\(\lambda\)</span> 的似然方程是：</p>
-<p><span class="math display">\[L(\lambda|observed \;data)=e^{-\lambda p}\frac{\lambda^dp^d}{d!}\]</span></p>
-<p>所以，<span class="math inline">\(\lambda\)</span> 的對數似然方程是：</p>
+<ol start="4" style="list-style-type: decimal">
+<li>已知 <span class="math inline">\(X_1, X_2 \stackrel{i.i.d}{\sim} Poi(30)\)</span> 求 <span class="math inline">\(P(X_1+X_2\leqslant40)\)</span>。</li>
+</ol>
+<p><strong>解</strong></p>
 <p><span class="math display">\[
 \begin{aligned}
-\ell(\lambda|observed\;data) &amp;= log(e^{-\lambda p}\frac{\lambda^dp^d}{d!}) \\
-  &amp;= -\lambda p+d\:log(\lambda)+d\:log(p)-log(d!) \\
+E(X_1+X_2) &amp;\;= E(X_1)+E(X_2) = 30+30 = 60\\
+Var(X_1+X_2) &amp;\;= Var(X_1)+Var(X_2) = 30+30 \\
+             &amp;\;= (\sqrt{60})^2 \\
+P(X_1+X_2\leqslant 40) &amp;\;= P(Z \leqslant \frac{40.5-60}{\sqrt{60}}) \\
+           &amp;\;= P(Z\leqslant-2.517) \\
+           &amp;\;= \Phi(-2.517) \\
+           &amp;\;= 0.006
 \end{aligned}
 \]</span></p>
-<p>解 <span class="math inline">\(\ell^\prime(\lambda|data)=0\)</span>:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看實際用傻瓜算法計算獲得的概率：</span>
+<span class="kw">ppois</span>(<span class="dv">40</span>, <span class="dt">lambda=</span><span class="dv">60</span>)</code></pre></div>
+<pre><code>## [1] 0.003983</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 快來看用中心極限定理模擬正態分佈獲得的概率：</span>
+<span class="kw">pnorm</span>((<span class="fl">40.5</span><span class="op">-</span><span class="dv">60</span>)<span class="op">/</span><span class="kw">sqrt</span>(<span class="dv">60</span>))</code></pre></div>
+<pre><code>## [1] 0.005911</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:bin-poi-approx2"></span>
+<img src="bookdown_files/figure-html/bin-poi-approx2-1.png" alt="Probability of 2 identically and independently observed results of less or equal to 40 events happen in total when the expectation of each observation is 30" width="90%" />
+<p class="caption">
+图 8.4: Probability of 2 identically and independently observed results of less or equal to 40 events happen in total when the expectation of each observation is 30
+</p>
+</div>
+<p>又一次，正態分佈的面積比泊松分佈的小柱子面積要大一些。</p>
+</div>
+</div>
+<div id="section-8.7" class="section level2">
+<h2><span class="header-section-number">8.7</span> 兩個連續隨機變量</h2>
+<ul>
+<li><p>假定 <span class="math inline">\(X_1, X_2\)</span> 是兩個連續隨機變量： <span class="math display">\[E(X_1)=\mu_1, Var(X_1)=\sigma_1^2 \\
+  E(X_2)=\mu_2, Var(X_2)=\sigma_2^2 \\
+  Corr(X_1, X_2)=\rho \Rightarrow Cov(X_1, X_2)=\rho\sigma_1\sigma_2=\sigma_{12}\]</span></p></li>
+<li><p>利用矩陣的標記法，可以將 <span class="math inline">\(X_1, X_2\)</span> 標記爲 <span class="math inline">\(\textbf{X}=(X_1, X_2)^T\)</span>, 即： <span class="math display">\[\textbf{X}=\left(
+\begin{array}{c}
+X_1\\
+X_2\\
+\end{array}
+\right)\]</span></p></li>
+<li><p>上面的所有內容都可以標記爲： <span class="math display">\[E(\textbf{X})=\mathbf{\mu}=\left(
+\begin{array}{c}
+\mu_1\\
+\mu_2\\
+\end{array}
+\right)\\
+Covariance \;matrix: \\
+Var(\textbf{X})=\mathbf{\Sigma}=\left(
+\begin{array}{c}
+\sigma_1^2 &amp; \sigma_{12}\\
+\sigma_{12} &amp; \sigma_1^2\\
+\end{array}
+\right)\]</span></p></li>
+</ul>
+</div>
+<div id="-" class="section level2">
+<h2><span class="header-section-number">8.8</span> 兩個連續隨機變量 例子：</h2>
+<p>假如要看收縮期血壓 (<span class="math inline">\(SBP\)</span>) 和舒張期血壓 (<span class="math inline">\(DBP\)</span>) 之間的關係：</p>
+<p>下列爲已知條件：</p>
+<ul>
+<li><span class="math inline">\(SBP\)</span> 的均值爲 <span class="math inline">\(130\)</span>， 標準差爲 <span class="math inline">\(15\)</span>;</li>
+<li><span class="math inline">\(DBP\)</span> 的均值爲 <span class="math inline">\(90\)</span>, 標準差爲 <span class="math inline">\(10\)</span>;</li>
+<li><span class="math inline">\(SBP\)</span> 和 <span class="math inline">\(DBP\)</span> 之間的相關係數爲 <span class="math inline">\(0.75\)</span>。</li>
+</ul>
+<p>那麼， 我們可以把這些信息用下面的方法來標記：</p>
+<p><span class="math display">\[E(\textbf{X})=\mathbf{\mu}=\left(
+\begin{array}{c}
+130\\
+90\\
+\end{array}
+\right)\\
+Var(\textbf{X})=\mathbf{\Sigma}=\left(
+\begin{array}{c}
+225 &amp; 112.5\\
+112.5 &amp; 225\\
+\end{array}
+\right)\]</span></p>
+</div>
+<div id="section-8.9" class="section level2">
+<h2><span class="header-section-number">8.9</span> 條件分佈和邊緣分佈的概念</h2>
+<ul>
+<li>如果 <span class="math inline">\(\textbf{X}=(X_1, X_2)^T\)</span> 的兩個變量都服從正態分佈；</li>
+<li><p>那麼這兩個變量的邊緣分佈 (marginal distribution) 也服從正態分佈: <span class="math display">\[X_1\sim N(\mu_1,\sigma_1^2), X_2\sim N(\mu, \sigma_2^2)\]</span></p></li>
+<li>同樣的，<span class="math inline">\(X_1\)</span> 的給出 <span class="math inline">\(X_2\)</span> 的條件分佈 (condition distribution) 也服從正態分佈： <span class="math display">\[E(X_1|X_2)=\mu_1+\frac{\rho\sigma_1}{\sigma_2}(X_2-\mu_2) \\
+ Var(X_1|X_2)=\sigma_1^2(1-\rho^2)\]</span></li>
+<li><p>反之亦然。</p></li>
+</ul>
+</div>
+<div id="section-8.10" class="section level2">
+<h2><span class="header-section-number">8.10</span> 條件分佈和邊緣分佈的例子</h2>
+<p>上面的概念過於抽象，用血壓的例子：</p>
+<p>收縮期血壓和舒張期血壓各自服從正態分佈。那麼可以用上面的概念來寫出已知舒張期血壓時，收縮期血壓的分佈。</p>
+<ul>
+<li><p>條件期望: <span class="math display">\[E(SBP|DBP)=130+\frac{0.75\times15}{10}(DBP-90)\]</span></p></li>
+<li><p>實際如果來了一個病人，他說他只記得自己測的舒張期血壓是95：<br> 他的收縮期血壓的期望值就可以用上面的式子計算： <span class="math display">\[E(SBP|DBP=95)=136\]</span></p></li>
+<li><p>條件方差爲： <span class="math display">\[Var(SBP|DBP)=15^2(1-0.75^2)=98.4\approx9.92^2&lt;15^2\]</span></p></li>
+<li><p>所以當我們知道了這個人的一部分信息以後，推測他的另一個相關連的變量變得更加準確(<strong>方差變小</strong>)了。</p></li>
+</ul>
+<div id="-1" class="section level3">
+<h3><span class="header-section-number">8.10.1</span> 例題</h3>
+<p>有 (閒) 人記錄了 <span class="math inline">\(1494\)</span> 名兒童在 <span class="math inline">\(2, 4, 6\)</span> 歲時的腿長度。已知在記錄的這三個年齡時的平均腿長度分別爲 <span class="math inline">\(85 cm, 103cm, 114cm\)</span>。協方差矩陣如下:</p>
+<p><span class="math display">\[\left(
+\begin{array}{c}
+22.2 &amp; 11.8 &amp; 13.7\\
+11.8 &amp; 26.3 &amp; 21.5\\
+13.7 &amp; 21.5 &amp; 29.0
+\end{array}
+\right)\]</span></p>
+<p>假定，這三個年齡記錄的這些兒童的腿長度數據（聯合分佈, joint distribution）服從三個變量正態分佈。</p>
+<ol style="list-style-type: decimal">
+<li>求 <span class="math inline">\(2\)</span> 歲時這些兒童的腿長度的邊緣分佈 (marginal distribution)</li>
+</ol>
+<p><strong>解</strong></p>
+<p><span class="math display">\[X_{age=2} \sim N(85, \sigma_{age=2}^2=22.2)\]</span></p>
+<ol start="2" style="list-style-type: decimal">
+<li>求他們 <span class="math inline">\(6\)</span> 歲時腿長度的 <span class="math inline">\(2\)</span> 歲時的條件分佈。(Find the distribution of leg length age 6 conditional on leg length at age 2.)</li>
+</ol>
+<p><strong>解</strong></p>
+<p><span class="math inline">\(6\)</span> 歲時和 <span class="math inline">\(2\)</span> 歲時腿長的相關係數 (correlation, <span class="math inline">\(\rho_{6,2}\)</span>) 爲： <span class="math display">\[
+\begin{aligned}
+\rho_{6,2} &amp;= \frac{Cov_{6,2}}{\sqrt{Var(length_6)}\sqrt{Var(length_2)}}\\
+&amp;= \frac{13.7}{\sqrt{22.2}\sqrt{29}}=0.54
+\end{aligned}
+\]</span></p>
+<p>條件分佈套用上面提到的公式：</p>
 <p><span class="math display">\[
 \begin{aligned}
-\ell^\prime(\lambda|data) &amp;= -p+\frac{d}{\lambda}=0\\
-\Rightarrow \hat{\lambda} &amp;= \frac{d}{p} \\
+E(length_6 | length_2) &amp;= \mu_6+\frac{\rho_{6,2}\sigma_6}{\sigma_2}(length_2-\mu_2) \\
+&amp;= 114+\frac{0.54\times\sqrt{29.0}}{\sqrt{22.2}}(length_2-85)\\
+Var(length_6 | length_2) &amp;= \sigma_6^2(1-\rho_{6,2}^2) \\
+                         &amp;= 29.0\times(1-0.54^2) =20.5
 \end{aligned}
 \]</span></p>
-<p><strong>注意：</strong> 在對數似然方程中，不包含參數的部分，對與似然方程的形狀不產生任何影響，我們在微分對數似然方程的時候，這部分也都自動消失。所以不包含參數的部分，與我們如何獲得極大似然估計是無關的。因此，我們常常在寫對數似然方程的時候就把其中沒有參數的部分直接忽略了。例如上面泊松分佈的似然方程中，<span class="math inline">\(d\:log(p)-log(d!)\)</span> 不包含參數 <span class="math inline">\(\lambda\)</span> 可以直接不寫出來。</p>
-</div>
-<div id="-n-" class="section level2">
-<h2><span class="header-section-number">12.7</span> 有 <span class="math inline">\(n\)</span> 個獨立觀察時的似然方程和對數似然方程</h2>
-<p>當有多個獨立觀察時，總體的似然方程等於各個觀察值的似然方程之<strong>乘積</strong>。如果 <span class="math inline">\(X_1,\dots,X_n\stackrel{i.i.d}{\sim}f(\cdot|\theta)\)</span></p>
-<p><span class="math display">\[L(\theta|x_1,\cdots,x_n)=f(x_1,\cdots,x_n|\theta)=\prod_{i=1}^nf(x_i|\theta)\\
-\Rightarrow \ell(\theta|x_1,\cdots,x_n)=\sum_{i=1}^nlog(f(x_i|\theta))\]</span></p>
+
 </div>
 </div>
+</div>
+
+
+
             </section>
 
           </div>
         </div>
       </div>
-<a href="chi-square-distribution.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="-log-likelihood-ratio.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="section-7.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="section-9.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -682,7 +578,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/02-Inference.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/01-Probability.Rmd",
 "text": "编辑"
 },
 "download": ["bookdown.pdf", "bookdown.epub"],
