@@ -1,3 +1,68 @@
 # (PART) 貝葉斯統計 {-}
 
 # 貝葉斯統計入門
+
+> A Bayesian statistician is one who, vaguely expecting a horse and catching a glimpse of a donkey, strongly concludes he has seen a mule.
+>
+> --- Guernsey McPearson's Drug Development Dictionary^[http://www.senns.demon.co.uk/wdict.html]
+
+
+
+
+本章節之目的：
+
+- 介紹 (啓發) 貝葉斯推斷 Bayesian inference 的基本概念。並且與概率論 frequentist inference 推斷實例作比較。
+- 介紹共軛分佈的概念 conjugate distributions。用單一參數家族 (single parameter family) ，特別是二項分佈的圖形來描述共軛分佈；用方差已知的正態分佈均值來描述共軛分佈。
+- 介紹貝葉斯預測分佈 Bayesian prediction distribution。
+
+推薦書目：
+
+1. ["Principles of Statistical Inference"](https://books.google.co.jp/books?id=nRgtGZXi2KkC&dq=principles+of+statistical+inference&lr=&source=gbs_navlinks_s) by D.R. Cox [@cox2006principles]
+2. ["Bayesian Data Analysis"](https://books.google.co.jp/books?id=nRgtGZXi2KkC&dq=principles+of+statistical+inference&lr=&source=gbs_navlinks_s) by Gelman, Carlin, Stern, Dunson, Vehtari, and Rubin [@gelman2013bayesian], [website for the book](www.stat.columbia.edu/~gelman/book/)
+3. ["Bayesian Biostatistics"](https://books.google.co.uk/books?id=WV7KVjEQnJMC&printsec=frontcover&dq=Bayesian+biostatistics&hl=zh-CN&sa=X&ved=0ahUKEwjct_3vqcbXAhXFJ8AKHar3BbQQ6AEIJjAA#v=onepage&q=Bayesian biostatistics&f=false) by Vehtari and Rubin [@lesaffre2012bayesian]
+
+
+貝葉斯統計推斷，提供了不同於概率論推斷的另一種考察和解決問題的思路。所有的思考，都源於貝葉斯定理 Bayes' Theorem (Section \@ref(Bayes-Definition))。起源於英國統計學家[托馬斯貝葉斯 (Thomas Bayes)](https://en.wikipedia.org/wiki/Thomas_Bayes) 死後被好友 [Richard Price](https://en.wikipedia.org/wiki/Richard_Price) 整理發表的論文: ["An essay towards solving a problem in the doctrine of chances."](www.stat.ucla.edu/history/essay.pdf)
+
+概率論推斷與貝葉斯推斷的中心都圍繞似然 likelihood (Section \@ref(likelihood-definition)) 的概念。然而二者對似然提供的信息之理解和解釋完全不同。即在對於觀察數據提供的信息的理解，和如何應用已有信息來影響未來決策（或提供預測）的問題上常常被認爲是統計學中形成鮮明對比的兩種哲學理念。過去幾個世紀二者之間孰優孰劣的爭論相當激烈。但是，從實際應用的角度來看，我們目前更關心哪種思維能更加實用地描述和模擬真實世界。幸運地是，多數情況下，二者的差距不大。所以無法簡單地從一個實驗或者一次爭論中得出誰更出色的結論。現在的統計學家們通常不再如同信仰之爭那樣的互相水火不容，而是從實用性角度來判斷一些實際情況下，採用哪種思想能使計算過程更加簡便或者計算結果更加接近真實情況。
+
+請思考如下的問題：
+什麼是概率？ What is probability?
+
+1. 概率論思想下的定義：某事件在**多次重複觀察**實驗結果中發生次數所佔的比例。<br> The probability of an event is the limit of its relative frequency in a large number of trials."
+2. 貝葉斯思想下的定義：概率是你相信某事件會發生的可能性。 <br> Probability is a measure of the degree of belief
+about an event.
+
+
+## 概率論推斷的複習
+
+思考不同場景：
+
+- 場景 A：假如我們在監測一個製造鐵絲的工廠，需要測量該工廠生產的鐵絲的強度。
+- 場景 B：假如我們正在進行一個大型隊列研究，該研究是關於心臟病和與之相關的某個危險因子的評價。數據來源是家庭醫生的診療數據庫。
+- 場景 C：假如一名警察凌晨三點在空無一人的街頭巡邏使，突然聽見防盜自動警鈴的報警聲。他立刻循聲望去，對面街上的珠寶店玻璃碎了一地。一個戴着巴拉克拉瓦頭套的人正揹着一個大包從破碎玻璃窗中爬出。該警察毫不猶豫地判定該人就是劫匪，立刻將其逮捕。
+
+在這些場景下，請用概率論思想思考如下幾個問題：
+
+1. 事件是什麼？
+2. 如何解讀總體參數？
+3. 如何使用參數進行概率推斷？
+4. 用經典概率論時，有什麼缺點嗎？
+
+- 場景 A：
+    1. 事件：該工廠製造的鐵絲，長期以來的強度大小是多少。
+    2. 總體參數：鐵絲的真實強度，或者與鐵絲強度相關的特性。
+    3. 概率推斷：我們進行鐵絲的強度實驗，即從該工廠已經生產的鐵絲中大量抽取樣本逐一進行強度檢測。用相應的概率模型來模擬抽取的樣本數據，並且使用極大似然估計找到最能體現抽樣數據的參數估計，然後對獲得的極大似然估計進行95%信賴區間的計算。然後如果我們重複這樣相同的實驗無數次，那麼我們計算的所有的信賴區間中，有95%包含了真實的鐵絲強度大小。
+    4. 在鐵絲強度測量的場景中，經典概率論顯得十分自然，因爲我們真的可以重複這樣的實驗很多很多次以獲得想要的參數的精確估計。
+
+- 場景 B：
+    1. 事件：由於我們用的是整個隊列研究的數據。所以從概率論的角度來看，本事件就是假定我們可以在人數無限多的人羣中重複同樣的隊列研究。
+    2. 總體參數：我們感興趣的心臟病相關危險因子，在抽取該隊列作爲樣本的人羣中的真實值大小。
+    3. 概率推斷：我們用泊松分佈的概率模型來模擬人羣中從開始觀察時起，至心臟病發病這段時間內和該危險因子之間的關係大小。然後用傳統的極大似然估計法計算獲得 HR, OR 等值來表示危險因素和心臟病的關係。
+    4. 缺點：實際情況是，經費時間和人力資源的限制下，我們無法“重複相同的隊列研究”。而且該對列本身可能就是十分獨特的，比如只有男性，或者有年齡限制，或者其他的特性使隊列本身在理論上就是不可能被重複的。所以，在這樣的場景下，用經典的概率論思想作統計推斷常常會被認爲是不自然不妥當的。
+
+- 場景 C：
+    1. 事件：警察無數次在同樣的時間同樣的地點巡邏時，聽見防盜自動警鈴的報警聲，他看見頭戴巴拉克拉瓦頭套的人從破碎的玻璃窗中爬出......
+    2. 總體參數：在無數次上面描述的場景時，發生盜竊案的真實概率。
+    3. 概率推斷：使用某種可以描述該事件（巡邏時。。。發生盜竊案的概率）的數學模型，我們用極大似然估計來計算發生盜竊案概率的估計和95%信賴區間，**然後警察同志再來決定是否要去抓眼前這個頭戴巴拉克拉瓦頭套的人**。
+    4. 缺點：經典概率論在如此場景下很明顯是完全不適用的。1) 這裏經典概率論思維下的概率實際上無法準確定義，充其量是一種發生盜竊案可能性的估計。2) 在如此場景下，警察會根據已經觀察到的現象（已知信息），來判斷一場盜竊案發生的概率是多少。

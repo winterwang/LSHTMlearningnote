@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="section-15.html">
-<link rel="next" href="section-17.html">
+<link rel="prev" href="intro.html">
+<link rel="next" href="-expectation-or-mean-variance.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -249,100 +249,35 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="section-16" class="section level1">
-<h1><span class="header-section-number">第 16 章</span> 貝葉斯統計入門</h1>
-<blockquote>
-<p>A Bayesian statistician is one who, vaguely expecting a horse and catching a glimpse of a donkey, strongly concludes he has seen a mule.</p>
-<p>— Guernsey McPearson’s Drug Development Dictionary<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></p>
-</blockquote>
-<p>本章節之目的：</p>
-<ul>
-<li>介紹 (啓發) 貝葉斯推斷 Bayesian inference 的基本概念。並且與概率論 frequentist inference 推斷實例作比較。</li>
-<li>介紹共軛分佈的概念 conjugate distributions。用單一參數家族 (single parameter family) ，特別是二項分佈的圖形來描述共軛分佈；用方差已知的正態分佈均值來描述共軛分佈。</li>
-<li>介紹貝葉斯預測分佈 Bayesian prediction distribution。</li>
-</ul>
-<p>推薦書目：</p>
-<ol style="list-style-type: decimal">
-<li><a href="https://books.google.co.jp/books?id=nRgtGZXi2KkC&amp;dq=principles+of+statistical+inference&amp;lr=&amp;source=gbs_navlinks_s">“Principles of Statistical Inference”</a> by D.R. Cox <span class="citation">(Cox <a href="#ref-cox2006principles">2006</a>)</span></li>
-<li><a href="https://books.google.co.jp/books?id=nRgtGZXi2KkC&amp;dq=principles+of+statistical+inference&amp;lr=&amp;source=gbs_navlinks_s">“Bayesian Data Analysis”</a> by Gelman, Carlin, Stern, Dunson, Vehtari, and Rubin <span class="citation">(Gelman et al. <a href="#ref-gelman2013bayesian">2013</a>)</span>, <a href="www.stat.columbia.edu/~gelman/book/">website for the book</a></li>
-<li><a href="https://books.google.co.uk/books?id=WV7KVjEQnJMC&amp;printsec=frontcover&amp;dq=Bayesian+biostatistics&amp;hl=zh-CN&amp;sa=X&amp;ved=0ahUKEwjct_3vqcbXAhXFJ8AKHar3BbQQ6AEIJjAA#v=onepage&amp;q=Bayesian%20biostatistics&amp;f=false">“Bayesian Biostatistics”</a> by Vehtari and Rubin <span class="citation">(Lesaffre and Lawson <a href="#ref-lesaffre2012bayesian">2012</a>)</span></li>
-</ol>
-<p>貝葉斯統計推斷，提供了不同於概率論推斷的另一種考察和解決問題的思路。所有的思考，都源於貝葉斯定理 Bayes’ Theorem (Section <a href="Bayes-Definition.html#Bayes-Definition">2</a>)。起源於英國統計學家<a href="https://en.wikipedia.org/wiki/Thomas_Bayes">托馬斯貝葉斯 (Thomas Bayes)</a> 死後被好友 <a href="https://en.wikipedia.org/wiki/Richard_Price">Richard Price</a> 整理發表的論文: <a href="www.stat.ucla.edu/history/essay.pdf">“An essay towards solving a problem in the doctrine of chances.”</a></p>
-<p>概率論推斷與貝葉斯推斷的中心都圍繞似然 likelihood (Section <a href="likelihood-definition.html#likelihood-definition">12</a>) 的概念。然而二者對似然提供的信息之理解和解釋完全不同。即在對於觀察數據提供的信息的理解，和如何應用已有信息來影響未來決策（或提供預測）的問題上常常被認爲是統計學中形成鮮明對比的兩種哲學理念。過去幾個世紀二者之間孰優孰劣的爭論相當激烈。但是，從實際應用的角度來看，我們目前更關心哪種思維能更加實用地描述和模擬真實世界。幸運地是，多數情況下，二者的差距不大。所以無法簡單地從一個實驗或者一次爭論中得出誰更出色的結論。現在的統計學家們通常不再如同信仰之爭那樣的互相水火不容，而是從實用性角度來判斷一些實際情況下，採用哪種思想能使計算過程更加簡便或者計算結果更加接近真實情況。</p>
-<p>請思考如下的問題： 什麼是概率？ What is probability?</p>
-<ol style="list-style-type: decimal">
-<li>概率論思想下的定義：某事件在<strong>多次重複觀察</strong>實驗結果中發生次數所佔的比例。<br> The probability of an event is the limit of its relative frequency in a large number of trials.&quot;</li>
-<li>貝葉斯思想下的定義：概率是你相信某事件會發生的可能性。 <br> Probability is a measure of the degree of belief about an event.</li>
-</ol>
-<div id="section-16.1" class="section level2">
-<h2><span class="header-section-number">16.1</span> 概率論推斷的複習</h2>
-<p>思考不同場景：</p>
-<ul>
-<li>場景 A：假如我們在監測一個製造鐵絲的工廠，需要測量該工廠生產的鐵絲的強度。</li>
-<li>場景 B：假如我們正在進行一個大型隊列研究，該研究是關於心臟病和與之相關的某個危險因子的評價。數據來源是家庭醫生的診療數據庫。</li>
-<li>場景 C：假如一名警察凌晨三點在空無一人的街頭巡邏使，突然聽見防盜自動警鈴的報警聲。他立刻循聲望去，對面街上的珠寶店玻璃碎了一地。一個戴着巴拉克拉瓦頭套的人正揹着一個大包從破碎玻璃窗中爬出。該警察毫不猶豫地判定該人就是劫匪，立刻將其逮捕。</li>
-</ul>
-<p>在這些場景下，請用概率論思想思考如下幾個問題：</p>
-<ol style="list-style-type: decimal">
-<li>事件是什麼？</li>
-<li>如何解讀總體參數？</li>
-<li>如何使用參數進行概率推斷？</li>
-<li>用經典概率論時，有什麼缺點嗎？</li>
-</ol>
-<ul>
-<li>場景 A：
-<ol style="list-style-type: decimal">
-<li>事件：該工廠製造的鐵絲，長期以來的強度大小是多少。</li>
-<li>總體參數：鐵絲的真實強度，或者與鐵絲強度相關的特性。</li>
-<li>概率推斷：我們進行鐵絲的強度實驗，即從該工廠已經生產的鐵絲中大量抽取樣本逐一進行強度檢測。用相應的概率模型來模擬抽取的樣本數據，並且使用極大似然估計找到最能體現抽樣數據的參數估計，然後對獲得的極大似然估計進行95%信賴區間的計算。然後如果我們重複這樣相同的實驗無數次，那麼我們計算的所有的信賴區間中，有95%包含了真實的鐵絲強度大小。</li>
-<li>在鐵絲強度測量的場景中，經典概率論顯得十分自然，因爲我們真的可以重複這樣的實驗很多很多次以獲得想要的參數的精確估計。</li>
-</ol></li>
-<li>場景 B：
-<ol style="list-style-type: decimal">
-<li>事件：由於我們用的是整個隊列研究的數據。所以從概率論的角度來看，本事件就是假定我們可以在人數無限多的人羣中重複同樣的隊列研究。</li>
-<li>總體參數：我們感興趣的心臟病相關危險因子，在抽取該隊列作爲樣本的人羣中的真實值大小。</li>
-<li>概率推斷：我們用泊松分佈的概率模型來模擬人羣中從開始觀察時起，至心臟病發病這段時間內和該危險因子之間的關係大小。然後用傳統的極大似然估計法計算獲得 HR, OR 等值來表示危險因素和心臟病的關係。</li>
-<li>缺點：實際情況是，經費時間和人力資源的限制下，我們無法“重複相同的隊列研究”。而且該對列本身可能就是十分獨特的，比如只有男性，或者有年齡限制，或者其他的特性使隊列本身在理論上就是不可能被重複的。所以，在這樣的場景下，用經典的概率論思想作統計推斷常常會被認爲是不自然不妥當的。</li>
-</ol></li>
-<li>場景 C：
-<ol style="list-style-type: decimal">
-<li>事件：警察無數次在同樣的時間同樣的地點巡邏時，聽見防盜自動警鈴的報警聲，他看見頭戴巴拉克拉瓦頭套的人從破碎的玻璃窗中爬出……</li>
-<li>總體參數：在無數次上面描述的場景時，發生盜竊案的真實概率。</li>
-<li>概率推斷：使用某種可以描述該事件（巡邏時。。。發生盜竊案的概率）的數學模型，我們用極大似然估計來計算發生盜竊案概率的估計和95%信賴區間，<strong>然後警察同志再來決定是否要去抓眼前這個頭戴巴拉克拉瓦頭套的人</strong>。</li>
-<li>缺點：經典概率論在如此場景下很明顯是完全不適用的。1) 這裏經典概率論思維下的概率實際上無法準確定義，充其量是一種發生盜竊案可能性的估計。2) 在如此場景下，警察會根據已經觀察到的現象（已知信息），來判斷一場盜竊案發生的概率是多少。</li>
-</ol></li>
-</ul>
-
-</div>
-</div>
-
-
-
-<h3>参考文献</h3>
-<div id="refs" class="references">
-<div id="ref-cox2006principles">
-<p>Cox, D.R. 2006. <em>Principles of Statistical Inference</em>. Cambridge University Press. <a href="https://books.google.co.jp/books?id=nRgtGZXi2KkC" class="uri">https://books.google.co.jp/books?id=nRgtGZXi2KkC</a>.</p>
-</div>
-<div id="ref-gelman2013bayesian">
-<p>Gelman, A., J.B. Carlin, H.S. Stern, D.B. Dunson, A. Vehtari, and D.B. Rubin. 2013. <em>Bayesian Data Analysis, Third Edition</em>. Chapman &amp; Hall/Crc Texts in Statistical Science. Taylor &amp; Francis. <a href="https://books.google.co.uk/books?id=ZXL6AQAAQBAJ" class="uri">https://books.google.co.uk/books?id=ZXL6AQAAQBAJ</a>.</p>
-</div>
-<div id="ref-lesaffre2012bayesian">
-<p>Lesaffre, E., and A.B. Lawson. 2012. <em>Bayesian Biostatistics</em>. Statistics in Practice. Wiley. <a href="https://books.google.co.uk/books?id=WV7KVjEQnJMC" class="uri">https://books.google.co.uk/books?id=WV7KVjEQnJMC</a>.</p>
-</div>
-</div>
-<div class="footnotes">
-<hr />
-<ol start="1">
-<li id="fn1"><p><a href="http://www.senns.demon.co.uk/wdict.html" class="uri">http://www.senns.demon.co.uk/wdict.html</a><a href="section-16.html#fnref1">↩</a></p></li>
-</ol>
+<div id="Bayes-Definition" class="section level1">
+<h1><span class="header-section-number">第 2 章</span> Bayes 貝葉斯理論的概念</h1>
+<p>許多時候，我們需要將概率中的條件相互對調。 例如： 在已知該人羣中有20%的人有吸菸習慣(<span class="math inline">\(P(S)\)</span>)，吸菸的人有9%的概率有哮喘(<span class="math inline">\(P(A|S)\)</span>)，不吸菸的人有7%的概率有哮喘(<span class="math inline">\(P(A|\bar{S})\)</span>)的前提下，有個人前來門診，發現是哮喘患者，那麼這個人有多大的概率是一個菸民？也就是要求 <span class="math inline">\(P(S|A)\)</span></p>
+<p>這裏先引入貝葉斯的概念：</p>
+<p>我們可以將 <span class="math inline">\(P(A\cap S)\)</span> 寫成： <span class="math display">\[P(A\cap S)=P(A|S)P(S)\\or\\
+P(A\cap S)=P(S|A)P(A)\]</span> 這兩個等式是完全等價的。我們將他們連起來：</p>
+<p><span class="math display">\[P(S|A)P(A)=P(A|S)P(S)\\
+\Rightarrow P(S|A)=\frac{P(A|S)P(S)}{P(A)}\]</span></p>
+<p>是不是看起來又像是寫了一堆<strong>廢話</strong>？ 沒錯，你看出來是一堆廢話的時候，證明你也同意這背後的簡單邏輯。</p>
+<p>再繼續，我們可以利用另外一個<strong>廢話</strong>：<span class="math inline">\(\because S+\bar{S}=1\\ \therefore P(A)=P(A\cap S)+P(A\cap\bar{S})\)</span></p>
+<p>用上面的公式替換掉 <span class="math inline">\(P(A\cap S)+P(A\cap\bar{S}） \\ \therefore P(A)=P(A|S)P(S)+P(A|\bar{S})P(\bar{S})\)</span></p>
+<p>可以得到<strong>貝葉斯理論公式</strong>：</p>
+<p><span class="math display">\[P(S|A)=\frac{P(A|S)P(S)}{P(A|S)P(S)+P(A|\bar{S})P(\bar{S})}\]</span></p>
+<p>回到上面說到的哮喘人中有多少比例吸菸的問題。可以繼續使用概率樹來方便的計算：</p>
+<p><img src="img/Selection_073.png" width="90%" style="display: block; margin: auto;" /></p>
+<span class="math display">\[\begin{align}
+P(S|A) &amp;= \frac{P(A|S)P(S)}{P(A|S)P(S)+P(A|\bar{S})P(\bar{S})} \\
+        &amp;= \frac{0.09\times0.2}{0.09\times0.2+0.07\times0.8} \\
+        &amp;= 0.24
+\end{align}\]</span>
+<p>所以我們的結論就是，在已知該人羣中有20%的人有吸菸習慣(<span class="math inline">\(P(S)\)</span>)，吸菸的人有9%的概率有哮喘(<span class="math inline">\(P(A|S)\)</span>)，不吸菸的人有7%的概率有哮喘(<span class="math inline">\(P(A|\bar{S})\)</span>)的前提下，有個人前來門診，發現是哮喘患者，那麼這個人有24% 的概率是一個菸民(<span class="math inline">\(P(S|A)\)</span>)。</p>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="section-15.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="section-17.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="intro.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="-expectation-or-mean-variance.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -371,7 +306,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/04-Intro-to-Bayes.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/01-Probability.Rmd",
 "text": "编辑"
 },
 "download": ["bookdown.pdf", "bookdown.epub"],

@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="section-15.html">
-<link rel="next" href="section-17.html">
+<link rel="prev" href="chi-square-distribution.html">
+<link rel="next" href="-log-likelihood-ratio.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -249,100 +249,428 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="section-16" class="section level1">
-<h1><span class="header-section-number">第 16 章</span> 貝葉斯統計入門</h1>
-<blockquote>
-<p>A Bayesian statistician is one who, vaguely expecting a horse and catching a glimpse of a donkey, strongly concludes he has seen a mule.</p>
-<p>— Guernsey McPearson’s Drug Development Dictionary<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a></p>
-</blockquote>
-<p>本章節之目的：</p>
+<div id="likelihood-definition" class="section level1">
+<h1><span class="header-section-number">第 12 章</span> 似然 Likelihood</h1>
+<div id="-vs.-probability-vs.inference" class="section level2">
+<h2><span class="header-section-number">12.1</span> 概率 vs. 推斷 Probability vs. Inference</h2>
+<p>在概率論的環境下，我們常常被告知的前提是：某某事件發生的概率是多少。例如： 一枚硬幣正面朝上的概率是 <span class="math inline">\(0.5\; Prob(coin\;landing\;heads)=0.5\)</span>。然後在這個前提下，我們又繼續去計算複雜的事件發生的概率（例如，10次投擲硬幣以後4次正面朝上的概率是多少？）。</p>
+<p><span class="math display">\[
+\binom{10}{4}\times(0.5^4)\times(0.5^{10-4}) = 0.205
+\]</span></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dbinom</span>(<span class="dv">4</span>, <span class="dv">10</span>, <span class="fl">0.5</span>)</code></pre></div>
+<pre><code>## [1] 0.2051</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># or you can calculate by hand:</span>
+<span class="kw">factorial</span>(<span class="dv">10</span>)<span class="op">*</span>(<span class="fl">0.5</span><span class="op">^</span><span class="dv">10</span>)<span class="op">/</span>(<span class="kw">factorial</span>(<span class="dv">4</span>)<span class="op">*</span>(<span class="kw">factorial</span>(<span class="dv">6</span>)))</code></pre></div>
+<pre><code>## [1] 0.2051</code></pre>
+<p>在統計推斷的理論中，我們考慮實際的情況，這樣的實際情況就是，我們通過觀察獲得數據，然而我們並不知道某事件發生的概率到底是多少（神如果存在話，只有神知道）。故這個 <span class="math inline">\(Prob(coin\;landing\;heads)\)</span> 的概率大小對於“人類”來說是未知的。我們可能觀察到投擲了10次硬幣，其中有4次是正面朝上的。那麼我們從這一次觀察實驗中，需要計算的是能夠符合觀察結果的“最佳”概率估計 (best estimate)。在這種情況下，<strong>似然法 (likelihood)</strong> 就是我們進行參數估計的最佳手段。</p>
+</div>
+<div id="-likelihood-and-maximum-likelihood-estimators" class="section level2">
+<h2><span class="header-section-number">12.2</span> 似然和極大似然估計 Likelihood and maximum likelihood estimators</h2>
+<p>此處用二項分佈的例子來理解似然法的概念：假設我們觀察到10個對象中有4個患<del>中二</del>病，我們假定這個患病的概率爲 <span class="math inline">\(\pi\)</span>。於是我們就有了下面的模型：</p>
+<p><strong>模型：</strong> 我們假定患病與否是一個服從<strong>二項分佈的隨機變量</strong>，<span class="math inline">\(X\sim Bin(10,\pi)\)</span>。同時也默認每個人之間是否患病是相互獨立的。</p>
+<p><strong>數據：</strong> 觀察到的數據是，10人中有4人患病。於是 <span class="math inline">\(x=4\)</span>。</p>
+<p>現在按照觀察到的數據，參數 <span class="math inline">\(\pi\)</span> 變成了未知數：</p>
+<p><span class="math display">\[Prob(X=4|\pi)=\binom{10}{4}\pi^4(1-\pi)^{10-4}\]</span></p>
+<p>此時我們會很自然的考慮，當 <span class="math inline">\(\pi\)</span> 是未知數的時候，<strong>它取值爲多大的時候才能讓這個事件（即：10人中4人患病）發生的概率最大？</strong> 所以我們可以將不同的數值代入 <span class="math inline">\(\pi\)</span> 來計算該事件在不同概率的情況下發生的可能性到底是多少：</p>
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>
+Table 12.1: The probability of observing <span class="math inline">\(X=4\)</span>
+</caption>
+<thead>
+<tr>
+<th style="text-align:center;">
+<span class="math inline">\(\pi\)</span>
+</th>
+<th style="text-align:center;">
+事件 <span class="math inline">\(X=4\)</span> 發生的概率
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+0.0
+</td>
+<td style="text-align:center;">
+0.000
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+0.2
+</td>
+<td style="text-align:center;">
+0.088
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+<strong>0.4</strong>
+</td>
+<td style="text-align:center;">
+<strong>0.251</strong>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+0.5
+</td>
+<td style="text-align:center;">
+0.205
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+0.6
+</td>
+<td style="text-align:center;">
+0.111
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+0.8
+</td>
+<td style="text-align:center;">
+0.006
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+1.0
+</td>
+<td style="text-align:center;">
+0.000
+</td>
+</tr>
+</tbody>
+</table>
+<p>很顯然，如果 <span class="math inline">\(\pi=0.4\)</span> 時，我們觀察到的事件發生的概率要比 <span class="math inline">\(\pi\)</span> 取其它值時更大。於是小總結一下目前爲止的步驟如下：</p>
 <ul>
-<li>介紹 (啓發) 貝葉斯推斷 Bayesian inference 的基本概念。並且與概率論 frequentist inference 推斷實例作比較。</li>
-<li>介紹共軛分佈的概念 conjugate distributions。用單一參數家族 (single parameter family) ，特別是二項分佈的圖形來描述共軛分佈；用方差已知的正態分佈均值來描述共軛分佈。</li>
-<li>介紹貝葉斯預測分佈 Bayesian prediction distribution。</li>
+<li>觀察到實驗數據（10人中4個患病）；</li>
+<li>假定這數據服從二項分佈的概率模型，計算不同（<span class="math inline">\(\pi\)</span> 的取值不同的）情況下，該事件按照假定模型發生的概率；</li>
+<li>通過比較，我們選擇了能夠讓觀察事件發生概率最高的參數取值 (<span class="math inline">\(\pi=0.4\)</span>)。</li>
 </ul>
-<p>推薦書目：</p>
+<p>至此，我們可以知道，似然方程，是一個關於未知參數 <span class="math inline">\(\pi\)</span> 的函數，我們目前位置做的就是找到這個函數的最大值 (maximised)，和使之成爲最大值時的 <span class="math inline">\(\pi\)</span> ：</p>
+<p><span class="math display">\[L(\pi|X=4)=\binom{10}{4}\pi^4(1-\pi)^{10-4}\]</span></p>
+<p>我們可以畫出這個似然方程的形狀， <span class="math inline">\(\pi\in[0,1]\)</span></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dt">by=</span><span class="fl">0.001</span>)
+y &lt;-<span class="st"> </span>(<span class="kw">factorial</span>(<span class="dv">10</span>)<span class="op">/</span>(<span class="kw">factorial</span>(<span class="dv">4</span>)<span class="op">*</span>(<span class="kw">factorial</span>(<span class="dv">6</span>))))<span class="op">*</span>(x<span class="op">^</span><span class="dv">4</span>)<span class="op">*</span>((<span class="dv">1</span><span class="op">-</span>x)<span class="op">^</span><span class="dv">6</span>)
+<span class="kw">plot</span>(x, y, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="fl">0.3</span>), <span class="dt">ylab =</span> <span class="st">&quot;L(\U03C0)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)
+<span class="co">#title(&quot;Figure 1. Binomial Likelihood&quot;)</span>
+<span class="kw">abline</span>(<span class="dt">h=</span><span class="fl">0.251</span>, <span class="dt">lty=</span><span class="dv">2</span>)
+<span class="kw">abline</span>(<span class="dt">v=</span><span class="fl">0.4</span>, <span class="dt">lty=</span><span class="dv">2</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:binomial-likelihood"></span>
+<img src="bookdown_files/figure-html/binomial-likelihood-1.png" alt="Binomial Likelihood" width="90%" />
+<p class="caption">
+图 12.1: Binomial Likelihood
+</p>
+</div>
+<p>從圖形上我們也能確認，<span class="math inline">\(\pi=0.4\)</span> 時能夠讓這個似然方程取得最大值。</p>
+</div>
+<div id="section-12.3" class="section level2">
+<h2><span class="header-section-number">12.3</span> 似然方程的一般化定義</h2>
+<p>對於一個概率模型，如果其參數爲 <span class="math inline">\(\theta\)</span>，那麼在給定觀察數據 <span class="math inline">\(\underline{x}\)</span> 時，該參數的似然方程被定義爲：</p>
+<p><span class="math inline">\(L(\theta|\underline{x})=P(\underline{x}|\theta)\)</span></p>
+<p>注意：</p>
 <ol style="list-style-type: decimal">
-<li><a href="https://books.google.co.jp/books?id=nRgtGZXi2KkC&amp;dq=principles+of+statistical+inference&amp;lr=&amp;source=gbs_navlinks_s">“Principles of Statistical Inference”</a> by D.R. Cox <span class="citation">(Cox <a href="#ref-cox2006principles">2006</a>)</span></li>
-<li><a href="https://books.google.co.jp/books?id=nRgtGZXi2KkC&amp;dq=principles+of+statistical+inference&amp;lr=&amp;source=gbs_navlinks_s">“Bayesian Data Analysis”</a> by Gelman, Carlin, Stern, Dunson, Vehtari, and Rubin <span class="citation">(Gelman et al. <a href="#ref-gelman2013bayesian">2013</a>)</span>, <a href="www.stat.columbia.edu/~gelman/book/">website for the book</a></li>
-<li><a href="https://books.google.co.uk/books?id=WV7KVjEQnJMC&amp;printsec=frontcover&amp;dq=Bayesian+biostatistics&amp;hl=zh-CN&amp;sa=X&amp;ved=0ahUKEwjct_3vqcbXAhXFJ8AKHar3BbQQ6AEIJjAA#v=onepage&amp;q=Bayesian%20biostatistics&amp;f=false">“Bayesian Biostatistics”</a> by Vehtari and Rubin <span class="citation">(Lesaffre and Lawson <a href="#ref-lesaffre2012bayesian">2012</a>)</span></li>
+<li><span class="math inline">\(P(\underline{x}|\theta)\)</span> 可以是概率（離散分佈）方程，也可以是概率密度（連續型變量）方程。對於此方程，<span class="math inline">\(\theta\)</span> 是給定的，然後再計算某些事件發生的概率。</li>
+<li><span class="math inline">\(L(\theta|\underline{x})\)</span> 是一個關於參數 <span class="math inline">\(\theta\)</span> 的方程，此時，<span class="math inline">\(\underline{x}\)</span> 是固定不變的（觀察值）。我們希望通過這個方程求出能夠使觀察到的事件發生概率最大的參數值。</li>
+<li>似然方程<strong>不是</strong>一個概率密度方程。</li>
 </ol>
-<p>貝葉斯統計推斷，提供了不同於概率論推斷的另一種考察和解決問題的思路。所有的思考，都源於貝葉斯定理 Bayes’ Theorem (Section <a href="Bayes-Definition.html#Bayes-Definition">2</a>)。起源於英國統計學家<a href="https://en.wikipedia.org/wiki/Thomas_Bayes">托馬斯貝葉斯 (Thomas Bayes)</a> 死後被好友 <a href="https://en.wikipedia.org/wiki/Richard_Price">Richard Price</a> 整理發表的論文: <a href="www.stat.ucla.edu/history/essay.pdf">“An essay towards solving a problem in the doctrine of chances.”</a></p>
-<p>概率論推斷與貝葉斯推斷的中心都圍繞似然 likelihood (Section <a href="likelihood-definition.html#likelihood-definition">12</a>) 的概念。然而二者對似然提供的信息之理解和解釋完全不同。即在對於觀察數據提供的信息的理解，和如何應用已有信息來影響未來決策（或提供預測）的問題上常常被認爲是統計學中形成鮮明對比的兩種哲學理念。過去幾個世紀二者之間孰優孰劣的爭論相當激烈。但是，從實際應用的角度來看，我們目前更關心哪種思維能更加實用地描述和模擬真實世界。幸運地是，多數情況下，二者的差距不大。所以無法簡單地從一個實驗或者一次爭論中得出誰更出色的結論。現在的統計學家們通常不再如同信仰之爭那樣的互相水火不容，而是從實用性角度來判斷一些實際情況下，採用哪種思想能使計算過程更加簡便或者計算結果更加接近真實情況。</p>
-<p>請思考如下的問題： 什麼是概率？ What is probability?</p>
+<p>另一個例子：</p>
+<p>有一組觀察數據是離散型隨機變量 <span class="math inline">\(X\)</span>，它符合概率方程 <span class="math inline">\(f(x|\theta)\)</span>。下表羅列了當 <span class="math inline">\(\theta\)</span> 分別取值 <span class="math inline">\(1,2,3\)</span> 時的概率方程的值，試求每個觀察值 <span class="math inline">\(X = 0,1,2,3,4\)</span> 的最大似然參數估計：</p>
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>
+Exercise 12.3
+</caption>
+<thead>
+<tr>
+<th style="text-align:center;">
+<span class="math inline">\(x\)</span>
+</th>
+<th style="text-align:center;">
+<span class="math inline">\(f(x|1)\)</span>
+</th>
+<th style="text-align:center;">
+<span class="math inline">\(f(x|2)\)</span>
+</th>
+<th style="text-align:center;">
+<span class="math inline">\(f(x|3)\)</span>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1/3
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1/3
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+1/6
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+3
+</td>
+<td style="text-align:center;">
+1/6
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+1/2
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+4
+</td>
+<td style="text-align:center;">
+1/6
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1/3
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>
+Exercise 12.3 answer
+</caption>
+<thead>
+<tr>
+<th style="text-align:center;">
+<span class="math inline">\(x\)</span>
+</th>
+<th style="text-align:center;">
+<span class="math inline">\(f(x|1)\)</span>
+</th>
+<th style="text-align:center;">
+<span class="math inline">\(f(x|2)\)</span>
+</th>
+<th style="text-align:center;">
+<span class="math inline">\(f(x|3)\)</span>
+</th>
+<th style="text-align:center;">
+<span class="math inline">\(\theta\)</span>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1/3
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+<strong>1</strong>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+1
+</td>
+<td style="text-align:center;">
+1/3
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+<strong>1</strong>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+2
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+1/6
+</td>
+<td style="text-align:center;">
+<strong>2</strong>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+3
+</td>
+<td style="text-align:center;">
+1/6
+</td>
+<td style="text-align:center;">
+1/4
+</td>
+<td style="text-align:center;">
+1/2
+</td>
+<td style="text-align:center;">
+<strong>3</strong>
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+4
+</td>
+<td style="text-align:center;">
+1/6
+</td>
+<td style="text-align:center;">
+0
+</td>
+<td style="text-align:center;">
+1/3
+</td>
+<td style="text-align:center;">
+<strong>3</strong>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="-log-likelihood" class="section level2">
+<h2><span class="header-section-number">12.4</span> 對數似然方程 log-likelihood</h2>
+<p>似然方程的最大值，可通過求 <span class="math inline">\(L(\theta|data)\)</span> 的最大值獲得，也可以通過求該方程的對數方程 <span class="math inline">\(\ell(\theta|data)\)</span> 的最大值獲得。傳統上，我們估計最大方程的最大值的時候，會給參數戴一頂“帽子”（因爲這是觀察獲得的數據告訴我們的參數）： <span class="math inline">\(\hat{\theta}\)</span>。並且我們發現對數似然方程比一般的似然方程更加容易微分，因此求似然方程的最大值就變成了求對數似然方程的最大值：</p>
+<p><span class="math display">\[\frac{d\ell}{d\theta}=\ell^\prime(\theta)=0\\
+AND\\
+\frac{d^2\ell}{d\theta^2}&lt;0\]</span></p>
+<p>要注意的是，微分不一定總是能幫助我們求得似然方程的最大值。如果說參數本身的定義域是有界限的話，微分就行不通了：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">3</span>,<span class="dt">by=</span><span class="fl">0.001</span>)
+y &lt;-<span class="st"> </span>(x<span class="op">-</span><span class="dv">1</span>)<span class="op">^</span><span class="dv">2</span><span class="op">-</span><span class="dv">5</span>
+<span class="kw">plot</span>(x, y, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">5</span>,<span class="dv">0</span><span class="op">-</span><span class="dv">1</span>), <span class="dt">ylab =</span> <span class="st">&quot;L(\U03B8)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03B8&quot;</span>)
+<span class="co">#title(&quot;Figure 2. Likelihood function with \n a limited domain&quot;)</span>
+<span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">3</span>, <span class="dt">lty=</span><span class="dv">2</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:likelihood-limited"></span>
+<img src="bookdown_files/figure-html/likelihood-limited-1.png" alt="Likelihood function with a limited domain" width="90%" />
+<p class="caption">
+图 12.2: Likelihood function with a limited domain
+</p>
+</div>
+<p><strong>證明：當 <span class="math inline">\(L(\theta|data)\)</span> 取最大值時，該方程的對數方程 <span class="math inline">\(\ell(\theta|data)\)</span> 也是最大值：</strong></p>
+<p>如果似然方程是連續可導，只有一個最大值，且可以二次求導，假設 <span class="math inline">\(\hat{\theta}\)</span> 使該方程取最大值，那麼：</p>
+<p><span class="math display">\[\frac{dL}{d\theta}=0, \frac{d^2L}{d\theta^2}&lt;0 \Rightarrow \theta=\hat{\theta}\]</span></p>
+<p>令 <span class="math inline">\(\ell=logL\)</span> 那麼 <span class="math inline">\(\frac{d\ell}{dL}=\ell^\prime=\frac{1}{L}\)</span>：</p>
+<p><span class="math display">\[\frac{d\ell}{d\theta}=\frac{d\ell}{dL}\cdot\frac{dL}{d\theta}=\frac{1}{L}\cdot\frac{dL}{d\theta}\]</span></p>
+<p>當 <span class="math inline">\(\ell(\theta|data)\)</span> 取最大值時：</p>
+<p><span class="math display">\[\frac{d\ell}{d\theta}=0\Leftrightarrow\frac{1}{L}\cdot\frac{dL}{d\theta}=0\\
+\because \frac{1}{L}\neq0 \\
+\therefore \frac{dL}{d\theta}=0\\
+\Leftrightarrow \theta=\hat{\theta}\]</span></p>
+<p><span class="math display">\[
+\begin{aligned}
+\frac{d^2\ell}{d\theta^2} &amp;= \frac{d}{d\theta}(\frac{d\ell}{dL}\cdot\frac{dL}{d\theta})\\
+ &amp;= \frac{d\ell}{dL}\cdot\frac{d^2L}{d\theta^2} + \frac{dL}{d\theta}\cdot\frac{d}{d\theta}(\frac{d\ell}{dL})
+\end{aligned}
+\]</span></p>
+<p>當 <span class="math inline">\(\theta=\hat{\theta}\)</span> 時，<span class="math inline">\(\frac{dL}{d\theta}=0\)</span> 且 <span class="math inline">\(\frac{d^2L}{d\theta^2}&lt;0 \Rightarrow \frac{d^2\ell}{d\theta^2}&lt;0\)</span></p>
+<p>所以，求獲得 <span class="math inline">\(\ell(\theta|data)\)</span> 最大值的 <span class="math inline">\(\theta\)</span> 即可令 <span class="math inline">\(L(\theta|data)\)</span> 獲得最大值。</p>
+</div>
+<div id="-maximum-likelihood-estimator-mle-" class="section level2">
+<h2><span class="header-section-number">12.5</span> 極大似然估計 (maximum likelihood estimator, MLE) 的性質：</h2>
 <ol style="list-style-type: decimal">
-<li>概率論思想下的定義：某事件在<strong>多次重複觀察</strong>實驗結果中發生次數所佔的比例。<br> The probability of an event is the limit of its relative frequency in a large number of trials.&quot;</li>
-<li>貝葉斯思想下的定義：概率是你相信某事件會發生的可能性。 <br> Probability is a measure of the degree of belief about an event.</li>
+<li>漸進無偏 Asymptotically unbiased: <br> <span class="math inline">\(n\rightarrow \infty \Rightarrow E(\hat{\Theta}) \rightarrow \theta\)</span></li>
+<li>漸進最高效能 Asymptotically efficient: <br> <span class="math inline">\(n\rightarrow \infty \Rightarrow Var(\hat{\Theta})\)</span> 是所有參數中方差最小的估計</li>
+<li>漸進正態分佈 Asymptotically normal: <br> <span class="math inline">\(n\rightarrow \infty \Rightarrow \hat{\Theta} \sim N(\theta, Var(\hat{\Theta}))\)</span></li>
+<li>變形後依然保持不變 Transformation invariant: <br> <span class="math inline">\(\hat{\Theta}\)</span> 是 <span class="math inline">\(\theta\)</span> 的MLE時 <span class="math inline">\(\Rightarrow g(\hat{\Theta})\)</span> 是 <span class="math inline">\(g(\theta)\)</span> 的 MLE</li>
+<li>信息足夠充分 Sufficient：<br> <span class="math inline">\(\hat{\Theta}\)</span> 包含了觀察數據中所有的能夠用於估計參數的信息</li>
+<li>始終不變 consistent: <br> <span class="math inline">\(n\rightarrow\infty\Rightarrow\hat{\Theta}\rightarrow\theta\)</span> 或者可以寫成：<span class="math inline">\(\varepsilon&gt;0, lim_{n\rightarrow\infty}P(|\hat{\Theta}-\theta|&gt;\varepsilon)=0\)</span></li>
 </ol>
-<div id="section-16.1" class="section level2">
-<h2><span class="header-section-number">16.1</span> 概率論推斷的複習</h2>
-<p>思考不同場景：</p>
-<ul>
-<li>場景 A：假如我們在監測一個製造鐵絲的工廠，需要測量該工廠生產的鐵絲的強度。</li>
-<li>場景 B：假如我們正在進行一個大型隊列研究，該研究是關於心臟病和與之相關的某個危險因子的評價。數據來源是家庭醫生的診療數據庫。</li>
-<li>場景 C：假如一名警察凌晨三點在空無一人的街頭巡邏使，突然聽見防盜自動警鈴的報警聲。他立刻循聲望去，對面街上的珠寶店玻璃碎了一地。一個戴着巴拉克拉瓦頭套的人正揹着一個大包從破碎玻璃窗中爬出。該警察毫不猶豫地判定該人就是劫匪，立刻將其逮捕。</li>
-</ul>
-<p>在這些場景下，請用概率論思想思考如下幾個問題：</p>
-<ol style="list-style-type: decimal">
-<li>事件是什麼？</li>
-<li>如何解讀總體參數？</li>
-<li>如何使用參數進行概率推斷？</li>
-<li>用經典概率論時，有什麼缺點嗎？</li>
-</ol>
-<ul>
-<li>場景 A：
-<ol style="list-style-type: decimal">
-<li>事件：該工廠製造的鐵絲，長期以來的強度大小是多少。</li>
-<li>總體參數：鐵絲的真實強度，或者與鐵絲強度相關的特性。</li>
-<li>概率推斷：我們進行鐵絲的強度實驗，即從該工廠已經生產的鐵絲中大量抽取樣本逐一進行強度檢測。用相應的概率模型來模擬抽取的樣本數據，並且使用極大似然估計找到最能體現抽樣數據的參數估計，然後對獲得的極大似然估計進行95%信賴區間的計算。然後如果我們重複這樣相同的實驗無數次，那麼我們計算的所有的信賴區間中，有95%包含了真實的鐵絲強度大小。</li>
-<li>在鐵絲強度測量的場景中，經典概率論顯得十分自然，因爲我們真的可以重複這樣的實驗很多很多次以獲得想要的參數的精確估計。</li>
-</ol></li>
-<li>場景 B：
-<ol style="list-style-type: decimal">
-<li>事件：由於我們用的是整個隊列研究的數據。所以從概率論的角度來看，本事件就是假定我們可以在人數無限多的人羣中重複同樣的隊列研究。</li>
-<li>總體參數：我們感興趣的心臟病相關危險因子，在抽取該隊列作爲樣本的人羣中的真實值大小。</li>
-<li>概率推斷：我們用泊松分佈的概率模型來模擬人羣中從開始觀察時起，至心臟病發病這段時間內和該危險因子之間的關係大小。然後用傳統的極大似然估計法計算獲得 HR, OR 等值來表示危險因素和心臟病的關係。</li>
-<li>缺點：實際情況是，經費時間和人力資源的限制下，我們無法“重複相同的隊列研究”。而且該對列本身可能就是十分獨特的，比如只有男性，或者有年齡限制，或者其他的特性使隊列本身在理論上就是不可能被重複的。所以，在這樣的場景下，用經典的概率論思想作統計推斷常常會被認爲是不自然不妥當的。</li>
-</ol></li>
-<li>場景 C：
-<ol style="list-style-type: decimal">
-<li>事件：警察無數次在同樣的時間同樣的地點巡邏時，聽見防盜自動警鈴的報警聲，他看見頭戴巴拉克拉瓦頭套的人從破碎的玻璃窗中爬出……</li>
-<li>總體參數：在無數次上面描述的場景時，發生盜竊案的真實概率。</li>
-<li>概率推斷：使用某種可以描述該事件（巡邏時。。。發生盜竊案的概率）的數學模型，我們用極大似然估計來計算發生盜竊案概率的估計和95%信賴區間，<strong>然後警察同志再來決定是否要去抓眼前這個頭戴巴拉克拉瓦頭套的人</strong>。</li>
-<li>缺點：經典概率論在如此場景下很明顯是完全不適用的。1) 這裏經典概率論思維下的概率實際上無法準確定義，充其量是一種發生盜竊案可能性的估計。2) 在如此場景下，警察會根據已經觀察到的現象（已知信息），來判斷一場盜竊案發生的概率是多少。</li>
-</ol></li>
-</ul>
-
 </div>
+<div id="likelihood-poi" class="section level2">
+<h2><span class="header-section-number">12.6</span> 率的似然估計 Likelihood for a rate</h2>
+<p>如果在一項研究中，參與者有各自不同的追蹤隨訪時間（長度），那麼我們應該把事件（疾病）的發病率用率的形式（多少事件每單位人年, e.g. per person year of observation）。如果這個發病率的參數用 <span class="math inline">\(\lambda\)</span> 來表示，所有參與對象的隨訪時間之和爲 <span class="math inline">\(p\)</span> 人年。那麼這段時間內的期望事件（疾病發病）次數爲：<span class="math inline">\(\mu=\lambda p\)</span>。假設事件（疾病發病）發生是相互獨立的，可以使用泊松分佈來模擬期望事件（疾病發病）次數 <span class="math inline">\(D\)</span>：</p>
+<p><span class="math display">\[D\sim Poi(\mu)\]</span></p>
+<p>假設我們觀察到了 <span class="math inline">\(D=d\)</span> 個事件，我們獲得這個觀察值的概率應該用以下的模型：</p>
+<p><span class="math display">\[Prob(D=d)=e^{-\mu}\frac{\mu^d}{d!}=e^{-\lambda p}\frac{\lambda^dp^d}{d!}\]</span></p>
+<p>因此，<span class="math inline">\(\lambda\)</span> 的似然方程是：</p>
+<p><span class="math display">\[L(\lambda|observed \;data)=e^{-\lambda p}\frac{\lambda^dp^d}{d!}\]</span></p>
+<p>所以，<span class="math inline">\(\lambda\)</span> 的對數似然方程是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell(\lambda|observed\;data) &amp;= log(e^{-\lambda p}\frac{\lambda^dp^d}{d!}) \\
+  &amp;= -\lambda p+d\:log(\lambda)+d\:log(p)-log(d!) \\
+\end{aligned}
+\]</span></p>
+<p>解 <span class="math inline">\(\ell^\prime(\lambda|data)=0\)</span>:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\ell^\prime(\lambda|data) &amp;= -p+\frac{d}{\lambda}=0\\
+\Rightarrow \hat{\lambda} &amp;= \frac{d}{p} \\
+\end{aligned}
+\]</span></p>
+<p><strong>注意：</strong> 在對數似然方程中，不包含參數的部分，對與似然方程的形狀不產生任何影響，我們在微分對數似然方程的時候，這部分也都自動消失。所以不包含參數的部分，與我們如何獲得極大似然估計是無關的。因此，我們常常在寫對數似然方程的時候就把其中沒有參數的部分直接忽略了。例如上面泊松分佈的似然方程中，<span class="math inline">\(d\:log(p)-log(d!)\)</span> 不包含參數 <span class="math inline">\(\lambda\)</span> 可以直接不寫出來。</p>
 </div>
-
-
-
-<h3>参考文献</h3>
-<div id="refs" class="references">
-<div id="ref-cox2006principles">
-<p>Cox, D.R. 2006. <em>Principles of Statistical Inference</em>. Cambridge University Press. <a href="https://books.google.co.jp/books?id=nRgtGZXi2KkC" class="uri">https://books.google.co.jp/books?id=nRgtGZXi2KkC</a>.</p>
+<div id="-n-" class="section level2">
+<h2><span class="header-section-number">12.7</span> 有 <span class="math inline">\(n\)</span> 個獨立觀察時的似然方程和對數似然方程</h2>
+<p>當有多個獨立觀察時，總體的似然方程等於各個觀察值的似然方程之<strong>乘積</strong>。如果 <span class="math inline">\(X_1,\dots,X_n\stackrel{i.i.d}{\sim}f(\cdot|\theta)\)</span></p>
+<p><span class="math display">\[L(\theta|x_1,\cdots,x_n)=f(x_1,\cdots,x_n|\theta)=\prod_{i=1}^nf(x_i|\theta)\\
+\Rightarrow \ell(\theta|x_1,\cdots,x_n)=\sum_{i=1}^nlog(f(x_i|\theta))\]</span></p>
 </div>
-<div id="ref-gelman2013bayesian">
-<p>Gelman, A., J.B. Carlin, H.S. Stern, D.B. Dunson, A. Vehtari, and D.B. Rubin. 2013. <em>Bayesian Data Analysis, Third Edition</em>. Chapman &amp; Hall/Crc Texts in Statistical Science. Taylor &amp; Francis. <a href="https://books.google.co.uk/books?id=ZXL6AQAAQBAJ" class="uri">https://books.google.co.uk/books?id=ZXL6AQAAQBAJ</a>.</p>
-</div>
-<div id="ref-lesaffre2012bayesian">
-<p>Lesaffre, E., and A.B. Lawson. 2012. <em>Bayesian Biostatistics</em>. Statistics in Practice. Wiley. <a href="https://books.google.co.uk/books?id=WV7KVjEQnJMC" class="uri">https://books.google.co.uk/books?id=WV7KVjEQnJMC</a>.</p>
-</div>
-</div>
-<div class="footnotes">
-<hr />
-<ol start="1">
-<li id="fn1"><p><a href="http://www.senns.demon.co.uk/wdict.html" class="uri">http://www.senns.demon.co.uk/wdict.html</a><a href="section-16.html#fnref1">↩</a></p></li>
-</ol>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="section-15.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="section-17.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="chi-square-distribution.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="-log-likelihood-ratio.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -371,7 +699,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/04-Intro-to-Bayes.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/02-Inference.Rmd",
 "text": "编辑"
 },
 "download": ["bookdown.pdf", "bookdown.epub"],
