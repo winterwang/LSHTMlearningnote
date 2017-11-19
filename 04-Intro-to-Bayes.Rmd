@@ -141,7 +141,7 @@ $$\text{Pr}(A|B)=\frac{\text{Pr}(B|A)\text{Pr}(A)}{\text{Pr}(B)}\propto \text{Pr
 
 所以：
 
-- $\text{Pr}(A)=$ 珠寶帶你發生盜竊案的概率 -- 先驗概率 (prior probability);
+- $\text{Pr}(A)=$ 珠寶店發生盜竊案的概率 -- 先驗概率 (prior probability);
 - $\text{Pr}(B|A)=$ 當珠寶店發生盜竊案時，觀察到“一個頭戴巴拉克拉瓦頭套的人正在從玻璃窗中爬出”事件的可能性 -- 似然 (likelihood);
 - $\text{Pr}(A|B)$ 當觀察到“一個頭戴巴拉克拉瓦頭套的人正在從玻璃窗中爬出”事件時，倒推珠寶店發生了盜竊案的概率 -- 事後概率 (posterior probability)。
 
@@ -405,3 +405,151 @@ $$
 **解**
 
 另一個孩子是女孩的概率是：$\frac{610+591}{610+591+657}=0.646$
+
+
+# 貝葉斯定理的應用：單一參數模型
+
+從前一章節我們可以深切體會到，貝葉斯統計如何讓我們的先驗概率，在觀察到數據之後，信息被更新，獲得時候概率的過程 (這是一個通過數據自我學習，進化的過程)。(How a prior belief about an event can be updated, given data, to a posterior belief.)
+
+所以說，在貝葉斯模型中，我們期待使用觀察數據來學習，以增加現有的對相關參數的知識和信息。本章我們把重點放在二項分佈，用二項分佈作爲單一參數模型來瞭解怎樣推導事後分佈。
+
+## 貝葉斯理論下的事後二項分佈概率密度方程 notation for probability density functions
+
+- $R$ 用來表示服從一個二項分佈的隨機變量， $R\sim Bin(n, \theta)$。
+- $r$ 表示觀察到 $r$ 次成功實驗，實驗次數爲 $n$。
+- 先驗概率分佈： $\pi_\Theta(\theta)$
+- 應用貝葉斯定理：
+
+$$
+\begin{aligned}
+\pi_{\Theta|R}(\theta|r) &= \frac{f_R(r|\theta)\pi_\Theta(\theta)}{\int_0^1f_R(r|\theta)\pi_\Theta(\theta)\text{ d}\theta}\\
+&= \frac{f_R(r|\theta)\pi_\Theta(\theta)}{f_R(r)}
+\end{aligned}
+$$
+
+
+如果我們的先驗概率分佈：
+
+$$\begin{equation}
+\pi_\Theta(\theta)=\begin{cases}
+1 \text{ if } \theta=0.2\\
+0 \text{ otherwise}
+\end{cases}
+\end{equation}$$
+
+意思就是，我們 100% 相信 $\theta$ 絕對就等於 0.2，不相信 $\theta$ 竟然還能去任何其他值（霸道自大又狂妄的我們）。
+
+如果先驗概率分佈：
+
+$$\begin{equation}
+\pi_\Theta(\theta)=\begin{cases}
+0.4 \text{ if } \theta=0.2\\
+0.6 \text{ if } \theta=0.7
+\end{cases}
+\end{equation}$$
+
+意思就是，我們有 60% 的把握相信 $\theta=0.7$，有 40% 的把握相信 $\theta=0.2$，稍微傾向於 $\theta=0.7$。
+
+假設進行10次實驗，觀察到3次成功。當 $\theta=0.2$ 時，觀察數據的似然 (likelihood) 爲：
+
+$$f_R(r|\theta=0.2)=\binom{10}{3}0.2^3(1-0.2)^7$$
+
+當 $\theta=0.7$ 時，觀察數據的似然爲：
+
+$$f_R(3|\theta=0.7)=\binom{10}{3}0.7^3(1-0.7)^7$$
+
+應用貝葉斯定理計算事後概率分佈：
+
+
+$$\begin{equation}
+\pi_{\Theta|R}(\theta|3)=\begin{cases}
+\frac{\binom{10}{3}0.2^3(1-0.2)^7\times0.4}{\binom{10}{3}0.2^3(1-0.2)^7\times0.4+\binom{10}{3}0.7^3(1-0.7)^7\times0.6}=0.937 \text{ if } \theta=0.2\\
+\frac{\binom{10}{3}0.7^3(1-0.7)^7\times0.6}{\binom{10}{3}0.7^3(1-0.7)^7\times0.6+\binom{10}{3}0.2^3(1-0.2)^7\times0.4}=0.063 \text{ if }\theta=0.7
+\end{cases}
+\end{equation}$$
+
+所以，我們從一開始認爲只有40%的把握相信 $\theta=0.2$，觀察數據告訴我們 10 次實驗，3次獲得了成功。所以我們現在有 93.7% 的把握相信 $\theta=0.2$。也就是說，觀察數據讓我們對參數 $\theta$ 的取值可能性發生了質的變化，從原先的傾向於 $\theta=0.7$ 到現在幾乎接近 100% 的認爲 $\theta=0.2$。也就是，觀察數據獲得的信息改變了我們的立場。
+
+上面的例子很直觀，但是有下面幾個問題：
+
+1. 如果我們無法對參數 $\theta$ 賦予先驗概率的點估計時，該怎麼辦？
+2. 如果事後概率不是一個離散的分佈時，該如何才能表達事後概率？
+
+## $\theta$ 的先驗概率
+
+一種選擇是，我們用均一分佈 (uniform distribution)，即我們對數據一無所知，認爲所有的 $\theta$ 的可能性都一樣，概率密度方程爲 $1$。在這一情況下，先驗概率爲 1： $\pi_\Theta(\theta)=1$，其事後概率分佈爲：
+
+$$
+\begin{equation}
+\pi_{\Theta|R}(\theta|r)=\frac{\binom{n}{r}\theta^r(1-\theta)^{n-r}}{\int_0^1\binom{n}{r}\theta^r(1-\theta)^{n-r} \text{ d}\theta}
+(\#eq:uniformBayes)
+\end{equation}
+$$
+
+看到即使在如此簡單的先驗概率下，我們還是要使用複雜的微積分進行計算。幸運的是，像 \@ref(eq:uniformBayes) 的分母這樣的積分公式其實是有跡可循的。這就是 beta ($\beta$) 分佈。
+
+### beta 分佈 the beta distribution
+
+
+```{r beta-distr, echo=FALSE, fig.height=7, fig.width=6, fig.cap='Beta distribution functions for various values of a, b', fig.align='center', out.width='90%'}
+par(mfrow=c(3,2))
+pi <- Vectorize(function(theta) dbeta(theta, 1,1))
+curve(pi, xlab=~ theta, ylab="Density", main="Beta prior: a=1, b=1", frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 0.3,1))
+curve(pi, xlab=~ theta, ylab="Density", main="Beta prior: a=0.3, b=1",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 0.3,0.3))
+curve(pi, xlab=~ theta, ylab="Density", main="Beta prior: a=0.3, b=0.3",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 2,2))
+curve(pi, xlab=~ theta, ylab="Density", main="Beta prior: a=2, b=2",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 8,2))
+curve(pi, xlab=~ theta, ylab="Density", main="Beta prior: a=8, b=2",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 2,8))
+curve(pi, xlab=~ theta, ylab="Density", main="Beta prior: a=2, b=8",frame=FALSE, lwd=2)
+```
+
+我們定義 $a>0$ 時[伽馬方程](https://zh.wikipedia.org/wiki/%CE%93%E5%87%BD%E6%95%B0)爲
+
+$$\Gamma(a)=\int_0^\infty x^{a-1}e^{-ax}\text{ d}x$$
+
+當 $a$ 取正整數時， $\Gamma(a)$ 是 $(a-1)!$。例如，當 $a=4, \Gamma(a)=3\times2\times1=6$。
+
+對於 $\theta\in[0,1]$ 時，beta 方程 $Beta(a,b)$ 被定義爲：
+
+$$
+\begin{aligned}
+\pi\Theta(\theta|a,b) &= \theta^{a-1}(1-\theta)^{b-1}\frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}\\
+&= \frac{\theta^{a-1}(1-\theta)^{b-1}}{B(a,b)}
+\end{aligned}
+$$
+
+
+其中
+$$B(a,b)=\frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}$$
+
+**莫要混淆 B 方程和 Beta 方程。**
+
+
+利用 Beta 方程作爲前概率顯得十分便捷且靈活。圖 \@ref(fig:beta-distr) 展示的是 6 種不同的 $(a,b)$ 取值下的先驗概率分佈示意圖。其實我們可以看到，包括均一分佈在內的各種可能性都可以通過 Beta 分佈實現。其中 $(a,b)$ 被叫做超參數 (hyperparameter)。$(a,b)$ 取值越大，先驗概率分佈的方差越小。
+
+關於 Beta 分佈的幾個性質：
+
+1. 均值：$\text{mean}=\frac{a}{a+b}$；
+2. 衆數：$\text{mode}=\frac{a-1}{a+b-2}$；
+3. 方差：$\text{variance}=\frac{ab}{(a+b)^2(a+b+1)}$。
+
+回到均一分佈的簡單例子 \@ref(eq:uniformBayes) 上：
+
+$\pi_\Theta(\theta)=Beta(1,1)$ 是 $\theta\in[0,1]$ 上的均一分佈。所以事後概率 posterior 和下面的式子成正比：
+
+$$\theta^r(1-\theta)^{n-r}$$
+
+換句話說，時候概率分佈服從 $Beta(r+1,n-r+1)$，均值爲 $\frac{r+1}{n+2}$，方差爲 $\frac{(1+r)(n-r+1)}{(n+2)^2(n+3)}$。
+
+由此可見，在貝葉斯統計思維下，先驗概率爲均一分佈的二項分佈數據，其事後概率分佈的均值和方差，和經典概率論下的極大似然估計 $r/n$ 不同，和它的漸進樣本方差 $r(n-r)/n^3$ 也不同。但是，當 $n$ 越來越大，獲得的觀察數據越多提供的信息越來越多以後，我們會發現時候概率分佈的均值和方差也會越來越趨近於經典概率論下的極大似然估計和它的方差。
+
+於是這裏可以總結以下兩點：
+
+1. 如果先驗概率對參數毫無用處（不能提供有效信息，或者我們對所觀察的數據一無所知），可能會讓我們獲得無法預期的事後概率分佈結果。
+2. 當樣本量增加，似然就主導了整個貝葉斯方程，在數學計算上，經典概率論和貝葉斯推理的估計結果將會十分接近。當然，其各自的意義還是截然不同的。
+
+### 二項分佈數據的一般化事後分佈：共軛性
