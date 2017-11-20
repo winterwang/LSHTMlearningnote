@@ -782,7 +782,7 @@ $$L(\theta|x_1,\cdots,x_n)=f(x_1,\cdots,x_n|\theta)=\prod_{i=1}^nf(x_i|\theta)\\
 
 
 
-# 對數似然比 Log-likelihood ratio
+# 對數似然比 Log-likelihood ratio {#llr}
 
 對數似然比的想法來自於將對數似然方程圖形的 $y$ 軸重新調節 (rescale) 使之最大值爲零。這可以通過計算該分佈方程的**對數似然比 (log-likelihood ratio)** 來獲得：
 
@@ -1463,3 +1463,245 @@ legend(x=0.968, y= -5.5 ,xpd = TRUE,  legend=c("logLR","Quadratic"), bty = "n",
 
 
 總結： 二次方程近似時，在二項分佈的情況下，隨着 $n, k$ 增加，近似越理想。
+
+
+# 假設檢驗的構建 Construction of a hypothesis test
+
+
+## 什麼是假設檢驗 Hypothesis testing
+
+一般來說，我們的**假設**（或者叫**假說**）是對與我們實驗觀察數據來自的總體（或人羣）的**概率分佈**的描述。在參數檢驗的背景下，就是要檢驗描述這個總體（或人羣）的**概率分佈**的參數 (parameters)。最典型的情況是，我們提出兩個互補的假設，一個叫作**零假設**（或者叫**原假設**），null hypothesis ($H_0$)；另一個是與之對應的（互補的）替代假設，althernative hypothesis ($H_1/H_A$)。
+
+例如，若 $X$ 是一個服從二項分佈的隨機離散變量 $X\sim Bin(5, \theta)$。可以考慮如下的零假設和替代假設：$H_0: \theta=\frac{1}{2}; H_1: \theta=\frac{2}{3}$。
+
+當建立了零假設和替代假設以後，假設檢驗就是要建立如下的規則以確定：
+
+1. 從樣本中計算所得的參數估計值爲多少時，拒絕零假設。（接受替代假設爲“真”）
+2. 從樣本中計算所得的參數估計值爲多少時，零假設不被拒絕。（接受零假設爲“真”）
+
+注意：（這一段很繞）
+
+上面的例子是零假設和替代假設均爲簡單假設的情況，實際操作中常常會設計更加複雜的（不對稱的）假設：即簡單的 $H_0$，複雜的 $H_1$。如此一來當零假設 $H_0$ 不被拒絕時，我們並不一定就接受之。因爲無證據證明 $H_1$ 不等於有證據證明 $H_0$。_**(Absence of evidence is not evidence of absence).**_ 換句話說，無證據讓我們拒絕 $H_0$ 本身並不成爲支持 $H_0$ 爲“真”的證據。因爲在實際操作中，當我們設定的簡單的零假設沒有被拒絕，可能還存在其他符合樣本數據的零假設；相反地，當樣本數據的計算結果拒絕了零假設，我們只能接受替代假設。所以，反對零假設的證據，同時就是支持替代假設的證據。
+
+在樣本空間 sample space 中，決定了零假設 $H_0$ 會被拒絕的子集 subset，被命名爲拒絕域 rejection region 或者 判別區域 critical region，用 $\mathfrak{R}$ 來標記。
+
+## 錯誤概率和效能方程 error probabilities and the power function
+
+這一部分也可以參考本書臨牀試驗樣本量計算 (Section \@ref(sample-size)) 部分。
+
+```{r echo=FALSE, eval=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("/home/ccwang/Documents/full-website-content/static/files/type12errorInfer.csv", header = T)
+kable(dt, "html",align = "c",caption = "Definition of Type I and Type II error") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))  %>%
+  collapse_rows(columns = c(1)) %>%
+  add_header_above(c(" " = 2, "SAMPLE" = 2))
+```
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption> 表 15.1 : Definition of Type I and Type II error</caption>
+ <thead>
+<tr>
+<th style="border-bottom:hidden" colspan="2"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">SAMPLE</div></th>
+</tr>
+<tr>
+<th style="text-align:center;">  </th>
+   <th style="text-align:center;">  </th>
+   <th style="text-align:center;"> $\underline{x} \notin \mathfrak{R}$ Accept $H_0$ </th>
+   <th style="text-align:center;"> $\underline{x} \in \mathfrak{R}$ Reject $H_0$ </th>
+  </tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;vertical-align: middle !important;" rowspan="2"> TRUTH </td>
+   <td style="text-align:center;"> $H_0$ is true </td>
+   <td style="text-align:center;"> $\checkmark$ </td>
+   <td style="text-align:center;"> $\alpha$ <br> Type I error </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> $H_1$ is true </td>
+   <td style="text-align:center;"> $\beta$ <br> Type II error </td>
+   <td style="text-align:center;"> $\checkmark$ </td>
+  </tr>
+</tbody>
+</table>
+
+
+假如一個假設檢驗是關於總體參數 $\theta$ 的：
+
+$$H_0: \theta=\theta_0 \text{ v.s. } H_1: \theta=\theta_1 $$
+
+這個檢驗的效能被定義爲當替代假設爲“真”時，拒絕零假設的概率（該檢驗方法能夠檢驗出有真實差別的能力）：
+
+$$\text{Power}=\text{Prob}(\underline{x}\in\mathfrak{R}|H_1\text{ is true}) = 1-\text{Prob}(\text{Type II error})$$
+
+觀察數據只有兩種可能：落在拒絕域內，或者落在拒絕域之外。第二類錯誤我們常常使用 $\beta$ 來表示，所以 $\text{Power}=1-\beta$。
+
+檢驗的顯著性水平用 $\alpha$ 來表示。$\alpha$ 的直觀意義就是，檢驗結果錯誤的拒絕了零假設 $H_0$，接受了替代假設 $H_1$，即假陽性的概率。
+
+$$\text{Prob}(\underline{x}\in \mathfrak{R} |H_0 \text{ is true})=\text{Prob(Type I error)}$$
+
+### 以二項分佈爲例
+
+用本文開頭的例子： $X\sim Bin(5,\theta)$。和我們建立的零假設和替代假設：$H_0: \theta=\frac{1}{2}; H_1: \theta=\frac{2}{3}$：
+
+考慮兩種檢驗方法：
+
+1. A 方法：當且僅當5次觀察都爲“成功”時才拒絕 $H_0 (\text{i.e.}\; X=5)$。所以此時判別區域 $\mathfrak{R}$ 爲 $5$。檢驗效能 $\text{Power}=1-\beta$ 爲：$Prob(X=5|H_1 \text{ is true})=(\frac{2}{3})^5=0.1317$。顯著性水平 $\alpha$ 爲 $Prob(X=5|H_0 \text{ is true})=(\frac{1}{2})^5=0.03125$。
+2. B 方法：當觀察到3,4,5次“成功”時，拒絕 $H_0 (\text{i.e.} X=3,4,5)$。此時判別區域  $\mathfrak{R}$ 爲 $3,4,5$。檢驗效能 $Power$ 爲：$Prob(X=3,4,\text{ or }5|H_1 \text{ is ture})=\sum_{i=3}^5(\frac{2}{3})^i(\frac{1}{3})^{5-i}\approx0.7901$；顯著性水平 $\alpha$ 爲：$Prob(X=3,4,5|H_0 \text{ is true})=\sum_{i=3}^5(\frac{1}{2})^i(\frac{1}{2})^{5-i}=0.5$
+
+```{r}
+# the power in test B
+dbinom(3,5,2/3)+dbinom(4,5,2/3)+dbinom(5,5,2/3)
+# the size in test B
+dbinom(3,5,0.5)+dbinom(4,5,0.5)+dbinom(5,5,0.5)
+```
+
+
+比較上面兩種檢驗方法，可以看到，用B方法時，我們有更高的概率獲得假陽性結果（犯第一類錯誤，錯誤地拒絕 $H_0$，接受 $H_1$)，但是也有更高的檢驗效能 $1-\beta$（真陽性更高）。這個例子就說明了，試圖提高檢驗效能的同時，會提高犯第一類錯誤的概率。實際操作中我們常常將第一類錯誤的概率固定，例如 $\alpha=0.05$，然後儘可能選擇檢驗效能最高的檢驗方法。
+
+## 如何選擇要檢驗的統計量
+
+在上面的二項分佈的實驗中，“成功的次數” 是我們感興趣的要檢驗的統計量。但也可能是第一次出現 “成功” 之前的實驗次數，或者，任何與假設相關的統計量。相似的，如果觀察不是離散變量而是連續的，可以拿來檢驗的指標就有很多，如均值，中位數，衆數，幾何平均值等。
+
+幸運地是，當明確了零假設和替代假設後，我們可以利用 [Neyman-Pearson lemma](https://en.wikipedia.org/wiki/Neyman%E2%80%93Pearson_lemma) 似然比公式^[區分與之前討論的對數似然比 (Section \@ref(llr))，之前討論的對數似然比指的是**所有的似然和極大似然**之間的比，此處的似然比只是純粹在探討兩個假設之間的似然比，**與極大似然無關**。]:
+
+來決定使用哪個統計量做檢驗**最有效**：
+
+$$\text{Neyman-Pearson lemma}=\frac{L_{H_0}}{L_{H_1}}$$
+
+這公式很直觀，因爲當觀察數據更加支持 $H_1$ 時 ($L_{H_1}$ 更大)，$H_0$ 的可能性相對更小，就更應該被拒絕。而且，由於似然比越小，他的對數就越小，實際計算是我們常使用對數似然比：$\ell_{H_0}-\ell_{H_1}$。
+
+問題來了，那到底要多小才算小？這個進入拒絕域的閾值由兩個指標來決定：
+
+1. 被檢驗統計量的樣本分佈 (the sampling distribution of the test statistic)
+2. 第一類錯誤概率 $\alpha$ (the required value of $\alpha$)
+
+### 以已知方差的正態分佈爲例
+
+假如已知 $X_1, \cdots, X_n \stackrel{i.i.d}{\sim} N(\mu, \sigma^2)$  而且方差 $\sigma^2$ 也是已知的。如果令 $H_0: \mu=5\; ;H_1: \mu=10$  可以通過如下的方法找到我們需要的最佳檢驗統計量 <u>best statistic</u> 根據之前的推導 (Section \@ref(llr)) 可知正態分佈的似然方程如下：
+
+$$\ell(\mu|\underline{x}) =-\frac{1}{2\sigma^2}\sum_{i=1}^n(x_i-\mu)^2$$
+
+所以已知 $\sigma^2$ 時，我們的零假設和替代假設之間的對數似然比 $\ell_{H_0}-\ell_{H_1}$ 爲:
+
+$$\ell_{H_0}-\ell_{H_1}=-\frac{1}{2\sigma^2}(\sum_{i=1}^n(x_i-5)^2-\sum_{i=1}^n(x_i-10)^2)$$
+
+然而，我們只需要考慮隨着數據變化的部分，所以忽略掉不變的部分^[Rememer that $\ell_{H_0}-\ell_{H_1}$ is a random variable: the data varies **each time** we sample, with consequently varying relative support for the hypotheses, and so we are only interested in that part of  $\ell_{H_0}-\ell_{H_1}$ which depends on the results, the data, which vary with each sample (i.e. which contains the random part); the constant part provides no information on the relative support the data give to the hypotheses, so we ignore it.]：
+
+
+
+$$
+\begin{aligned}
+\ell_{H_0}-\ell_{H_1} & = -(\sum_{i=1}^n(x_i-5)^2-\sum_{i=i}^n(x_i-10)^2)\\
+                & = 75n - 2\times(10-5)\sum_{i=1}^nx_i \\
+\end{aligned}
+$$
+
+所以只要樣本和 (sum of sample) $\sum_{i=1}^nx_i$ <u>(最佳統計量 best statistic)</u> 足夠大，零假設就會被拒絕。而且注意到最佳統計量可以乘以任何常數用作新的最佳統計量。爲了方便我們就用樣本均數 $\frac{1}{n}\sum_{i=1}^nx_i$ 作此處的最佳統計量。所以此時，我們的最佳檢驗就是當樣本均值足夠大，超過某個閾值時，我們拒絕零假設。而且，樣本均值的樣本分佈是可以知道的，這樣就便於我們繼續計算下一步：拒絕域 （判別區域）。
+
+
+
+## 複合假設 composite hypotheses
+
+目前爲止我們討論的假設檢驗限制太多，實際操作時，我們多考慮類似如下的假設：
+
+1.  $H_0: \theta=\theta_0 \;\text{v.s.}\; H_1: \theta>\theta_0$ [**單側**的替代假設]
+2.  $H_0: \theta=\theta_0 \;\text{v.s.}\; H_1: \theta\neq\theta_0$ [**雙側**的替代假設]
+
+所以我們面臨的問題是簡單假設中用於判定的最佳統計量，是始終如一地適用？我們一一來看：
+
+### 單側替代假設
+
+本章目前爲止的推導中我們發現，樣本均值越大，零假設和替代假設的對數似然比 $\ell_{H_0}-\ell_{H_1}$ 越小。所以我們在樣本均值較大時，拒絕零假設，那麼就可以把原來使用的簡單替代假設 $H_1: \mu=10$ 擴展爲，任意大於 $5$ 的 $\mu$ ，即 $\mu>5$ 。因爲大於 $5$ 的任何均值，都提供了更小的對數似然比，都會讓我們拒絕零假設。所以在正態分佈時，單側替代假設的最佳檢驗統計量還是**樣本均值**。
+
+### 雙側替代假設
+
+雙側替代假設的情況下，我們無法繼續使用樣本均值作爲最佳統計量。因爲當我們想檢驗：$H_0: \mu=5 \;\text{v.s.}\; H_1: \mu<5$ 時，必須獲得足夠小的樣本均值才能讓我們拒絕零假設。此處暫且先按下不表。
+
+## 對反對零假設 $H_0$ 的證據定量
+
+重新再考慮符合假設：$H_0: \theta=\theta_0\;\text{v.s.}\;H_1: \theta>\theta_0$ 假如存在一個總是可用的最佳檢驗統計量，用 $T$ 來標記 (或 $T(x)$)， 這個統計量足夠大時，我們拒絕 $H_0$。 別忘了我們還要給事先固定好的顯著性水平 $\alpha$ 定義與之相關的判別區域：
+
+$$\text{Prob}(\underline{x}\in\mathfrak{R}|H_0)=\alpha$$
+
+如果我們知道 $T$ 的樣本分佈，我們就可以使用一個閾值 $c$ 來定義這個判別區域：
+
+$$Prob(T\geqslant c|H_0)=\alpha$$
+
+更加正式的，我們定義判別區域 $\mathfrak{R}$ 爲：
+
+$$\{\underline{x}:\text{Prob}(T(x)\geqslant c|H_0)=\alpha\}$$
+
+換句話說，當統計量 $T>c$ 時，我們拒絕 $H_0$ 。如果先不考慮拒絕或不拒絕的二元判定，我們可以用一個連續型測量值來量化反對零假設 $H_0$ 的證據。再考慮從觀察數據中獲得的 $T$ ，即數據告訴我們的 $t$ 。所以，當 $t$ 值越大，說明觀察值相對零假設 $H_0$ 越往極端的方向走。因此我們可以用 $T$ 的樣本分佈來計算觀察值大大於等於這個閾值（極端值）時的概率：
+
+$$p=\text{Prob}(T\geqslant t|H_0)$$
+
+這個概率公式被稱爲是單側 $p$ 值 **(one-side p-value)**。單側 $p$ 值越小，統計量 $T$ 的樣本空間就有越小比例（越強）的證據支持零假設 $H_0$。
+
+我們把這以思想用到假設檢驗中時，就可以認爲：
+
+$$p<\alpha \Leftrightarrow t>c$$
+
+所以用我們一貫的設定 $\alpha=0.05$，所以如果計算獲得 $p<0.05$ 我們就認爲獲得了足夠強的拒絕零假設 $H_0$ 的證據。
+
+### 回到正態分佈的均值比較問題上來（單側替代假設）
+
+繼續考慮 $X_1,\cdots,X_n\stackrel{i.i.d}{\sim} N(\mu, \sigma^2)$，假設 $\sigma^2=10$，我們要檢驗的是 $H_0: \mu=5 \;\text{v.s}.\; H_1: \mu>5$
+
+1.  確定最佳檢驗統計量：已經證明過，單側替代假設的最佳檢驗統計量是**樣本均值 $\bar{x}$**。
+2.  確定該統計量的樣本分佈：已知樣本均數的樣本分佈是 $\bar{X}\sim N(\mu,\sigma^2/n)$ 。<br>$\Rightarrow Z=\frac{\bar{X}-\mu}{\sigma/\sqrt{n}} \sim N(0,1)$，所以在 $H_0$ 條件下，$\Rightarrow Z=\frac{\bar{X}-5}{\sqrt{10}/\sqrt{n}} \sim N(0,1)$
+3.  所以當一個檢驗的顯著性水平設定爲 $\alpha=0.05$ 時，我們用判別區域 $\mathfrak{R}$，使統計量據落在該判別區域內的概率爲 $0.05$：<br> $\text{Prob}(\bar{X}\geqslant c|H_0) = 0.05$ <br> 已知在標準正態分佈時，$\text{Prob}(Z\geqslant1.64)=0.05=\text{Prob}(\frac{\bar{X}-5}{\sqrt{10}/\sqrt{n}}\geqslant1.64)$
+4.  假設樣本量是 $10$，那麼數據的判別區域 $\mathfrak{R}$ 就是 $\bar{X}\geqslant6.64$。
+5.  假設觀察數據告訴我們，$\bar{X}=7.76$ 。那麼這一組觀察數據計算得到的統計量落在了判別區域內，就提供了足夠的證據拒絕接受 $H_0$。
+6.  我們可以給這個觀察數據計算相應的單側 $p$ 值：<br> $p=\text{Prob}(\bar{X}\geqslant7.76|H_0)=\text{Prob}(Z+5\geqslant7.76)\\=\text{Prob}(Z\geqslant2.76)=0.003$ <br> 所以，觀察數據告訴我們，在 $H_0$ 的前提下，觀察值出現的概率是 $0.3\%$ 。即，在無數次**重複**取樣實驗中，僅有 $0.3\%$ 的結果可以給出支持 $H_0$ 的證據。因此我們拒絕 $H_0$ 接受 $H_1$。
+
+
+## 雙側替代假設情況下，雙側 $p$ 值的定量方法
+
+
+```{r fig.height=4, fig.width=5, message=FALSE, warning=FALSE, echo=FALSE, cache=TRUE}
+x <- rchisq(1000000, 5)
+q100 <- quantile(x, 1)
+q95 <- quantile(x, .95)
+q05 <- quantile(x, 0.05)
+q00 <- quantile(x,0)
+dens <- density(x)
+plot(dens, xlim=c(0,20), frame.plot = FALSE, main=" ", yaxs="i",
+     ylim=c(0,0.18),xlab = expression(paste("(T|", theta[0], ")")))
+
+x1 <- max(which(dens$x <= q05))
+x2 <- min(which(dens$x > q00))
+x3 <- min(which(dens$x >= q95))
+x4 <- max(which(dens$x <  q100))
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col="gray"))
+with(dens, polygon(x=c(x[c(x3,x3:x4,x4)]), y= c(0, y[x3:x4], 0), col="gray"))
+
+axis(1, at=c(1.17,11.17), labels = c("t1","t2"))
+```
+
+此處故意使用一個左右不對稱的概率密度分佈來解釋。
+
+現在的替代假設是雙側的：
+
+$$H_0: \theta=\theta_0 \;v.s.\; H_1:  \theta\neq\theta_0$$
+
+正常來說，雙側的假設檢驗應該分成兩個單側檢驗。即：
+
+1. $H_1: \theta>\theta_0$;
+2. $H_1: \theta<\theta_0$.
+
+每個單側檢驗都有自己的最佳檢驗統計量。令 $T$ 是 1. 的最佳檢驗統計量，該統計量的樣本分佈如上圖所示（左右不對稱）。假如觀察數據給出的統計量爲 $t2$，那麼在概率上反對零假設的情況可以有兩種：
+
+1. $T\geqslant t2$ 其中， $Prob(T\geqslant t2|H_0)=p1$;
+2. $T\leqslant t1$ 其中， $Prob(T\leqslant t1|H_0) =p1$
+
+所以概率密度分佈兩側的距離可以不對稱，但是只要左右兩側概率密度分佈的面積($=p1$)相同，那麼就可以直接認爲，雙側 $p$ 值是兩側面積之和 ($p=2\times p1$)，且觀察數據提供的統計量落在這兩個面積內的話，都足以提供證據拒絕零假設 $H_0$。
+
+回到上文中單側 $p$ 值爲$0.003$，故雙側 $p$ 值就是它的兩倍：
+
+$p1=Prob(\bar{X}\geqslant7.76|H_0)=Prob(Z+5\geqslant7.76)\\=Prob(Z\geqslant2.76)=0.003\\
+\Rightarrow p=2\times p1=0.006$
