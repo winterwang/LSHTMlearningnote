@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="-estimation-and-precision.html">
-<link rel="next" href="likelihood-definition.html">
+<link rel="prev" href="llr.html">
+<link rel="next" href="-construction-of-a-hypothesis-test.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -296,127 +296,274 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="chi-square-distribution" class="section level1">
-<h1><span class="header-section-number">第 11 章</span> 卡方分佈 Chi-square distribution</h1>
-<div id="section-11.1" class="section level2">
-<h2><span class="header-section-number">11.1</span> 卡方分佈的期望和方差的證明</h2>
-<p>當 <span class="math inline">\(X\sim N(0,1)\)</span> 時， <span class="math inline">\(X^2\sim \mathcal{X}_1^2\)</span></p>
-<p>如果 <span class="math inline">\(X_1, \dots, X_n\stackrel{i.i.d}{\sim} N(0,1)\)</span>， 那麼 <span class="math inline">\(\sum_{i=1}^nX_i^2\sim\mathcal{X}_n^2\)</span></p>
-<p>其中： <span class="math inline">\(\mathcal{X}_n^2\)</span> 表示自由度爲 <span class="math inline">\(n\)</span> 的卡方分佈。</p>
-<p>且 <span class="math inline">\(X_m^2+X_n^2=\mathcal{X}_{m+n}^2\)</span></p>
-</div>
-<div id="section-11.2" class="section level2">
-<h2><span class="header-section-number">11.2</span> 卡方分佈的期望</h2>
-<p><span class="math display">\[E(X_1^2)=Var(X)+[E(X)]^2=1+0=1\]</span></p>
-<p><span class="math display">\[\Rightarrow E(X_n^2)=n\]</span></p>
-</div>
-<div id="section-11.3" class="section level2">
-<h2><span class="header-section-number">11.3</span> 卡方分佈的方差</h2>
-<p><span class="math display">\[
-\begin{aligned}
-Var(X_1^2) &amp;= E(X_1^{2^2}) - E(X_1^2)^2 \\
-           &amp;= E(X_1^4)-1
-\end{aligned}
+<div id="quadratic-llr" class="section level1">
+<h1><span class="header-section-number">第 14 章</span> 二次方程近似法求對數似然比 approximate log-likelihood ratios</h1>
+<p>爲什麼要用二次方程近似對數似然比方程？</p>
+<ol style="list-style-type: decimal">
+<li>上節也看到，我們會碰上難以用代數學計算獲得對數似然比信賴區間的情況 (Section <a href="llr.html#binomial-ex">13.4.1</a>: binomial example)。</li>
+<li>我們同時知道，對數似然比方程會隨着樣本量增加而越來越漸進於二次方程，且左右對稱。</li>
+<li>所以，我們考慮當樣本量足夠大時，用二次方程來近似對數似然比方程從而獲得參數估計的信賴區間。</li>
+</ol>
+<div id="quadratic-llr2" class="section level2">
+<h2><span class="header-section-number">14.1</span> 正態近似法求對數似然 Normal approximation to the log-likelihood</h2>
+<p>根據前一節 (Section <a href="llr.html#normal-ex">13.4.2</a>)，如果樣本均數的分佈符合正態分佈：<span class="math inline">\(\bar{X}\sim N(\mu, \sigma^2/n)\)</span>。那麼樣本均數的對數似然比爲：</p>
+<p><span class="math display">\[llr(\mu|\bar{X})=\ell(\mu|\bar{X})=-\frac{1}{2}(\frac{\bar{x}-\mu}{\sigma/\sqrt{n}})^2\]</span></p>
+<p>其中， <span class="math inline">\(\bar{x}\)</span> 是正態分佈總體均數 <span class="math inline">\(\mu\)</span> 的極大似然估計 (maximum likelihood estimator, MLE)。如果已知總體的方差參數，那麼 <span class="math inline">\(\sigma/\sqrt{n}\)</span> 是 <span class="math inline">\(\bar{x}\)</span> 的標準誤 (standard error)。</p>
+<p>因此，假設 <span class="math inline">\(\theta\)</span> 是我們想尋找的總體參數。有些人提議可以使用下面的關於 <span class="math inline">\(\theta\)</span> 的二次方程來做近似：</p>
+<p><span class="math display">\[f(\theta|data)=-\frac{1}{2}(\frac{\theta-M}{S})^2\]</span></p>
+<p>上述方程具有一個正態二次對數似然 (比) 的形式，而且該方程的極大似然估計(MLE)， <span class="math inline">\(M\)</span> 的標準誤爲 <span class="math inline">\(S\)</span>。如果我們正確地選用 <span class="math inline">\(M\)</span> 和 <span class="math inline">\(S\)</span>，那我們就可以用這樣的方程來近似求真實觀察數據的似然 <span class="math inline">\(\ell(\theta|data)\)</span>。</p>
+<p>通過近似正態對數似然比，<span class="math inline">\(M\)</span> 應當選用使方程取最大值時，參數 <span class="math inline">\(\theta\)</span> 的極大似然估計 <span class="math inline">\(M=\hat{\Theta}\)</span>。</p>
+<p>但是在選用標準誤 <span class="math inline">\(S\)</span> 上必須滿足下列條件：</p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(S\)</span> 是極大似然估計 <span class="math inline">\(\hat{\Theta}\)</span> 的標準誤。</li>
+<li>被選擇的 <span class="math inline">\(S\)</span> 必須儘可能的使該二次方程形成一個十分接近真實的對數似然比方程。特別是在最大值的部分必須與之無限接近或者一致。所以二者在 MLE 的位置應當有相同的曲率（二階導數）。</li>
+</ol>
+<p>由於，一個方程的曲率是該方程的二階導數（斜線斜率變化的速度）。所以對數似然比方程在 MLE 取最大值時的曲率（二階導數）爲：</p>
+<p><span class="math display">\[\left.\frac{d^2}{d\theta^2}\ell(\theta)\right\vert_{\theta=\hat{\theta}}=\ell^{\prime\prime}(\hat{\theta})=-\frac{1}{S^2}\\
+\Rightarrow S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}}
 \]</span></p>
-<div id="-ex_14" class="section level3">
-<h3><span class="header-section-number">11.3.1</span> 下面來求 <span class="math inline">\(E(X_1^4)\)</span></h3>
-<p><span class="math display">\[
-\begin{aligned}
-\because E(X_1) &amp;= \int_{-\infty}^{+\infty} xf(x)dx \\
-\therefore E(X_1^4) &amp;= \int_{-\infty}^{+\infty} x^4f(x)dx
+<p>在正態分佈的例子下，<span class="math inline">\(M=\bar{x}, S=\sigma/\sqrt{n}\)</span>。對數似然比方程最大值時的曲率（二階導數）恰好就爲標準誤的平方的負倒數：</p>
+<p><span class="math inline">\(\ell^{\prime\prime}(\theta)=-\frac{1}{SE^2}\)</span> <span class="math inline">\(\Rightarrow\)</span> 被叫做 <strong>Fisher information</strong>。</p>
+<p>稍微總結一下：</p>
+<ol style="list-style-type: decimal">
+<li>任意的對數似然比方程 <span class="math inline">\(llr(\theta)\)</span> 都可以考慮用一個二次方程來近似： <span class="math display">\[f(\theta|data)=-\frac{1}{2}(\frac{\theta-M}{S})^2\]</span></li>
+<li>其中<br> <span class="math inline">\(\begin{aligned} &amp;M=\hat\theta\\ &amp;S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}}\\ &amp;when \\  &amp; n\rightarrow\infty \Rightarrow  \begin{cases}  S^2\rightarrow Var(\hat\theta) \\  S\rightarrow SE(\hat\theta)  \end{cases} \end{aligned}\)</span></li>
+</ol>
+<div id="section-14.1.1" class="section level3">
+<h3><span class="header-section-number">14.1.1</span> 近似法估算對數似然比的信賴區間</h3>
+<p>一旦我們決定了使用正態近似法來模擬對數似然比方程，對數似然比的信賴區間算法就回到了前一節中我們算過的方法，也就是：</p>
+<p><span class="math display">\[-2f(\theta)&lt;\mathcal{X}_{1,(1-\alpha)}^2\]</span></p>
+<p>故信賴區間爲： <span class="math inline">\(m\pm\sqrt{\mathcal{X}_{1,(1-\alpha)}^2}S\)</span>。求<span class="math inline">\(95\%\)</span> 水平的信賴區間時，<span class="math inline">\(\mathcal{X}_{1,0.95}^2=3.84\)</span>，所以就又看到了熟悉的 <span class="math inline">\(M\pm1.96S\)</span>。</p>
+</div>
+<div id="section-14.1.2" class="section level3">
+<h3><span class="header-section-number">14.1.2</span> 以泊松分佈爲例</h3>
+<p>一個被追蹤的樣本，經過了 <span class="math inline">\(p\)</span> 人年的觀察，記錄到了 <span class="math inline">\(d\)</span> 個我們要研究的事件：</p>
+<p><span class="math display">\[D\sim Poi(\mu), where \mu=\lambda p\]</span></p>
+<p>Step 1. 找極大似然估計 (MLE)，之前介紹似然方程時推導過的泊松分佈的似然方程 (Section <a href="likelihood-definition.html#likelihood-poi">12.6</a>)：</p>
+<p><span class="math display">\[\begin{aligned}
+P(D=d|\lambda) &amp;= \frac{e^{-\mu}\cdot\mu^d}{d!} \\
+ &amp;=\frac{e^{-\lambda p}\cdot\lambda^d p^d}{d!} \\
+omitting&amp;\;terms\;not\;in\;\mu \\
+&amp;\Rightarrow \ell(\lambda) = d\text{log}\lambda - \lambda p \\
+&amp;\Rightarrow \ell^\prime(\lambda) = \frac{d}{\lambda} -p \\
+&amp;\Rightarrow \hat\lambda=\frac{d}{p} = \textbf{M}
 \end{aligned}\]</span></p>
-<p>已知： <span class="math inline">\(f(x)=\frac{1}{\sqrt{2\pi}}e^{(-\frac{x^2}{2})}\)</span> 代入上式：</p>
+<p>Step 2. 求似然方程的二階導數，確認 MLE 是使方程獲得最大值的點，然後確定 <span class="math inline">\(S^2\)</span>：</p>
+<p><span class="math display">\[\begin{aligned}
+&amp; \ell^\prime(\lambda) = \frac{d}{\lambda} -p \\
+&amp; \Rightarrow \ell^{\prime\prime}(\lambda) = -\frac{d}{\lambda^2}&lt;0 \Rightarrow \textbf{MLE is maximum} \\
+&amp; S^2 = \left.-\frac{1}{\ell^{\prime\prime}(\lambda)}\right\vert_{\lambda=\hat{\lambda}=d/p} = -\frac{1}{-d/\hat\lambda^2} = -\frac{1}{-d/(d/p)^2} \\
+&amp;\Rightarrow S^2 = \frac{d}{p^2} \\
+\end{aligned}\]</span></p>
+<p>Step 3. 把前兩部求得的 <span class="math inline">\(MLE\)</span> 和 <span class="math inline">\(S^2\)</span> 代入近似的二次方程：</p>
+<p><span class="math display">\[\begin{aligned}
+&amp; \hat\lambda=\frac{d}{p}=M,\; S^2 = \frac{d}{p^2}  \\
+&amp; using\;approximate\;quadratic\;llr \\
+&amp; q(\lambda) = -\frac{1}{2}(\frac{\lambda-M}{S})^2\\
+&amp;\Rightarrow q(\lambda) = -\frac{1}{2}(\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}})^2\\
+&amp; let \; q(\lambda)=-1.92\\
+&amp;\Rightarrow -\frac{1}{2}(\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}})^2=-1.92\\
+&amp;(\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}})^2=3.84\\
+&amp;\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}} = \pm1.96\\
+&amp;\Rightarrow 95\%CI \;for \;\lambda = \frac{d}{p}\pm1.96\frac{\sqrt{d}}{p}
+\end{aligned}\]</span></p>
+<p>結論就是： 發病（死亡）率 <span class="math inline">\(\lambda\)</span> 的 <span class="math inline">\(95\%\)</span> 信賴區間爲： <span class="math inline">\(M\pm1.96S\)</span>。所以我們不需要每次都代入對數似然比方程，只要算出 <span class="math inline">\(MLE = M\)</span> 和 <span class="math inline">\(S\)</span> 之後代入這個公式就可以用二次方程近似法算出信賴區間。</p>
+</div>
+<div id="section-14.1.3" class="section level3">
+<h3><span class="header-section-number">14.1.3</span> 以二項分佈爲例</h3>
+<p><span class="math display">\[K\sim Bin(n,\pi)\]</span></p>
+<p>Step 1. 找極大似然估計 (MLE)：</p>
 <p><span class="math display">\[
 \begin{aligned}
-E(X_1^4) &amp;= \int_{-\infty}^{+\infty} x^4f(x)dx \\
-         &amp;= \int_{-\infty}^{+\infty} x^4\frac{1}{\sqrt{2\pi}}e^{(-\frac{x^2}{2})}dx\\
-         &amp;=\frac{1}{\sqrt{2\pi}}\int_{-\infty}^{+\infty}x^4e^{(-\frac{x^2}{2})}dx\\
-         &amp;=\frac{-1}{\sqrt{2\pi}}\int_{-\infty}^{+\infty}x^3(-x)e^{(-\frac{x^2}{2})}dx
+&amp; Prob(K=k) = \pi^k(1-\pi)\binom{n}{k}\\
+&amp;\Rightarrow L(\pi|k) = \pi^k(1-\pi)\binom{n}{k}\\
+&amp;omitting\;terms\;not\;in\;\pi \\
+&amp;\Rightarrow \ell(\pi) = k\:\text{log}\pi+(n-k)\text{log}(1-\pi) \\
+&amp;\ell^\prime(\pi) = \frac{k}{\pi}-\frac{n-k}{1-\pi} \\
+&amp; let\;\ell^\prime(\hat\pi) =0 \\
+&amp;\Rightarrow \frac{k}{\hat\pi}-\frac{n-k}{1-\hat\pi}=0\\
+&amp;\Rightarrow \frac{\hat\pi}{1-\hat\pi}=\frac{k}{n-k}\\
+&amp;\Rightarrow \frac{\hat\pi}{1-\hat\pi}=\frac{k/n}{1-k/n}\\
+&amp;\Rightarrow \hat\pi=\frac{k}{n} = p = \textbf{M}
 \end{aligned}
 \]</span></p>
-<p>令 <span class="math inline">\(u=x^3, v=e^{(-\frac{x^2}{2})},t=-\frac{x^2}{2}\)</span> 可以推導：</p>
+<p>Step 2. 將對數似然方程的二次微分 (二階導數)，確認在 MLE 爲極大值，並確認 <span class="math inline">\(S^2\)</span>：</p>
 <p><span class="math display">\[
 \begin{aligned}
-\frac{dv}{dx} &amp;= \frac{dv}{dt}\frac{dt}{dx} \\
-              &amp;= e^t(-\frac{1}{2}\times2x) \\
-              &amp;= (-x)e^{(-\frac{x^2}{2})} \\
-\Rightarrow dv &amp;= (-x)e^{(-\frac{x^2}{2})}dx
+&amp;\ell^\prime(\pi) = \frac{k}{\pi}-\frac{n-k}{1-\pi} \\
+&amp;\ell^{\prime\prime}(\pi)=\frac{-k}{\pi^2}-\frac{n-k}{(1-\pi)^2} &lt;0 \\
+&amp;\therefore at\;\textbf{MLE}\;\ell(\pi)\;has\;maximum \\
+S^2&amp;=\left.-\frac{1}{\ell^{\prime\prime}(\pi)}\right\vert_{\pi=\hat\pi=k/n=p}\\
+&amp;=\frac{1}{\frac{k}{\hat\pi^2}+\frac{n-k}{(1-\hat\pi)^2}}\\
+&amp;=\frac{\hat\pi^2(1-\hat\pi)^2}{k(1-\hat\pi)^2+(n-k)\hat\pi^2}\\
+&amp;=\frac{P^2(1-P)^2}{np(1-p)^2+(n-np)p^2}\\
+&amp;=\frac{p(1-p)}{n(1-p)+np}\\
+&amp;=\frac{p(1-p)}{n}\\
+&amp;\Rightarrow S=\sqrt{\frac{p(1-p)}{n}}
 \end{aligned}
 \]</span></p>
-<p>再代入上面的式子：</p>
+<p>Step 3. 將求得的 MLE 和 <span class="math inline">\(S^2\)</span> 代入近似信賴區間：</p>
 <p><span class="math display">\[
-\begin{aligned}
-E(X_1^4) &amp;= \frac{-1}{\sqrt{2\pi}}\int_{-\infty}^{+\infty}u\:dv \\
-integrate\; &amp;by\; parts:\\
-E(X_1^4) &amp;= \frac{-1}{\sqrt{2\pi}}\{[u\:v] \rvert_{-\infty}^{+\infty}-\int_{-\infty}^{+\infty}v\:du\} \\
-&amp;= \frac{-1}{\sqrt{2\pi}}\{[x^3e^{(-\frac{x^2}{2})}]\rvert_{-\infty}^{+\infty} -\int_{-\infty}^{+\infty}v\:du\} \\
-&amp;=\frac{-1}{\sqrt{2\pi}}\{0-0-\int_{-\infty}^{+\infty}e^{(-\frac{x^2}{2})}dx^3\} \\
-&amp;=\frac{-1}{\sqrt{2\pi}}[-3\int_{-\infty}^{+\infty}x^2e^{(-\frac{x^2}{2})}dx] \\
-&amp;=\frac{-3}{\sqrt{2\pi}}[\int_{-\infty}^{+\infty}x(-x)e^{(-\frac{x^2}{2})}dx] \\
-\end{aligned}
-\]</span></p>
-<p>再來一次分部積分：</p>
-<p>令 <span class="math inline">\(a=x,b=e^{(-\frac{x^2}{2})},d\:b = (-x)e^{(-\frac{x^2}{2})}dx\)</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-E(X_1^4) &amp;= \frac{-3}{\sqrt{2\pi}}\{[a\:b] \rvert_{-\infty}^{+\infty} - \int_{-\infty}^{+\infty}b\:da\} \\
-&amp;=\frac{-3}{\sqrt{2\pi}}\{[xe^{(-\frac{x^2}{2})}]\rvert_{-\infty}^{+\infty} -\int_{-\infty}^{+\infty}b\:da\} \\
-&amp;=\frac{-3}{\sqrt{2\pi}}\{0-0-\int_{-\infty}^{+\infty}e^{(-\frac{x^2}{2})}dx\} \\
-&amp;=\frac{-3}{\sqrt{2\pi}}[-\int_{-\infty}^{+\infty}e^{(-\frac{x^2}{2})}dx] \\
-&amp;=\frac{3}{\sqrt{2\pi}}\int_{-\infty}^{+\infty}e^{(-\frac{x^2}{2})}dx
-\end{aligned}
-\]</span></p>
-<p>下面令 <span class="math inline">\(I=\int_{-\infty}^{+\infty}e^{(-\frac{x^2}{2})}dx\\ \Rightarrow I^2=\int_{-\infty}^{+\infty}\int_{-\infty}^{+\infty}e^{(-\frac{x^2+y^2}{2})}dxdy\)</span></p>
-<p>接下來需要用到 <a href="https://www.youtube.com/watch?v=r0fv9V9GHdo">座標轉換</a>的知識，將 <span class="math inline">\(x,y\)</span> 表示的笛卡爾座標，轉換爲用角度 <span class="math inline">\(\theta\)</span> 和半徑 <span class="math inline">\(r\)</span> 表示的形式。之後的證明可以在<a href="https://www.youtube.com/watch?v=fWOGfzC3IeY">油管</a>上看到，但是我還是繼續證明下去。</p>
-<p>直角座標系 (cartesian coordinators) 和 極座標系 (polar coordinators) 之間轉換的關係如下：</p>
-<p><span class="math display">\[
-\begin{aligned}
-x&amp;=r\:cos\theta\\
-y&amp;=r\:sin\theta\\
-r^2&amp;=x^2+y^2\\
-\end{aligned}
-\]</span></p>
-<p>座標轉換以後可以繼續求 <span class="math inline">\(E(X_1^4)\)</span>。 在那之前我們先求 <span class="math inline">\(I^2\)</span>。 注意轉換座標系統以後，<span class="math inline">\(\theta\in[0,2\pi], r\in[0,+\infty]\)</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-I^2 &amp;= \int_{-\infty}^{+\infty}\int_{-\infty}^{+\infty}e^{(-\frac{x^2+y^2}{2})}dxdy \\
-&amp;= \int_{0}^{+\infty}\int_{0}^{2\pi}e^{(-\frac{r^2}{2})}rd\theta dr \\
-\end{aligned}
-\]</span></p>
-<p>由於先從中間的 <span class="math inline">\(\int_{0}^{2\pi}e^{(-\frac{r^2}{2})}rd\theta\)</span> 開始積分，<span class="math inline">\(\theta\)</span> 以外都可以視爲常數，那麼這個 <span class="math inline">\([0,2\pi]\)</span> 上的積分就的等於 <span class="math inline">\(2\pi e^{(-\frac{r^2}{2})}r\)</span>。</p>
-<p>因此上面的式子又變爲：</p>
-<p><span class="math display">\[
-\begin{aligned}
-I^2 &amp;=  2\pi\int_{0}^{+\infty}e^{(-\frac{r^2}{2})}r\:dr \\
-\because \frac{d(e^{\frac{-r^2}{2}})}{dr} &amp;= -e^{(-\frac{r^2}{2})}r \\
-\therefore I^2 &amp;= 2\pi(-e^{\frac{-r^2}{2}})\rvert_0^{+\infty} \\
-               &amp;= 0-(2\pi\times(-1)) \\
-               &amp;= 2\pi\\
-\Rightarrow I  &amp;= \sqrt{2\pi}
-\end{aligned}
-\]</span></p>
-<p>所以，</p>
-<p><span class="math display">\[
-\begin{aligned}
-E(X_1^4) &amp;= \frac{3}{\sqrt{2\pi}}\int_{-\infty}^{+\infty}e^{(-\frac{x^2}{2})}dx \\
-&amp;= \frac{3}{\sqrt{2\pi}}\times I \\
-&amp;= 3 \\
-\Rightarrow Var(X_1^2) &amp;= E(X_1^4) - 1 \\
-                       &amp;= 3-1 =2
-\end{aligned}
+95\% CI \;for \; \pi:\\
+M\pm1.96S=p\pm1.96\sqrt{\frac{p(1-p)}{n}}\\
 \]</span></p>
 </div>
 </div>
-<div id="section-11.4" class="section level2">
-<h2><span class="header-section-number">11.4</span> 把上面的推導擴展</h2>
-<p><span class="math display">\[
-\text{Suppose } \mathcal{X}^2_1, \cdots \mathcal{X}^2_k \stackrel{i.i.d}{\sim} \mathcal{X}^2_1 \\
-\Rightarrow \sum_{i=1}^k \mathcal{X}^2_i \sim \mathcal{X}^2_k \\
-\Rightarrow \text{E}(\sum_{i=1}^n\mathcal{X}^2_i)=\sum_{i-1}^n\text{E}(\mathcal{X}^2_i)=n\times1=n\\
-\text{Var}(\sum_{i=1}^n\mathcal{X}^2_i)=\sum_{i=1}^n\text{Var}(\mathcal{X}^2_i) = n\times2=2n
-\]</span></p>
-<p>結論：<span class="math inline">\(X_1, \dots, X_n\stackrel{i.i.d}{\sim} N(0,1)\)</span> 時，<span class="math inline">\(\sum_{i=1}^nX_i^2\sim\mathcal{X}_n^2\)</span> 服從卡方分佈，其期望 <span class="math inline">\(E(X_n^2)=n\)</span>，方差 <span class="math inline">\(Var(X_n^2)=2n\)</span>。 根據<strong>中心極限定理</strong>(Section <a href="CLT.html#CLT">8</a>)</p>
-<p><span class="math display">\[n\rightarrow \infty, X_n^2\sim N(n, 2n)\]</span></p>
+<div id="para-trans" class="section level2">
+<h2><span class="header-section-number">14.2</span> 參數轉化 parameter transformations</h2>
+<p>如果將參數 <span class="math inline">\(\theta\)</span> 通過某種數學方程轉化成 <span class="math inline">\(g(\theta)\)</span>，那麼我們可以認爲，轉化後的方程的 MLE 爲 <span class="math inline">\(g(\hat\theta)\)</span>，其中 <span class="math inline">\(\hat\theta\)</span> 是參數 <span class="math inline">\(\theta\)</span> 的 MLE。</p>
+<p>類似地，如果 <span class="math inline">\(\theta_1 \sim \theta_2\)</span> 是參數 <span class="math inline">\(\theta\)</span> 的似然比信賴區間，那麼 <span class="math inline">\(g(\theta_1)\sim g(\theta_2)\)</span> 就是 <span class="math inline">\(g(\theta)\)</span> 的似然比信賴區間。</p>
+<p>以下爲轉換參數以後獲取信賴區間的步驟：</p>
+<ol style="list-style-type: decimal">
+<li>將參數通過某些數學方程（通常是取對數）轉化，使新的對數似然比方程更加接近二次方程的對稱圖形。<br> Transform parameter so that <span class="math inline">\(llr\)</span> is closer to a quadratic shape.</li>
+<li>用本節學到的二次方程近似法，求得轉化後的參數的似然比信賴區間。 <br> Use our quadratic approximation on the transformed parameter to calculate our likelihood ratio confidence intervals.</li>
+<li>將第2步計算獲得的似然比信賴區間再通過轉化參數時的逆函數轉換回去，以獲得原參數的似然比信賴區間。<br> Transform the confidence intervals back, or to any scale we wish – they remain valid.</li>
+</ol>
+<div id="-1" class="section level3">
+<h3><span class="header-section-number">14.2.1</span> 以泊松分佈爲例</h3>
+<p>當我們用泊松分佈模擬事件在某段時間內發生率 <span class="math inline">\(\lambda\)</span> 時，注意到這個事件發生率必須滿足 <span class="math inline">\(\lambda&gt;0\)</span>。當事件發生次數較低時，會讓似然方程的圖形被擠壓在低值附近。如果嘗試用對數轉換 <span class="math inline">\(\lambda \rightarrow \text{log}(\lambda)\)</span> 此時 <span class="math inline">\(\text{log}(\lambda)\)</span> 就不再被限制與 <span class="math inline">\(&gt;0\)</span>。下面我們嘗試尋找對數轉換過後的 <span class="math inline">\(M\)</span> 和 <span class="math inline">\(S\)</span>。</p>
+<p>令 <span class="math inline">\(\beta=\text{log}(\lambda), \Rightarrow e^\beta=\lambda\)</span> 從本文上半部分中我們已知 <span class="math inline">\(\hat\lambda=\frac{d}{p}\)</span>。</p>
+<ul>
+<li>對數轉換以後的 <span class="math inline">\(M\)</span> 是什麼? <br>根據定義，<span class="math inline">\(MLE(\beta)=MLE[\text{log}(\lambda)]=\text{log}(\hat\lambda)\)</span> <span class="math inline">\(\Rightarrow M=\hat\beta=\text{log}(\frac{d}{p})\)</span></li>
+<li><p>對數轉換以後的 <span class="math inline">\(S\)</span> 是什麼? <br> 泊松分佈的對數似然方程是：<span class="math inline">\(\ell(\lambda|d)=d \text{log}(\lambda) - \lambda p\)</span> 用 <span class="math inline">\(\beta\)</span> 替換掉 <span class="math inline">\(\lambda\)</span></p>
+<span class="math inline">\(\begin{aligned} &amp; \ell(\beta|d)=d \beta - pe^\beta\\ &amp; \Rightarrow \ell^\prime(\beta)=d-pe^\beta \Rightarrow \ell^{\prime\prime}(\beta)=-pe^\beta \\ &amp; S^2 = \left.-\frac{1}{\ell^{\prime\prime}(\beta)}\right\vert_{\beta=\hat{\beta}} = \left.\frac{1}{pe^\beta}\right\vert_{\beta=\hat{\beta}} = \frac{1}{pe^{\text{log}(d/p)}}\\ &amp;\Rightarrow S^2=\frac{1}{d} \therefore S=\frac{1}{\sqrt{d}} \end{aligned}\)</span></li>
+<li><p>轉換後的近似二次方程：<br> <span class="math inline">\(\begin{aligned} &amp; q(\beta) = -\frac{1}{2}(\frac{\beta-M}{S})^2 = -\frac{1}{2}(\frac{\beta-\text{log}(\frac{d}{p})}{\frac{1}{\sqrt{d}}})^2 \end{aligned}\)</span></p></li>
+<li><p><span class="math inline">\(\beta\)</span> 的 <span class="math inline">\(95\%\)</span> 信賴區間 <span class="math inline">\(=\text{log}(\frac{d}{p})\pm1.96\frac{1}{\sqrt{d}}\)</span></p></li>
+<li><p><span class="math inline">\(\lambda\)</span> 的 <span class="math inline">\(95\%\)</span> 信賴區間 <span class="math inline">\(=exp(\text{log}(\frac{d}{p})\pm1.96\frac{1}{\sqrt{d}})\)</span></p></li>
+</ul>
+</div>
+<div id="-1" class="section level3">
+<h3><span class="header-section-number">14.2.2</span> 以二項分佈爲例</h3>
+<p>在研究對象 <span class="math inline">\(n\)</span> 人中觀察到 <span class="math inline">\(k\)</span> 個人患有某種<del>中二</del>疾病。</p>
+<p>令 <span class="math inline">\(\beta=\text{log}(\pi) \Rightarrow \pi=e^\beta\)</span> 從上文的推倒也已知 <span class="math inline">\(\hat\pi=\frac{k}{n}=p\)</span></p>
+<p><span class="math inline">\(\begin{aligned} &amp;\Rightarrow \ell(\beta)=k\text{log}\pi+(n-k)\text{log}(1-\pi)=k\beta+(n-k)\text{log}(1-e^\beta) \\ &amp;\Rightarrow \ell^{\prime}(\beta)=k-\frac{(n-k)(e^\beta)}{1-e^\beta} \\ &amp;\Rightarrow \ell^{\prime\prime}(\beta)=-(n-k)\frac{e^\beta(1-e^\beta)+e^{2\beta}}{(1-e^\beta)^2} \\ &amp; \ell^{\prime\prime}(\beta)= -(n-k)\frac{e^\beta}{(1-e^\beta)^2}\\ &amp;\Rightarrow S^2 = \left.-\frac{1}{\ell^{\prime\prime}(\beta)}\right\vert_{\beta=\hat{\beta}} = \frac{(1-e^{\hat\beta})^2}{(n-k)e^{\hat\beta}} \\ &amp;\because \hat\beta=\text{log}(\hat\pi) \\ &amp;\therefore e^{\hat\beta} = \frac{k}{n}\\ &amp;\Rightarrow S^2=\frac{(1-\frac{k}{n})^2}{(n-k)\frac{k}{n}}=\frac{n-k}{nk}=\frac{1}{k}-\frac{1}{n}\\ &amp; \Rightarrow S=\sqrt{\frac{1}{k}-\frac{1}{n}}\\ \end{aligned}\)</span></p>
+</div>
+</div>
+<div id="-1" class="section level2">
+<h2><span class="header-section-number">14.3</span> 練習題</h2>
+<div id="q1-1" class="section level3">
+<h3><span class="header-section-number">14.3.1</span> Q1</h3>
+<ol style="list-style-type: lower-alpha">
+<li>在<span class="math inline">\(n=100\)</span>人中觀察到有<span class="math inline">\(k=40\)</span>人患病，假設每個人只有患病，不患病兩個狀態，用二項分佈來模擬這個數據，<span class="math inline">\(\pi\)</span> 爲患病的概率。下面是 <span class="math inline">\(\pi \in [0.2,0.6]\)</span> 區間的對數似然比方程曲線。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pi &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="fl">0.6</span>, <span class="dt">by=</span><span class="fl">0.01</span>)
+L &lt;-<span class="st"> </span>(pi<span class="op">^</span><span class="dv">40</span>)<span class="op">*</span>((<span class="dv">1</span><span class="op">-</span>pi)<span class="op">^</span><span class="dv">60</span>)
+Lmax &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">max</span>(L), <span class="dv">41</span>)
+LR &lt;-<span class="st"> </span>L<span class="op">/</span>Lmax
+logLR &lt;-<span class="st"> </span><span class="kw">log</span>(LR)
+
+<span class="kw">plot</span>(pi, logLR, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">11</span>, <span class="dv">0</span>),<span class="dt">yaxt=</span><span class="st">&quot;n&quot;</span>,
+     <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>, <span class="dt">ylab =</span> <span class="st">&quot;logLR(\U03C0)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)
+<span class="kw">grid</span>(<span class="ot">NA</span>, <span class="dv">5</span>, <span class="dt">lwd =</span> <span class="dv">2</span>) <span class="co"># add some horizontal grid on the background</span>
+<span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at=</span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">12</span>,<span class="dv">0</span>,<span class="dv">2</span>), <span class="dt">las=</span><span class="dv">2</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:bin-llr-40-100"></span>
+<img src="bookdown_files/figure-html/bin-llr-40-100-1.png" alt="Binomial log-likelihood ratio between 0.2-0.6" width="90%" />
+<p class="caption">
+图 14.1: Binomial log-likelihood ratio between 0.2-0.6
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#title(main = &quot;Figure 1. Binomial log-likelihood ratio&quot;)</span></code></pre></div>
+<ol start="2" style="list-style-type: lower-alpha">
+<li>用一個二次方程來模擬上面的對數似然比曲線：<span class="math inline">\(f(\pi)=-\frac{(\pi-M)^2}{2S^2}\)</span>，其中 <span class="math inline">\(M=\hat\pi=\frac{k}{n}=0.4\)</span>，<span class="math inline">\(S^2=\frac{p(1-p)}{n}=0.0024\)</span></li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mai =</span> <span class="kw">c</span>(<span class="fl">1.2</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="fl">0.7</span>))
+quad &lt;-<span class="st"> </span><span class="op">-</span>(pi<span class="op">-</span><span class="fl">0.4</span>)<span class="op">^</span><span class="dv">2</span><span class="op">/</span>(<span class="dv">2</span><span class="op">*</span><span class="fl">0.0024</span>)
+<span class="kw">plot</span>(pi, quad, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">4</span>, <span class="dv">0</span>),<span class="dt">yaxt=</span><span class="st">&quot;n&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>,
+     <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>, <span class="dt">ylab =</span> <span class="st">&quot;&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)
+<span class="kw">lines</span>(pi, logLR, <span class="dt">col=</span><span class="st">&quot;black&quot;</span>)
+<span class="kw">grid</span>(<span class="ot">NA</span>, <span class="dv">4</span>, <span class="dt">lwd =</span> <span class="dv">1</span>) <span class="co"># add some horizontal grid on the background</span>
+<span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at=</span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">1</span>), <span class="dt">las=</span><span class="dv">2</span>)
+<span class="co">#title(main = &quot;Figure 2. Quadratic approximation\n of binomial log-likelihood ratio \n 40 out of 100 subjects&quot;)</span>
+<span class="kw">abline</span>(<span class="dt">h=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">lty=</span><span class="dv">1</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)
+<span class="kw">axis</span>(<span class="dv">4</span>, <span class="dt">at=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">las=</span><span class="dv">2</span>)
+<span class="kw">legend</span>(<span class="dt">x=</span><span class="fl">0.27</span>, <span class="dt">y=</span> <span class="op">-</span><span class="fl">5.5</span> ,<span class="dt">xpd =</span> <span class="ot">TRUE</span>,  <span class="dt">legend=</span><span class="kw">c</span>(<span class="st">&quot;logLR&quot;</span>,<span class="st">&quot;Quadratic&quot;</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,
+       <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;black&quot;</span>,<span class="st">&quot;red&quot;</span>), <span class="dt">lty=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>), <span class="dt">horiz =</span> <span class="ot">TRUE</span>) <span class="co">#the legend is below the graph</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin"></span>
+<img src="bookdown_files/figure-html/qua-apprx-bin-1.png" alt="Quadratic approximation
+ of binomial log-likelihood ratio 40 out of 100 subjects" width="90%" />
+<p class="caption">
+图 14.2: Quadratic approximation of binomial log-likelihood ratio 40 out of 100 subjects
+</p>
+</div>
+</div>
+<div id="q2-1" class="section level3">
+<h3><span class="header-section-number">14.3.2</span> Q2</h3>
+<p>依舊使用二項分佈數據來模擬，觀察不同的事件數量和樣本量對近似計算的影響。</p>
+<ol style="list-style-type: decimal">
+<li>類比上面的問題，用同樣的 <span class="math inline">\(\hat\pi=0.4\)</span>，但是 <span class="math inline">\(n=10, k=4\)</span> 時的圖形：</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mai =</span> <span class="kw">c</span>(<span class="fl">1.2</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="fl">0.7</span>))
+pi &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.0</span>, <span class="fl">0.85</span>, <span class="dt">by=</span><span class="fl">0.01</span>)
+L &lt;-<span class="st"> </span>(pi<span class="op">^</span><span class="dv">4</span>)<span class="op">*</span>((<span class="dv">1</span><span class="op">-</span>pi)<span class="op">^</span><span class="dv">6</span>)
+logLR &lt;-<span class="st"> </span><span class="kw">log</span>(L<span class="op">/</span><span class="kw">max</span>(L))
+
+quad &lt;-<span class="st"> </span><span class="op">-</span>(pi<span class="op">-</span><span class="fl">0.4</span>)<span class="op">^</span><span class="dv">2</span><span class="op">/</span>(<span class="dv">2</span><span class="op">*</span><span class="fl">0.4</span><span class="op">*</span><span class="fl">0.6</span><span class="op">/</span><span class="dv">10</span>)
+<span class="kw">plot</span>(pi, quad, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">5</span>, <span class="dv">0</span>),<span class="dt">yaxt=</span><span class="st">&quot;n&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>,
+     <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>, <span class="dt">ylab =</span> <span class="st">&quot;&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)
+<span class="kw">lines</span>(pi, logLR, <span class="dt">col=</span><span class="st">&quot;black&quot;</span>)
+<span class="kw">grid</span>(<span class="ot">NA</span>, <span class="dv">4</span>, <span class="dt">lwd =</span> <span class="dv">1</span>)
+<span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at=</span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">1</span>), <span class="dt">las=</span><span class="dv">2</span>)
+<span class="co">#title(main = &quot;Figure 3. Quadratic approximation\n of binomial log-likelihood ratio\n 4 out of 10 subjects&quot;)</span>
+<span class="kw">abline</span>(<span class="dt">h=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">lty=</span><span class="dv">1</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)
+<span class="kw">axis</span>(<span class="dv">4</span>, <span class="dt">at=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">las=</span><span class="dv">2</span>)
+
+<span class="kw">legend</span>(<span class="dt">x=</span><span class="fl">0.17</span>, <span class="dt">y=</span> <span class="op">-</span><span class="fl">6.5</span> ,<span class="dt">xpd =</span> <span class="ot">TRUE</span>,  <span class="dt">legend=</span><span class="kw">c</span>(<span class="st">&quot;logLR&quot;</span>,<span class="st">&quot;Quadratic&quot;</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,
+       <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;black&quot;</span>,<span class="st">&quot;red&quot;</span>), <span class="dt">lty=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>), <span class="dt">horiz =</span> <span class="ot">TRUE</span>) <span class="co">#the legend is below the graph</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin4-10"></span>
+<img src="bookdown_files/figure-html/qua-apprx-bin4-10-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 4 out of 10 subjects" width="90%" />
+<p class="caption">
+图 14.3: Quadratic approximation of binomial log-likelihood ratio 4 out of 10 subjects
+</p>
+</div>
+<ol start="2" style="list-style-type: decimal">
+<li><span class="math inline">\(\hat\pi=0.4, n=1000, k=400\)</span></li>
+</ol>
+<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin400-1000"></span>
+<img src="bookdown_files/figure-html/qua-apprx-bin400-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 400 out of 1000 subjects" width="90%" />
+<p class="caption">
+图 14.4: Quadratic approximation of binomial log-likelihood ratio 400 out of 1000 subjects
+</p>
+</div>
+<ol start="3" style="list-style-type: decimal">
+<li><span class="math inline">\(\hat\pi=0.01, n=100, k=1\)</span></li>
+</ol>
+<p>注意此圖中紅線提示的近似二次曲線，信賴區間的下限已經低於0，是無法接受的近似。</p>
+<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin1-1000"></span>
+<img src="bookdown_files/figure-html/qua-apprx-bin1-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 1 out of 100 subjects" width="90%" />
+<p class="caption">
+图 14.5: Quadratic approximation of binomial log-likelihood ratio 1 out of 100 subjects
+</p>
+</div>
+<ol start="4" style="list-style-type: decimal">
+<li><span class="math inline">\(\hat\pi=0.01, n=1000, k=10\)</span></li>
+</ol>
+<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin10-1000"></span>
+<img src="bookdown_files/figure-html/qua-apprx-bin10-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 10 out of 1000 subjects" width="90%" />
+<p class="caption">
+图 14.6: Quadratic approximation of binomial log-likelihood ratio 10 out of 1000 subjects
+</p>
+</div>
+<ol start="5" style="list-style-type: decimal">
+<li><span class="math inline">\(\hat\pi=0.01, n=10000, k=100\)</span></li>
+</ol>
+<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin100-1000"></span>
+<img src="bookdown_files/figure-html/qua-apprx-bin100-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 100 out of 10000 subjects" width="90%" />
+<p class="caption">
+图 14.7: Quadratic approximation of binomial log-likelihood ratio 100 out of 10000 subjects
+</p>
+</div>
+<ol start="6" style="list-style-type: decimal">
+<li><span class="math inline">\(\hat\pi=0.99, n=100, k=99\)</span></li>
+</ol>
+<p>注意此圖中紅線提示的近似二次曲線，信賴區間的上限已經大於1，和上面的 Figure 5. 一樣也是無法接受的近似。</p>
+<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin99-100"></span>
+<img src="bookdown_files/figure-html/qua-apprx-bin99-100-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 99 out of 100 subjects" width="90%" />
+<p class="caption">
+图 14.8: Quadratic approximation of binomial log-likelihood ratio 99 out of 100 subjects
+</p>
+</div>
+<p>總結： 二次方程近似時，在二項分佈的情況下，隨着 <span class="math inline">\(n, k\)</span> 增加，近似越理想。</p>
+</div>
 </div>
 </div>
             </section>
@@ -424,8 +571,8 @@ E(X_1^4) &amp;= \frac{3}{\sqrt{2\pi}}\int_{-\infty}^{+\infty}e^{(-\frac{x^2}{2})
           </div>
         </div>
       </div>
-<a href="-estimation-and-precision.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="likelihood-definition.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="llr.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="-construction-of-a-hypothesis-test.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>

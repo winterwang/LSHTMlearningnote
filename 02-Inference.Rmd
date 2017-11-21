@@ -1073,7 +1073,7 @@ kable(data.frame(lambda, LogLR), "html") %>%
 所以從列表數據結合圖形， 可以找到信賴區間的下限在 0.022~0.023 之間， 上限在 0.093～0.094 之間。
 
 
-# 二次方程近似法求對數似然比  approximate log-likelihood ratios
+# 二次方程近似法求對數似然比  approximate log-likelihood ratios {#quadratic-llr}
 
 爲什麼要用二次方程近似對數似然比方程？
 
@@ -1083,7 +1083,7 @@ kable(data.frame(lambda, LogLR), "html") %>%
 
 
 
-## 正態近似法求對數似然 Normal approximation to the log-likelihood
+## 正態近似法求對數似然 Normal approximation to the log-likelihood {#quadratic-llr2}
 
 根據前一節 (Section \@ref(normal-ex))，如果樣本均數的分佈符合正態分佈：$\bar{X}\sim N(\mu, \sigma^2/n)$。那麼樣本均數的對數似然比爲：
 
@@ -1875,7 +1875,7 @@ $$
 &\text{Let }   \ell^\prime(\pi|k=40) = 0 \\
 &\Rightarrow   \frac{40}{\pi}-\frac{60}{1-\pi} =0 \\
 &\Rightarrow  \text{ MLE } \hat\pi=0.4 \\
-&\Rightarrow llr(\pi_0)=\ell(\pi_0)-\ell(\hat\pi) =\\
+&\Rightarrow llr(\pi_0)=\ell(\pi_0)-\ell(\hat\pi) \\
 &\;\;\;\;\;\;\;\;\;=40\text{log}0.5+60\text{log}(1-0.5)-40\text{log}0.4-60\text{log}(1-0.4)\\
 &\;\;\;\;\;\;\;\;\;=-2.013\\
 &\Rightarrow -2llr=4.026 > \text{Pr}(\mathcal{X}^2_{1,0.95})=3.84
@@ -1883,3 +1883,35 @@ $$
 $$
 
 所以當顯著性水平爲 $\alpha=0.05$ 時，數據提供了足夠拒絕零假設的證據。該事件在此人羣中發生的概率要低於人羣的 $0.5$。
+
+## 近似檢驗法之 -- Wald 檢驗
+
+和 LRT 一樣， Wald 檢驗也適用於檢驗 $H_0: \theta=\theta_0 \text{ v.s. } H_1: \theta\neq\theta_0$。但是本方法其實是使用對數似然比方程的近似二次方程 (Section \@ref(quadratic-llr))。相比之下，LRT 使用的是精確的對數似然比，只對檢驗統計量 $-2llr$ 進行了自由度爲 $1$ 的卡方分佈 $\mathcal{X}_1^2$ 近似。本節介紹的 Wald 檢驗過程中使用了兩次近似，一次是計算對數似然比時使用了二次方程，一次則是和 LRT 一樣對檢驗統計量進行 $\mathcal{X}_1^2$ 近似。
+
+根據之前的對數似然比近似結論 (Section \@ref(quadratic-llr2)) ：
+
+$$llr(\theta)\approx-\frac{1}{2}(\frac{M-\theta}{S})^2\text{ asymptotically}$$
+
+其中，$M$ 是 $\text{MLE }\hat\theta$，$S=\sqrt{\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}}}$
+
+而且前一節我們也看到，
+
+$$
+\text{Under }H_0: \theta=\theta_0\Rightarrow -2llr(\theta_0) \stackrel{\cdot}{\sim}\mathcal{X}_1^2\\
+\Rightarrow -2\times-\frac{1}{2}(\frac{M-\theta_0}{S})^2 \stackrel{\cdot}{\sim}\mathcal{X}_1^2 \\
+\Rightarrow (\frac{M-\theta_0}{S}) \stackrel{\cdot}{\sim} N(0,1)\\
+\text{Let } W=(\frac{M-\theta_0}{S})
+$$
+
+$W$ 就是我們在 Wald 檢驗中用到的檢驗統計量。接下來就可以計算給定顯著水平 $\alpha$ 時的拒絕域，給 $p$ 值定量：
+
+當 $W>N(0,1)_{1-\alpha/2}$ 或 $W<N(0,1)_{\alpha/2}$時，拒絕 $H_0: \theta=\theta_0$；
+
+或者，當 $W^2>\mathcal{X}^2_{1,1-\alpha}$ 時，拒絕 $H_0: \theta=\theta_0$。
+
+這就是我們心心念念的 Wald 檢驗。
+
+```{r llr-wald, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Likelihood ratio and Wald tests: solid (green) line is log-likelihood ratio, dashed (red) is quadratic approximation', fig.align='center', out.width='70%'}
+knitr::include_graphics("img/Selection_083.png")
+```
+上圖 \@ref(fig:llr-wald) 解釋了 LRT 和 Wald 檢驗的不同之處。紅色虛線是二次方程，用於近似似然比方程（綠色實線）。二者在 $\text{MLE}=\hat\theta$ 時同時取極大值。Wald 檢驗的是，數據提供的 $\hat\theta$ 和我們想要比較的零假設 $\theta_0$ 之間的橫軸差距。在檢驗量 $W$ 中我們還把這個差除以觀察數據均值的標準差（數據的標準誤）。 如果數據本身波動大，$W$ 的分母（標準誤）較大，那麼即使 $\hat\theta - \theta_0$ 保持不變，統計量變小，反對零假設的證據也就越小。反觀，LRT 檢驗的檢驗統計量就是上圖 \@ref(fig:llr-wald) 顯示的縱軸差 $\ell(\theta_0)-\ell(\hat\theta)$ 的大小。二者之間的關係被直觀的顯示在圖中。
