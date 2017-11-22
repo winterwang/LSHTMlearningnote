@@ -1181,7 +1181,7 @@ $$\begin{aligned}
 
 結論就是： 發病（死亡）率 $\lambda$ 的 $95\%$ 信賴區間爲： $M\pm1.96S$。所以我們不需要每次都代入對數似然比方程，只要算出 $MLE = M$ 和 $S$ 之後代入這個公式就可以用二次方程近似法算出信賴區間。
 
-### 以二項分佈爲例
+### 以二項分佈爲例 {#quadratic-binomial-approx}
 
 $$K\sim Bin(n,\pi)$$
 
@@ -1227,7 +1227,7 @@ M\pm1.96S=p\pm1.96\sqrt{\frac{p(1-p)}{n}}\\
 $$
 
 
-## 參數轉化 parameter transformations {#para-trans}
+## 參數转换 parameter transformations {#para-trans}
 
 如果將參數 $\theta$ 通過某種數學方程轉化成 $g(\theta)$，那麼我們可以認爲，轉化後的方程的 MLE 爲 $g(\hat\theta)$，其中 $\hat\theta$ 是參數 $\theta$ 的 MLE。
 
@@ -1916,4 +1916,50 @@ knitr::include_graphics("img/Selection_083.png")
 ```
 上圖 \@ref(fig:llr-wald) 解釋了 LRT 和 Wald 檢驗的不同之處。紅色虛線是二次方程，用於近似似然比方程（綠色實線）。二者在 $\text{MLE}=\hat\theta$ 時同時取極大值。Wald 檢驗的是，數據提供的 $\hat\theta$ 和我們想要比較的零假設 $\theta_0$ 之間的橫軸差距。在檢驗量 $W$ 中我們還把這個差除以觀察數據均值的標準差（數據的標準誤）。 如果數據本身波動大，$W$ 的分母（標準誤）較大，那麼即使 $\hat\theta - \theta_0$ 保持不變，統計量變小，反對零假設的證據也就越小。反觀，LRT 檢驗的檢驗統計量就是上圖 \@ref(fig:llr-wald) 顯示的縱軸差 $\ell(\theta_0)-\ell(\hat\theta)$ 的大小。二者之間的關係被直觀的顯示在圖中。
 
+Wald 檢驗優點：
+
+1. 簡單；
+2. 不必再計算零假設時的對數似然，只需要 $MLE$ 和它的標準誤。
+
+Wald 檢驗缺點：
+
+1. 兩次近似（LRT只用了一次近似）；
+2. 無法總是保證這是最佳檢驗統計量；
+3. 參數如果被數學轉換 (Section \@ref(para-trans))，$p$ 值會跟着變化。
+
+
+
 ### 以二項分佈爲例
+
+在 $n$ 個實驗對象中觀察到 $k$ 個事件，使用參數爲 $\pi$ 的二項分佈模型來模擬。使用 Wald 檢驗法對下列假設做出統計檢驗： $H_0: \pi=\pi_0 \text{ v.s. } H1: \pi\neq\pi_0$。將參數 logit 轉換 (log-odds) 之後，對轉換後的新參數再做一次 Wald 檢驗。
+
+**解**
+
+根據之前的二次方程近似法推導 (Section \@ref(quadratic-binomial-approx))：
+
+$$
+M=\text{MLE}=\hat\pi=\frac{k}{n}=p\\
+S=se(\hat\pi)=\sqrt{\frac{p(1-p)}{n}}\\
+\Rightarrow \text{Under } H_0: \pi=\pi_0\\
+W=(\frac{p-\pi_0}{\sqrt{\frac{p(1-p)}{n}}})\stackrel{\cdot}{\sim} N(0,1)
+$$
+
+根據參數數學轉換的性質 (Section \@ref(para-trans))
+
+$$
+\text{New parameter } \beta=g(\pi)=\text{logit}(\pi)=\text{log}\frac{\pi}{1-\pi}\\
+ \text{MLE}=\text{logit}(\hat\pi)=\text{log}\frac{\hat\pi}{1-\hat\pi} \\
+ \text{Here we need to use delta-method to approximate standard error of } g(\pi)\\
+ S=se[g(\hat\pi)]\approx g^\prime(\pi)\times se(\hat\pi) \\
+ = \frac{1}{\hat\pi(1-\hat\pi)}\sqrt{\frac{p(1-p)}{n}}\\
+ =\sqrt{\frac{1}{k}+\frac{1}{n-k}} \\
+ \text{So the Wald test becomes}\\
+ H_0: \beta=\beta_0\\
+ \Rightarrow W=\frac{\text{log}(\frac{\hat\pi}{1-\hat\pi})-\text{log}(\frac{\pi_0}{1-\pi_0})}{\sqrt{\frac{1}{k}+\frac{1}{n-k}}}\stackrel{\cdot}{\sim} N(0,1)
+$$
+
+可見對參數進行了數學轉換之後，檢驗統計量的計算式發生了變化。因此 $p$ 值也會不同。
+
+## Score 检验
+
+Score 检验是基于
