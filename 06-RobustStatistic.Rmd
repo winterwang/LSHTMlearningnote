@@ -3,3 +3,86 @@
 # 穩健統計方法入門
 
 # 基於秩次的非參數檢驗
+
+基於秩次的統計學方法不像其他參數檢驗那樣需要太多的假設和前提 (比如服從正態分佈或者其它假設)。這類方法其實放棄了數據的部分信息 -- 那就是數據之間值的差距。通過給數據排序列，我們僅僅知道數據的排序。所以我們可以下結論說 $A$ 大於 $B$，或者 $B$ 大於 $C$ (因此 $A$ 也大於 $C$)，但是他們之間數值的差距被忽略掉了 (所以我們不能比較 $A-B$ 和 $B-C$ 的大小)。
+
+所以，基於秩次的統計學方法完全只依賴數據的大小**排序**，觀察獲得數據的真實大小被忽視了。
+
+## 符號檢驗 the Sign test
+
+我們以下列一組空腹血糖測量值的數據爲例：
+
+```{r echo=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("/home/ccwang/Documents/LSHTMlearningnote/backupfiles/FBG.csv", header = F)
+kable(dt, "html", col.names = c("","",""), align = "c",caption = "Fasting Glucose Level (mmol/L)") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+#  collapse_rows(columns = c(1)) %>%
+  add_header_above(c("n=24 Diabetics" = 3))
+```
+我們如果想要對這組數據的中位數做出假設檢驗，$H_0: \theta = 10; \text{ v.s. } H_1: \theta\neq10$。
+
+該選擇哪種檢驗方法可以回答這個假設檢驗提出的問題：中位數是否等於 $10$?
+
+符號檢驗 (the _sign test_)，可以用來輔助我們對數據的中位數 (median $\theta$) 作出推斷 (inference)。雖然往下看你會發現嚴格說來這並不算是基於秩次的檢驗方法。使用符號檢驗時我們需要的唯一假設：數據來自連續型隨機變量 (continuous distribution random variable)。
+
+這種類型的檢驗方法常用的假設檢驗如下：
+
+$$
+H_0: \theta=\theta_0 \\
+H_1: \theta\neq\theta_0
+$$
+
+其中，$\theta_0$ 就是我們想要檢驗的中位數的大小，在上面的例子中，$\theta_0=10$。
+
+此時我們用到的檢驗統計量，$X$ 的定義是：樣本數據中比 $\theta_0$ 大的數據個數，和比 $\theta_0$ 小的數據個數，兩個個數中小的那一個。因爲在零假設的條件下，如果觀察數據的中位數等於 $\theta_0$ 的話，數據中比 $\theta_0$ 大或者小的數據個數應該是相等的。可以用一個二項分佈，概率爲 $0.5$ 的模型來模擬：
+
+$$X\sim Bin(n, 0.5)$$
+
+在本例中，觀察數據有 13 個小於 $\theta_0=10$，有 11 個大於 $\theta_0=10$。因此 $X=11, n=24$。假如 $\pi$ 是一個觀察數據大於 $\theta_0$ 的概率的話，在零假設的條件下，$H_0: \pi=0.5$。檢驗這個假設的雙側概率的計算公式爲：
+
+$$2\times P(X\leqslant x|\pi=0.5)$$
+
+在本例中， $X=11$。如果（像在考試的時候沒有電腦輔助）要用查表的方式判斷 $p$ 值大小。可以先[下載](http://onlinelibrary.wiley.com/doi/10.1002/9780470776124.app1/pdf) 一份統計數據的表格。下載好了找到 "Statistical Table 7.1 Critical one- and two-tailed values of x for a Sign test" 在第185頁：(下面只是截圖)
+
+
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='%'}
+knitr::include_graphics("img/Selection_088.png")
+```
+$$\cdots\cdots\cdots$$
+
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Sign test', fig.align='center', out.width='%'}
+knitr::include_graphics("img/Selection_089.png")
+```
+
+找到 $n=24$ 這一行，發現顯著性水平是 $20\%$ 的拒絕域都要小於 $8$， 所以本例的 $p>20\%$。
+
+如果你很幸運沒有在考場上，那麼可以找出自己的電腦下載好 [R](https://www.r-project.org/) 之後執行下面的命令：
+
+```{r}
+2*pbinom(11,24, 0.5)
+```
+或者可以使用命令 `binom.test` 來做一個二項分佈的概率檢驗：
+
+```{r}
+options(scipen = 1, digits = 8) # just to show the p values are exactly the same
+binom.test(11,24,0.5)
+```
+
+或者你也可以使用 [`BSDA`](https://alanarnholt.github.io/BSDA/) 中的 `SIGN.test` 命令來進行一場轟轟烈烈的符號檢驗：
+
+```{r}
+options(scipen = 1, digits = 8)
+# input the data
+dt <- c(10.3,9.5,12.2,15.1,10.8,19.0,16.1, 8.1, 8.8, 6.7,12.5, 4.2,15.3, 7.2, 9.3, 8.6, 5.3,6.7 ,5.2,13.3, 7.5, 4.9,19.5,11.1)
+BSDA::SIGN.test(dt, md=10, alternative="two.sided", conf.level=0.95)
+```
+
+“據說”如果你用 [`Stata`](https://www.stata.com/) 的話還會給你一個絢麗的表格：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='The Stata output of a Sign Test', fig.align='center', out.width='%'}
+knitr::include_graphics("img/Selection_090.png")
+```
+
+總而言之無論你用的是哪個方法，查 (水) 表法或是統計武俠包，結果都是一樣的：數據無法提供足夠的證據拒絕零假設，即無證據證明中位數不等於10。
