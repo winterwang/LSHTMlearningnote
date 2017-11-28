@@ -280,6 +280,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="28.1.1" data-path="section-28.html"><a href="section-28.html#section-28.1.1"><i class="fa fa-check"></i><b>28.1.1</b> 符號檢驗的特點</a></li>
 </ul></li>
 <li class="chapter" data-level="28.2" data-path="section-28.html"><a href="section-28.html#wilcoxon-the-wilcoxon-signed-rank-test"><i class="fa fa-check"></i><b>28.2</b> Wilcoxon 符號秩和檢驗，the Wilcoxon signed-rank test</a></li>
+<li class="chapter" data-level="28.3" data-path="section-28.html"><a href="section-28.html#wilcoxon-mann-whitney-wmw-"><i class="fa fa-check"></i><b>28.3</b> Wilcoxon-Mann-Whitney (WMW) 檢驗</a></li>
 </ul></li>
 <li class="part"><span><b>VII 貝葉斯統計</b></span></li>
 <li class="chapter" data-level="29" data-path="section-29.html"><a href="section-29.html"><i class="fa fa-check"></i><b>29</b> 貝葉斯統計入門</a><ul>
@@ -534,12 +535,102 @@ z=\lvert\frac{2x}{\sqrt{n}}-\sqrt{n}\rvert-\frac{1}{\sqrt{n}}
 <div id="wilcoxon-the-wilcoxon-signed-rank-test" class="section level2">
 <h2><span class="header-section-number">28.2</span> Wilcoxon 符號秩和檢驗，the Wilcoxon signed-rank test</h2>
 <p>Wilcoxon 符號秩和檢驗也可以用來檢驗一組數據的中位數是否和某個已知數字相等。進行本方法時除了像符號檢驗那樣要假設數據是連續的以外，還要假設數據的分佈是左右對稱的。因此，由於假定了左右對稱的前提，中位數也就等於均數，所以它也可以被用於檢驗均數是否等於某個已知的值。</p>
-<p>Wilcoxon 符號秩和檢驗的前提可以被認爲是處於符號檢驗和單一樣本 <span class="math inline">\(t\)</span> 檢驗 (還假設數據來自於正態分佈) 之間的一種檢驗。</p>
+<p>Wilcoxon 符號秩和檢驗的前提可以被認爲是介於符號檢驗和單一樣本 <span class="math inline">\(t\)</span> 檢驗 (還假設數據來自於正態分佈) 之間的一種檢驗。</p>
 <p>當一組隨機觀察數據 <span class="math inline">\(x_1,\cdots,x_n\)</span> 來自於對稱的連續分佈數據。如果它的中位數是 <span class="math inline">\(\theta\)</span>，在零假設：<span class="math inline">\(H_0: \theta=\theta_0\)</span> 的條件下：</p>
 <ol style="list-style-type: decimal">
 <li>將全部觀察數據一一和 <span class="math inline">\(\theta_0\)</span> 相減，那麼每一個 <span class="math inline">\(d_i=x_i-\theta_0, i=1,2,\cdots,n\)</span> 的正負符號概率是相等的；</li>
 <li>任何一個和 <span class="math inline">\(\theta_0\)</span> 相減之後的差 <span class="math inline">\(\lvert d_i \lvert\)</span> ，取正負符號的概率是相等的。</li>
 </ol>
+<p>這裏我們使用另一個例子來說明 Wilcoxon 檢驗法。下列數據爲，12名女性從平躺姿勢改成直立時心跳次數的變化 (次/分)。</p>
+<p><code>-2, -5, 12, 4, 16, 17, 8, 3, 20, 25, 1, 9</code></p>
+<p>下面來使用 Wilcoxon 符號秩和檢驗法來檢驗中位數 <span class="math inline">\(\theta=15\)</span>。</p>
+<p>首先，先計算每個數據和 <span class="math inline">\(15\)</span> 之間的差值：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="op">-</span><span class="dv">5</span>, <span class="dv">12</span>, <span class="dv">4</span>, <span class="dv">16</span>, <span class="dv">17</span>, <span class="dv">8</span>, <span class="dv">3</span>, <span class="dv">20</span>, <span class="dv">25</span>, <span class="dv">1</span>, <span class="dv">9</span>)
+newdata &lt;-<span class="st"> </span>data<span class="op">-</span><span class="dv">15</span>
+newdata</code></pre></div>
+<pre><code>##  [1] -17 -20  -3 -11   1   2  -7 -12   5  10 -14  -6</code></pre>
+<p>下一步，計算這些差值的絕對值：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">abs_newdata &lt;-<span class="st"> </span><span class="kw">abs</span>(newdata)
+abs_newdata</code></pre></div>
+<pre><code>##  [1] 17 20  3 11  1  2  7 12  5 10 14  6</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Dt &lt;-<span class="st"> </span><span class="kw">data.frame</span>(data, newdata, abs_newdata)
+Dt &lt;-<span class="st"> </span>Dt[<span class="kw">order</span>(newdata), ] <span class="co"># sort the data by newdata</span>
+Dt</code></pre></div>
+<pre><code>##    data newdata abs_newdata
+## 2    -5     -20          20
+## 1    -2     -17          17
+## 11    1     -14          14
+## 8     3     -12          12
+## 4     4     -11          11
+## 7     8      -7           7
+## 12    9      -6           6
+## 3    12      -3           3
+## 5    16       1           1
+## 6    17       2           2
+## 9    20       5           5
+## 10   25      10          10</code></pre>
+<p>之後，給絕對值排序：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Dt<span class="op">$</span>ranks &lt;-<span class="st"> </span><span class="kw">rank</span>(Dt<span class="op">$</span>abs_newdata)
+Dt</code></pre></div>
+<pre><code>##    data newdata abs_newdata ranks
+## 2    -5     -20          20    12
+## 1    -2     -17          17    11
+## 11    1     -14          14    10
+## 8     3     -12          12     9
+## 4     4     -11          11     8
+## 7     8      -7           7     6
+## 12    9      -6           6     5
+## 3    12      -3           3     3
+## 5    16       1           1     1
+## 6    17       2           2     2
+## 9    20       5           5     4
+## 10   25      10          10     7</code></pre>
+<p>接下來，給小於 <span class="math inline">\(15\)</span> 的數據的排序加上負號：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Dt<span class="op">$</span>signed_ranks &lt;-<span class="st"> </span><span class="kw">ifelse</span>(Dt<span class="op">$</span>newdata <span class="op">&lt;</span><span class="st"> </span><span class="dv">0</span>, Dt<span class="op">$</span>ranks<span class="op">*</span>(<span class="op">-</span><span class="dv">1</span>), Dt<span class="op">$</span>ranks)
+Dt &lt;-<span class="st"> </span>Dt[<span class="kw">order</span>(Dt<span class="op">$</span>ranks),]
+Dt</code></pre></div>
+<pre><code>##    data newdata abs_newdata ranks signed_ranks
+## 5    16       1           1     1            1
+## 6    17       2           2     2            2
+## 3    12      -3           3     3           -3
+## 9    20       5           5     4            4
+## 12    9      -6           6     5           -5
+## 7     8      -7           7     6           -6
+## 10   25      10          10     7            7
+## 4     4     -11          11     8           -8
+## 8     3     -12          12     9           -9
+## 11    1     -14          14    10          -10
+## 1    -2     -17          17    11          -11
+## 2    -5     -20          20    12          -12</code></pre>
+<p>對正的負的 <code>signed_ranks</code> 分別求和，小的那個就是 Wilcoxon 檢驗的統計量。本例中：<span class="math inline">\(S^+=\)</span> 14，<span class="math inline">\(S^-=\)</span> -64，所以本例中的檢驗統計量等於 <span class="math inline">\(14\)</span>。如果要繼續查表的話，可以找到 <span class="math inline">\(0.05&lt;p&lt;0.1\)</span>：</p>
+<p><img src="img/Selection_091.png" width="%" style="display: block; margin: auto;" /> <span class="math display">\[\cdots\cdots\cdots\]</span></p>
+<div class="figure" style="text-align: center"><span id="fig:unnamed-chunk-39"></span>
+<img src="img/Selection_092.png" alt="Critical Values for a Wilcoxon Signed-Ranks test" width="%" />
+<p class="caption">
+图 28.3: Critical Values for a Wilcoxon Signed-Ranks test
+</p>
+</div>
+<p>精確的 Wilcoxon 符號秩和檢驗可以通過下列代碼在 <a href="https://www.r-project.org/">R</a> 裏完成：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">wilcox.test</span>(Dt<span class="op">$</span>data, <span class="dt">mu=</span><span class="dv">15</span>, <span class="dt">paired =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<pre><code>## 
+##  Wilcoxon signed rank test
+## 
+## data:  Dt$data
+## V = 14, p-value = 0.052246
+## alternative hypothesis: true location is not equal to 15</code></pre>
+<p>如果數據中有觀察值和我們希望比較的數值完全相等的話，和符號檢驗類似的，這些觀察值需要被剔除之後再進行上面的個步驟檢驗。記得還要將樣本量減去相應個數再去查表尋找 <span class="math inline">\(p\)</span> 值。</p>
+<p>另外，下面的代碼可以計算正態分佈近似的 Wilcoxon 秩和檢驗，結果十分接近：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">wilcox.test</span>(Dt<span class="op">$</span>data, <span class="dt">mu=</span><span class="dv">15</span>, <span class="dt">paired =</span> <span class="ot">FALSE</span>, <span class="dt">exact =</span> <span class="ot">FALSE</span>, <span class="dt">correct =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<pre><code>## 
+##  Wilcoxon signed rank test
+## 
+## data:  Dt$data
+## V = 14, p-value = 0.04986
+## alternative hypothesis: true location is not equal to 15</code></pre>
+<p>值得注意的是，精確計算時，我們需要剔除那些和比較數值完全一致的觀察值。然而在正態分佈近似法的 Wilcoxon 檢驗中，這些數值並不會被剔除，而是保留下來，並且用於對方差進行調整。Wilcoxon 秩和檢驗可以在我們能夠假設數據左右對稱分佈，且明顯不服從正態分佈時使用 (即概率密度分布圖左右兩端的尾部較厚的時候)。如果數據左右完全對稱，本檢驗方法不太推薦採用。</p>
+</div>
+<div id="wilcoxon-mann-whitney-wmw-" class="section level2">
+<h2><span class="header-section-number">28.3</span> Wilcoxon-Mann-Whitney (WMW) 檢驗</h2>
 
 </div>
 </div>

@@ -116,9 +116,77 @@ $$z=\lvert\frac{2\times11}{\sqrt{24}}-\sqrt{24}\rvert-\frac{1}{\sqrt{24}}=0.204$
 
 Wilcoxon 符號秩和檢驗也可以用來檢驗一組數據的中位數是否和某個已知數字相等。進行本方法時除了像符號檢驗那樣要假設數據是連續的以外，還要假設數據的分佈是左右對稱的。因此，由於假定了左右對稱的前提，中位數也就等於均數，所以它也可以被用於檢驗均數是否等於某個已知的值。
 
-Wilcoxon 符號秩和檢驗的前提可以被認爲是處於符號檢驗和單一樣本 $t$ 檢驗 (還假設數據來自於正態分佈) 之間的一種檢驗。
+Wilcoxon 符號秩和檢驗的前提可以被認爲是介於符號檢驗和單一樣本 $t$ 檢驗 (還假設數據來自於正態分佈) 之間的一種檢驗。
 
 當一組隨機觀察數據 $x_1,\cdots,x_n$ 來自於對稱的連續分佈數據。如果它的中位數是 $\theta$，在零假設：$H_0: \theta=\theta_0$ 的條件下：
 
 1. 將全部觀察數據一一和 $\theta_0$ 相減，那麼每一個 $d_i=x_i-\theta_0, i=1,2,\cdots,n$ 的正負符號概率是相等的；
 2. 任何一個和 $\theta_0$ 相減之後的差 $\lvert d_i \lvert$ ，取正負符號的概率是相等的。
+
+這裏我們使用另一個例子來說明 Wilcoxon 檢驗法。下列數據爲，12名女性從平躺姿勢改成直立時心跳次數的變化 (次/分)。
+
+`-2, -5, 12, 4, 16, 17, 8, 3, 20, 25, 1, 9`
+
+下面來使用 Wilcoxon 符號秩和檢驗法來檢驗中位數 $\theta=15$。
+
+首先，先計算每個數據和 $15$ 之間的差值：
+
+```{r}
+data <- c(-2, -5, 12, 4, 16, 17, 8, 3, 20, 25, 1, 9)
+newdata <- data-15
+newdata
+```
+
+下一步，計算這些差值的絕對值：
+
+```{r}
+abs_newdata <- abs(newdata)
+abs_newdata
+Dt <- data.frame(data, newdata, abs_newdata)
+Dt <- Dt[order(newdata), ] # sort the data by newdata
+Dt
+```
+
+之後，給絕對值排序：
+
+```{r}
+Dt$ranks <- rank(Dt$abs_newdata)
+Dt
+```
+
+接下來，給小於 $15$ 的數據的排序加上負號：
+
+```{r}
+Dt$signed_ranks <- ifelse(Dt$newdata < 0, Dt$ranks*(-1), Dt$ranks)
+Dt <- Dt[order(Dt$ranks),]
+Dt
+```
+
+對正的負的 `signed_ranks` 分別求和，小的那個就是 Wilcoxon 檢驗的統計量。本例中：$S^+=$ `r sum(Dt$signed_ranks[Dt$signed_ranks>0])`，$S^-=$ `r sum(Dt$signed_ranks[Dt$signed_ranks<0])`，所以本例中的檢驗統計量等於 $14$。如果要繼續查表的話，可以找到 $0.05<p<0.1$：
+
+
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='%'}
+knitr::include_graphics("img/Selection_091.png")
+```
+$$\cdots\cdots\cdots$$
+
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Wilcoxon Signed-Ranks test', fig.align='center', out.width='%'}
+knitr::include_graphics("img/Selection_092.png")
+```
+精確的 Wilcoxon 符號秩和檢驗可以通過下列代碼在 [R](https://www.r-project.org/) 裏完成：
+
+```{r}
+wilcox.test(Dt$data, mu=15, paired = FALSE)
+```
+
+如果數據中有觀察值和我們希望比較的數值完全相等的話，和符號檢驗類似的，這些觀察值需要被剔除之後再進行上面的個步驟檢驗。記得還要將樣本量減去相應個數再去查表尋找 $p$ 值。
+
+另外，下面的代碼可以計算正態分佈近似的 Wilcoxon 秩和檢驗，結果十分接近：
+
+```{r}
+wilcox.test(Dt$data, mu=15, paired = FALSE, exact = FALSE, correct = FALSE)
+```
+
+值得注意的是，精確計算時，我們需要剔除那些和比較數值完全一致的觀察值。然而在正態分佈近似法的 Wilcoxon 檢驗中，這些數值並不會被剔除，而是保留下來，並且用於對方差進行調整。Wilcoxon 秩和檢驗可以在我們能夠假設數據左右對稱分佈，且明顯不服從正態分佈時使用 (即概率密度分布圖左右兩端的尾部較厚的時候)。如果數據左右完全對稱，本檢驗方法不太推薦採用。
+
+## Wilcoxon-Mann-Whitney (WMW) 檢驗
