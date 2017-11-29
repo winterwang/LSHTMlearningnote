@@ -452,7 +452,7 @@ $$\begin{equation}
 
 假設進行10次實驗，觀察到3次成功。當 $\theta=0.2$ 時，觀察數據的似然 (likelihood) 爲：
 
-$$f_R(r|\theta=0.2)=\binom{10}{3}0.2^3(1-0.2)^7$$
+$$f_R(3|\theta=0.2)=\binom{10}{3}0.2^3(1-0.2)^7$$
 
 當 $\theta=0.7$ 時，觀察數據的似然爲：
 
@@ -549,10 +549,10 @@ $$\theta^r(1-\theta)^{n-r}$$
 
 於是這裏可以總結以下兩點：
 
-1. 如果先驗概率對參數毫無用處（不能提供有效信息，或者我們對所觀察的數據一無所知），可能會對事後概率分佈結果提供一些意外的信息。
+1. 即使先驗概率對參數毫無用處（不能提供有效信息，或者我們對所觀察的數據一無所知），也可能會對事後概率分佈結果提供一些意外的信息。
 2. 當樣本量增加，似然就主導了整個貝葉斯方程，在數學計算上，經典概率論和貝葉斯推理的估計結果將會十分接近。當然，其各自的意義還是截然不同的。
 
-### 二項分佈數據事後概率分佈的一般化：共軛性
+### 二項分佈數據事後概率分佈的一般化：共軛性 {#conjugate}
 
 當 $r\sim \text{Binomial}(n,\theta)$ 時，如果先驗概率 $\pi_\Theta(\theta)=\text{Beta}(a,b)$。那麼參數 $\theta$ 的事後概率分佈的密度方程滿足：
 
@@ -590,7 +590,124 @@ $$
 
 $$\frac{(a+r)(b+n+r)}{(a+b+n)^2(a+b+n+1)}\approx0$$
 
+當 $n$，樣本越來越大時，我們獲得更多的來自數據的信息，所以來自數據的信息逐漸主導 (dominate) 了整個貝葉斯推斷的過程，事後均值等衆多統計結果都越來越趨近於概率論統計思想下的極大似然估計等結論。
 
 我們也可以注意到，當 $a\rightarrow0, b\rightarrow0$ 時，事後概率分佈的均值 $E[\theta|r] = \frac{a+r}{a+b+n} \rightarrow \frac{r}{n}$，方差也趨向於樣本漸進方差 (asymptotic sample variance)。但是當 $a\rightarrow 0, b\rightarrow0$ 時，先驗概率是沒有被定義的，可是此例下事後概率卻可以正常被定義。所以當先驗概率分佈無法被定義，或者被定義的不恰當時，事後概率分佈依然不受太大影響。所以特別是對於均值（或迴歸係數，regression coefficients）等參數，我們常常會使用均一分佈這樣的無信息先驗概率。
 
 ## 練習題
+
+### Q1
+當先驗概率分佈服從 $\text{Beta}(0.5,0.5)$，觀察數據記錄到 $5$ 個患者中 $3$ 人死亡的事件。
+試求：
+死亡發生概率 $\theta$ 的 95% 可信區間 (credible intervals)。
+
+**解**
+
+根據 Section \@ref(conjugate) 的公式，當先驗概率爲 $\pi_{\Theta|r}(\theta|r)=\text{Beta}(a=0.5,b=0.5)$ ，數據 $n=5, r=3$。參數 $\theta$ 的事後概率分佈 $\pi_{\Theta|r}(\theta|r)=\text{Beta}(a+r,b+n-r)=\text{Beta}(3.5,2.5)$。
+
+在 [R](https://www.r-project.org/) 裏進行貝葉斯計算十分簡便：
+
+```{r}
+# 95% Credible Intervals
+L <- qbeta(0.025, 3.5, 2.5)
+U <- qbeta(0.975, 3.5, 2.5)
+
+print(c(L,U))
+```
+
+事後分佈 $\pi_{\Theta|r}(\theta|r)=\text{Beta}(3.5,2.5)$ 的分佈圖形如下：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Posterior distribution of Beta(3.5,2.5)', out.width='80%'}
+post <- Vectorize(function(theta) dbeta(theta, 3.5, 2.5))
+
+# Illustration
+x <- seq(0,1,length=10000)
+y <- post(x)
+plot(x,y, type = "l", xlab=~theta, ylab="Density", lwd=2, frame.plot = FALSE)
+
+polygon(c(L, x[x>=L & x<= U], U), c(0, y[x>=L & x<=U], 0), col="grey")
+```
+
+我們可以自己寫一個求可信區間的公式來計算：
+
+```{r}
+# Credible Interval function:
+# a, b : shape / super parameters
+# level: probability level (0,1)
+
+cred.int <- function(a,b,level){
+  L <- qbeta((1-level)/2, a, b) # Lower limit
+  U <- qbeta((1+level)/2, a, b) # Upper limit
+  return(c(L,U))
+}
+
+cred.int(3.5,2.5,0.95)
+```
+95%可信區間 $(0.2094, 0.9056)$ 告訴我們，參數 $\theta\in(0.2094, 0.9056)$ 的概率是 $0.95$。
+
+下面我們嘗試寫 Beta 分佈的其他統計量：均值，衆數，方差等。
+
+```{r}
+# a, b: shape / super parameters
+MeanBeta <- function(a,b) a/(a+b)
+ModeBeta <- function(a,b) {
+  m <- ifelse(a>1 & b>1, (a-1)/(a+b-2), NA)
+  return(m)
+}
+VarianceBeta <- function(a,b) (a*b)/((a+b)^2*(a+b+1))
+
+# mean
+MeanBeta(3.5,2.5)
+
+# mode
+ModeBeta(3.5,2.5)
+
+# Variance
+VarianceBeta(3.5, 2.5)
+
+# SD
+sqrt(VarianceBeta(3.5, 2.5))
+```
+
+### Q2
+假如數據還是 Q1 的數據，然而先驗概率讓我們認爲可能在 5 名受試對象中觀察到 1 次事件。
+
+1. 試求超參數 $(a,b)$ 滿足先驗概率的 Beta 分佈。(不止一組)
+
+**解**
+
+我們認爲最有可能發生 “5 名受試對象中觀察到 1 次事件” 的情況，所以先驗概率的均值爲 $\frac{a}{a+b}=0.2$。所以，在實數中有無數組超參數都可以用來模擬先驗概率分佈。例如 $a=1, b=4; a=10, b=40; a=100, b=400; a=0.317, b=1.268, \cdots$。
+
+
+2. 假如觀察數據是 $n=5, r=1$，計算事後概率分佈及其均值，標準差。
+
+**解**
+
+先來嘗試寫一個計算貝葉斯二項分佈的方程：
+
+```{r}
+# binbayes function in R
+#------------------------------
+# a, b: shape / super parameters
+# r   : number of successes
+# n   : number of trials
+
+binbayes <- function(a, b, r, n) {
+  prior <- c(a, b, NA, MeanBeta(a,b), sqrt(VarianceBeta(a, b)), qbeta(0.025, a, b), qbeta(0.5, a, b), qbeta(0.975, a, b))
+  posterior <- c(a+r, b+n-r, r/n, MeanBeta(a+r, b+n-r), sqrt(VarianceBeta(a+r, b+n-r)), qbeta(0.025, a+r, b+n-r), qbeta(0.5, a+r, b+n-r), qbeta(0.975, a+r, b+n-r))
+  out <- rbind(prior, posterior)
+  out <- round(out, 4)
+  colnames(out) <- c("a","b","r/n","Mean", "SD", "2.5%", "50%", "97.5%")
+  return(out)
+}
+
+# a=1, b=4, r=1, n=5
+binbayes(1,4,1,5)
+
+# a=10, b=40, r=1, n=5
+binbayes(10,40,1,5)
+```
+
+
+
+3.
