@@ -617,7 +617,7 @@ print(c(L,U))
 
 事後分佈 $\pi_{\Theta|r}(\theta|r)=\text{Beta}(3.5,2.5)$ 的分佈圖形如下：
 
-```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Posterior distribution of Beta(3.5,2.5)', out.width='80%'}
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Posterior distribution of Beta(3.5,2.5)', out.width='80%'}
 post <- Vectorize(function(theta) dbeta(theta, 3.5, 2.5))
 
 # Illustration
@@ -708,6 +708,143 @@ binbayes(1,4,1,5)
 binbayes(10,40,1,5)
 ```
 
+通過繪製先驗概率分佈圖和事後概率分佈圖來比較二者的變化：
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,4) vs. Posterior (cont.) Beta(2,8)', out.width='80%'}
+# Prior vs posterior graphs
+# a,b : shape / super parameters
+# r   : number of successes
+# n   : number of trials
+graph.binbayes <- function(a,b,r,n) {
+  prior <- Vectorize(function(theta) dbeta(theta, a,b))
+  posterior <- Vectorize(function(theta) dbeta(theta, a+r, b+n-r))
+  YL <- max(prior(seq(0.001,0.999,by=0.001)),posterior(seq(0.001,0.999,by=0.001)))
+  curve(prior, xlab=~theta, ylab="Density", lwd=1, lty=2,n=10000,ylim=c(0,YL), frame.plot = FALSE)
+  curve(posterior, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+}
+
+graph.binbayes(1,4,1,5)
+```
 
 
-3.
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(10,40) vs. Posterior (cont.) Beta(11, 44)', out.width='80%'}
+graph.binbayes(10,40,1,5)
+```
+
+我們可以很清楚的看見，先驗概率相同時，$\text{Beta} (a,b)$ 的超參數如果越大，先驗概率的分佈就越趨近與對稱圖形，且極大值也就越出現在均值的地方 (本例中是 $0.2$)。而且也會使事後概率的 HPD (highest posterior density) 的區間更狹窄 (意爲對事後概率的預測越準確)，同時事後概率分佈也更加接近左右對稱。
+
+### Q3
+我們事先估計某個事件在 $n=20$ 名患者中發生的概率爲 $15\%$。當實際觀察數據爲 $n=15,r=3$ 時，計算相應的事後概率。
+
+**解**
+
+```{r}
+# because 15% events happened in 20 subjects, assuming prior Beta(a=3, b=17)
+# observed n=15, r=3
+binbayes(3,17,3,15)
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(3,17) vs. Posterior (cont.) Beta(6,29)', out.width='80%'}
+graph.binbayes(3,17,3,15)
+```
+
+試着繪製先驗概率服從 $\text{Beta} (1,1)$，回憶之前本章開頭的圖 \@ref(fig:beta-distr)，這個先驗概率的含義就是我們沒有任何背景知識，對數據完全陌生的情況：
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4,13)', out.width='80%'}
+graph.binbayes(1,1,3,15)
+```
+
+### Q4
+試給出上面各題中參數 $\theta$ 落在 $(0.1,0.25)$ 之間的概率。
+
+
+```{r}
+# function to calculate probabilities in a interval
+# a, b: super parameters
+# r   : number of successes
+# n   : number of trials
+# L   : Lower limit of the probability interval
+# U   : Upper limit of the probability interval
+
+prob.int <- function(a,b,r,n,L,U){
+prior0 <- pbeta(U,a,b) - pbeta(L,a,b)
+posterior0 <- pbeta(U,a+r,n-r+b) - pbeta(L,a+r,n-r+b)
+prob <- as.matrix(c(prior0, posterior0))
+prob <- round(prob,4)
+colnames(prob) <- paste("Probability of theta lies between the Interval", L, U)
+rownames(prob) <- c("Prior","Posterior")
+  return(prob)
+}
+
+# Prior Beta(0.317,1.286) n = 5, r=1
+binbayes(0.317, 1.286, 1, 5)
+prob.int(0.317, 1.286, 1, 5,0.1,0.25)
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(0.317,1.286) vs. Posterior (cont.) Beta(1.317, 5.286)', out.width='80%'}
+graph.binbayes(0.317, 1.286, 1, 5)
+```
+
+```{r}
+# Prior Beta(10,40) n = 5, r=1
+binbayes(10, 40, 1, 5)
+prob.int(10, 40, 1, 5,0.1,0.25)
+```
+
+所以在範圍固定的時候，事後概率分佈總是能夠比先驗概率分佈給出更高的累計概率。
+
+### Q5
+一個臨牀試驗要進行兩個階段 (two phases)，第一階段我們觀察到 $10$ 個患者中 $1$ 個事件。第二階段，觀察到 $n=50, r=5$。
+
+1. 兩個階段都使用 $\text{Beta}(1,1)$ 作先驗概率。求兩個實驗階段參數 $\theta<0.1$ 的概率。
+
+```{r}
+# Phase I
+binbayes(1, 1, 1, 10)
+prob.int(1,1,1,10,0,0.1)
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 10)', out.width='80%'}
+graph.binbayes(1, 1, 1, 10)
+```
+
+
+
+```{r}
+# Phase II
+binbayes(1, 1, 5, 50)
+prob.int(1,1,5,50,0,0.1)
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(6, 46)', out.width='80%'}
+graph.binbayes(1, 1, 5, 50)
+```
+
+2. 繼續使用先驗概率分佈 $\text{Beta}(1,1)$，合併兩個實驗階段，求此時的事後概率分佈，以及參數 $\theta<0.1$ 的概率。
+
+
+```{r}
+# Combining both phases
+binbayes(1, 1, 6, 60)
+prob.int(1,1,6,60,0,0.1)
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(7, 55)', out.width='80%'}
+graph.binbayes(1, 1, 6, 60)
+```
+
+3. 用第一階段的實驗結果做第二階段實驗的先驗概率分佈，再計算事後概率分佈，以及 $\theta<0.1$ 的概率。
+
+```{r}
+# Using Phase I results as a prior for Phase II
+binbayes(2, 10, 5, 50)
+prob.int(2,10,5,50,0,0.1)
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(2,10) vs. Posterior (cont.) Beta(7, 55)', out.width='80%'}
+graph.binbayes(2, 10, 5, 50)
+```
+
+第2，3兩個小問題提示我們，無論是將第一階段實驗結果作爲第二階段實驗的先驗假設還是將兩次實驗合併，最終的結果是不會改變的。Both approaches are equivalent.
+
+### Q6 
