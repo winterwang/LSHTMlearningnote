@@ -47,12 +47,12 @@ $$2\times P(X\leqslant x|\pi=0.5)$$
 在本例中， $X=11$。如果（像在考試的時候沒有電腦輔助）要用查表的方式判斷 $p$ 值大小。可以先[下載](http://onlinelibrary.wiley.com/doi/10.1002/9780470776124.app1/pdf) 一份統計數據的表格。下載好了找到 "Statistical Table 7.1 Critical one- and two-tailed values of x for a Sign test" 在第185頁：(下面只是截圖)
 
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='%'}
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_088.png")
 ```
 $$\cdots\cdots\cdots$$
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Sign test', fig.align='center', out.width='%'}
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Sign test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_089.png")
 ```
 
@@ -81,7 +81,7 @@ BSDA::SIGN.test(dt, md=10, alternative="two.sided", conf.level=0.95)
 
 “據說”如果你用 [`Stata`](https://www.stata.com/) 的話還會給你一個絢麗的表格：
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='The Stata output of a Sign Test', fig.align='center', out.width='%'}
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='The Stata output of a Sign Test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_090.png")
 ```
 
@@ -165,12 +165,12 @@ Dt
 對正的負的 `signed_ranks` 分別求和，絕對值較小的那個就是 Wilcoxon 檢驗的統計量。本例中：$S^+=$ `r sum(Dt$signed_ranks[Dt$signed_ranks>0])`，$S^-=$ `r sum(Dt$signed_ranks[Dt$signed_ranks<0])`，所以本例中的檢驗統計量等於 $14$。如果要繼續查表的話，可以找到 $0.05<p<0.1$：
 
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='%'}
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_091.png")
 ```
 $$\cdots\cdots\cdots$$
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Wilcoxon Signed-Ranks test', fig.align='center', out.width='%'}
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Wilcoxon Signed-Ranks test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_092.png")
 ```
 精確的 Wilcoxon 符號秩和檢驗可以通過下列代碼在 [R](https://www.r-project.org/) 裏完成：
@@ -251,7 +251,7 @@ $$U_1=W_1-\frac{n(n+1)}{2}=51.5-\frac{7\times(7+1)}{2}=23.5$$
 
 所以 $n\times m-U_1=7\times9-23.5=39.5$，顯然這兩個數值中小的 $23.5$ 就是我們尋找的 WMW 統計量。繼續查水錶：
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values of U for a Wilcoxon-Mann-Whitney test', fig.align='center', out.width='%'}
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values of U for a Wilcoxon-Mann-Whitney test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_093.png")
 ```
 可知 $n_1=7, n_2=9$ 時，統計量要低於 $15$ $p$ 值才會小於 $0.01$。所以數據給出的 $p>0.1$。
@@ -264,4 +264,95 @@ wilcox.test(dt$thyr~dt$group) # with continuity correction i.e. normal apprixima
 
 ## 秩相關，Spearman's Rank Correlation Coefficient
 
-Spearman 的秩相關 (通常用 $\rho$)
+Spearman 的秩相關 (通常用 $\rho$)，是一種基於數據排序的相關係數算法。和傳統的 Pearson 相關係數類比，是當數據無法被認定是線性相關時的另一種相關關係檢驗方法。所以秩相關不假定兩組數據之間是線性相關 (linear association)。秩相關只關心一個數據遞增時，另一個數據是否單調遞增。所以可以用於傾向性檢驗。
+
+具體的操作是，在兩組數據中先各自排序，像所有的排序檢驗一樣遇到相同大小的數值將排序取均值。之後使用一般的求相關係數的方法。本法中只用到了數值在各自組中的排序，並沒有使用他們的真實大小。近似法的秩相關計算公式爲：
+
+$$\hat\tau=\frac{\hat\rho}{\sqrt{(1-\hat\rho^2)/(n-2)}}$$
+
+在零假設條件下 $H_0: \rho=0$，上面的近似法秩相關服從 $t_{n-2}$ 分佈。
+下面用某血友病患者調查數據獲得的血液 $T_4, T_8$ 淋巴球計數 $(\times10^9/\ell)$ 來詳細解釋計算過程：
+
+```{r echo=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("/home/ccwang/Documents/LSHTMlearningnote/backupfiles/t4t8.csv", header = T)
+kable(dt, "html", align = "c",caption = "Lymphocyte counts") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+#  collapse_rows(columns = c(1)) %>%
+  add_header_above(c("n=28 haemophiliacs" = 2)) %>%
+    scroll_box(width = "700px", height = "600px")
+```
+
+
+
+給這組數據繪製散點圖：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Scatter plot of T4 and T8 counts', out.width='80%'}
+library(ggplot2)
+
+ggplot(dt, aes(x=th4, y=th8)) + geom_point(shape=20) + #geom_rug(position = "jitter", size=0.2)+
+ theme(plot.subtitle = element_text(vjust = 1),
+    plot.caption = element_text(vjust = 1),
+    axis.line = element_line(size = 0.5,
+        linetype = "solid"), axis.title = element_text(size = 13,
+        face = "bold"), axis.text = element_text(size = 12,
+        face = "bold", colour = "gray0"),
+    axis.text.x = element_text(size = 11),
+    axis.text.y = element_text(size = 11),
+    panel.background = element_rect(fill = "whitesmoke"))+
+  scale_y_continuous(breaks=seq(0, 1.5, 0.5),limits = c(0,1.53))+
+  scale_x_continuous(breaks = seq(0,2.5,0.5),limits = c(0,2.53))
+```
+
+可以看見圖中右上角的兩個點幾乎可以認爲是異常值 (outliers)。
+分別給 `th4, th8` 求各自的排序：
+
+```{r}
+dt$rank4 <- rank(dt$th4)
+dt$rank8 <- rank(dt$th8)
+kable(dt, "html", align = "c",caption = "Lymphocyte counts") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+#  collapse_rows(columns = c(1)) %>%
+  add_header_above(c("n=28 haemophiliacs with ranks" = 4)) %>%
+    scroll_box(width = "700px", height = "600px")
+```
+
+接下來再給 `th4, th8` 的排序做散點圖：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Scatter plot of T4 and T8 ranks', out.width='80%'}
+library(ggplot2)
+
+ggplot(dt, aes(x=rank4, y=rank8)) + geom_point(shape=20) + #geom_rug(position = "jitter", size=0.2)+
+ theme(plot.subtitle = element_text(vjust = 1),
+    plot.caption = element_text(vjust = 1),
+    axis.line = element_line(size = 0.5,
+        linetype = "solid"), axis.title = element_text(size = 13,
+        face = "bold"), axis.text = element_text(size = 12,
+        face = "bold", colour = "gray0"),
+    axis.text.x = element_text(size = 11),
+    axis.text.y = element_text(size = 11),
+    panel.background = element_rect(fill = "whitesmoke"))+
+  labs(x = "rank of (th4)", y = "rank of (th8)")+
+  scale_y_continuous(breaks=seq(0, 35, 5),limits = c(0,31))+
+  scale_x_continuous(breaks = seq(0,35,5),limits = c(0,31))
+```
+
+此時也就沒有了異常值的存在。對二者的排序計算相關係數：
+
+```{r}
+cor.test(dt$rank4, dt$rank8)
+cor.test(dt$th4, dt$th8)
+```
+
+秩相關的相關係數爲 $0.628$。而原始數據的相關係數爲 $0.719$。
+
+## 基於秩次的非參數檢驗的優缺點
+
+優點：
+- 可以讓我們拋棄很多 (正態分佈等的) 前提假設，許多真實數據本身並不能滿足這些條件，這些情況下，基於秩次的非參數檢驗能提供更高的統計效能 (power)。
+
+缺點：
+- 如果數據本身能夠滿足如正態分佈之類的假設，那麼相比較與一般的參數檢驗，基於秩次的非參數檢驗法效能就偏低。
+- 基於秩次的非參數檢驗較難推廣到更加複雜的情況。
+- 這些檢驗法僅僅只能幫助我們進行假設檢驗。但是多數情況下，我們更加希望能使用觀察數據對總體進行點估計 (point estimates) 並且給出信賴區間 (CIs)。通常情況下，基於秩次的非參數檢驗法就很難給出這樣的估計。
