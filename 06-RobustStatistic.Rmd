@@ -162,7 +162,7 @@ Dt <- Dt[order(Dt$ranks),]
 Dt
 ```
 
-對正的負的 `signed_ranks` 分別求和，小的那個就是 Wilcoxon 檢驗的統計量。本例中：$S^+=$ `r sum(Dt$signed_ranks[Dt$signed_ranks>0])`，$S^-=$ `r sum(Dt$signed_ranks[Dt$signed_ranks<0])`，所以本例中的檢驗統計量等於 $14$。如果要繼續查表的話，可以找到 $0.05<p<0.1$：
+對正的負的 `signed_ranks` 分別求和，絕對值較小的那個就是 Wilcoxon 檢驗的統計量。本例中：$S^+=$ `r sum(Dt$signed_ranks[Dt$signed_ranks>0])`，$S^-=$ `r sum(Dt$signed_ranks[Dt$signed_ranks<0])`，所以本例中的檢驗統計量等於 $14$。如果要繼續查表的話，可以找到 $0.05<p<0.1$：
 
 
 ```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='%'}
@@ -214,6 +214,54 @@ $$W_1=\sum_{i=1}^n R_i$$
 
 $$U_1=W_1+\frac{n(n+1)}{2}$$
 
-最後拿來判斷的檢驗統計量是 $U_1$ 和 $n\times m -U_1$ 兩者中較小的數字。(注：如果我們一開始計算樣本量較多的部分的秩和 $W_2=\sum_{i=1}^m R_i$ 的話，將計算的 $U_2=W_2-\frac{m(m+1)}{2}$，跟 $n\times m - U_2$ 中較小的數字作爲檢驗統計量的話，我們會在數學上獲得完全一樣的檢驗統計量。)
+最後拿來判斷的檢驗統計量是 $U_1$ 和 $n\times m -U_1$ 兩者中較小的數字。(注：如果我們一開始計算樣本量較多的部分的秩和 $W_2=\sum_{i=1}^m R_i$ 時，將計算的 $U_2=W_2-\frac{m(m+1)}{2}$，跟 $n\times m - U_2$ 中較小的數字作爲檢驗統計量的話，我們會在數學上獲得完全一樣的檢驗統計量。)
 
-其實兩個統計量 $W, U$ 均可以用來作相同的統計推斷，當然各自的 $p$ 值表格不同。
+其實兩個統計量 $W, U$ 均可以用來作相同的統計推斷，當然各自的 $p$ 值表格不同。但是 $U$ 有另外一種統計學含義：$U$ 是 $X_i>Y_j$， 也就是所有的 $(X_i, Y_j)$ 配對中 $X_i$ 較大的對的個數。
+
+這裏使用下面的例子來解釋如何操作 WMW 檢驗：
+採集16名甲亢兒童的血清甲狀腺素濃度值列表如下，
+
+```{r echo=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("/home/ccwang/Documents/LSHTMlearningnote/backupfiles/thyroid.csv", header = T)
+kable(dt, "html", align = "c",caption = "Serum thyroxine levels") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+#  collapse_rows(columns = c(1)) %>%
+  add_header_above(c("n=16 hypothyroid children" = 2))
+```
+
+這裏我們需要比較輕微症狀組和嚴重症狀組的血清甲狀腺濃度的分佈是否只是左右位移，$H_0: \Delta=0$。
+
+首先，我們要給兩組合併後的濃度排序：
+
+```{r}
+dt$rank <- rank(dt$thyr)
+dt <- dt[order(dt$rank),]
+dt
+```
+
+Wilcoxon 統計量 $W_1$ 是人數少的組的排序之數值和。本樣本中 7 人有嚴重症狀，9人有輕微或無症狀。所以 $W_1$ 就是嚴重症狀組的秩和：
+
+$$W_1=1+2+3+4+11.5+14+16=51.5$$
+
+再計算統計量 $U_1$：
+
+$$U_1=W_1-\frac{n(n+1)}{2}=51.5-\frac{7\times(7+1)}{2}=23.5$$
+
+所以 $n\times m-U_1=7\times9-23.5=39.5$，顯然這兩個數值中小的 $23.5$ 就是我們尋找的 WMW 統計量。繼續查水錶：
+
+```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values of U for a Wilcoxon-Mann-Whitney test', fig.align='center', out.width='%'}
+knitr::include_graphics("img/Selection_093.png")
+```
+可知 $n_1=7, n_2=9$ 時，統計量要低於 $15$ $p$ 值才會小於 $0.01$。所以數據給出的 $p>0.1$。
+
+在 [R](https://www.r-project.org/) 裏面用下面的代碼進行 WHW 檢驗：
+```{r warning=FALSE}
+wilcox.test(dt$thyr~dt$group, correct=FALSE) # without continuity correction
+wilcox.test(dt$thyr~dt$group) # with continuity correction i.e. normal appriximation
+```
+
+## 秩相關，Spearman's Rank Correlation Coefficient
+
+Spearman 的秩相關 (通常用 $\rho$)
