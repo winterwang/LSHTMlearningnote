@@ -847,4 +847,189 @@ graph.binbayes(2, 10, 5, 50)
 
 第2，3兩個小問題提示我們，無論是將第一階段實驗結果作爲第二階段實驗的先驗假設還是將兩次實驗合併，最終的結果是不會改變的。Both approaches are equivalent.
 
-### Q6 
+### Q6
+藥物 A 和藥物 B 都被批准用於治療某種疾病。在 5000 例病例中使用藥物 A，發現有 3 人發生了不良副作用。在另外 7000 例病例中使用藥物 B，發現只有 1 例發生了副作用。
+
+1. 先使用單一分佈作爲先驗概率 (uniform prior: $\text{Beta}(1,1)$)。求藥物 A 和藥物 B 各自發生不良反應的事後概率。
+
+**藥物 A**
+```{r}
+# Drug A
+binbayes(1,1, 3, 5000)
+```
+```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4, 4998)', out.width='80%'}
+priorA     <- Vectorize(function(theta) dbeta(theta,1,1))
+posteriorA <- Vectorize(function(theta) dbeta(theta,1+3,5000-3+1))
+curve(priorA,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,1200),frame=FALSE)
+curve(posteriorA, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+**藥物 B**
+```{r}
+# Drug B
+binbayes(1,1, 1, 7000)
+```
+```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 7000)', out.width='80%'}
+priorB     <- Vectorize(function(theta) dbeta(theta,1,1))
+posteriorB <- Vectorize(function(theta) dbeta(theta,1+1,7000-1+1))
+curve(priorB,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,2700),frame=FALSE)
+curve(posteriorB, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+2. 使用 $\text{Beta}(0.00001,0.00001)$ 作爲先驗概率，重複上面的計算
+
+
+**藥物 A**
+```{r}
+# Drug A
+binbayes(0.00001, 0.00001, 3, 5000)
+```
+```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(3, 4997)', out.width='80%'}
+priorA     <- Vectorize(function(theta) dbeta(theta,0.00001,0.00001))
+posteriorA <- Vectorize(function(theta) dbeta(theta,0.00001+3,5000-3+0.00001))
+curve(priorA,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,1500),frame=FALSE)
+curve(posteriorA, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+**藥物 B**
+```{r}
+# Drug B
+binbayes(0.00001, 0.00001, 1, 7000)
+```
+```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(1, 6999)', out.width='80%'}
+priorB     <- Vectorize(function(theta) dbeta(theta,0.00001,0.00001))
+posteriorB <- Vectorize(function(theta) dbeta(theta,1+0.00001,7000-1+0.00001))
+curve(priorB,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,7000),frame=FALSE)
+curve(posteriorB, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+3. 現在使用概率論的計算信賴區間 (confidence intervals) 的方法，求上面數據的精確二項分佈 95% 信賴區間。之前兩問中使用的哪個先驗概率更加接近概率論算法？
+
+```{r}
+#------------------------------------------------
+# Binomial confidence intervals
+#------------------------------------------------
+# r    : number of successes
+# n    : number of trials
+# level: confidence level
+binom.confint <- function(r,n,level){
+ p <- r/n
+conf <-  as.vector(binom.test(r,n,conf.level = 0.95)$conf.int)
+out <- c(p,conf)
+out <- as.matrix(t(round(out,8)))
+colnames(out) <- c("MLE", "L", "U")
+return(out)
+}
+
+# Drug A
+binom.confint(3,5000,0.95)
+# Drug B
+binom.confint(1,7000,0.95)
+```
+
+明顯可以看到，先驗概率使用 $\text{Beta}(0.00001,0.00001)$ 時，事後概率的均值和可信區間的下限值更接近概率論算法。使用先驗概率 $\text{Beta}(1,1)$ 時，事後概率的可信區間的上限值更接近概率論算法。
+
+4. 如果需要你來下結論說，藥物 B 和藥物 A 哪個更加安全？ 求 $\text{Pr}(\theta_B < \theta_A|data)$。
+
+**解**
+
+**貝葉斯**
+
+在計算機的輔助下，這是一個十分簡單的計算。我們從各自的事後分佈中採集大量隨機樣本，然後求 $\theta_B-\theta_A$ 然後看有多少比例這個數值是小於零的就可以得出結論：
+
+```{r}
+# Simulating from each posterior
+set.seed(1001)
+post.thetaA <- rbeta(1000000, 3, 4997)
+post.thetaB <- rbeta(1000000, 1, 6999)
+
+# Taking the differences
+theta.diff0 <- post.thetaB - post.thetaA
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Histogram of  Drug B - Drug A', out.width='80%'}
+# Histogram of the differences
+hist(theta.diff0,probability = TRUE, breaks = 50, xlab=expression(theta[B] - theta[A]),main = "")
+abline(v=0, col="red", lwd=2)
+box()
+```
+
+也可以不採用直方圖而是使用連續曲線：
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Density of Drug B - Drug A', out.width='80%'}
+# Continuous version
+plot(density(theta.diff0), xlab=expression(theta[B] - theta[A]), lwd=2, main = "", frame=FALSE)
+abline(v=0, col="red", lwd=2)
+box()
+```
+
+計算 $\text{Pr}(\theta_B < \theta_A|data)$ 和可信區間：
+
+```{r}
+# P(theta[B] < theta[A] | Data)
+mean(theta.diff0 <0)
+# Credible interval for theta[B] - theta[A]
+quantile(theta.diff0, c(0.05,0.95))
+quantile(theta.diff0, c(0.10,0.90))
+```
+```{r}
+
+# Simulating from each posterior
+set.seed(1001)
+post.thetaA <- rbeta(1000000, 4, 4998)
+post.thetaB <- rbeta(1000000, 2, 7000)
+
+# Taking the differences
+theta.diff1 <- post.thetaB - post.thetaA
+
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Histogram of  Drug B - Drug A', out.width='80%'}
+hist(theta.diff1,probability = TRUE, breaks = 50, xlab=expression(theta[B] - theta[A]),main = "")
+abline(v=0, col="red", lwd=2)
+box()
+```
+
+```{r fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Density of  Drug B - Drug A', out.width='80%'}
+# Continuous version
+plot(density(theta.diff1), xlab=expression(theta[B] - theta[A]), lwd=2,main = "")
+abline(v=0, col="red", lwd=2)
+box()
+```
+計算 $\text{Pr}(\theta_B < \theta_A|data)$ 和可信區間：
+
+```{r}
+# P(theta[B] < theta[A] | Data)
+
+mean(theta.diff1 <0)
+# Credible interval for theta[B] - theta[A]
+quantile(theta.diff1, c(0.05,0.95))
+quantile(theta.diff1, c(0.10,0.90))
+```
+
+**概率論算法**
+
+```{r}
+# Normal Approximation
+diff_mle <- (1/7000)-(3/5000)
+diff_se <- sqrt( 1*6999/7000^3 + 3*4997/5000^3 )
+U <- diff_mle + 1.28*diff_se
+L <- diff_mle - 1.28*diff_se
+print(c(U,L))
+norm.app <- Vectorize(function(x) dnorm(x,diff_mle,diff_se))
+
+```
+
+```{r fig.asp=.7, fig.width=6, fig.align='center',fig.cap='Comparison of different prior distribution and frequentist approximation', out.width='80%'}
+# Comparison
+plot(density(theta.diff0), xlab=expression(theta[B] - theta[A]), xlim= c(-0.002,0.001), lwd=2, col="red",main = "")
+points(density(theta.diff1), xlab=expression(theta[B] - theta[A]), type = "l", col = "blue", lwd=2)
+curve(norm.app,-0.0045,0.002,add=T,lwd=2,n=10000)
+legend(-0.0021, 1300, c("Posterior with B(0,0)","Posterior with B(1,1)","Frequentist Normal App"), col=c("red","blue","black"),
+       text.col = "black", lty = c(1, 1, 1), lwd = c(2,2,2),
+       merge = TRUE, bg = "gray90",cex=0.8)
+box()
+```
