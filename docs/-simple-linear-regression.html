@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="sample-size.html">
-<link rel="next" href="section-31.html">
+<link rel="prev" href="section-23.html">
+<link rel="next" href="-ordinary-least-squares-estimators-and-inference.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -348,16 +348,197 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="section-30" class="section level1">
-<h1><span class="header-section-number">第 30 章</span> 穩健統計方法入門</h1>
+<div id="-simple-linear-regression" class="section level1">
+<h1><span class="header-section-number">第 24 章</span> 簡單線性迴歸 Simple Linear Regression</h1>
+<div id="section-24.1" class="section level2">
+<h2><span class="header-section-number">24.1</span> 一些背景和術語</h2>
+<p>思考下面這些問題：</p>
+<ol style="list-style-type: decimal">
+<li>脂肪攝入量增加，會導致體重增加嗎？</li>
+<li>兒童成年時的身高，可以用父母親的身高來預測嗎？</li>
+<li>如果其他條件都沒有變化，飲食習慣的改變，是否能影響血清膽固醇的水平？</li>
+</ol>
+<p>上面的問題中，自變量 (預測變量)，和因變量 (反應量) 分別是什麼？</p>
+<p>你可能還會碰到像下面這些稱呼，他們都是一個意思：</p>
+<ul>
+<li>因變量 Dependent variable = 反應量 response variable = 結果變量 outcome variable;</li>
+<li>自變量 independent variable = 預測變量 predictor variable = 解釋變量 explanatory variable = 共變量 covariate.</li>
+</ul>
+<p>所有的非簡單統計模型 (non-trivial statistical models) 都包括以下三個部分：</p>
+<ol style="list-style-type: decimal">
+<li>隨機變量 random variables：
+<ul>
+<li>因變量永遠都是隨機變量；</li>
+<li>預測變量不一定是隨機變量；</li>
+<li>在相對簡單的模型中，我們討論的因變量和預測變量幾乎都來自於從人羣中抽取觀察樣本收集來的數據。</li>
+</ul></li>
+<li>人羣參數 population parameters：
+<ul>
+<li>人羣參數，是我們希望通過收集樣本獲得的數據來估計 (estimate) 的參數。</li>
+</ul></li>
+<li>對不確定性的描述 representation of uncertainty：
+<ul>
+<li>不確定性，意爲因變量的變動中，沒有被預測變量解釋的部分。</li>
+</ul></li>
+</ol>
+<p>其他的術語問題：</p>
+<ul>
+<li><strong>單一因變量</strong>的統計模型：<strong>univariate model</strong>;</li>
+<li><strong>多個因變量</strong>的統計模型： <strong>multivariate model</strong>;</li>
+<li><strong>單一因變量</strong>，含有<strong>多個預測變量</strong>的統計模型：<strong>multivariable model</strong>；</li>
+<li>在線性迴歸中，單一因變量，單一預測變量的統計模型：<strong>simple linear regression</strong> (簡單線性迴歸)；</li>
+<li>在線性迴歸中，單一因變量，多個預測變量的統計模型：<strong>multiple linear regression</strong> (多重線性迴歸)；</li>
+</ul>
+<p>儘量避免將預測變量 (predictor variable) 寫作自變量 (independent variable)，因爲 “independent” 有自己的統計學含義 (獨立)。然而我們在線性迴歸中使用的預測變量，不一定都<strong>互相獨立</strong>，所以容易讓人混淆其意義。</p>
+</div>
+<div id="-simple-linear-regression-model" class="section level2">
+<h2><span class="header-section-number">24.2</span> 簡單線性迴歸模型 simple linear regression model</h2>
+<p>即：<strong>單一因變量，單一預測變量</strong>的統計模型。</p>
+<div id="1" class="section level3">
+<h3><span class="header-section-number">24.2.1</span> 例1</h3>
+<p>下面的散點圖 <a href="-simple-linear-regression.html#fig:age-wt">24.1</a> 展示的是一項橫斷面調查的結果，調查的是一些兒童的年齡 (月)，和他們的體重 (千克) 之間的關係。</p>
+<div class="figure" style="text-align: center"><span id="fig:age-wt"></span>
+<img src="bookdown_files/figure-html/age-wt-1.png" alt="Age and weight of children in a cross-sectional survey" width="80%" />
+<p class="caption">
+图 24.1: Age and weight of children in a cross-sectional survey
+</p>
+</div>
+</div>
+<div id="2" class="section level3">
+<h3><span class="header-section-number">24.2.2</span> 例2</h3>
+<p>表 <a href="-simple-linear-regression.html#tab:walk">24.1</a> 羅列的是11名兒童能夠自己獨立行走時的年齡。這些兒童在剛出生時被隨機分配到兩個組中 (積極鍛鍊走路，和對照組)。如果你熟悉均數比較，這樣的數據可以通過簡單 <span class="math inline">\(t\)</span> 檢驗來分析其均值的不同。但是實際上後面你會看到簡單 <span class="math inline">\(t\)</span> 檢驗和簡單線性迴歸是同一回事。</p>
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>
+<span id="tab:walk">表 24.1: </span>Childen’s ages at time of first walking aline by randomisation group
+</caption>
+<thead>
+<tr>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+Age in months for walking alone
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:center;">
+Active Exercise (n=6)
+</th>
+<th style="text-align:center;">
+Eight Week Control (n=5)
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">
+9.00
+</td>
+<td style="text-align:center;">
+13.25
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+9.50
+</td>
+<td style="text-align:center;">
+11.5
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+9.75
+</td>
+<td style="text-align:center;">
+12
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+10.00
+</td>
+<td style="text-align:center;">
+13.5
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+13.00
+</td>
+<td style="text-align:center;">
+11.5
+</td>
+</tr>
+<tr>
+<td style="text-align:center;">
+9.30
+</td>
+<td style="text-align:center;">
+–
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="section-24.3" class="section level2">
+<h2><span class="header-section-number">24.3</span> 區分因變量和預測變量</h2>
+<p>在簡單兩樣本 <span class="math inline">\(t\)</span> 檢驗中，我們不區分那兩個要比較的數據 <span class="math inline">\((X, Y)\)</span>。所以 <span class="math inline">\(X\)</span> 和 <span class="math inline">\(Y\)</span> 的關係，同分析 <span class="math inline">\(Y\)</span> 和 <span class="math inline">\(X\)</span> 的關係是一樣的。表 <a href="-simple-linear-regression.html#tab:walk">24.1</a> 的例子中，視“直立行走的年齡”這一變量爲因變量十分直觀且自然。圖 <a href="-simple-linear-regression.html#fig:age-wt">24.1</a> 的例子中我們顯然可以關心是否可以用兒童的年齡來推測他/她的體重。所以年齡被視爲預測變量 <span class="math inline">\((X)\)</span>，體重被視爲因變量或者叫結果變量 <span class="math inline">\((Y)\)</span>。</p>
+<div id="--" class="section level3">
+<h3><span class="header-section-number">24.3.1</span> 均值 (期待值) 公式</h3>
+<p>圖 <a href="-simple-linear-regression.html#fig:age-wt">24.1</a> 的例子中，當我們決定考察體重變化 <span class="math inline">\((Y)\)</span> 和年齡的關係 <span class="math inline">\((X)\)</span> 後，我們需要提出一個模型，來描述二者之間的關係。這個模型中，最重要的信息，是均值，或者叫期待值：</p>
+<p><span class="math display">\[
+E(Y|X=x), \text{ the expected value of } Y \text{ when } X \text{ takes the value } x
+\]</span></p>
+<p>在簡單線性迴歸模型中，我們認爲這個均值方程是線性關係：</p>
+<p><span class="math display">\[
+E(Y|X=x) = \alpha +\beta x
+\]</span></p>
+<p>所以這個線性關係中，有兩個參數 (parameters) 是我們關心的 <span class="math inline">\(\alpha, \beta\)</span>。</p>
+<ul>
+<li><span class="math inline">\(\alpha\)</span> 是截距 intecept。意爲當 <span class="math inline">\(X\)</span> 取 <span class="math inline">\(0\)</span>時， <span class="math inline">\(Y\)</span> 的期待值大小；</li>
+<li><span class="math inline">\(\beta\)</span> 是方程的斜率 slope。意爲當 <span class="math inline">\(X\)</span> 上升一個單位時，<span class="math inline">\(Y\)</span> 上升的期待值大小。</li>
+</ul>
+<p>需要強調的是，這樣的線性模型，是我們提出，用來模擬真實數據時使用的。<del>你如果作死</del>當然還可以提出更加複雜的模型。如下面圖 <a href="-simple-linear-regression.html#fig:age-wt-lm">24.2</a> 顯示的是線性迴歸直線， 而圖 <a href="-simple-linear-regression.html#fig:age-wt-loess">24.3</a> 顯示的是較爲複雜的迴歸曲線。曲線方程可能更加擬合我們收集到的數據，然而這樣的連續的斜率變化很可能僅僅只解釋了這個樣本量數據，而不能解釋在人羣中年齡和體重的關係。</p>
+<div class="figure" style="text-align: center"><span id="fig:age-wt-lm"></span>
+<img src="bookdown_files/figure-html/age-wt-lm-1.png" alt="Linear Mean Function for Age and weight of children in a cross-sectional survey" width="80%" />
+<p class="caption">
+图 24.2: Linear Mean Function for Age and weight of children in a cross-sectional survey
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:age-wt-loess"></span>
+<img src="bookdown_files/figure-html/age-wt-loess-1.png" alt="Non-linear Mean Function for Age and weight of children in a cross-sectional survey" width="80%" />
+<p class="caption">
+图 24.3: Non-linear Mean Function for Age and weight of children in a cross-sectional survey
+</p>
+</div>
+</div>
+<div id="-the-conditional-distribution-and-the-variance-function" class="section level3">
+<h3><span class="header-section-number">24.3.2</span> 條件分佈和方差 the conditional distribution and the variance function</h3>
+<p>如果要完全明確一個統計模型，另一個重要的事情是，該模型能否準確描述因變量在預測變量的條件分佈 it is necessary to describe the ddistribution of the dependent variable conditional on the predictor variable。使用簡單線性迴歸模型有幾個前提假設，一是因變量對預測變量的條件分佈的方差是保持不變的 the variance of the dependent variable (conditional on the predictor variable) is constant。二是，這樣的條件分佈是一個正態分佈。有時候，這些假設條件並不能得到滿足。上面的散點圖 <a href="-simple-linear-regression.html#fig:age-wt">24.1</a>看上去還算符合這兩個假設前提：在每一個年齡階段，體重的分佈沒有發生歪斜 (skew)，分散分佈 (方差) 也相對穩定。但是圖 <a href="-simple-linear-regression.html#fig:diamond">24.4</a> 中的價格-克拉數據很明顯無法滿足上面的前提假設。在線性迴歸模型中，我們使用 <span class="math inline">\(\sigma^2\)</span> 表示殘差的方差 (residual variance)。</p>
+<div class="figure" style="text-align: center"><span id="fig:diamond"></span>
+<img src="bookdown_files/figure-html/diamond-1.png" alt="Relationship between diamond carat and price" width="80%" />
+<p class="caption">
+图 24.4: Relationship between diamond carat and price
+</p>
+</div>
+</div>
+<div id="section-24.3.3" class="section level3">
+<h3><span class="header-section-number">24.3.3</span> 定義簡單線性迴歸模型</h3>
+<p>用來描述一個隨機變量 <span class="math inline">\((Y)\)</span> 和另一個變量 <span class="math inline">\((X)\)</span> 之間關係的簡單線性迴歸模型，被定義爲：</p>
+<p><span class="math display">\[
+(Y|X=x) \sim N(\alpha+\beta x, \sigma^2)
+\]</span></p>
+</div>
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="sample-size.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="section-31.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="section-23.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="-ordinary-least-squares-estimators-and-inference.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -386,7 +567,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/06-RobustStatistic.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/04-Linear-Regression.Rmd",
 "text": "编辑"
 },
 "download": ["bookdown.pdf", "bookdown.epub"],
