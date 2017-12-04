@@ -312,6 +312,143 @@ $\hat\sigma^2 = 1.62, \hat\sigma=1.27$  就是默認輸出中最下面的 `Resid
 
 ## R 演示 例 2： 表\@ref(tab:walk) 數據
 
+如果在 `Stata` 聽說你還需要自己生成啞變量 (dummy variables) (應該是計算時，在想要變成啞變量的變量名前面加上 `i.`)。在 [R](https://www.r-project.org/) 裏面，分類變量被設置成因子 "factor" 時，你就完全可以忽略生成啞變量的過程。下圖 \@ref(fig:age-walk) 顯示了兩組兒童直立行走時的年齡。
+
+```{r age-walk, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Age at walking by group', fig.align='center', out.width='80%', warning=FALSE}
+library(ggplot2)
+library(ggthemes)
+dt <- read.csv("backupfiles/walking.csv", header = T)
+age1 <- dt$Active.Exercise.Group..n.6.
+age2 <- dt$Eight.Week.Control.Group..n.5.
+Group <- c(rep("exercise", 6), rep("control", 6))
+Walk <- data.frame(c(age1,age2), Group)
+names(Walk)[1] <- "Age"
+## Reordering Group
+Walk$Group <- factor(Walk$Group,levels=c("exercise", "control"))
+
+ggplot(Walk, aes(x=Group, y=Age)) + geom_point() +
+  scale_y_continuous(breaks = seq(9, 14, 1),limits = c(9,14)) +
+   theme_economist() +labs(x = "Randomised groups", y = "Age (Months)")
+```
+
+擬合簡單線性迴歸也是小菜一碟：
+
+```{r}
+wk_age <- lm(Age ~ Group, data=Walk)
+
+summary(wk_age)
+anova(wk_age)
+```
+
+這裏的 $\hat\alpha=10.125$，意爲參照組 (此處，"exercise" 被默認設定爲參照組，而 "control" 被默認拿來和參照組相比較) 的兒童也就是，積極練習走路的小朋友這組能夠獨立行走的平均年齡是 $10.125$ 個月。
+
+$\hat\beta=2.225$，意爲和參照組 (積極練習組) 相比，對照組兒童能夠自己行走的年齡平均要晚 $2.225$ 個月。所以對照組兒童能夠直立行走的平均年齡就是 $10.125+2.225=12.35$ 個月。
+
+上述結果，你如果拿來和下面的兩樣本 $t$ 檢驗的結果相比就知道，是完全一致的。其中統計量 $t^2=2.9285^2=F_{1,9}=8.58$。
+```{r}
+t.test(Age~Group, data=Walk, var.equal=TRUE)
+```
+
+## 練習
+
+使用的數據內容爲：兩次調查同一樣本，99 名健康男性的血清膽固醇水平，間隔一年。
+
+
+```{r message=FALSE}
+# 數據讀入
+library(haven)
+
+Chol <- read_dta("backupfiles/chol.dta")
+summary(Chol)
+
+# Alternative Descriptive Statistics using psych package
+library(psych)
+describe(Chol)
+
+# 兩次膽固醇水平的直方圖 Distribution of the two measures
+par(mfrow=c(1,2))
+hist(Chol$chol1)
+hist(Chol$chol2)
+
+# 對兩次膽固醇水平作散點圖
+ggplot(Chol, aes(x=chol1, y=chol2)) + geom_point(shape=20) +
+  scale_x_continuous(breaks=seq(150, 400, 50),limits = c(150, 355))+
+  scale_y_continuous(breaks=seq(150, 400, 50),limits = c(150, 355)) +
+   theme_economist() +labs(x = "Cholesterol at visit 1 (mg/100ml)", y = "Cholesterol at visit 2 (mg/100ml)")
+```
+### 兩次測量的膽固醇水平分別用 $C_1, C_2$ 來標記的話，考慮這樣的簡單線性迴歸模型：$C_2=\alpha+\beta C_2 + \varepsilon$。我們進行這樣迴歸的前提假設有哪些？
+
+- 每個觀察對象互相獨立。
+- 前後兩次測量的膽固醇水平呈線性相關。
+- 殘差值，在每一個給定的 $C_1$ 值處呈現正態分佈，且方差不變。
+
+從散點圖來看這些假設應該都能得到滿足。
+
+```{r}
+# 計算兩次膽固醇水平的 均值，方差，以及二者的協方差
+mean(Chol$chol1); mean(Chol$chol2)
+var(Chol$chol1); var(Chol$chol2)
+cov(Chol$chol1, Chol$chol2)
+```
+
+### 計算普通最小二乘法 (OLS) 下，截距和斜率的估計值 $\hat\alpha, \hat\beta$
+
+$$
+\begin{aligned}
+\hat\beta &= \frac{\sum_{i=1}^n(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^n(x_i-\bar{x})^2}\\
+&=\frac{\text{Cov}(C_1,C_2)}{\text{Var}(C_1)}\\
+&=\frac{1661.061}{961.224}=0.578
+\end{aligned}
+$$
+
+```{r}
+cov(Chol$chol1, Chol$chol2)/var(Chol$chol1)
+```
+
+$$\hat\alpha=\bar{y}-\hat\beta\bar{x}=263.54-0.578\times264.59=110.425$$
+
+```{r}
+mean(Chol$chol2)-mean(Chol$chol1)*cov(Chol$chol1, Chol$chol2)/var(Chol$chol1)
+```
+### 和迴歸模型計算的結果作比較，解釋這些估計值的含義
+
+```{r}
+summary(lm(chol2~chol1, data=Chol))
+```
+
+- 截距的估計值是 110.4 mg/100ml: 意爲這組樣本，第一次採集數據時，膽固醇水平的平均值是 110.4。
+- 斜率的估計值是 0.58：意爲第一次採集的膽固醇水平每高 1 mg/100ml，那麼第二次採集的膽固醇相應提高的值的期待量爲 0.58.
+
+### 加上計算的估計值直線 (即迴歸直線)
+
+```{r warning=FALSE}
+ggplot(Chol, aes(x=chol1, y=chol2)) + geom_point(shape=20, colour="grey40") +
+  stat_smooth(method = lm, se=FALSE, size=0.5) +
+   scale_x_continuous(breaks=seq(150, 400, 50),limits = c(150, 355))+
+  scale_y_continuous(breaks=seq(150, 400, 50),limits = c(150, 355)) +
+   theme_economist() +labs(x = "Cholesterol at visit 1 (mg/100ml)", y = "Cholesterol at visit 2 (mg/100ml)")
+```
+
+可以注意到，第一次訪問時膽固醇水平高的人，第二次被測量時膽固醇值高於平均值，但是卻沒有第一次高出平均值的部分多。
+相似的，第一次膽固醇水平低的人，第二次膽固醇水平低於平均值，但是卻沒有第一次低於平均值的部分多。這一現象被叫做 “向均數迴歸-regression to the mean”
+
+
+### 下面的代碼用於模型的假設診斷
+```{r}
+M <- lm(chol2~chol1, data=Chol)
+par(mfrow = c(2, 2))  # Split the plotting panel into a 2 x 2 grid
+plot(M)
+```
+
+
+好心人在 [github](https://gist.github.com/atyre2/ff4e1ec24e42adda8dbd43cda99d6282) 上共享了 `Check_assumption.R` 的代碼，可以使用 ggplot2 來獲取高逼格的模型診斷圖：
+
+```{r message=FALSE}
+source("checkassumptions.R")
+check_assumptions(M)
+```
+
+### 接下來我們
 
 # 最小二乘估計的性質和推斷 Ordinary Least Squares Estimators and Inference
 
