@@ -245,6 +245,72 @@ $$
 \end{equation}
 $$
 
+其中 $\bar{y}=\frac{\sum_{i=1}^ny_i}{n}, \bar{x}=\frac{\sum_{i=1}^nx_i}{n}$
+
+**證明**
+
+求能最小化 $SS_{RES}$ 的 $\alpha$， 我們需要把公式 \@ref(eq:ssres) 對 $\hat\alpha$ 求導，然後將求導之後的式子等於 $0$ 之後求根即可：
+
+$$
+\begin{aligned}
+& \frac{\text{d}SS_{RES}}{\text{d}\hat\alpha} =\sum_{i=1}^n -2(y_i-\hat\alpha-\hat\beta x_i) = 0\\
+& \text{Since } \sum_{i=1}^n(y_i) = n\bar{y}; \sum_{i=1}^n (x_i) =n\bar{x} \\
+& \Rightarrow -n\bar{y}+n\hat\alpha+n\hat\beta\bar{x} = 0 \\
+& \Rightarrow \hat\alpha = \bar{y}-\hat\beta\bar{x}
+\end{aligned}
+$$
+
+求能最小化 $SS_{RES}$ 的 $\beta$，求導之前我們先對其公式 \@ref(eq:ssres) 中含有 $\hat\alpha$ 的部分替換掉：
+
+$$
+\begin{equation}
+\begin{split}
+SS_{RES} &= \sum_{i=1}^n\hat\varepsilon_i^2=\sum_{i=1}^n(y_i-(\bar{y}-\hat\beta\bar{x})-\hat\beta x_i)^2\\
+         &= \sum_{i=1}^n((y_i-\bar{y})-\hat\beta(x_i-\bar{x}))^2 \\
+\end{split}
+(\#eq:ssres-rearrange)
+\end{equation}
+$$
+
+接下來對上式 \@ref(eq:ssres-rearrange) 求導之後，用相同辦法求根：
+
+$$
+\begin{aligned}
+&\frac{\mathrm{d} SS_{RES}}{\mathrm{d} \hat\beta} = \sum_{i=1}^n -2(x_i-\bar{x})(y_i-\bar{y}) + 2\hat\beta(x_i-\bar{x})^2 = 0\\
+& \Rightarrow \hat\beta\sum_{i=1}^n(x_i-\bar{x})^2 = \sum_{i=1}^n (x_i-\bar{x})(y_i-\bar{y}) \\
+& \hat\beta=\frac{\sum_{i=1}^n(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^n(x_i-\bar{x})^2}
+\end{aligned}
+$$
+
+這兩個式子 \@ref(eq:hatalpha) \@ref(eq:hatbeta) 同時也是參數 $\alpha \beta$ 的極大似然估計 (MLE)。
+
+## R 演示
+
+
+```{r }
+library(haven)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+
+slm <- lm(wt~age, data=growgam1)
+
+summary(slm) # basic default output of the summary
+print(anova(slm), digits = 8) # show the sum of squares for the fitted model and residuals
+```
+也可以用 `stargazer` 包輸出很酷的表格報告：
+
+```{r results='asis', message=FALSE}
+library(stargazer)
+stargazer(slm, type = "html")
+```
+其實結果都一樣。我們這裏詳細來看 $\alpha, \beta, \sigma^2$：
+
+$\hat\alpha = 6.84$：當年齡爲 $0$ 時，體重爲 $6.84 kg$。本數據 \@ref(fig:age-wt) 中並沒有 $0$ 歲的兒童，所以這裏的截距的解釋需要非常小心是否合理。
+
+$\hat\beta = 0.165$：這數據中兒童的體重估計隨着年齡升高 $1$ 個月增長 $0.165 kg$。所以使用這兩個估計值我們就可以來估計任意年齡時兒童的體重。圖 \@ref(fig:age-wt-lm) 就是擬合數據以後的簡單線性迴歸曲線。
+
+$\hat\sigma^2 = 1.62, \hat\sigma=1.27$  就是默認輸出中最下面的 `Residual standard error: 1.274` 和 ANOVA 表格中 Residuals 的 `Mean Sq=1.62184` 部分。含義是，沿着擬合的直線，在每一個給定的年齡上兒童體重的分佈的標準差是 $1.27 kg$。
+
+
 # 最小二乘估計的性質和推斷 Ordinary Least Squares Estimators and Inference
 
 # 方差分析 Introduction to Analysis of Variance
