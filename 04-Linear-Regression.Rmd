@@ -513,7 +513,113 @@ $$
 
 ## $\hat\beta$ 的性質
 
+$$
+\begin{equation}
+\hat\beta=\frac{S_{xy}}{SS_{xx}}=\frac{CV_{xy}}{SD_x^2}
+\end{equation}
+(\#eq:hatbetaalt)
+$$
 
+### $Y$ 對 $X$ 迴歸， 和 $X$ 對 $Y$ 迴歸
+
+如果我們使用 $\hat\beta_{y|x}$ 表示預測變量 $x$，因變量 $y$ 的簡單線性迴歸係數，那麼我們就有：
+
+$$
+\begin{equation}
+\hat\beta_{y|x} = \frac{CV_{xy}}{SD_x^2}  \text{ and } \hat\beta_{x|y} = \frac{CV_{xy}}{SD_y^2} \\
+\text{Hence, } \hat\beta_{y|x}\hat\beta_{x|y} = r^2_{xy}
+\end{equation}
+(\#eq:r2)
+$$
+
+公式 \@ref(eq:r2) 也證明了：如果兩個變量相關係數爲 $1$ (100% 相關)， $Y$ 對 $X$ 迴歸的迴歸係數，是 $X$ 對 $Y$ 迴歸的迴歸係數的倒數。
+
+### 例 1： 還是圖 \@ref(fig:age-wt) 數據
+
+```{r}
+library(haven)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+
+# regress wt on age
+summary(lm(wt~age, data=growgam1))
+print(anova(lm(wt~age, data=growgam1)), digits = 8)
+# regress age on wt
+summary(lm(age~wt, data=growgam1))
+print(anova(lm(age~wt, data=growgam1)), digits = 8)
+```
+
+可以看到二者的輸出結果中統計檢驗量一樣，但是一個是將體重針對年齡迴歸，另一個則是反過來，所以迴歸係數和截距都不同。迴歸方程的含義也就發生了變化。如果把兩條迴歸曲線同時作圖可以更加直觀：
+
+
+```{r age-wt-lm1, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Simple linear regression model line relating weight to age', fig.align='center', out.width='80%'}
+library(haven)
+library(ggplot2)
+library(ggthemes)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+
+ggplot(growgam1, aes(x=age, y=wt)) + geom_point(shape=20, colour="grey40") +
+  stat_smooth(method = lm) +
+  scale_x_continuous(breaks=seq(0, 38, 4),limits = c(0,36.5))+
+  scale_y_continuous(breaks = seq(0, 20, 5),limits = c(0,20.5)) +
+   theme_economist() +labs(x = "Age (Months)", y = "Weight (kg)")
+```
+
+```{r wt-age-lm, warning=FALSE, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Simple linear regression model line relating age to weight', fig.align='center', out.width='80%'}
+
+ggplot(growgam1, aes(x=wt, y=age)) + geom_point(shape=20, colour="grey40") +
+  stat_smooth(method = lm) +
+  scale_y_continuous(breaks=seq(0, 38, 4),limits = c(0,36.5))+
+  scale_x_continuous(breaks = seq(0, 20, 5),limits = c(0,20.5)) +
+   theme_economist() +labs(y = "Age (Months)", x = "Weight (kg)")+
+coord_flip()
+```
+
+## 截距和迴歸係數的方差，協方差
+
+假如簡單線性迴歸模型是正確的，那麼截距 $\hat\alpha$ 和迴歸係數 $\hat\beta$ 的方差分別是：
+
+$$
+\begin{equation}
+V(\hat\alpha) = \sigma^2(\frac{1}{n}+\frac{\bar{x}^2}{SS_{xx}}) = \frac{\sigma^2}{(n-1)} (1-\frac{1}{n}+\frac{\bar{x}^2}{SD_x^2})
+\end{equation}
+(\#eq:varhatalpha)
+$$
+
+
+$$
+\begin{equation}
+V(\hat\beta) = \frac{\sigma^2}{SS_{xx}}=\frac{\sigma^2}{(n-1)SD_x^2}
+\end{equation}
+(\#eq:varhatbeta)
+$$
+
+從公式 \@ref(eq:varhatalpha) 和 \@ref(eq:varhatbeta) 也可以看出，兩個估計量的方差隨着殘差方差的增加而增加 (估計不精確)，隨着樣本兩的增加而減少 (估計更精確)。截距 $\hat\alpha$ 的方差會隨着樣本均值的增加而增加。
+
+通常來說，截距和迴歸係數二者之間並非相互獨立。他們的協方差爲：
+
+$$
+\begin{equation}
+CoV(\hat\alpha,\hat\beta) = -\frac{\sigma^2\bar{x}}{SS_{xx}}
+\end{equation}
+(\#eq:covaralphabeta)
+$$
+
+上面的公式 \@ref(eq:varhatalpha) \@ref(eq:varhatbeta) \@ref(eq:covaralphabeta) 都包含了真實的殘差方差 $\sigma^2$。這個量對於我們“人類”來說是未知的。
+
+### 中心化 centring
+
+簡單線性迴歸模型常用的一個技巧是將預測變量中心化。即，求預測變量的均值，然後將每個觀測值減去均值之後再用這個新的預測變量擬合簡單線性迴歸模型。這樣做其實完全不影響回顧係數，卻會影響截距的大小。此時新的迴歸直線的截距，就等於預測變量的均值。
+
+用圖 \@ref(fig:age-wt) 數據來解釋：
+
+```{r}
+# mean value of age
+mean(growgam1$age) 
+growgam1$age_cen <- growgam1$age-mean(growgam1$age) 
+# regress wt on age
+summary(lm(wt~age, data=growgam1))
+summary(lm(wt~age_cen, data=growgam1))
+```
 
 
 
