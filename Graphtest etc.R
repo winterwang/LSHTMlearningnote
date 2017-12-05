@@ -1,11 +1,29 @@
+
+
+
+
+library(haven)
 library(ggplot2)
 library(ggthemes)
-library("gridExtra")
-library("ggsci")
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+
+ggplot(growgam1, aes(x=age, y=wt)) + geom_point(shape=20, colour="grey40") +
+  stat_smooth(method = lm, size = 0.3) +
+  scale_x_continuous(breaks=seq(0, 38, 4),limits = c(0,36.5))+
+  scale_y_continuous(breaks = seq(0, 20, 5),limits = c(0,20.5)) +
+  theme_stata() +labs(x = "Age (Months)", y = "Weight (kg)") 
 
 
-hist(Chol$chol1)
-curve(dnorm(x, mean=mean(Chol$chol1), sd=sd(Chol$chol1)), add=TRUE)
+Model <- lm(wt~age, data=growgam1)
 
-ggplot(Chol, aes(x=chol1)) + geom_histogram(binwidth = 22, fill="white", colour="#5F9EA0") + 
-  theme_economist() 
+plot(growgam1$age, growgam1$wt, main="Regression")
+abline(Model, col="lightblue")
+
+range(growgam1$age)
+newage <- seq(5,36, by=0.05)
+  
+
+pred_interval <- predict(Model, newdata=data.frame(age=newage), interval="prediction",
+                         level = 0.95)
+lines(newage, pred_interval[,2], col="orange", lty=2)
+lines(newage, pred_interval[,3], col="orange", lty=2)
