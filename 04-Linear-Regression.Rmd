@@ -117,10 +117,10 @@ library(ggthemes)
 growgam1 <- read_dta("backupfiles/growgam1.dta")
 
 ggplot(growgam1, aes(x=age, y=wt)) + geom_point(shape=20, colour="grey40") +
-  stat_smooth(method = lm) +
+  stat_smooth(method = lm, size = 0.3) +
   scale_x_continuous(breaks=seq(0, 38, 4),limits = c(0,36.5))+
   scale_y_continuous(breaks = seq(0, 20, 5),limits = c(0,20.5)) +
-   theme_economist() +labs(x = "Age (Months)", y = "Weight (kg)")
+   theme_stata() +labs(x = "Age (Months)", y = "Weight (kg)")
 ```
 
 
@@ -133,10 +133,10 @@ library(ggthemes)
 growgam1 <- read_dta("backupfiles/growgam1.dta")
 
 ggplot(growgam1, aes(x=age, y=wt)) + geom_point(shape=20, colour="grey40") +
-  stat_smooth(method = loess, se=T) +
+  stat_smooth(method = loess, se=T, size = 0.3) +
   scale_x_continuous(breaks=seq(0, 38, 4),limits = c(0,36.5))+
   scale_y_continuous(breaks = seq(0, 20, 5),limits = c(0,20.5)) +
-   theme_economist() +labs(x = "Age (Months)", y = "Weight (kg)")
+   theme_stata() +labs(x = "Age (Months)", y = "Weight (kg)")
 ```
 
 ### 條件分佈和方差 the conditional distribution and the variance function
@@ -290,7 +290,7 @@ $$
 
 $$
 \begin{equation}
-\hat\sigma^2=\sum_{i=1}^n \frac{\hat\varepsilon^2}{n} = \sum_{i=1}^n \frac{(y_i-\hat\alpha-\hat\beta\x_i)^2}{n}
+\hat\sigma^2=\sum_{i=1}^n \frac{\hat\varepsilon^2}{n} = \sum_{i=1}^n \frac{(y_i-\hat\alpha-\hat\beta x_i)^2}{n}
 \end{equation}
 (\#eq:sigma2wrong)
 $$
@@ -299,7 +299,7 @@ $$
 
 $$
 \begin{equation}
-\hat\sigma^2=\sum_{i=1}^n \frac{\hat\varepsilon^2}{n-2} = \sum_{i=1}^n \frac{(y_i-\hat\alpha-\hat\beta\x_i)^2}{n-2}
+\hat\sigma^2=\sum_{i=1}^n \frac{\hat\varepsilon^2}{n-2} = \sum_{i=1}^n \frac{(y_i-\hat\alpha-\hat\beta x_i)^2}{n-2}
 \end{equation}
 (\#eq:sigma2right)
 $$
@@ -614,16 +614,86 @@ $$
 
 ```{r}
 # mean value of age
-mean(growgam1$age) 
-growgam1$age_cen <- growgam1$age-mean(growgam1$age) 
+mean(growgam1$age)
+growgam1$age_cen <- growgam1$age-mean(growgam1$age)
 # regress wt on age
 summary(lm(wt~age, data=growgam1))
 summary(lm(wt~age_cen, data=growgam1))
 ```
 
+很明顯，結果顯示中心化不會改變迴歸係數，也不會改變它的方差。但是“新”的截距，其實就等於一開始計算過的預測變量的平均值。而且很多數據都集中在這個均值附近，因而，截距的方差比沒有中心化的迴歸方程要小。
 
+## $\alpha, \beta$ 的推斷
 
+$\hat\alpha, \hat\beta$ 都可以被改寫成關於因變量 $Y$ 的方程，因此同時也是隨機誤差的方程式：
 
+$$
+\begin{aligned}
+\hat\beta &= \sum_{i=1}^n[\frac{(x_i-\bar{x})}{SS_{xx}}(y_i-\bar{y})] \\
+\text{Substituting } &(y_i-\bar{y}) = \beta(x_i-\bar{x})+(\varepsilon_i-\bar{\varepsilon}) \\
+          &= \beta + \sum_{i=1}^n[\frac{x_i-\bar{x}}{SS_{xx}}(\varepsilon_i-\bar{\varepsilon})]
+\end{aligned}
+$$
+
+又因爲，$\varepsilon_i \sim NID(0,\sigma^2)$，估計量 $\hat\alpha, \hat\beta$ 均爲 $\varepsilon_i$ 的線性轉換，所以他們也都是服從正態分佈的。
+
+### 對迴歸係數進行假設檢驗
+
+對於迴歸係數 $\beta$，我們可以使用 Wald statistic (Section \@ref(Wald)) 進行零假設爲 $\text{H}_0: \beta=0$ 的假設檢驗。此時，替代假設爲 $\text{H}_1: \beta\neq0$。最佳檢驗統計量爲：
+
+$$
+\begin{equation}
+t = \frac{\hat\beta-0}{SE(\hat\beta)}
+\end{equation}
+(#eq:betattest)
+$$
+
+根據公式 \@ref(eq:varhatbeta) $SE(\hat\beta) = \sqrt{V(\hat\beta)} = \frac{\hat\sigma}{\sqrt{SS_{xx}}}$。用 $\hat\sigma^2$ 替換掉公式 \@ref(eq:varhatbeta) 中的 $\sigma^2$，意味着迴歸係數的檢驗統計量 $t$ 服從自由度爲 $n-2$ 的 $t$ 分佈。之後就可以根據 $t$ 分佈的性質求相應的 $p$ 值了，對相關係數是否爲 $0$ 進行檢驗。之所以我們可以在這裏使用 Wald 檢驗，是因爲前提條件：隨機誤差服從正態分佈，於是 $\beta$ 的對數似然比也是左右對稱的，當對數似然比的圖形左右對稱時，就可以使用二次方程來近似 (Wald 檢驗的實質)。
+
+### 迴歸係數，截距的信賴區間
+
+估計量 $\beta$ 的 $95\%$ 信賴區間的計算公式如下：
+
+$$
+\begin{equation}
+\hat\beta \pm t_{n-2,0.975}SE(\hat\beta)
+\end{equation}
+(#eq:CIbeta)
+$$
+
+其中，$t_{n-2, 0.975}$ 表示自由度爲 $n-2$ 的 $t$ 分佈的 $97.5\%$ 位點的值。繼續使用之前的實例，圖 \@ref(fig:age-wt) 中的數據。體重對年齡進行簡單線性迴歸之後，年齡的估計回顧係數 $\hat\beta=0.165, SE(\hat\beta)=0.0111$, 此例中 $n=190$，所以 $t_{188, 0.975}=1.973$。所以迴歸係數的 $95\%$ 信賴區間可以如此計算：$0.165\pm1.973\times0.0111=(0.143, 0.187)$。
+
+類似的，估計截距 $\hat\alpha$ 的 $95\%$ 信賴區間的計算式便是： $\hat\alpha \pm t_{n-2, 0.975}SE(\hat\alpha)$。同樣的例子裏，$\hat\alpha=6.838, SE(\hat\beta) = 0.210, t_{188, 0.975}=1.973$。所以結局的 $95\%$ 信賴區間的計算方法就是： $6.838\pm1.973\times0.210=(6.42, 7.25)$
+
+跟下面 R 計算的完全一樣：
+
+```{r}
+confint(lm(wt~age, data=growgam1))
+```
+
+### 預測值的信賴區間
+
+這裏所謂的“預測值”其實並沒有拿來預測什麼新的數值，而是說我們希望通過線性迴歸找到因變量真實值的存在區間 (信賴區間)。所以這個預測值的真實含義其實應該是在預測變量取 $X=x$ 時，因變量的期待值，$E(Y|X=x)$。
+
+這個預測值的方差公式如下：
+
+$$
+\begin{equation}
+V(\hat y_{x} = \sigma^2[\frac{1}{n}+\frac{(x-\bar{x})^2}{SS_{xx}}])
+\end{equation}
+(#eq:predictvar)
+$$
+
+於是可以計算它的 $95\%$ 信賴區間公式是：
+
+$$
+\begin{equation}
+\hat y_x \pm t_{n-2, 0.975} \hat\sigma \sqrt{[\frac{1}{n}+\frac{(x-\bar{x})^2}{SS_{xx}}]}
+\end{equation}
+(#eq:predictCI)
+$$
+
+其實在之前的圖 (圖 \@ref(fig:age-wt-lm)) 我們也已經展示過這個信賴區間的範圍。
 
 # 方差分析 Introduction to Analysis of Variance
 
