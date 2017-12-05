@@ -284,6 +284,28 @@ $$
 
 這兩個式子 \@ref(eq:hatalpha) \@ref(eq:hatbeta) 同時也是參數 $\alpha \beta$ 的極大似然估計 (MLE)。
 
+## 殘差方差的估計 Estimation of the residual variance $(\sigma^2)$
+
+殘差方差等於殘差平方和除以樣本量。所以我們會把殘差方差的估計用下面的式子表示：
+
+$$
+\begin{equation}
+\hat\sigma^2=\sum_{i=1}^n \frac{\hat\varepsilon^2}{n} = \sum_{i=1}^n \frac{(y_i-\hat\alpha-\hat\beta\x_i)^2}{n}
+\end{equation}
+(\#eq:sigma2wrong)
+$$
+
+這的確是 $\sigma^2$ 的極大似然估計 (MLE)。然而我們知道，公式 \@ref(eq:sigma2wrong) 並不是殘差方差的無偏估計。類似與樣本方差低估了總體方差 (Section \@ref(samplevarbias))，那樣，這裏殘差方差的觀察值也是低估了總體殘差方差的。所以，殘差方差的無偏估計需要用下面的式子來校正：
+
+$$
+\begin{equation}
+\hat\sigma^2=\sum_{i=1}^n \frac{\hat\varepsilon^2}{n-2} = \sum_{i=1}^n \frac{(y_i-\hat\alpha-\hat\beta\x_i)^2}{n-2}
+\end{equation}
+(\#eq:sigma2right)
+$$
+
+公式 \@ref(eq:sigma2right) 被叫做殘差均方 (Residual Mean Squares, RMS)，常常被標記爲 $\text{MS_{RES}}$。分母的 $n-2$，表示進行殘差方差估計時用掉了兩個信息量 $\alpha, \beta$ (自由度減少了 2)，
+
 ## R 演示  例 1： 圖 \@ref(fig:age-wt) 數據
 
 
@@ -376,6 +398,7 @@ ggplot(Chol, aes(x=chol1, y=chol2)) + geom_point(shape=20) +
   scale_y_continuous(breaks=seq(150, 400, 50),limits = c(150, 355)) +
    theme_economist() +labs(x = "Cholesterol at visit 1 (mg/100ml)", y = "Cholesterol at visit 2 (mg/100ml)")
 ```
+
 ### 兩次測量的膽固醇水平分別用 $C_1, C_2$ 來標記的話，考慮這樣的簡單線性迴歸模型：$C_2=\alpha+\beta C_2 + \varepsilon$。我們進行這樣迴歸的前提假設有哪些？
 
 - 每個觀察對象互相獨立。
@@ -450,6 +473,51 @@ check_assumptions(M)
 
 
 # 最小二乘估計的性質和推斷 Ordinary Least Squares Estimators and Inference
+
+
+前一章介紹了簡單線性迴歸模型中對總體參數 $\alpha, \beta, \sigma^2$ 的估計公式，分別是 \@ref(eq:hatalpha) \@ref(eq:hatbeta) \@ref(eq:sigma2right)。本章繼續介紹他們的統計學性質。下面的標記和統計量也會被用到：
+
+1. $\bar{y}=\frac{\sum_{i=1}^n y_i}{n}$，因變量 $y$ 的樣本均值；
+2. $\bar{x}=\frac{\sum_{i=1}^n x_i}{n}$，預測變量 $x$ 的樣本均值；
+3. $SS_{yy}=\sum_{i=1}^n(y_i-\bar{y})^2$，因變量 $y$ 的校正平方和；
+4. $SS_{xx}=\sum_{i=1}^n(x_i-\bar{x})^2$，預測變量 $x$ 的校正平方和；
+5. $SD_y^2=\frac{\sum_{i=1}(y_i-\bar{y})^2}{n-1}=\frac{SS_{yy}}{n-1}$，因變量 $y$ 的樣本方差；
+6. $SD_x^2=\frac{\sum_{i=1}(x_i-\bar{x})^2}{n-1}=\frac{SS_{xx}}{n-1}$，因變量 $y$ 的樣本方差；
+7. $S_{xy}=\sum_{i=1}^n(x_i-\bar{x})(y_i-\bar{y})$，$x,y$ 的交叉乘積；
+8. $CV_{xy}=\frac{\sum_{i=1}^n(x_i-\bar{x})(y_i-\bar{y})}{n-1}=\frac{S_{xy}}{n-1}$，樣本協方差；
+9. $r_{xy}=\frac{CV_{xy}}{SD_xSD_y}$，$x,y$ 的樣本相關係數；
+10. $SS_{RES}=\sum_{i=1}^n\hat\varepsilon^2=\sum_{i=1}^n(y_i-\hat\alpha-\hat\beta x_i)^2$，殘差的估計平方和。
+
+## OLS 估計量的性質
+
+1. 樣本估計的迴歸直線必定穿過數據的中心 $(\bar{x},\bar{y})$。
+
+**證明**
+
+由於樣本估計的截距和斜率公式  \@ref(eq:hatalpha) \@ref(eq:hatbeta) 可知：
+
+$$
+\begin{aligned}
+\hat\alpha &= \bar{y} - \hat\beta\bar{x} \\
+ \hat y_i  &= \hat\alpha + \hat\beta x_i \\
+ \Rightarrow \hat y_i &= \bar{y}+\hat\beta(x_i-\bar{x})
+\end{aligned}
+(\#eq:lmcenter)
+$$
+
+所以，當 $\hat x_i=\bar{x}$ 時 $\hat y_i=\bar{y}$。即迴歸直線必然穿過中心點。
+
+2. 如果擬合模型是正確無誤的， $\hat\alpha,\hat\beta,\hat\sigma^2$ 分別是各自的無偏估計。
+3. $\hat\alpha, \hat\beta$ 是極大似然估計， $\hat\sigma^2$ 不是MLE。
+4. $\hat\alpha, \hat\beta$ 是 $\alpha, \beta$ 最有效的估計量。
+
+## $\hat\beta$ 的性質
+
+
+
+
+
+
 
 # 方差分析 Introduction to Analysis of Variance
 
