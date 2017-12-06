@@ -371,12 +371,12 @@ $\hat\beta=2.225$，意爲和參照組 (積極練習組) 相比，對照組兒�
 t.test(Age~Group, data=Walk, var.equal=TRUE)
 ```
 
-## 練習
+## 練習 {#exeChol}
 
 使用的數據內容爲：兩次調查同一樣本，99 名健康男性的血清膽固醇水平，間隔一年。
 
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, fig.align='center', out.width='80%'}
 # 數據讀入
 library(haven)
 
@@ -520,7 +520,7 @@ $$
 (\#eq:hatbetaalt)
 $$
 
-### $Y$ 對 $X$ 迴歸， 和 $X$ 對 $Y$ 迴歸
+### $Y$ 對 $X$ 迴歸， 和 $X$ 對 $Y$ 迴歸 {#randbeta}
 
 如果我們使用 $\hat\beta_{y|x}$ 表示預測變量 $x$，因變量 $y$ 的簡單線性迴歸係數，那麼我們就有：
 
@@ -599,7 +599,7 @@ $$
 
 $$
 \begin{equation}
-CoV(\hat\alpha,\hat\beta) = -\frac{\sigma^2\bar{x}}{SS_{xx}}
+Cov(\hat\alpha,\hat\beta) = -\frac{\sigma^2\bar{x}}{SS_{xx}}
 \end{equation}
 (\#eq:covaralphabeta)
 $$
@@ -643,7 +643,7 @@ $$
 
 $$
 \begin{equation}
-t = \frac{\hat\beta-0}{SE(\hat\beta)}
+t = \frac{\hat\beta-0}{SE(\hat\beta)} \\
 \end{equation}
 (#eq:betattest)
 $$
@@ -742,6 +742,126 @@ ggplot(new_df, aes(x=age, y=wt)) + geom_point(shape=20, colour="grey40") +
 ```
 
 
+## 線性迴歸模型和 Pearson 相關係數
+
+前面也推導過線性迴歸係數和 Pearson 相關係數之間的關係 (Section \@ref(randbeta))，這裏詳細再展開討論它們之間關係的另外兩個重要結論。
+
+### $r^2$ 可以理解爲因變量方差被模型解釋的比例
+
+Pearson 相關係數，因變量的平方和，模型的殘差平方和之間有如下的關係：
+
+$$
+\begin{equation}
+r^2 = \frac{SS_{yy}-SS_{RES}}{SS_{yy}} = 1-\frac{SS_{RES}}{SS_{yy}}
+\end{equation}
+(#eq:rSSyySSres)
+$$
+
+**證明**
+
+$$
+\frac{SS_{RES}}{SS_{yy}} = \frac{\sum_{i=1}^n(y_i-\hat\alpha-\hat\beta x_i)^2}{\sum_{i=1}^n(y_i-\bar{y})^2}
+$$
+
+因爲 \@ref(eq:hatalpha) : $\hat\alpha=\bar{y}-\hat{\beta}\bar{x}$
+
+$$
+\begin{aligned}
+\frac{SS_{RES}}{SS_{yy}} &= \frac{\sum_{i=1}^n[(y_i-\bar{y})-\hat\beta(x_i-\bar{x})]^2}{\sum_{i=1}^n(y_i-\bar{y})^2} \\
+                  &=\frac{\sum_{i=1}^n(y_i-\bar{y})^2}{\sum_{i=1}^n(y_i-\bar{y})^2}-\frac{2\hat\beta\sum_{i=1}^n(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^n(y_i-\bar{y})^2}+\frac{\hat\beta^2\sum_{i=1}^n(x_i-\bar{x})^2}{\sum_{i=1}^n(y_i-\bar{y})^2}\\
+                  &=1-\frac{2\hat\beta SS_{xy}}{SS_{yy}} + \frac{\hat\beta^2SS_{xx}}{SS_{yy}}
+\end{aligned}
+$$
+
+又因爲 $\hat\beta=\frac{\sum_{i=1}^n(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^n(x_i-\bar{x})^2}=\frac{S_{xy}}{SS_{xx}}, r^2=\frac{S_{xy}^2}{SS_{xx}SS_{yy}}$。
+
+$$
+\begin{aligned}
+\frac{SS_{RES}}{SS_{yy}} &= 1-\frac{2S_{xy}^2}{SS_{yy}SS_{xx}}+\frac{S_{xy}^2}{SS_{xx}SS_{yy}}\\
+&=1-2r^2+r^2\\
+&=1-r^2\\
+\Rightarrow r^2&=1-\frac{SS_{RES}}{SS_{yy}}
+\end{aligned}
+$$
+
+因此，這裏就引出了非常重要的一個結論，**Pearson 相關係數的平方 $r^2$ 的統計學含義是，因變量的方差 $SS_{yy}$ 中，模型的預測變量能夠解釋的部分 $1-SS_{RES}$ 的百分比。** 統計學結果的報告中，爲了和一般相關係數的意義區分，會用大寫的 $R^2$ 來表示這個模型解釋了因變量的百分比。
+
+## Pearson 相關係數和模型迴歸係數的檢驗統計量 $t$ 之間的關係
+
+$$
+\begin{equation}
+t=r\sqrt{\frac{n-2}{1-r^2}}
+\end{equation}
+(#eq:t_r2)
+$$
+
+**證明**
+
+由於前面推導的 $r^2$ 公式 \@ref(eq:rSSyySSres)，而且 $r^2=\frac{S_{xy}^2}{SS_{xx}SS_{yy}}$：
+
+$$
+\begin{aligned}
+\frac{r^2}{1-r^2} & = \frac{\frac{S_{xy}^2}{SS_{xx}SS_{yy}}}{\frac{SS_{RES}}{SS_{yy}}} \\
+                  & = \frac{S_{xy}^2}{SS_{xx}SS_{RES}} \\
+                  & = \frac{S_{xy}^2}{SS_{xx}(n-2)\hat\sigma^2}
+\end{aligned}
+$$
+
+由於公式 \@ref(eq:varhatbeta)，所以 $\hat\sigma^2=V(\hat\beta)SS_{xx}$
+
+$$
+\begin{aligned}
+\frac{r^2}{1-r^2} & = \frac{S_{xy}^2}{SS^2_{xx}(n-2)V(\hat\beta)} \\
+                  & = \frac{\hat\beta^2}{(n-2)V(\hat\beta)} \\
+\Rightarrow t=r\sqrt{\frac{n-2}{1-r^2}}
+\end{aligned}
+$$
+
+這個結論也被用於相關係數的假設檢驗。而且也正如 Section \@ref(randbeta) 證明過的那樣，在簡單線性迴歸裏因變量和預測變量的位置對調以後，對於回顧係數是否爲零的檢驗統計量不受影響。
+
+## 練習
+
+數據同前一章練習部分數據相同 \@ref(exeChol)：
+
+```{r message=FALSE, warning=FALSE, fig.align='center', out.width='80%'}
+# 數據讀入
+library(haven)
+library(ggplot2)
+library(ggthemes)
+Chol <- read_dta("backupfiles/chol.dta")
+Model <- lm(chol2~chol1, data=Chol)
+summary(Model)
+anova(Model)
+
+# 計算截距和迴歸係數的 P 值 HAND CALCULATIONS twosided p-value in R can be obtained by pt(t, df) function
+
+## p value for intercept:
+
+110.42466/20.01133 #=5.518107
+
+2*pt(5.518107, 97, lower.tail = FALSE)
+
+## p value for beta:
+
+0.57868/0.07476 #= 7.740503
+
+2*pt(7.740503, 97, lower.tail = FALSE)
+
+# add fitted regression lines 95% CIs and reference range
+temp_var <- predict(Model, interval="prediction")
+
+new_df <- cbind(Chol, temp_var)
+
+ggplot(new_df, aes(x=chol1, y=chol2)) + geom_point(shape=20, colour="grey40") +
+  stat_smooth(method = lm, se=TRUE, size=0.5)  +
+  geom_line(aes(y=lwr), color = "red", linetype = "dashed")+
+    geom_line(aes(y=upr), color = "red", linetype = "dashed")+
+   scale_x_continuous(breaks=seq(150, 400, 50),limits = c(150, 355))+
+  scale_y_continuous(breaks=seq(150, 400, 50),limits = c(150, 355)) +
+   theme_stata() +labs(x = "Cholesterol at visit 1 (mg/100ml)", y = "Cholesterol at visit 2 (mg/100ml)")
+```
+
+圖中可見，95% 置信帶變化顯著，距離均值越遠的地方，置信帶越寬。然而預測帶基本是平行的沒有變化。因爲預測帶的涵義是，95%的觀察數據都在這個區間範圍內。
 
 
 
