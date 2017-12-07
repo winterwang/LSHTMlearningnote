@@ -1262,11 +1262,11 @@ $$
 
 ## 背景
 
-簡單線性迴歸描述的是一個連續型的因變量 $(y)$，和一個單一的預測變量 $(x)$ 之間的關係。我們考誒把這個模型擴展成包含多個預測變量，單一因變量的模型。例如，我們可以考慮建立一個模型使用生活習慣 (包括“年齡，性別，運動，飲食習慣等”) 來預測收縮期血壓。此時多重迴歸的思想就可以幫我們理解一些我們**更加關心的因子**，與因變量之間的關係，同時控制或者叫調整了其他的**混雜因子** (control or adjust confounders)。有時候這樣的模型也可以直接應用到生活中去，比如上面的例子，我們可以通過瞭解一個人的生活習慣，用建立好的模型來估計這個人的收縮期血壓。
+簡單線性迴歸描述的是一個連續型的因變量 $(y)$，和一個單一的預測變量 $(x)$ 之間的關係。我們考慮把這個模型擴展成包含多個預測變量，單一因變量的模型。例如，我們可以考慮建立一個模型使用生活習慣 (包括“年齡，性別，運動，飲食習慣等”) 來預測收縮期血壓。此時多重迴歸的思想就可以幫我們理解一些我們**更加關心的因子**，與因變量之間的關係，同時控制或者叫調整了其他的**混雜因子** (control or adjust confounders)。有時候這樣的模型也可以直接應用到生活中去，比如上面的例子，我們可以通過瞭解一個人的生活習慣，用建立好的模型來估計這個人的收縮期血壓。
 
 建立模型之前，必須明確研究的目的是什麼。例如我們關心一個**新發現的因子**可能與高血壓有關係，那麼模型中我們放進去調整的其他因子 (如年齡，性別，運動) 等和因變量 (血壓) 之間的關係就變得不那麼重要。
 
-多重線性迴歸，或者交多元模型分析 (multiple linear regression or multivariable linear regression) 是研究一個連續型因變量和多個預測變量之間關係的重要模型。本章還會着重討論**混雜 (confounding)**的概念。
+多重線性迴歸，或者叫多元模型分析 (multiple linear regression or multivariable linear regression) 是研究一個連續型因變量和多個預測變量之間關係的重要模型。本章還會着重討論**混雜 (confounding)**的概念。
 
 ## 兩個預測變量的線性迴歸模型
 
@@ -1308,7 +1308,7 @@ y_n
 \begin{array}{c}
 1&  x_{11} & x_{21}  \\
 1&  x_{12} & x_{22} \\
-1&   \vdots& \vdots \\
+\vdots &   \vdots& \vdots \\
 1&   x_{1n}& x_{2n} \\
 \end{array}
 \right)\left(
@@ -1329,7 +1329,7 @@ y_n
 (\#eq:matrixlm)
 $$
 
-此時上面的表達式中，$\textbf{X}$ 是一個矩陣，$\textbf{Y}, \beta, \varepsilon$ 均為向量。殘差被認為服從多變量正態分佈 **(Multivariate normal distribution)** ，這個多變量正態分佈的協方差矩陣為 $\sigma^2$ 和單位矩陣 $\textbf{I}$ 的乘積來描述。這等價於假設殘差是獨立同分佈且方差 $\sigma^2$ 不變。
+此時上面的表達式中，$\textbf{X}​$ 是一個矩陣，$\textbf{Y}, \beta, \varepsilon​$ 均為向量。殘差被認為服從多變量正態分佈 **(Multivariate normal distribution)** ，這個多變量正態分佈的協方差矩陣為 $\sigma^2​$ 和單位矩陣 $\textbf{I}​$ 的乘積來描述。這等價於假設殘差是獨立同分佈且方差 $\sigma^2​$ 不變。
 
 ### 最小平方和估計 Least Squares Estimation
 
@@ -1436,6 +1436,38 @@ y_i=\alpha+\beta_1x_{1i}+\varepsilon_i & \text{ if } x_{2i}=1 \\
 y_i=\alpha+\beta_2+\beta_1x_{1i}+\varepsilon_i & \text{ if } x_{2i} = 2
 \end{array}
 $$
+
+所以，在一個二維圖形中繪製這兩條回歸直線，你會發現他們之間是**平行的**。因為他們之間相差的只有截距，決定直線斜率的回歸係數，都是 $\beta_1$。再用之前用過的數據，兒童的體重和年齡，如果此時考慮了性別因素的話，多重線性回歸的輸出結果和圖形分別應該是：
+
+```{r}
+library(haven)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+growgam1$sex <- as.factor(growgam1$sex)
+
+Model1 <- lm(wt ~ age + sex, data=growgam1)
+print(summary(Model1), digits = 5)
+print(anova(Model1), digits = 5)
+```
+
+
+
+```{r age-wt-mlm, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Data and fitted values from a regression model relating age and gender to data from a cross-sectional survey. For male children data points shown as circles and fitted values linked by a solid line. For female children data points shown as triangles and fitted values linked by a dashed line.', fig.align='center', out.width='80%'}
+library(ggplot2)
+library(ggthemes)
+library(ggsci)
+
+ggplot(growgam1, aes(x=age, y=wt, shape=sex, colour=sex)) + geom_point(size=2, alpha=2/3) + 
+  scale_x_continuous(breaks = seq(0,42,6), limits = c(0,36)) + 
+  scale_y_continuous(breaks = seq(0,30,5), limits = c(0,20)) + 
+  labs(x = "Age (months)", y= "Weight (kg)") + theme_bw() + 
+  geom_abline(intercept = Model1$coefficients[1], 
+              slope = Model1$coefficients[2], colour = "#BC3C29FF") + 
+  geom_abline(intercept = Model1$coefficients[1]+Model1$coefficients[3], 
+              slope = Model1$coefficients[2], colour = "#0072B5FF", linetype=2) +
+  scale_color_nejm() + theme(legend.position = "none")
+ 
+```
+
 
 
 # 多元模型分析的解釋
