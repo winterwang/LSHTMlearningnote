@@ -27,3 +27,10 @@ pred_interval <- predict(Model, newdata=data.frame(age=newage), interval="predic
                          level = 0.95)
 lines(newage, pred_interval[,2], col="orange", lty=2)
 lines(newage, pred_interval[,3], col="orange", lty=2)
+
+
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/anova2.csv", header = T)
+kable(dt, "html", align = "c",caption = "One-way ANOVA table") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
