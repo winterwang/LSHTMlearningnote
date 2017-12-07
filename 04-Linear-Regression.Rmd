@@ -1025,13 +1025,13 @@ kable(dt, "html", align = "c",caption = "Analysis of Variance table for a simple
 <td style="text-align:center;"> Residual </td>
    <td style="text-align:center;"> $SS_{res}$ </td>
    <td style="text-align:center;"> $n-2$ </td>
-   <td style="text-align:center;"> $MS_res = \frac{SS_res}{(n-2)}$ </td>
+   <td style="text-align:center;"> $MS_{res} = \frac{SS_{res}}{(n-2)}$ </td>
   </tr>
 <tr>
 <td style="text-align:center;"> Total </td>
    <td style="text-align:center;"> $SS_{yy}$ </td>
    <td style="text-align:center;"> $n-1$ </td>
-   <td style="text-align:center;"> $\frac{SS_yy}{(n-1)}$ </td>
+   <td style="text-align:center;"> $\frac{SS_{yy}}{(n-1)}$ </td>
   </tr>
 </tbody>
 </table>
@@ -1255,8 +1255,42 @@ F=\frac{SS_{between}/(K-1)}{SS_{within}/(n-K)} \sim F_{(K-1),(n-K)}
 (\#eq:F1way-anova)
 $$
 
-在解釋兩組以上分組變量的分析結果時，要注意的是如果 $p$ 值很小，檢驗結果告訴我們的是，各組中因變量的均值**不全相等**，而**不是全部都不相等**。其實就是，即使做了這個檢驗，我們也不知道到底那兩組之間是有差異的。如果此時我們發現結果提示均值不全相等，通常我們還會再作進一步的分析，使用類似成對比較法等等 (以後再繼續詳述)。不過提前要記住，如果使用成對比較法時 (pair-wise comparisons)，**多重比較的問題 (multiple comparisons)**會凸顯出來，主要的結果是增加統計檢驗的假陽性 (false-positive) 概率，此時再繼續使用 $p<0.05$ 作爲統計學意義的標準則是不妥當的。 
+在解釋兩組以上分組變量的分析結果時，要注意的是如果 $p$ 值很小，檢驗結果告訴我們的是，各組中因變量的均值**不全相等**，而**不是全部都不相等**。其實就是，即使做了這個檢驗，我們也不知道到底那兩組之間是有差異的。如果此時我們發現結果提示均值不全相等，通常我們還會再作進一步的分析，使用類似成對比較法等等 (以後再繼續詳述)。不過提前要記住，如果使用成對比較法時 (pair-wise comparisons)，**多重比較的問題 (multiple comparisons)**會凸顯出來，主要的結果是增加統計檢驗的假陽性 (false-positive) 概率，此時再繼續使用 $p<0.05$ 作爲統計學意義的標準則是不妥當的。
+
 
 # 多元模型分析 Multivariable Models
+
+## 背景
+
+簡單線性迴歸描述的是一個連續型的因變量 $(y)$，和一個單一的預測變量 $(x)$ 之間的關係。我們考誒把這個模型擴展成包含多個預測變量，單一因變量的模型。例如，我們可以考慮建立一個模型使用生活習慣 (包括“年齡，性別，運動，飲食習慣等”) 來預測收縮期血壓。此時多重迴歸的思想就可以幫我們理解一些我們**更加關心的因子**，與因變量之間的關係，同時控制或者叫調整了其他的**混雜因子** (control or adjust confounders)。有時候這樣的模型也可以直接應用到生活中去，比如上面的例子，我們可以通過瞭解一個人的生活習慣，用建立好的模型來估計這個人的收縮期血壓。
+
+建立模型之前，必須明確研究的目的是什麼。例如我們關心一個**新發現的因子**可能與高血壓有關係，那麼模型中我們放進去調整的其他因子 (如年齡，性別，運動) 等和因變量 (血壓) 之間的關係就變得不那麼重要。
+
+多重線性迴歸，或者交多元模型分析 (multiple linear regression or multivariable linear regression) 是研究一個連續型因變量和多個預測變量之間關係的重要模型。本章還會着重討論**混雜 (confounding)**的概念。
+
+## 兩個預測變量的線性迴歸模型
+
+### 數學標記法和解釋
+
+這裏假設我們研究一個因變量 $Y$，和兩個預測變量 $(X_1,X_2)$ 的模型。那麼此時兩個預測變量的線性迴歸模型可以記爲：
+
+$$
+\begin{equation}
+y_i = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \varepsilon_i, \text{ where } \varepsilon_i \sim NID(0, \sigma^2)
+\end{equation}
+(\#eq:2varmultilm)
+$$
+
+其中，
+    - $y_i$ 是第 $i$ 名研究對象的因變量數據 (例如體重)；
+    - $x_{1i}$ 是第 $i$ 名研究對象的第一個預測變量數據 (例如年齡)， $X_1$；
+    - $x_{2i}$ 是第 $i$ 名研究對象的第二個預測變量數據 (例如身高)， $X_1$；
+    - $\alpha$ 的涵義是，當兩個預測變量均爲 $0$ 時，因變量的期望值；
+    - $\beta_1$ 的涵義是，當 $X_2$ 不變時，$X_1$ 每升高一個單位，因變量的期望值；
+    - $\beta_2$ 的涵義是，當 $X_1$ 不變時，$X_2$ 每升高一個單位，因變量的期望值。
+
+$\beta_1, \beta_2$ 叫做偏迴歸係數 (partial regression coefficient)。它們測量的是兩個預測變量中，當一個被控制 (保持不變) 時，另一個對因變量的影響。
+
+
 
 # 多元模型分析的解釋
