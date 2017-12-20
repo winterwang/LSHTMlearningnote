@@ -48,10 +48,23 @@ hist(b, xlim=c(0,100), main = "")
 
 
 
-x <- rbeta(N,80,2)
-
-
+x <- rbeta(10000,1.2,1.3)
 hist(x, breaks = 30,
      xlim=c(min(x),max(x)), probability=T, 
-     col='lightblue', xlab='Skew < 0 \n Mean < median', ylab=' ', axes=F,
-     main='Negatively Skewed \n assymmetric')
+     col='lightblue', xlab='Kurtosis < 3', ylab=' ', axes=F,
+     main='Light-tailed')
+curve(dnorm(x, mean = 0.5), xlim = c(0,1), add = T, lwd=2)
+y <- rt(10000, 8)
+hist(y, breaks = 30,
+     xlim=c(min(y),max(y)), probability=T, ylim = c(0,0.4),
+     col='lightblue', xlab='Kurtosis > 3', ylab=' ', axes=F,
+     main='Heavy-tailed')
+curve(dnorm(x), xlim = c(-5,5), add = T, lwd=2)
+
+lines(dn, col='red', lwd=2)
+
+set.seed(1234)
+#hist(x, breaks = 30, probability = T)
+curve(dt(x, 10), xlim = c(-5,5), frame=F, type = "l", lty=2)
+curve(dt(x, 5), xlim = c(-5,5), add = T, col="red", type = "l", lty=3)
+curve(dnorm(x), xlim = c(-5,5), add = T, col="blue")
