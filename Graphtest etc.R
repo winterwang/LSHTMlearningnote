@@ -44,3 +44,14 @@ b <- rnorm(10000, 50, 10)
 hist(a, xlim=c(0,100), main = "")
 
 hist(b, xlim=c(0,100), main = "")
+
+
+
+
+x <- rbeta(N,80,2)
+
+
+hist(x, breaks = 30,
+     xlim=c(min(x),max(x)), probability=T, 
+     col='lightblue', xlab='Skew < 0 \n Mean < median', ylab=' ', axes=F,
+     main='Negatively Skewed \n assymmetric')
