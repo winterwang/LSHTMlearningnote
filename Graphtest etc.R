@@ -34,3 +34,13 @@ library(kableExtra)
 dt <- read.csv("backupfiles/anova2.csv", header = T)
 kable(dt, "html", align = "c",caption = "One-way ANOVA table") %>%
   kable_styling(bootstrap_options = c("striped", "bordered"))
+
+
+
+
+par(mfrow=c(1,2))
+a <- rnorm(10000,50, 5)
+b <- rnorm(10000, 50, 10)
+hist(a, xlim=c(0,100), main = "")
+
+hist(b, xlim=c(0,100), main = "")

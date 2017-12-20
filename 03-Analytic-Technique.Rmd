@@ -41,9 +41,9 @@ knitr::include_graphics("img/AT1.png")
 1. 連續型變量，continuous data  <br>連續型數據多來自實驗中對某些特徵的測量，例如身高，體重等，它們本質上是一組連續型的數據。現實生活中接觸到的許多數據也都是連續型的，例如：時間，距離，骨骼密度，藥物濃度等等。所謂連續型變量是由於它理論上可以取某段數值區間內的任何值。當然我們還會被測量尺度的精確度所局限。
 2. 離散型變量，discrete data  <br>許多數據，是通過計數來收集的。離散型變量的本質上也是屬於數值型數據 (numeric)，特徵是這種數值型數據總是**取正整數**或者零。例如，醫院中發生感染的次數，一個家庭中兄弟姐妹的人數，術後患者存活天數等等。
 3. 分類型變量，categorical data <br>分類型變量的數據，其每一個觀察值都歸類於一種類別 (或者屬性)。分類型數據和離散型數據最大的不同是，它從本質上說就不屬於數值型數據。例如，頭髮的顏色 (紅色，黃色，黑色)，職業類型 (裝修工人，教師，總統)。儘管分類型數據本質上不是數值，分析過程中我們常常會給它們賦予一定的數值以便於計算。
-   1. 二分類型數據，binary：十分常見，例如，生存/死亡，有效/無效，成功/失敗；
-   2. 名義型數據，nominal：數據本身沒有高低順序之分，例如，種族，血型等；
-   3. 排序型數據，ordinal：每個分類是包函了順序含義的數據，例如，回答某些問卷問題時用的 “十分同意，同意，不同意，十分不同意”，某些癌症使用的分級診斷 “一級，二級，三級，終級”，對一些結果的評價時使用的 “優，良，中，差”。
+    1. 二分類型數據，binary：十分常見，例如，生存/死亡，有效/無效，成功/失敗；
+    2. 名義型數據，nominal：數據本身沒有高低順序之分，例如，種族，血型等；
+    3. 排序型數據，ordinal：每個分類是包函了順序含義的數據，例如，回答某些問卷問題時用的 “十分同意，同意，不同意，十分不同意”，某些癌症使用的分級診斷 “一級，二級，三級，終級”，對一些結果的評價時使用的 “優，良，中，差”。
 
 其實，對於連續型變量我們還常常會將它們轉化成分類型變量，使用一些特定的或者事先定義好的閾值 (cutoff values) 把連續型數據分組，分級，分層等等。最常見的例子就是體重指數 (BMI)，它本身是一個連續型的變量，但是又可以根據定義好的閾值把它分類成低體重 ($< 18.5 \; kg/m^2$)，正常體重 ($18.5 - 24.9 \; kg/m^2$)，超重 ($25-29.9 \; kg/m^2$)，肥胖 ($\geqslant 30 \; kg/m^2$)。另一個例子是血紅蛋白 (haemoglobin, $g/l$)，它本身是一個連續型變量，但是我們利用它的閾值 (女性，$<120 \; g/l$；男性，$< 130 \; g/l$)，作為診斷是否患有貧血症的依據。
 
@@ -78,7 +78,7 @@ ggplot(diamonds, aes(x=cut)) + geom_bar() +
 
 上面這兩圖的 y 軸都用的是頻率，當然還可以使用百分比。不同組間分類型變量的分佈比較的話更常使用百分比作為 y 軸。如下面的表格及百分比條形圖所示。
 
-```{r}
+```{r message=FALSE}
 
 library(Epi)
 
@@ -109,6 +109,41 @@ ggplot(Prop1, aes(x=Clarity, y=Percent, fill=Cut)) + geom_bar(stat = "identity",
     panel.background = element_blank(),
     axis.line = element_line(colour = "black"))
 ```
+
+### 連續型變量
+
+連續型變量如果做頻數分佈表一般提供的信息量就較小。常用來描述連續型變量的手段是柱狀圖，histogram，和箱形圖，boxplot。柱狀圖應該不必過多解釋。箱形圖，展示的是連續型變量的中位數，四分位，範圍值，以及異常值。一個典型的箱形圖，中間的方形區域包括了該數據的四分位距，interquartile range (即中間 50% 的數據, IQR)。
+
+```{r diamond-carat-box, echo=FALSE, fig.asp=.7, fig.width=6, fig.cap='Boxplot of the diamond carat data', fig.align='center', out.width='80%'}
+boxplot(diamonds$carat[diamonds$carat < 2.1])
+```
+
+
+R作出的箱形圖如 \@ref(fig:diamond-carat-box) 所示，箱子以上的橫線，意為最高值為75%分位值加上1.5倍的IQR；箱子以下橫線，意為最低值為25%分位值減去1.5倍的IQR。其他的觀察值如果不在這個上下限範圍之內的，會用黑點標記出來。這些值被認為是異常值 (outliers)。
+
+## 數據總結方案：位置，分散，偏度，和峰度
+
+1. 描述一組連續型變量的位置，location，此處的位置指的是數據分佈的**中心**位置，常用的數值是眾數 (mode)，中位數 (median)，均值 (mean)。
+    - 眾數 mode，的定義是，一組數據中出現最多次的數值大小；
+    - 中位數 median，的定義是，一組數據中從小到大/或者從大到小排序後50%位置的數值大小，如果觀察值有偶數個，中位數的定義是中間兩個數值的平均值大小；
+    - 算術平均值 arithmetic mean 的**大小受異常值影響較大**，通常簡略為均值，其定義可以用下面的表達式：$$\bar{X}=\frac{1}{n}\sum_{i=1}^n X_i$$
+    - 幾何平均值 geometrix mean，常用在正偏態分佈數據 (positively skewed data)，其定義為： $$\sqrt[n]{\prod_{i=1}^n X_i}=exp[\frac{1}{n}\sum_{i=1}^n log_e(X_i)]$$
+    - 調和平均值 harmonic mean，是所有觀察值的倒數和的倒數，定義為：$$\frac{1}{\frac{1}{n}\sum_{i=1}^n\frac{1}{X_i}}$$
+
+2. 描述一組連續型變量的分散程度
+
+數據的分散程度，dispersion，也就是數據的波動大小 variation。同樣均值的數據，他們的分散可能差別很大：
+
+```{r diff-dispersion, echo=FALSE, fig.asp=.7, fig.width=10, fig.cap='Distributions with similar central location but different dispersion', fig.align='center', out.width='80%'}
+par(mfrow=c(1,2))
+set.seed(1234)
+a <- rnorm(10000,50, 5)
+b <- rnorm(10000, 50, 10)
+hist(a, xlim=c(0,100), xlab = "Mean=50, SD=5", freq = TRUE, main = "")
+
+hist(b, xlim=c(0,100), xlab = "Mean=50, SD=10", freq = TRUE, main = "")
+```
+
 
 
 # 信賴區間
