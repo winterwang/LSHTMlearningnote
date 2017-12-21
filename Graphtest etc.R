@@ -68,3 +68,20 @@ set.seed(1234)
 curve(dt(x, 10), xlim = c(-5,5), frame=F, type = "l", lty=2)
 curve(dt(x, 5), xlim = c(-5,5), add = T, col="red", type = "l", lty=3)
 curve(dnorm(x), xlim = c(-5,5), add = T, col="blue")
+
+# design a function that helps to calculate the binomial distribution
+# and draw the discrete graph
+graph.binom <- function(n, p) {
+  x <- (dbinom(0:n, size = n, prob = p))
+  barplot(x, yaxt="n",
+          col = "lightblue",
+          ylim = c(0, 0.4),
+          names.arg = 0:n, ylab = "Probability",
+          main = sprintf(paste('Binomial Distribution (n,p)' , n, p, sep = ', ')))
+  axis(2, at=c(seq(0, 0.4, 0.1), 0.025), las=2)
+  abline(h=0.025, col = "Red", lty=2, lwd = 2)
+}
+
+graph.binom(20, 0.0866)
+graph.binom(20, 0.4910)
+
