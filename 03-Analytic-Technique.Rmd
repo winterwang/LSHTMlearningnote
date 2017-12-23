@@ -653,6 +653,128 @@ $$
 
 ## 二項分佈的精確假設檢驗
 
+若 $n$ 次實驗中成功次數爲 $R$，那麼樣本百分比 (估計，estimator) $P=\frac{R}{n}$ 是它的人羣比例 $\pi$ (參數，parameter) 的無偏估計。欲檢驗的零假設 $\pi=\pi_0$，替代假設 $\pi\neq\pi_0$，且某一次觀察結果爲 $R=r$，我們要計算的 $p$ 值就是在零假設條件下，所有情況中 $R=r$ 或者與之同等極端甚至更加極端的事件所佔的比例。
+
+- 如果 $r<n\pi_0$，單側 $p$ 值等於
+
+$$
+\begin{aligned}
+p & = \text{Prob}\{ r\text{ or fewer successes out of n | \pi=\pi_0} \} \\
+  & = P_0 + P_1 + P_2 + \cdots + P_r \\
+\text{Where } & P_x = \binom{n}{x} \pi_0^x (1-\pi_0)^{n-x}
+\end{aligned}
+$$
+
+- 如果 $r>n\pi_0$，單側 $p$ 值等於
+
+$$
+\begin{aligned}
+p & = \text{Prob}\{ r\text{ or more successes out of n | \pi=\pi_0} \} \\
+  & = P_r + P_{r+1} + P_{r+2} + \cdots + P_{n} \\
+\text{Where } & P_x = \binom{n}{x} \pi_0^x (1-\pi_0)^{n-x}
+\end{aligned}
+$$
+
+一般情況下兩個單側 $p$ 值很接近，所以雙側 $p$ 值就可以計算其中一個然後乘以 $2$。你也可以計算兩側的單側 $p$ 值然後相加。
+
+## 當樣本量較大
+
+如果樣本量 $n$ 比較大，那麼計算上面的精確法是十分繁瑣的 (計算器也會累。。。)。可以考慮利用中心極限定理用正態近似法進行假設檢驗。此時需要做的就是把近似後的正態分佈標準化，然後和標準正態分佈做比較獲得 $p$ 值即可：
+
+$$
+\begin{equation}
+Z=\frac{R-E(R)}{\sqrt{\text{Var}(R)}} = \frac{R-E(R)}{\text{SE}(R)}
+\end{equation}
+(\#eq:binapprox)
+$$
+
+在目前爲止人類所知道的範圍內，上面公式的 $Z$ 值隨着實驗樣本量 $n$ 的增加而無限接近標準正態分佈 $N(0,1)$。
+
+## 二項分佈的正態近似法假設檢驗
+
+二項分佈的特徵值：
+
+$$
+E(R) = n\pi_0; \text{ and Var}(R) = n\pi_0(1-\pi_0)
+$$
+
+套用公式 \@ref(eq:binapprox)，計算 $Z$ 值如下：
+
+$$
+\begin{aligned}
+Z & = \frac{R-E(R)}{\sqrt{\text{Var}(R)}} \\
+  & = \frac{R-n\pi_0}{\sqrt{n\pi_0(1-\pi_0)}} \\
+  & = \frac{P-\pi_0}{\sqrt{\frac{\pi_0(1-\pi_0)}{n}}} \\
+\text{Where } & P=\frac{R}{n}
+\end{aligned}
+$$
+
+利用實驗數據的 $p=r/n$，以及零假設時的 $\pi_0$，就可以計算上面的觀察 $Z$ 值，之後查閱標準正態分佈的概率表格就可以獲得單側 $p$ 值，別忘了乘以 $2$。
+
+### 連續性校正 continuity correction
+
+在使用正態分佈近似法進行二項分佈數據的假設檢驗時，我們其實是在使用一個連續型分佈近似一個離散型分佈，誤差通常會比較大。我們會使用矯正後的正態近似法計算 $Z$ 值：
+
+$$
+Z=\frac{|R-n\pi_0|-\frac{1}{2}}{\sqrt{n\pi_0(1-\pi_0)}}  \text{ or } Z=\frac{|P-\pi_0|-\frac{1}{2n}}{\sqrt{\frac{\pi_0(1-\pi_0)}{n}}}
+$$
+
+“Statistical Methods in Medical Research” [@Armitage2008] 書中建議，滿足 $n\pi \geqslant 10 \text{ or } n(1-\pi) \geqslant 10$ 時近似法計算的 $p$ 值可以給出較爲滿意的結果。另外，當 $n>100$ 則建議不再進行連續性校正，即把校正部分的 $-\frac{1}{2}$ 或者 $-\frac{1}{2n}$ 去掉。
+
+## 情況1：對均值進行假設檢驗 (方差已知)
+
+假設從已知方差 $(\sigma^2)$ 的人羣中隨機抽取樣本進行血糖值測量 $(Y_n)$，該樣本測量的人羣的平均血糖值爲 $\mu=\bar{Y}$，假設我們要比較該人羣的血糖值和某個理想血糖值 $\mu_0$，進行假設檢驗：
+
+$$\text{H}_0: \mu=\mu_0 \text{ v.s. H}_1: \mu\neq\mu_0$$
+
+根據中心極限定理，當 $n$ 足夠大，樣本均值 $\bar{Y}$ 的分佈接近正態分佈，且均值 $\mu$，方差 $\frac{\sigma^2}{n}$。所以可以計算 $Z$ 值：
+
+$$
+Z = \frac{\bar{Y}-E(\bar{Y})}{\sqrt{\text{Var}\bar{Y}}} = \frac{\bar{Y}-\mu_0}{\sqrt{\sigma^2/n}}
+$$
+
+進而計算其 $p$ 值：
+
+$$
+\begin{aligned}
+p &= \text{Prob}(\bar{Y}\leqslant\bar{y}|\mu=\mu_0) \\
+  &= \text{Prob}(Z<\frac{\bar{y}-\mu_0}{\sqrt{\sigma^2/n}}) \\
+  &= \Phi(\frac{\bar{y}-\mu_0}{\sqrt{\sigma^2/n}}) \\
+\text{Where } & \Phi \text{ is the distribution function for a } N(0,1) distribution
+\end{aligned}
+$$
+
+所以計算了上面的單側 $p$ 值以後別忘了乘以 $2$ 以獲得雙側 $p$ 值。
+
+## 情況2：對均值進行假設檢驗 (方差未知) the one-sample t-test
+
+如果方差未知，我們仍要比較一個樣本均值和一個數值的話，零假設和替代假設依然不變：
+
+$$\text{H}_0: \mu=\mu_0 \text{ v.s. H}_1: \mu\neq\mu_0$$
+
+但是此時計算的統計量的分母，總體方差的地方使用了樣本方差 $\frac{\hat\sigma^2}{n}$ 替代時，該統計量不再服從標準正態分佈，而服從自由度爲 $n-1$ 的 $t$ 分佈。$t$ 分佈看上去和標準正態分佈很像，但是其分佈的雙側尾部“較厚”，峯度大於 3：
+
+$$
+T = \frac{\bar{Y}-\mu_0}{\sqrt{\hat\sigma^2/n}} \sim t_{n-1}
+$$
+
+
+
+```{r tdistrifig, echo=FALSE, fig.align='center', fig.cap='Student t distributions with 1, 4 and infinity degrees of freedom compared with a standard normal distribution', fig.height=4, fig.width=6, out.width='80%'}
+set.seed(1234)
+#hist(x, breaks = 30, probability = T)
+curve(dt(x, 1), xlim = c(-5,5), ylim = c(0, 0.4),
+      frame=F, type = "l", lty=2, lwd = 2, xlab = "", ylab = "Density")
+curve(dt(x, 4), xlim = c(-5,5), add = T, col="red", type = "l", lty=3, lwd=2)
+curve(dnorm(x), xlim = c(-5,5), add = T, col="blue")
+legend("topright", legend=c("Infinity", "t with 1 df", "t with 4 df"), col=c("blue", "black", "red"), lty = c(1, 2, 3), lwd = c(1, 2, 2) ,bty="n")
+```
+
+
+
+## 情況3：對配對實驗數據的均值差進行假設檢驗 the paired t-test
+
+配對 t 檢驗可以用於實驗前後數據的比較，或者是某兩個對象兩兩配對時的均值比較。這樣的實驗數據我們就可以去配對數據的差值，然後利用單樣本 t 檢驗比較這個配對數據的差是否等於零。
 
 
 # 相關
