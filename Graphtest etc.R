@@ -85,3 +85,35 @@ graph.binom <- function(n, p) {
 graph.binom(20, 0.0866)
 graph.binom(20, 0.4910)
 
+
+library(mvtnorm) #多変量正規分布パッケージ
+library(scatterplot3d) #三次元描画パッケージ
+
+sigma.zero <- matrix(c(1,0,0,1), ncol=2) #分散共分散行列（無相関）
+x1 <- seq(-3, 3, length=50)  # 変量x1の定義域 -3≦x1≦3
+x2 <- seq(-3, 3, length=50)  # 変量x2の定義域 -3≦x1≦3
+
+f.zero <- function(x1,x2) { 
+  dmvnorm(matrix(c(x1,x2), ncol=2), 
+          mean=c(0,0), sigma=sigma.zero) }
+# 分散共分散行列 sigma.zero の密度関数
+z <- outer(x1, x2, f.zero) 
+# x1とx2の定義域の外積に対する密度関数f.zeroの値域
+z[is.na(z)] <- 1  # z に関する条件
+op <- par(bg = "white")  #グラフィクスの環境設定
+persp(x1, x2, z, theta = -30, phi = 15, expand = 0.7, col = "lightblue", xlab = "X", 
+      ylab = "Y", zlab = "Probability Density")  
+
+# interactive 3d bivariate normal distribution
+library(rgl)
+x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数1000個
+ plot3d(x10000[,1], x10000[,2],col = "lightblue", xlab = "X", 
+       ylab = "Y", zlab = "Probability Density", 
+       dmvnorm(x10000, mean=c(0,0), sigma=sigma.zero), type="s", size=1, lit=TRUE, main = "",sub="3-D Plot")
+
+ 
+
+ library(car)
+ x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数10000個
+  data.ellipse(x10000[1], x10000[2], levels=c(0.5, 0.975))
+  contour(x.points,y.points,z)

@@ -5,7 +5,6 @@
 ##  數據分析的流程
 
 
-
 ```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Population, sample and statistical inference', fig.align='center', out.width='70%'}
 knitr::include_graphics("img/AT1.png")
 ```
@@ -844,6 +843,70 @@ $$
 ### 相關係數的 $95\%$ 信賴區間
 
 
+如果要計算相關係數 $r$ 的信賴區間，我們需要知道兩個變量 $X,Y$ 之間的聯合分佈 (joint distribution)。$X,Y$ 如果服從二元正態分佈，可以利用 Fisher's Z-transformation 計算相關係數的信賴區間。圖 \@ref(fig:binormal) 完美展示了兩個服從二元正態分佈的三維立體概率密度分布圖。可以用鼠標拖動下面那個三維圖，就能理解什麼叫做二元正態分佈。就是無論是在 X 軸看 Y，還是在 Y 軸看 X，每一個切面都呈現正態分佈。因此二元正態分佈的概率密度方程繪製出來是成爲一個完美的鍾罩形狀。很美吧！
+
+$$
+X|Y \sim N(\mu_x, \sigma_x^2) \text{ AND } Y|X \sim N(\mu_y, \sigma_y^2)
+$$
+
+```{r binormal, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Bivariate normal distribution of X and Y', fig.align='center', out.width='100%'}
+
+library(mvtnorm) #多変量正規分布パッケージ
+library(scatterplot3d) #三次元描画パッケージ
+
+sigma.zero <- matrix(c(1,0,0,1), ncol=2) #分散共分散行列（無相関）
+x1 <- seq(-3, 3, length=50)  # 変量x1の定義域 -3≦x1≦3
+x2 <- seq(-3, 3, length=50)  # 変量x2の定義域 -3≦x1≦3
+
+f.zero <- function(x1,x2) {
+  dmvnorm(matrix(c(x1,x2), ncol=2),
+          mean=c(0,0), sigma=sigma.zero) }
+# 分散共分散行列 sigma.zero の密度関数
+z <- outer(x1, x2, f.zero)
+# x1とx2の定義域の外積に対する密度関数f.zeroの値域
+z[is.na(z)] <- 1  # z に関する条件
+op <- par(bg = "white")  #グラフィクスの環境設定
+persp(x1, x2, z, theta = -30, phi = 15, expand = 0.8, col = "lightblue", xlab = "X",
+      ylab = "Y", zlab = "Probability Density")
+```
+
+
+```{r binormal-inter, fig.asp=.7, fig.width=8, fig.cap='interactive way to see bivariate normal distribution of X and Y', fig.align='center', out.width='100%', webgl=TRUE}
+library(rgl)
+x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数10000個
+plot3d(x10000[,1], x10000[,2],col = "lightblue", xlab = "X",
+       ylab = "Y", zlab = "Probability Density",
+       dmvnorm(x10000, mean=c(0,0), sigma=sigma.zero), type="s", size=1, lit=TRUE, main = "",sub="Interactive way to see bivariate normal distribution of X and Y")
+```
+
+
+
+如果 $\rho\neq0$，相關係數的樣本分佈雖然不是正態分佈，但是只要 $X,Y$ 服從上面的圖形顯示的二元正態分佈，就可以利用Fisher's Z-transformation 公式計算統計量 $Z_r$：
+
+$$
+\begin{equation}
+Z_r = \frac{1}{2}log_e(\frac{1+r}{1-r}) = \text{tanh}^{-1} (r)
+\end{equation}
+(\#eq:AT4-4)
+$$
+
+$Z_r$，近似服從正態分佈：
+
+$$
+\begin{equation}
+Z_r \sim N(\frac{1}{2}log_e(\frac{1+\rho}{1-\rho}), \frac{1}{n-3})
+\end{equation}
+(\#eq:AT4-5)
+$$
+
+利用這個性質，我們可以計算 $Z_\rho$ 的信賴區間，然後再通過逆運算轉換之後獲得 $\rho$ 的信賴區間：
+
+$$
+\begin{equation}
+\rho = \frac{exp(2Z_\rho)-1}{exp(2Z_\rho)+1} = \text{tanh}(Z_\rho)
+\end{equation}
+(\#eq:AT4-6)
+$$
 
 # 比較
 
