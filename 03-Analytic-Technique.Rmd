@@ -740,7 +740,7 @@ $$
 p &= \text{Prob}(\bar{Y}\leqslant\bar{y}|\mu=\mu_0) \\
   &= \text{Prob}(Z<\frac{\bar{y}-\mu_0}{\sqrt{\sigma^2/n}}) \\
   &= \Phi(\frac{\bar{y}-\mu_0}{\sqrt{\sigma^2/n}}) \\
-\text{Where } & \Phi \text{ is the distribution function for a } N(0,1) distribution
+\text{Where } & \Phi \text{ is the distribution function for a } N(0,1) \text{distribution}
 \end{aligned}
 $$
 
@@ -777,7 +777,73 @@ legend("topright", legend=c("Infinity", "t with 1 df", "t with 4 df"), col=c("bl
 配對 t 檢驗可以用於實驗前後數據的比較，或者是某兩個對象兩兩配對時的均值比較。這樣的實驗數據我們就可以去配對數據的差值，然後利用單樣本 t 檢驗比較這個配對數據的差是否等於零。
 
 
-# 相關
+# 相關 association
+
+## 背景介紹
+
+兩個變量如果相關 (associated)，那麼它們二者中的一個的分佈是依賴另一個的分佈的 the distribution of one is dependent on the value taken by the other and vice-versa。統計學中如何描述兩個變量之間的相關關係取決於兩個變量的性質 (連續型還是分類型，continuous or categorical variables)。本章討論不同情形下兩個變量相關關係及統計學上的假設檢驗方法。
+
+兩個變量之間的關係除了可以用相關來描述，還可以利用迴歸的手段來分析。但是迴歸分析，和本章討論的相關性分析的本質區別在於，相關分析着重討論兩個變量的聯合分佈 (joint distribution)，而迴歸分析則是要探索一個變量在另一個變量的條件下的條件分佈 (conditional distribution)。因此，相關分析從某種意義上來說是對稱的 (X 與 Y 的相關性等同於 Y 與 X 的相關性)，迴歸分析則不然 (Y 對 X 的迴歸不等同與 X 對 Y 的迴歸)。
+
+另外一個要點是，**相關分析絕不討論因果關係。**
+
+## 兩個連續型變量的相關分析
+
+### 相關係數的定義
+
+在概率論 (Section \@ref(correlation)) 中也已經介紹過相關係數 $\rho$ 的定義：
+
+$$
+\begin{equation}
+\rho=\frac{E[(X-E(X))(Y-E(Y))]}{\sqrt{E(X-E(X))^2E(Y-E(Y))^2}} = \frac{\text{Cov}(X,Y)}{\sqrt{V(X)V(Y)}}
+\end{equation}
+(\#eq:AT4-1)
+$$
+
+用 $\textbf{x}=\{x_1, x_2, \cdots, x_n \}$ 和 $\textbf{y}=\{ y_1, y_2, \cdots, y_n \}$ 表示對 $n$ 個隨機研究對象測量的兩個變量。那麼這兩個變量的相關關係 $r$ 的計算式爲：
+
+$$
+\begin{equation}
+r = \frac{\sum(x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum(x_i-\bar{x})^2\sum(y_i-\bar{y})^2}} = \frac{S_{xy}}{S_xS_y}
+\end{equation}
+(\#eq:AT4-2)
+$$
+
+$S_{xy}$ 代表樣本數據的協方差 (Section \@ref(covariance))，$S_x$ 是變量 $X$ 的樣本標準差 (有時會記爲 $\hat\rho_x$)，$S_y$ 是變量 $Y$ 的樣本標準差。$r$ 被命名爲相關係數 $\rho$ 的 Pearson 积矩估計 (Pearson Product-Moment estimator)。
+
+
+### 相關係數的性質
+
+```{r rho-char, echo=FALSE, fig.asp=.7, fig.width=10, fig.cap='Examples of Peason correlation coefficients', fig.align='center', out.width='100%'}
+knitr::include_graphics("img/Selection_101.png")
+```
+
+上圖 \@ref(fig:rho-char) 描述了9種不同設定時的相關係數 $r$。$r$ 的主要性質可以總結爲：
+
+1. $r$ 的取值範圍是 $-1\sim1\text{, i.e. } -1\leqslant r \leqslant 1$；
+2. $r>0$ 時，二者呈正相關， $r<0$ 時，二者呈負相關；
+3. 當且僅當兩個變量的散點圖呈現圖 \@ref(fig:rho-char) 中 A，B 顯示的直線時才有 $|r|=1$，然而直線的坡度卻與相關係數無關；
+4. 如果兩個變量之間沒有**直線的 linear**相關關係，那麼相關係數 $r$ 會接近於零；
+5. 求 X 和 Y 的相關係數，等同於求 Y 和 X 的相關係數 (**與迴歸不同**)；
+6. 相關係數 $r$ 沒有單位，並且位置不會發生改變 (location invariant)，如果兩個變量乘以或者除以，加上或者減去任意常數，不會改變相關係數的大小 (**與迴歸不同**)。
+
+圖 \@ref(fig:rho-char) 中 F 顯示的相關關係可以看出，$r$ 受異常值的影響很大，如果將右上角的異常值從數據中去除掉的話，該圖中的相關係數會變小到幾乎爲零。G 和 H 則表示非線性相關時，Pearson 相關係數不適用。I 則告訴我們如果不熟悉數據本身的分佈的話，如果只看總體的相關是多麼的危險 (總體爲負相關，但是在不同的分層數據中卻是呈正相關的)。
+
+### 對相關係數是否爲零進行假設檢驗
+
+在線性迴歸 (Section \@ref(t-r2-F)) 中會討論和證明 Pearson 相關係數和統計量 $t$ 之間的關係，該公式也被用於檢驗相關係數是否爲零：
+
+$$
+\begin{equation}
+T=r\sqrt{\frac{n-2}{1-r^2}} \sim t_{n-2}
+\end{equation}
+(\#eq:AT4-3)
+$$
+
+
+### 相關係數的 $95\%$ 信賴區間
+
+
 
 # 比較
 
