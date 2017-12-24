@@ -117,3 +117,11 @@ x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数1000個
  x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数10000個
   data.ellipse(x10000[1], x10000[2], levels=c(0.5, 0.975))
   contour(x.points,y.points,z)
+
+  
+  
+  dt <- read.csv("backupfiles/binary-assoc.csv", header = T)
+  names(dt) <- c("  ", "Y = 0", "Y = 1", "Total")
+  kable(dt, "html",  align = "c",caption = "Population parameters in a 2 by 2 contingency table") %>%
+    kable_styling(bootstrap_options = c("striped", "bordered"))
+  

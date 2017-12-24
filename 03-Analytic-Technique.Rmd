@@ -932,6 +932,151 @@ knitr::include_graphics("img/Selection_102.png")
 1. 圖 \@ref(fig:rho-restrict) 展示了同樣的一組數據，如果只是斷章取義，其相關係數可能發生極大的變化。所以，想用相關係數作合理的統計推斷，必須保證數據的完整性，否則就有玩弄數據之嫌。然而，如果你用的是線性迴歸的方法，受數據限制 (data restriction) 的影響就幾乎可以忽略不計。
 
 
+```{r regre-to-mean, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Effect of regression to the mean', fig.align='center', out.width='80%'}
+knitr::include_graphics("img/Selection_103.png")
+```
+
+2. 均數迴歸現象，regression to the mean phenomenon，是指在進行重複測量時，前次測量中獲得的極高或極低分數會在後期測量時傾向於向平均值偏移，即隨着時間的推移，高分者成績下降，低分者成績升高的一種自然迴歸效應。所以在一些臨牀實驗中宣稱自己發現的測量值的變化和基線值之間的相關關係 (correlation between initial measurement and a change in that measurement)，其實是一種自然現象而不是真的存在什麼相關關係，如圖 \@ref(fig:regre-to-mean)。要避免這樣的低級失誤，可以計算測量值的變化 ($X_2-X_1$) 和前後兩次測量值的均值 ($(X_2+X_1)/2$) 之間的相關關係。
+
+3. 有些科學家聲稱自己用迴歸係數來衡量兩個變量之間的一致性 (assess agreement between variables)，這當然是完全錯誤的。兩個變量之間高度相關，和他們高度一致是完全不同的概念 (單位，測量方法，可能都不一樣怎麼可能一致呢)。你完全可以將同一個變量乘以2以後和它原來的值作相關分析，就會發現二者相關係數等於 1，但是二者數值上相差兩倍。
+
+
+一般來說，迴歸模型 (regression models) 顯得比 Pearson 相關係數更加實用，能提供更多的信息用於推斷 (甚至是用一個值的變化預測另一個變量的大小)，也能避免上面舉例的錯誤使用。
+
+### 在 R 裏面計算相關係數
+
+```{r age-hei, echo=FALSE, fig.asp=.7, fig.width=6, fig.cap='Association between age and height in children aged 6-36 months', fig.align='center', out.width='80%'}
+library(haven)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+ggplot(growgam1, aes(x=age, y=len)) + geom_point(shape=21) + theme_bw() + theme(plot.subtitle = element_text(vjust = 1),
+    panel.border=element_blank(), axis.line=element_line(),
+    plot.caption = element_text(vjust = 1),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12,
+        angle = 0)) +
+  labs(x = "Age (months)", y = "Length of child (cm) ") +
+  ylim(c(60,100))
+```
+
+在 R 裏面用 `cor()` 可以簡單的獲得兩個變量之間的相關係數，`cor.test()` 可以用於獲得相關係數的信賴區間和是否爲零的假設檢驗結果：
+
+```{r}
+cor(growgam1$age, growgam1$len)
+cor.test(growgam1$age, growgam1$len)
+```
+
+## 二元變量之間的相關性 association between pairs of binary variables
+
+兩個二元變量之間的相關性常用比值比 Odds Ratio (OR) 來衡量。跟連續型變量的 Pearson 相關係數一樣，二元變量之間的比值比也是一種對稱的特徵值。所以，X 對於 Y 的 OR，和 Y 對於 X 的 OR 是一樣的。令 $\pi_{ij}$ 表示 $X=i, Y=j$ 時的概率。
+
+
+```{r binary-assoc, echo=FALSE, eval=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/binary-assoc.csv", header = T)
+names(dt) <- c("", "Y = 0", "Y = 1", "Total")
+kable(dt, "html",  align = "c",caption = "Population parameters in a 2 by 2 contingency table") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表21.1： Population parameters in a $2\times2$ contingency table</caption>
+ <thead><tr>
+<th style="text-align:center;"> </th>
+   <th style="text-align:center;"> $Y = 0$ </th>
+   <th style="text-align:center;"> $Y = 1$ </th>
+   <th style="text-align:center;"> Total </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:center;"> $X = 0$ </td>
+   <td style="text-align:center;"> $\pi_{00}$ </td>
+   <td style="text-align:center;"> $\pi_{01}$ </td>
+   <td style="text-align:center;"> $\pi_{0\cdot}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> $X = 1$ </td>
+   <td style="text-align:center;"> $\pi_{10}$ </td>
+   <td style="text-align:center;"> $\pi_{11}$ </td>
+   <td style="text-align:center;"> $\pi_{1\cdot}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> $\pi_{\cdot 0}$ </td>
+   <td style="text-align:center;"> $\pi_{\cdot 1}$ </td>
+   <td style="text-align:center;"> 1 </td>
+  </tr>
+</tbody>
+</table>
+
+利用表格可以看出，求 Y 對 X 的 OR 計算式爲 (horizontal)：
+
+$$
+\Psi = \frac{\pi_{00}/\pi_{01}}{\pi_{10}/\pi_{11}} = \frac{\pi_{00}\times\pi_{11}}{\pi_{10}\times\pi_{01}}
+$$
+
+求 X 對 Y 的 OR 計算式爲 (vertical)：
+
+$$
+\Psi = \frac{\pi_{00}/\pi_{10}}{\pi_{01}/\pi_{11}} = \frac{\pi_{00}\times\pi_{11}}{\pi_{10}\times\pi_{01}}
+$$
+
+可見兩個計算 OR (parameter) 值關係的計算式是完全等價的。
+
+
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表21.2： Observed data in a $2\times2$ contingency table</caption>
+ <thead><tr>
+<th style="text-align:center;"> </th>
+   <th style="text-align:center;"> $Y = 0$ </th>
+   <th style="text-align:center;"> $Y = 1$ </th>
+   <th style="text-align:center;"> Total </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:center;"> $X = 0$ </td>
+   <td style="text-align:center;"> $O_{00}$ </td>
+   <td style="text-align:center;"> $O_{01}$ </td>
+   <td style="text-align:center;"> $O_{0\cdot}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> $X = 1$ </td>
+   <td style="text-align:center;"> $O_{10}$ </td>
+   <td style="text-align:center;"> $O_{11}$ </td>
+   <td style="text-align:center;"> $O_{1\cdot}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> $O_{\cdot 0}$ </td>
+   <td style="text-align:center;"> $O_{\cdot 1}$ </td>
+   <td style="text-align:center;"> 1 </td>
+  </tr>
+</tbody>
+</table>
+
+
+所以用觀察數據 (Observed data, all "O"s in the table) 替代掉 OR 計算式中的 $\pi$ 可得觀察數據的 OR 估計值 (estimator) 的計算公式：
+
+$$
+\begin{equation}
+\hat\Psi = \frac{\hat\pi_{00}\times\hat\pi_{11}}{\hat\pi_{10}\times\hat\pi_{01}} = \frac{O_{00}\times O_{11}}{O_{10}\times O_{01}}
+\end{equation}
+(\#eq:AT4-8)
+$$
+
+### OR 的信賴區間
+
+由於 OR 是乘法計算的結果，我們習慣上使用對數轉換 OR 以後 $(\text{log}(\hat\Psi))$ 計算完對稱的 95% 信賴區間，然後再通過對數的反函數獲得 OR 的 95% 信賴區間。
+
+樣本量足夠大時， $\text{log}(\hat\Psi)$ 的分佈是正態分佈，標準誤 (standard error) 是：
+
+$$
+\sqrt{}
+$$
 
 # 比較
 
