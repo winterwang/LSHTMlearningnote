@@ -1,10 +1,20 @@
-
-
-
-
 library(haven)
 library(ggplot2)
 library(ggthemes)
+library(RYoudaoTranslate)
+library(RCurl)
+library(rjson)
+library(ggsci)
+library(epicalc)
+apikey = "498375134"
+keyfrom = "JustForTestYouDao"
+
+
+
+
+
+
+
 growgam1 <- read_dta("backupfiles/growgam1.dta")
 
 ggplot(growgam1, aes(x=age, y=wt)) + geom_point(shape=20, colour="grey40") +
@@ -120,8 +130,11 @@ x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数1000個
 
   
   
-  dt <- read.csv("backupfiles/binary-assoc.csv", header = T)
-  names(dt) <- c("  ", "Y = 0", "Y = 1", "Total")
-  kable(dt, "html",  align = "c",caption = "Population parameters in a 2 by 2 contingency table") %>%
-    kable_styling(bootstrap_options = c("striped", "bordered"))
+  library(knitr)
+  library(kableExtra)
+  dt <- read.csv("backupfiles/walkingAT.csv", header = T)
+  names(dt) <- c("", "Active exercise group (i=1)", "Eight week control group (i=2)")
+  kable(dt, "html",  align = "c",caption = "表 22.1: Children's ages at time of first walking alone by randomisation group") %>%
+    kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+    add_header_above(c("", "Age in months for walking alone" = 2))
   

@@ -409,7 +409,7 @@ $$
 
 當 $\alpha = 0.05$ 時，我們說$(\bar{Y} - z_{1-\alpha/2}\frac{\sigma}{\sqrt{n}}, \bar{Y} + z_{1-\alpha/2}\frac{\sigma}{\sqrt{n}})$ 包含了總體參數均值 $(\mu)$ 的概率是 $95\%$。但是要記住，千萬不能說：總體參數 $\mu$ 有 $95\%$ 的概率落在這個信賴區間內。因爲**總體參數不是隨機變量**，它不會隨我們的樣本變化而變化，它是恆定不變的。我們每一次實驗，每一次採樣，獲得的樣本數據，計算出一個新的信賴區間，這樣的區間都是在估計這個未知位置的總體參數。所以，**從長遠來說，相同的實驗，重複20次，其中19次計算獲得的信賴區間，會包含真實的總體參數。**
 
-## 情況2：未知方差，但是已知服從正態分佈數據均值的信賴區間
+## 情況2：未知方差，但是已知服從正態分佈數據均值的信賴區間 {#AT2-5}
 
 多數情況下，總體的方差我們無從知曉。它也必須通過實驗數據來估計 $\hat\sigma^2$。那麼，下面的公式計算的統計量 $T$ 服從自由度爲 $n-1$ 的 $t$ 分佈：
 
@@ -720,7 +720,7 @@ $$
 
 “Statistical Methods in Medical Research” [@Armitage2008] 書中建議，滿足 $n\pi \geqslant 10 \text{ or } n(1-\pi) \geqslant 10$ 時近似法計算的 $p$ 值可以給出較爲滿意的結果。另外，當 $n>100$ 則建議不再進行連續性校正，即把校正部分的 $-\frac{1}{2}$ 或者 $-\frac{1}{2n}$ 去掉。
 
-## 情況1：對均值進行假設檢驗 (方差已知)
+## 情況1：對均值進行假設檢驗 (方差已知) {#AT3-5}
 
 假設從已知方差 $(\sigma^2)$ 的人羣中隨機抽取樣本進行血糖值測量 $(Y_n)$，該樣本測量的人羣的平均血糖值爲 $\mu=\bar{Y}$，假設我們要比較該人羣的血糖值和某個理想血糖值 $\mu_0$，進行假設檢驗：
 
@@ -743,7 +743,11 @@ p &= \text{Prob}(\bar{Y}\leqslant\bar{y}|\mu=\mu_0) \\
 \end{aligned}
 $$
 
-所以計算了上面的單側 $p$ 值以後別忘了乘以 $2$ 以獲得雙側 $p$ 值。
+所以計算了上面的單側 $p$ 值以後別忘了乘以 $2$ 以獲得雙側 $p$ 值：
+
+$$
+\text{Two-sided } p \text{ value } = 2\times[1-\Phi(\frac{\bar{y}-\mu_0}{\sqrt{\sigma^2/n}})]
+$$
 
 ## 情況2：對均值進行假設檢驗 (方差未知) the one-sample t-test
 
@@ -1142,7 +1146,7 @@ P_{O_{00}} = \text{Prob}(O_{00},O_{01},O_{10},O_{11}|O_{0\cdot},O_{1\cdot},O_{\c
 (\#eq:AT4-Fisher)
 $$
 
-在 R 裏可以用 `fisher.test` 對四個表內容進行確切檢驗。
+在 R 裏可以用 `fisher.test` 對四格表內容進行確切檢驗。
 
 ```{r}
 x3 <- matrix(c(7,5,3,8), ncol = 2, byrow = TRUE)
@@ -1219,6 +1223,230 @@ $$
 
 
 
-# 比較
+# 比較 Comparisons
+
+- 本章暫且只討論**兩組之間**的比較 (均值，方差，百分比)；
+- 本章也只討論兩種類型的變量，**連續型和二分類型變量**；
+- 本章會介紹點估計 (point estimation)，信賴區間計算 (confidence intervals)，假設檢驗 (hypothesis testing)。
+
+## 比較兩個均值 comparing two population means
+
+### 當方差已知，且數據服從正態分佈
+
+令 $Y_{1i} (i=1,2,\cdots, n_1); Y_{2i} (i=1,2,\cdots, n_2)$ 表示兩個獨立且隨機的變量，他們來自兩個人羣 (1 和 2)，且各自的人羣均值爲 $\mu_k$，方差爲 $\sigma_k^2$：
+
+$$
+E(Y_{ki})=\mu_k \text{ and Var}(Y_{ki}) = \sigma_k^2 \text{ for } k=1,2 \text{ and } i= 1,2,\cdots,n_k
+$$
+
+用樣本均值 $\bar{Y}_k$ 作爲總體均值 $\mu_k$ 的估計：
+
+$$
+\bar{Y}_k \sim N(\mu_k, \frac{\sigma_k^2}{n_k}) \text{ for } k=1,2
+$$
+
+
+如果兩個樣本的觀察值互相獨立，我們知道均值差 $\bar{Y}_2 - \bar{Y}_1$，也服從下面描述的正態分佈：
+
+$$
+\begin{equation}
+\bar{Y}_2-\bar{Y}_1  \sim N(\mu_2-\mu_1, \frac{\sigma^2_2}{n_2}+\frac{\sigma^2_1}{n_1})
+\end{equation}
+(\#eq:AT5-1)
+$$
+
+根據這個性質，可以計算均值差的統計量 $Z$：
+
+$$
+\begin{equation}
+Z=\frac{\bar{Y}_2-\bar{Y}_1}{\sqrt{(\sigma_2^2/n_2)+(\sigma_1^2)/n_1}} \sim N(\frac{\mu_2-\mu_1}{\sqrt{(\sigma_2^2/n_2)+(\sigma_1^2)/n_1}},1)
+\end{equation}
+(\#eq:AT5-2)
+$$
+
+所以 $\bar{Y}_2-\bar{Y}_1$ 的樣本分佈 \@ref(eq:AT5-2)，就可以應用於爲 $\mu_2-\mu_1$ 計算顯著性水平爲 $\alpha$ 的 $100(1-\alpha)\%$ 信賴區間，或者進行假設檢驗。
+
+用信賴區間章節 (Section \@ref(CImean)) 學到的方法，均值差的信賴區間的下限 $L$，和上限 $U$，分別是：
+
+$$
+\begin{aligned}
+L & = (\bar{Y}_2 - \bar{Y}_1) + z_{\alpha/2}\sqrt{\frac{\sigma_2^2}{n_2}+\frac{\sigma_1^2}{n_1}}\\
+U & = (\bar{Y}_2 - \bar{Y}_1) + z_{1-\alpha/2}\sqrt{\frac{\sigma_2^2}{n_2}+\frac{\sigma_1^2}{n_1}}
+\end{aligned}
+$$
+
+由於標準正態分佈左右對稱 $z_{\alpha/2}=-z_{1-\alpha/2}$，所以$100(1-\alpha)\%$ 信賴區間爲：
+
+$$
+\begin{equation}
+(\bar{Y}_2 - \bar{Y}_1) \pm z_{1-\alpha/2}\sqrt{\frac{\sigma_2^2}{n_2}+\frac{\sigma_1^2}{n_1}}
+\end{equation}
+(\#eq:AT5-3)
+$$
+
+進行均值差的假設檢驗時，零假設是均值差等於零 $\text{H}_0: \mu_2-\mu_1 = 0$；替代假設是均值差不等於零 $\text{H}_1: \mu_2-\mu_1\neq0$。
+
+在零假設條件下 $\mu_2-\mu_1 = 0$，公式 \@ref(eq:AT5-2) 計算的均值差的檢驗統計量 $Z$ 服從標準正態分佈 $Z\sim N(0,1)$。根據章節  \@ref(AT3-5) 同理知雙側 $p$ 值的計算式爲：
+
+
+$$
+\begin{equation}
+2[1-\Phi(\frac{|\bar{y}_2-\bar{y}_1|}{\sqrt{(\sigma_2^2/n_2)+(\sigma_1^2/n_1)}})]
+\end{equation}
+(\#eq:AT5-4)
+$$
+
+
+此時，我們進行的假設檢驗，計算的信賴區間用到的前提有：
+
+1. 兩組的觀察數據 $Y_{ki}$ 均服從正態分佈；
+2. 所有的觀察對象互相獨立；
+3. 兩組數據來自的人羣的方差已知。
+
+違反這些前提的話：
+1. 如果不滿足前提 1，對統計結果影響不會很大，只要觀察樣本較大，均值或者均值差本身的樣本分佈也就服從了正態分佈 (中心極限定理)；
+2. 如果不滿足前提 2，則不應該採用此方法，觀察對象本身如果有一定的結構構成或者不滿足相互獨立，本方法不適用；
+3. 前提 3，大多數現實例子中都不太可能滿足，因爲總體/人羣的方差多數情況下都是未知的，所以，下一小節討論方差未知的情況，逐漸放寬我們的統計分析前提條件。
+
+### 當方差未知，但是方差可以被認爲相等，且數據服從正態分佈 two sample $t$ test
+
+如果兩組數據來自的人羣可以被認爲方差是齊的 $\sigma_1^2=\sigma_2^2=\sigma^2$，公式 \@ref(eq:AT5-1) 可以變爲：
+
+$$
+\bar{Y}_2-\bar{Y}_1 \sim N(\mu_2-\mu_1, \sigma^2(\frac{1}{n_2}+\frac{1}{n_1}))
+$$
+
+但是這個分佈中的方差是未知的，所以除了均值和均值差，這個共同的方差也變成了需要用樣本方差 $\hat{\sigma}^2$ 來作估計。此時，兩個樣本的方差的無偏估計爲，**加權方差**：
+
+$$
+\begin{equation}
+\hat\sigma^2 = \frac{(n_1-1)\hat\sigma^2_1+(n_2-1)\hat\sigma^2_2}{n_1+n_2-2}
+\end{equation}
+(\#eq:AT5-5)
+$$
+
+因爲 $\frac{(n_1-1)\hat\sigma^2_1}{\sigma^2} \sim \chi^2_{n_1-1}; \frac{(n_2-1)\hat\sigma^2_2}{\sigma^2} \sim \chi^2_{n_2-1}$，所以兩樣本的加權方差 $\hat\sigma^2$ 服從自由度爲 $n_1+n_2-2$ 的卡方分佈：
+
+$$
+\frac{(n_1+n_2-2)\hat\sigma^2_1}{\sigma^2} \sim \chi^2_{n_1+n_2-2}
+$$
+
+所以，此時的檢驗統計量 $T$，服從自由度爲 $n_1+n_2-2$ 的 $t$ 分佈：
+
+$$
+T=\frac{(\bar{Y}_2-\bar{Y}_1) - (\mu_2-\mu_1)}{\hat\sigma\sqrt{(1/n_2)+(1/n_1)}} \sim t_{n_1+n_2-2}
+$$
+
+接下來就可以利用這個統計量進行假設檢驗，求均值差的 $100(1-\alpha)\%$ 信賴區間，類比章節 \@ref(AT2-5)：
+
+$$
+(\bar{Y}_2-\bar{Y}_1) \pm t_{n_1+n_2-2, 1-\alpha/2}\hat\sigma\sqrt{(1/n_2)+(1/n_1)}
+$$
+
+### 練習
+
+下表展示的是，隨機將11名嬰兒分配到實驗組和對照組，記錄嬰兒能夠獨立行走的月齡。試用表格總結的數據進行能獨立行走的月齡的均值是否在實驗組和對照組之間有差異的假設檢驗，並求月齡均差的 $95\%$ 信賴區間。
+
+```{r  echo=FALSE, eval=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/walkingAT.csv", header = T)
+names(dt) <- c("", "表 22.1： Active exercise group (i=1)", "Eight week control group (i=2)")
+kable(dt, "html",  align = "c",caption = "Children's ages at time of first walking alone by randomisation group") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+  add_header_above(c("", "Age in months for walking alone" = 2))
+```
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 22.1: Children's ages at time of first walking alone by randomisation group</caption>
+ <thead>
+<tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Age in months for walking alone</div></th>
+</tr>
+<tr>
+<th style="text-align:center;">  </th>
+   <th style="text-align:center;"> Active exercise group (i=1) </th>
+   <th style="text-align:center;"> Eight week control group (i=2) </th>
+  </tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">  </td>
+   <td style="text-align:center;"> 9.00, 9.50, 9.75, 10.00, 13.00, 9.50 </td>
+   <td style="text-align:center;"> 13.25, 11.50, 12.00, 13.50, 11.50 </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> $n_i$ </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 5 </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> $\bar{Y}_i$ </td>
+   <td style="text-align:center;"> 10.125 </td>
+   <td style="text-align:center;"> 12.350 </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> $\hat\sigma_i$ </td>
+   <td style="text-align:center;"> 1.447 </td>
+   <td style="text-align:center;"> 0.962 </td>
+  </tr>
+</tbody>
+</table>
+
+**解**
+
+假設 $\text{H}_0: \mu_2-\mu_1 = 0 \text{ v.s } \text{H}_1: \mu_2-\mu_1 \neq 0$
+
+假如，實驗組對照組的月齡方差可以認爲是方差相同的，那麼他們的加權方差則可以計算爲：
+
+$$
+\hat\sigma^2 = \frac{(6-1)\times(1.447)^2+(5-1)\times(0.962)^2}{6+5-2} = \frac{14.172}{9} = 1.575
+$$
+
+零假設條件下，則檢驗統計量 $T$ 服從自由度爲 $9$ 的 $t$ 分佈，本例的數據給出的檢驗統計量大小爲：
+
+$$
+T=\frac{12.350-10.125}{\sqrt{1.575\times(1/5+1/6)}} = \frac{2.225}{0.76} = 2.928
+$$
+
+通過查閱[統計數據表格](http://www.statisticshowto.com/tables/t-distribution-table/)：
+
+
+```{r t-distr, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='T-Distribution table (0ne-Tail)', fig.align='center', out.width='80%'}
+knitr::include_graphics("img/Selection_104.png")
+```
+
+圖 \@ref(fig:t-distr) 中顯示統計量 $t=2.928$ 的單側 $p$ 值介於 $0.01\sim0.005$ 之間，所以此例的雙側 $0.01 < p < 0.02$。
+
+均值差 $\mu_2-\mu_1$ 的 $95\%$ 信賴區間爲：
+
+$$
+\begin{aligned}
+(\bar{Y}_2-\bar{Y}_1) &\pm t_{9, 0.975}\hat\sigma\sqrt{(1/n_2)+(1/n_1)} \\
+= 2.225 &\pm 2.262 \times 0.76 = (0.51, 3.94)
+\end{aligned}
+$$
+
+上面的手計算過程，如果你像我一樣運氣好可能在考場上碰到，實際生活中我們肯定是使用 R 進行計算拉。下面用了兩種不同的代碼，但是結果和目的都是一樣的： `t.test()` 時制定 `var.equal = TRUE` 和簡單線性迴歸的 `lm()`。
+
+```{r echo=FALSE}
+dt <- read.csv("backupfiles/walking.csv", header = T)
+age1 <- dt$Active.Exercise.Group..n.6.
+age2 <- dt$Eight.Week.Control.Group..n.5.
+Group <- c(rep("exercise", 6), rep("control", 6))
+Walk <- data.frame(c(age1,age2), Group)
+names(Walk)[1] <- "Age"
+## Reordering Group
+Walk$Group <- factor(Walk$Group,levels=c("exercise", "control"))
+Walk <- Walk[-12,]
+```
+
+```{r}
+t.test(Walk$Age ~ Walk$Group, var.equal = TRUE)
+summary(lm(Age ~ Group, data = Walk))
+```
+
+
 
 # 假定前提和數據轉換
