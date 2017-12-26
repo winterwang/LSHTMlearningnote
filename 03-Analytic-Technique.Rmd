@@ -1140,9 +1140,10 @@ $$
 確切檢驗法的思想理論是超幾何分佈 (Section \@ref(hyperdist))，在四個表格邊緣合計固定不變的條件下，利用下面公式 \@ref(eq:AT4-Fisher) 直接計算表內四個格子數據的**各種組合**的概率，然後計算單側或者雙側累計概率，與顯著性水平 $\alpha$ 比較。
 
 $$
-\begin{equation}
-P_{O_{00}} = \text{Prob}(O_{00},O_{01},O_{10},O_{11}|O_{0\cdot},O_{1\cdot},O_{\cdot0},O_{\cdot1}) = \frac{O_{0\cdot}!O_{1\cdot}!O_{\cdot0}!O_{\cdot1}!}{O_{\cdot\cdot}!O_{00}!O_{01}!O_{10}!O_{11}!}
-\end{equation}
+\begin{aligned}
+P_{O_{00}} & = \text{Prob}(O_{00},O_{01},O_{10},O_{11}|O_{0\cdot},O_{1\cdot},O_{\cdot0},O_{\cdot1}) \\
+    & = \frac{O_{0\cdot}!O_{1\cdot}!O_{\cdot0}!O_{\cdot1}!}{O_{\cdot\cdot}!O_{00}!O_{01}!O_{10}!O_{11}!}
+\end{aligned}
 (\#eq:AT4-Fisher)
 $$
 
@@ -1446,6 +1447,30 @@ Walk <- Walk[-12,]
 t.test(Walk$Age ~ Walk$Group, var.equal = TRUE)
 summary(lm(Age ~ Group, data = Walk))
 ```
+
+### 當方差未知，但是方差**不可以**被認爲相等，且數據服從正態分佈
+
+下一節會討論如何比較方差是否齊的手段，用於本節分析方法在實際應用時的參考。
+
+當兩組連續型正態分佈的數據不能被認爲方差相同時，有幾種方法可以採用。一是將數據通過數學轉換 (log-transformed, etc.)，人爲的把方差的差異縮小以後，使用前一節的齊方差時的均值比較法 (two-sample $t$ test)。另一種方法是，既然方差不齊，那就用各自的觀察數據來估計其方差 $(\hat\sigma_1^2, \hat\sigma_2^2)$。只要各自的樣本量較大 $n_1, n_2$，兩組數據均值差 $|\bar{y}_2-\bar{y}_1|$ 除以其合併後的標準誤 $\sqrt{\frac{\hat\sigma_1^2}{n_1}+\frac{\hat\sigma_2^2}{n_2}}$。利用公式 \@ref(eq:AT5-3) 和 \@ref(eq:AT5-4)，**把已知的兩組數據各自的方差用樣本方差取代**之後即可用於計算信賴區間，實施假設檢驗求 $p$ 值。
+
+但是，當兩組觀察數據的樣本量不大時 $(< 30)$，根據 [Welch–Satterthwaite](https://en.wikipedia.org/wiki/Welch%E2%80%93Satterthwaite_equation) 建議的，估計均值差除以估計標準誤服從一個自由度爲 $n^*$ 的 $t$ 分佈。值得注意的是，這個自由度並非正整數：
+
+$$
+n^*=\frac{(\frac{\hat\sigma_1^2}{n_1}+\frac{\hat\sigma_2^2}{n_2})^2}{[\frac{(\hat\sigma_1^2/n_1)^2}{n_1-1}] + [\frac{(\hat\sigma_2^2/n_2)^2}{n_2-1}]}
+$$
+
+在 R 裏可以指定 `var.equal = TRUE` 進行 $t$ 檢驗：
+
+```{r}
+t.test(Walk$Age ~ Walk$Group, var.equal = FALSE)
+```
+
+值得注意的是在 R 裏面，$t$ 檢驗是默認組間方差不齊的，如果你沒有指定 `var.equal = TRUE`，R 就會默認進行上面的方差不齊的 $t$ 檢驗。
+
+## 兩個人羣的方差比較
+
+### 方差比檢驗 variance ratio test
 
 
 
