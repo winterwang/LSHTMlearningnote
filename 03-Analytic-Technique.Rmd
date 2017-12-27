@@ -1470,7 +1470,7 @@ t.test(Walk$Age ~ Walk$Group, var.equal = FALSE)
 
 ## 兩個人羣的方差比較
 
-### 方差比值檢驗 variance ratio test
+### 方差比值檢驗 variance ratio test {#Ftest}
 
 前一節介紹的樣本均值比較中一個重要的前提是方差齊不齊的問題，所以本節我們就來討論如何比較兩個人羣的方差是否相同，進而爲均值比較時是選用方差齊的檢驗方法 (two sample $t$ test) 還是方差不齊的方法 (Welch Two Sample $t$ test) 提供有價值的參考信息。
 
@@ -1612,4 +1612,113 @@ $$
 
 那麼什麼情況下可以說一個統計方法是表現良好的呢，performing well？
 
-我們說一個統計方法表現良好，是指該方法計算的名義上的顯著性水平 (nominal signficance level)
+我們說一個**統計方法表現良好**，是指該方法用於定義是否有意義的臨界值，或者叫名義顯著性水平 (**nominal** signficance level)，和實際上計算的檢驗統計量在所有的可能中達到或超過該臨界值的概率 (**actual** probability the test statistic exceeds the cut-off)。用 $t$ 檢驗舉例如下：
+
+$$
+\text{Prob}(|T| > t_{df,0.975} | \text{H}_0 \text{true}) = 0.05
+$$
+
+類似地，我們說一個**信賴區間的計算方法表現良好**，是指該方法計算獲得的 $95\%$ 信賴區間包含真實參數值的概率真的可以無限接近 $95\%$：
+
+$$
+\text{Prob}(\mu \in (L, U) | \mu) = 0.95
+$$
+
+一些常見方法的穩健性列舉：
+
+1. 樣本量小且分佈偏度越大時，依賴正態分佈前提的信賴區間計算和其他的檢驗手段就變得不再可靠；
+2. 兩個方差比較時使用的 $F$ 檢驗 (Section \@ref(Ftest)) 常常由於數據不服從正態分佈缺乏穩健性，即使樣本量較大也不能改善；
+3. 根據中心極限定理，樣本量足夠大時，單樣本 $t$ 檢驗 (Section \@ref(OneSampleT)) 具有良好的穩健性。
+4. 一般地，基於均值的檢驗方法都相對其他統計量較爲穩健。
+
+## 正態性
+
+大多數情況下，正如我們在這個部分最開頭的章節提到的，拿到數據以後先用圖形手段探索，並熟悉該數據。從圖形來判斷一組數據是否接近正態分佈或者偏離正態分佈。常用的探索連續型變量是否服從正態分佈的圖形方法是：
+
+1. 箱形圖，box and whisker plot，如圖 \@ref(fig:diamond-carat-box)；
+2. 柱狀圖，histogram，如圖 \@ref(fig:normal-hist)；
+3. 正態分佈圖，normal plots，如圖 \@ref(fig:normal-qq)。
+
+
+```{r normal-hist, fig.asp=.7, fig.width=6, fig.cap='Appearance of histogram with normal curve', fig.align='center', out.width='100%'}
+set.seed(1234)
+Normal <- rnorm(2500, mean = 120, sd = 8)
+h <- hist(Normal,breaks = 20, col = "lightblue", xlab = "some value" ,
+          ylim = c(0,300))
+xfit<-seq(min(Normal),max(Normal),length=40)
+yfit<-dnorm(xfit,mean=mean(Normal),sd=sd(Normal))
+yfit <- yfit*diff(h$mids[1:2])*length(Normal)
+lines(xfit, yfit, col="blue", lwd=2)
+```
+
+
+```{r normal-qq, fig.asp=.7, fig.width=6, fig.cap='Appearance of normal plot for a normally distributed variable', fig.align='center', out.width='100%'}
+qqnorm(Normal,frame=F); qqline(Normal)
+```
+
+### 正態分佈圖 normal plot
+
+其實光看柱狀圖和箱形圖，有時候很難判斷數據正態性與否，當數據和正態分佈有些微妙的不同時可能就沒辦法從柱狀圖覺察出來。此時需要借用正態分布圖的威力。正態分布圖的原理就是，把原始數據 (Y軸) 和理論上服從正態分佈的期待數據 (X軸) 從小到大排序一一對應以後繪製散點圖。所以理論上，如果原始數據服從正態分佈，那麼正態分佈中第10百分位的點，我們期望和原始數據中第10百分位的點十分接近，那麼繪成的散點圖應該接近於完美的貼在 $y=x$ 這條直線上。如果正態分布圖的點越偏離 $y=x$ 的直線，覺說明原始數據越偏離正態分佈。
+
+下面的系列圖\@ref(fig:Outliers-hist-normal)，\@ref(fig:skewpos-hist-normal)，\@ref(fig:skewneg-hist-normal)，\@ref(fig:skewneg-hist-normal)展示了各種非正態分佈時會出現的柱狀圖，和正態分布圖的特徵：
+
+```{r Outliers-hist-normal, echo=FALSE, fig.align='center', fig.cap='Appearance of histogram and normal plot for a variable with outlying values', fig.height=8, fig.width=6, out.width='80%'}
+par(mfrow=c(2,1))
+a <- rep(150,10)
+Normal <- rnorm(200, mean = 120, sd = 8)
+Outlier <- c(Normal,a)
+h <- hist(Outlier,breaks = 20, col = "lightblue", xlab = "some value")
+xfit<-seq(min(Outlier),max(Outlier),length=40)
+yfit<-dnorm(xfit,mean=mean(Outlier),sd=sd(Outlier))
+yfit <- yfit*diff(h$mids[1:2])*length(Outlier)
+lines(xfit, yfit, col="blue", lwd=2)
+qqnorm(Outlier,frame=F, pch=20); qqline(Outlier)
+```
+
+
+```{r skewpos-hist-normal, echo=FALSE, fig.align='center', fig.cap='Appearance of histogram and normal plot for a variable exhibiting right-skewness', fig.height=8, fig.width=6, out.width='80%'}
+par(mfrow=c(2,1))
+x <- rbeta(200,0.5,200)
+h <- hist(x, breaks = 30,
+ xlim=c(min(x),max(x)), probability=F,
+   col='lightblue', ylab="Frequence", xlab="Y",
+   main='Positively Skewed \n assymmetric',cex.lab=1.5)
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="blue", lwd=2)
+qqnorm(x,frame=F, ylim=c(-0.006,0.019), pch=20); qqline(x)
+```
+
+
+```{r skewneg-hist-normal, echo=FALSE, fig.align='center', fig.cap='Appearance of histogram and normal plot for a variable exhibiting left-skewness', fig.height=8, fig.width=6, out.width='80%'}
+par(mfrow=c(2,1))
+x <- rbeta(200,200,0.5)
+h <- hist(x, breaks = 30,
+ xlim=c(min(x),max(x)), probability=F,
+   col='lightblue', ylab="Frequence", xlab="Y",
+   main='Negatively Skewed \n assymmetric',cex.lab=1.5)
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="blue", lwd=2)
+qqnorm(x,frame=F, ylim=c(0.975,1.01), pch=20); qqline(x)
+```
+
+
+
+
+```{r heavytail-hist-normal, echo=FALSE, fig.align='center', fig.cap='Appearance of histogram and normal plot for a heavy tailed variable', fig.height=8, fig.width=6, out.width='80%'}
+par(mfrow=c(2,1))
+set.seed(123)
+x <- rcauchy(100, location = 40)
+h <- hist(x, breaks = 30,
+ xlim=c(30,max(x)), probability=F,
+   col='lightblue', ylab="Frequence", xlab="Y",
+   main='Heavy tailed variable',cex.lab=1.5)
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="blue", lwd=2)
+qqnorm(x,frame=F, pch=20, ylim = c(25,55), main="Dots cross the line 3 times!!!"); qqline(x)
+```
