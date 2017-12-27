@@ -137,4 +137,55 @@ x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数1000個
   kable(dt, "html",  align = "c",caption = "表 22.1: Children's ages at time of first walking alone by randomisation group") %>%
     kable_styling(bootstrap_options = c("striped", "bordered")) %>%
     add_header_above(c("", "Age in months for walking alone" = 2))
+
+  
+
+  
+  data <-  data.frame(x^3,x^2,x,sqrt(x),log(x),1/sqrt(x),1/x,1/(x^2),1/(x^3))
+  names(data) <- c("cubic","square","identity","square root","log","1/(square root)",
+                   "inverse","1/square","1/cubic")
+  test <- shapiro.test(data$cubic)
+  W.statistic <- as.numeric(test$statistic)
+  p.value <- test$p.value
+  Transformation <- "cubic"
+  Formula <- "square"
+  (results <- data.frame(Transformation, Formula, W.statistic, p.value))
+  
+  Ladder.x <- function(x){
+    data <- data.frame(x^3,x^2,x,sqrt(x),log(x),1/sqrt(x),1/x,1/(x^2),1/(x^3))
+    names(data) <- c("cubic","square","identity","square root","log","1/(square root)",
+                     "inverse","1/square","1/cubic")
+ #   options(scipen=3, digits = 3)
+    test1 <- shapiro.test(data$cubic)
+    test2 <- shapiro.test(data$square)
+    test3 <- shapiro.test(data$identity)
+    test4 <- shapiro.test(data$`square root`)
+    test5 <- shapiro.test(data$log)
+    test6 <- shapiro.test(data$`1/(square root)`)
+    test7 <- shapiro.test(data$inverse)
+    test8 <- shapiro.test(data$`1/square`)
+    test9 <- shapiro.test(data$`1/cubic`)
+    W.statistic <- c(test1$statistic, 
+                     test2$statistic,
+                     test3$statistic,
+                     test4$statistic,
+                     test5$statistic,
+                     test6$statistic,
+                     test7$statistic,
+                     test8$statistic,
+                     test9$statistic)
+    p.value <- c(test1$p.value,
+                 test2$p.value,
+                 test3$p.value,
+                 test4$p.value,
+                 test5$p.value,
+                 test6$p.value,
+                 test7$p.value,
+                 test8$p.value,
+                 test9$p.value)
+    Transformation <- c("cubic","square","identity","square root","log","1/(square root)",
+                        "inverse","1/square","1/cubic")
+    Formula <- c("x^3","x^2","x","sqrt(x)","log(x)","1/sqrt(x)","1/x","1/(x^2)","1/(x^3)")
+    (results <- data.frame(Transformation, Formula, W.statistic, p.value))
+  }  
   

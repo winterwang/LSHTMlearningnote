@@ -5,6 +5,7 @@
 ##  數據分析的流程
 
 
+
 ```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Population, sample and statistical inference', fig.align='center', out.width='70%'}
 knitr::include_graphics("img/AT1.png")
 ```
@@ -1722,3 +1723,151 @@ yfit <- yfit*diff(h$mids[1:2])*length(x)
 lines(xfit, yfit, col="blue", lwd=2)
 qqnorm(x,frame=F, pch=20, ylim = c(25,55), main="Dots cross the line 3 times!!!"); qqline(x)
 ```
+
+如果對數據是否服從正態分佈實在沒有信心，統計學家也很少使用那些檢驗是否服從正態分佈的所謂檢驗方法 ([Sharpiro-Wilk test](https://en.wikipedia.org/wiki/Shapiro%E2%80%93Wilk_test) 或者 [Kolmogorov-Smirnov test](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test))，而是傾向用直接改用穩健統計學分析法 (Robust Statistical Methods)。
+
+
+## 總結連續型變量不服從正態分佈時的處理方案
+
+- 根據中心極限定理，樣本兩足夠大時，即使原始樣本數據不服從正態分佈，仍然可以用一般的參數估計技巧來分析類似均值這樣較爲穩健的參數。
+- 用非參數檢驗法，會在穩健統計學方法中介紹，但是這些方法的缺點很明顯，例如無法進行精確的參數估計，且容易失去較大的統計學檢驗力 (loss of power)，增加一類錯誤概率 (錯誤的拒絕掉可能存在有意義差異的檢驗)。更重要的是，沒有一種非參數檢驗法是可以和多重線性迴歸等較爲複雜，高級的技巧等價的。
+- 用一些穩健統計學方法 (bootstrap，"sandwich" estimators of variance)，可行但是對電腦的計算需求較高。
+- 數據轉換法。但是沒有人能保證一定能找到合適的數學轉換法來滿足前提條件 (下節討論)。
+
+## 數學冪轉換 power transformations
+
+數據轉換家族：
+
+$$
+\cdots,x^{-2},x^{-1},x^{-\frac{1}{2}},\text{log}(x),x^{\frac{1}{2}},x^1,x^2,\cdots
+$$
+
+上面舉例的數學冪轉換方法，都是常見的手段用於降低原始數據的偏度 (skewness)，相反地，冪轉換卻不一定能夠改變數據的峯度 (kurtosis)。下面的方程，(非常的羅嗦的方程 sorry)，用於實施類似 `ladder` 在 Stata 中的效果，即對數據進行各種轉換，然後輸出每種冪轉換後的數據是否爲正態分佈的檢驗結果 (使用 `shapiro.test()`)：
+
+
+```{r}
+Ladder.x <- function(x){
+    data <- data.frame(x^3,x^2,x,sqrt(x),log(x),1/sqrt(x),1/x,1/(x^2),1/(x^3))
+    names(data) <- c("cubic","square","identity","square root","log","1/(square root)",
+                     "inverse","1/square","1/cubic")
+   # options(scipen=5)
+    test1 <- shapiro.test(data$cubic)
+    test2 <- shapiro.test(data$square)
+    test3 <- shapiro.test(data$identity)
+    test4 <- shapiro.test(data$`square root`)
+    test5 <- shapiro.test(data$log)
+    test6 <- shapiro.test(data$`1/(square root)`)
+    test7 <- shapiro.test(data$inverse)
+    test8 <- shapiro.test(data$`1/square`)
+    test9 <- shapiro.test(data$`1/cubic`)
+    W.statistic <- c(test1$statistic,
+                     test2$statistic,
+                     test3$statistic,
+                     test4$statistic,
+                     test5$statistic,
+                     test6$statistic,
+                     test7$statistic,
+                     test8$statistic,
+                     test9$statistic)
+    p.value <- c(test1$p.value,
+                 test2$p.value,
+                 test3$p.value,
+                 test4$p.value,
+                 test5$p.value,
+                 test6$p.value,
+                 test7$p.value,
+                 test8$p.value,
+                 test9$p.value)
+    Hmisc::format.pval(p.value ,digits=5, eps = 0.00001, scientific = FALSE)
+    Transformation <- c("cubic","square","identity","square root","log","1/(square root)",
+                        "inverse","1/square","1/cubic")
+    Formula <- c("x^3","x^2","x","sqrt(x)","log(x)","1/sqrt(x)","1/x","1/(x^2)","1/(x^3)")
+    (results <- data.frame(Transformation, Formula, W.statistic, p.value))
+  }
+```
+
+
+```{r}
+Normal <- rnorm(2500, mean = 120, sd = 8)
+Ladder.x(Normal)
+```
+
+### 對數轉換 logarithmic Transformation
+
+在衆多冪轉換中，對數轉換是最常用的，因爲對數轉換之後，再通過逆運算轉換回原單位數據的方法，被發現是相較於其他冪轉換較爲容易解釋和應用在臨牀醫學中。假如現在在分析男女之間收縮期血壓的均值差別。下面是對數轉換前後的檢驗方法步驟，試作一個對比：
+
+轉換前：
+
+- 計算收縮期血壓在男性女性中各自的均值 $\bar{Y}_j, j=1,2$；
+- 計算男女間均值差 $D=\bar{Y}_2 - \bar{Y}_1$；
+- 所以均值差就被解釋爲男女減血壓的平均差距 (difference of mmHg)；
+- 例如，均值差爲 10 mmHg，就可以被解讀爲女性血壓平均值比男性低 10 mmHg。
+
+對數轉換後：
+
+- 計算觀察值的對數值 $t_{ij} = \text{log}_e(y_{ij})$；
+- 計算男女對數收縮期血壓的算數平均值 $\bar{T}_j, j=1,2$；
+- 計算對數血壓均值差 $D=\bar{T}_2-\bar{T}_1$；
+- 由於 $exp(\bar{T}_j) = G_j$ 是男女收縮期血壓的幾何平均值，所以 $exp(D)=exp(\text{log}_eG_2 - \text{log}_eG_1) = \frac{G_2}{G_1}$，就可以解釋爲男女收縮期血壓的幾何平均值之比；
+- 例如，$D=-0.05$，那麼男女收縮期血壓的幾何平均值之比爲 $exp(-0.05)=0.951$，就可以被解讀爲女性收縮期血壓平均比男性低 $4.9\%$。
+
+### 逆轉換信賴區間 back-transformation of CIs
+
+當使用轉換後數據計算信賴區間以後，需要再把數據逆轉換回原始數據的單位才能順利被解讀。但是逆轉換回去以後的信賴區間就不再左右對稱了 (no way)。
+
+### 對數正態分佈 log-normal distribution
+
+一個隨機變量的對數轉換如果服從正態分佈，我們說這個數據服從對數正態分佈。
+
+### 百分比的轉換
+
+百分比被侷限在 $[0,1]$ 的範圍內，所以爲了打破這個取值範圍的限制，百分比常用的數學轉換有：
+
+1. 把百分比 $\pi$ 轉換成 Odds $\frac{\pi}{1-\pi}$。如此 Odds 的取值範圍就可以變成 $[0, \infty)$；
+2. Odds $\frac{\pi}{1-\pi}$ 又常被轉換成 log-odds  $\text{log}(\frac{\pi}{1-\pi})$。這樣的轉換方程 $f(\pi)=\text{log}(\frac{\pi}{1-\pi})$ 又被命名爲邏輯轉換 (logit transformation)；
+3. 百分比的商 (危險度比，risk ratio) $\pi_1/\pi_2$ 可以轉換成 $\text{log}(\pi_1/\pi_2)$；
+4. 比值比 (odds ratio) $\frac{\pi_1(1-\pi_2)}{\pi_2(1-\pi_1)}$ 可以轉換成對數比值比 (log odds ratio) $\text{log}[\frac{\pi_1(1-\pi_2)}{\pi_2(1-\pi_1)}] = \text{log}[\pi_1(1-\pi_1)] - \text{log}[\pi_2(1-\pi_2)]$。
+
+
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表23.1： Common Transformation and their range</caption>
+ <thead><tr>
+<th style="text-align:center;"> Transformation</th>
+   <th style="text-align:center;"> Formula </th>
+   <th style="text-align:center;"> Range </th>
+   </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:center;"> Odds </td>
+   <td style="text-align:center;"> $\frac{\pi}{1-\pi}$ </td>
+   <td style="text-align:center;"> $[0,\infty)$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Log Odds </td>
+   <td style="text-align:center;"> $\text{log}(\frac{\pi}{1-\pi})$ </td>
+   <td style="text-align:center;"> $(-\infty,+\infty)$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Risk Ratio </td>
+   <td style="text-align:center;"> $\frac{\pi_1}{\pi_2}$ </td>
+   <td style="text-align:center;"> $[0,\infty)$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Log Risk Ratio </td>
+   <td style="text-align:center;"> $\text{log}(\frac{\pi_1}{\pi_2})$ </td>
+   <td style="text-align:center;"> $(-\infty,+\infty)$ </td>
+  </tr>
+    <tr>
+  <td style="text-align:center;"> Odds Ratio </td>
+     <td style="text-align:center;"> $\frac{\pi_1(1-\pi_2)}{\pi_2(1-\pi_1)}$ </td>
+     <td style="text-align:center;"> $[0,\infty)$  </td>
+    </tr>
+  <tr>
+<td style="text-align:center;"> Log Odds Ratio  </td>
+  <td style="text-align:center;"> $\text{log}[\frac{\pi_1(1-\pi_2)}{\pi_2(1-\pi_1)}]$ </td>
+  <td style="text-align:center;"> $(-\infty,+\infty)$ </td>
+  </tr>
+</tbody>
+</table>
