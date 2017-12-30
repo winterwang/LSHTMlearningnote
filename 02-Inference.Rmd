@@ -2781,5 +2781,79 @@ E\left[
 \right)_{\lambda_0,\psi_0} \stackrel{\cdot}{\sim} \chi^2_2
 $$
 
+## 條件似然 conditional likelihood
+
+現實的例子中，參數可能有非常多，但是我們可能只關心其中幾個。下章介紹的子集似然函數 (profile likelihood) 是可以在多種情況下應用的好方法。本節介紹的方法是**條件似然法**。簡單原理是，把模型中不能提供我們感興趣的參數的有效信息的那些參數 ("nuisance" parameters) 當作是固定的 (fixed)。由此可以定義一個新的概率模型 -- **條件概率模型 conditional probability model**。
+
+我們用泊松模型來解釋如何建立這樣的模型。
+
+兩個獨立的人羣追蹤樣本，在 $p_0, p_1$ 人年的隨訪中發生事件 A 的次數分別是 $k_0, k_1$。假設我們只關心兩組的事件 A 發生率的比 $\text{Rate ratio:} \theta=\frac{\lambda_1}{\lambda_0}$。
+
+合併兩個人羣，發生事件 A 的總次數爲 $k=k_0+k_1$。只知道 $k$ 並不能讓我們推算兩個人羣中各發生了多少次事件 A，也無法用它來計算發生率的比 $\theta$，而這個 $k$ 就是條件概率模型中的條件。
+
+$$
+K_0 \sim Po(\mu_0); K_1 \sim Po(\mu_1) ; \text{ where } \mu_0 = \lambda_0 p_0 \mu_1 = \lambda_1 p_1\\
+k=k_0 + k_1 \Rightarrow K_0+K_1 \sim Po(\mu_0 + \mu_1)
+$$
+
+$$
+\begin{aligned}
+  & \text{Prob}(k_0 \text{events in group 0} | k \text{ events in total}) \\
+= & \frac{\text{Prob}(k_0 \text{ events in group }0 \text{ and } k-k_0 \text{ events in  group } 1)}
+ {\text{Prob}(k \text{ events in total})} \\
+\end{aligned}
+(\#eq:infer9-1)
+$$
+
+由於兩個樣本是來自獨立的人羣，所以公式 \@ref(eq:infer9-1) 的分母，和分子分別是
+
+$$
+\begin{aligned}
+\text{Prob}(k &\text{ events in total}) \\
+ = & \frac{(\lambda_0 p_0 + \lambda_1 p_1)^k e^{-(\lambda_0 p_0 + \lambda_1 p_1)}}{k!} \\
+\text{Prob}(k_0 &\text{ events in group }0 \text{ and } k-k_0 \text{ events in  group } 1) \\
+ = & \frac{(\lambda_0 p_0)^{k_0}e^{-\lambda_0 p_0}}{k_0!}\times\frac{(\lambda_1 p_1)^{k-k_0}e^{-\lambda_1 p_1}}{(k-k_0)!}
+\end{aligned}
+$$
+
+所以公式 \@ref(eq:infer9-1) 可以整理成：
+
+$$
+\begin{aligned}
+& \frac{\frac{(\lambda_0 p_0)^{k_0}e^{-\lambda_0 p_0}}{k_0!}\times\frac{(\lambda_1 p_1)^{k-k_0}e^{-\lambda_1 p_1}}{(k-k_0)!}}
+{\frac{(\lambda_0 p_0 + \lambda_1 p_1)^k e^{-(\lambda_0 p_0 + \lambda_1 p_1)}}{k!}} \\
+= &  \frac{e^{-(\lambda_0 p_0 + \lambda_1 p_1)}(\lambda_0 p_0)^{k_0}(\lambda_1 p_1)^{k-k_0}\cdot k!}{e^{-(\lambda_0 p_0 + \lambda_1 p_1)}(\lambda_0p_0+\lambda_1p_1)^k\cdot k_0!\cdot (k-k_0)!}\\
+= & (\frac{\lambda_0 p_0}{\lambda_0 p_0+\lambda_1 p_1})^{k_0}(\frac{\lambda_1 p_1}{\lambda_0 p_0+\lambda_1 p_1})^{k-k_0}\cdot\frac{k!}{k_0!(k-k_0)!} \\
+= & (\pi)^{k_0}(1-\pi)^{k-k_0}\cdot\frac{k!}{k_0!(k-k_0)!} \\
+\text{Where } & \pi = \frac{\lambda_0 p_0}{\lambda_0 p_0 + \lambda_1 p_1} = \frac{p_0}{p_0+(\lambda_1/\lambda_0)p_1} = \frac{p_0}{p_0+\theta p_1}\\
+\Rightarrow &\text{ Given } K_0+K_1=K, K_0 \sim Bin(k, \pi=\frac{p_0}{p_0+\theta p_1})
+\end{aligned}
+$$
+
+我們就把兩個泊松分佈的模型，變形成爲了一個條件二項分佈，而且只有一個未知參數 $\theta$。之後就可以用二項分佈的對數似然方程進行下一步的假設檢驗的構建：
+
+$$
+\begin{aligned}
+               L(\pi) & = (\pi)^{k_0}(1-\pi)^{k-k_0}  \\
+\Rightarrow \ell(\pi) & = k_0 \text{log}\pi + (k-k_0)\text{log} (1-\pi) \\
+\text{Because }  \pi  & = \frac{p_0}{p_0+\theta p_1} \\
+        \ell_c(\theta)  & = k_0 \text{log}(\frac{\pi}{1-\pi}) + k\text{log}(1-\pi) \\
+                      & = k_0 \text{log}(\frac{p_0}{\theta p_1}) + k\text{log}(\frac{\theta p_1}{p_0 + \theta p_1}) \\
+\text{Ignoring} & \text{ terms not involving } \theta \\
+        \ell_c(\theta)& = k_1 \text{log}\theta - k\text{log}(p_0 + \theta p_1)
+\end{aligned}
+$$
+
+至此，推導發生率比 $\theta = \frac{\lambda_1}{\lambda_0}$ 的條件對數似然就完成了。Elegant and Bravo!
+
+關於條件對數似然：
+
+1. 推導出的條件對數似然是一個**真實**的以觀察數據爲條件的對數似然，可以用於假設檢驗；
+2. 條件似然過程依賴於我們能否找到這樣一個“條件似然”，使得模型的對數似然**只取決於我們關心的參數**，我們幸運地找到了發生率比的對數似然方程，**但是至今沒有人找到發生率差 $\lambda_1-\lambda_0$ 的條件對數似然**；
+3. 與此相對地是，下一章介紹的子集似然函數 (profile likelihood)，可以用於幾乎所有的多參數模型的假設檢驗之構建；
+4. 但是，條件對數似然相當之重要，特別是它作爲 Cox proportional hazard model 模型的基本模型構架在生存分析 (survival analysis) 中的應用，以及在配對病例對照分析 (matched case-control study) 中用於條件邏輯迴歸 (conditional logistic regression) 的理論基礎 (將會在第二學期的碩士課程中介紹，敬請期待)。
+
+
+
 
 # Inference with multiple parameters II
