@@ -3,7 +3,7 @@ library(RCurl)
 library(rjson)
 apikey = "498375134"
 keyfrom = "JustForTestYouDao"
-youdaoLookUp("dimension",api=apikey,keyfrom=keyfrom)
+youdaoLookUp("algebraically",api=apikey,keyfrom=keyfrom)
 
 
 
