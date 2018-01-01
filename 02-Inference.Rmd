@@ -2781,7 +2781,7 @@ E\left[
 \right)_{\lambda_0,\psi_0} \stackrel{\cdot}{\sim} \chi^2_2
 $$
 
-## 條件似然 conditional likelihood
+## 條件似然 conditional likelihood {#condilikeli}
 
 現實的例子中，參數可能有非常多，但是我們可能只關心其中幾個。下章介紹的子集似然函數 (profile likelihood) 是可以在多種情況下應用的好方法。本節介紹的方法是**條件似然法**。簡單原理是，把模型中不能提供我們感興趣的參數的有效信息的那些參數 ("nuisance" parameters) 當作是固定的 (fixed)。由此可以定義一個新的概率模型 -- **條件概率模型 conditional probability model**。
 
@@ -2842,6 +2842,7 @@ $$
 \text{Ignoring} & \text{ terms not involving } \theta \\
         \ell_c(\theta)& = k_1 \text{log}\theta - k\text{log}(p_0 + \theta p_1)
 \end{aligned}
+(\#eq:inference9-2)
 $$
 
 至此，推導發生率比 $\theta = \frac{\lambda_1}{\lambda_0}$ 的條件對數似然就完成了。Elegant and Bravo!
@@ -3071,3 +3072,90 @@ $$
 
 
 # 多個參數時的統計推斷 -- 子集似然函數 profile log-likelihoods
+
+本章介紹的子集似然法是處理多個參數模型的主要方法。前章介紹的**條件似然法**也是相當出色的方法，但是許多情況下我們無法找到合適的“條件”來輔助我們擺脫那些模型中不需要的，**障礙 (或者叫噪音) 參數 nuisance parameters**。
+
+我們還是沿用上一節的例子。
+
+兩個獨立的人羣追蹤樣本，在 $p_0, p_1$ 人年的隨訪中發生事件 A 的次數分別是 $k_0, k_1$。我們只關心兩組的事件 A 發生率的比 $\text{Rate ratio:} \theta=\frac{\lambda_1}{\lambda_0}$。兩個人羣的聯合對數似然函數如下：
+
+$$
+\ell(\lambda_0, \lambda_1) = k_0\text{log}\lambda_0 - \lambda_0p0 + k_1\text{log}\lambda_1 - \lambda_1p1
+$$
+
+- Step 1. 先用 $\lambda_1 = \lambda_0\theta$ 取代掉上面式子中的 $\lambda_1$。
+
+$$
+\begin{aligned}
+\Rightarrow \ell(\lambda_0, \theta) & = k\text{log}\lambda_0 + k_1\text{log}\theta - \lambda_0(P_0 + \theta p_1) \\
+\text{Where } k & = k_0 + k_1
+\end{aligned}
+(\#eq:infer10-1)
+$$
+
+這一步先是消滅了一個障礙參數 $\lambda_1$，獲得了一個我們關心的參數 $\theta$，和 $\lambda_0$ 的對數似然方程。接下來，我們尋找用 $\theta$ 表示 $\lambda_0$ (用 $\hat\lambda_0(\theta)$ 標記) 的似然方程，使得只包含一個參數 $\theta$ 的對數似然方程可以在每個 $lambda_0$ 時取得極大值。此時我們定義 $\theta$ 的子集對數似然方程 profile log-likelihood是：
+
+$$
+\ell_p(\theta) = \ell(\hat\lambda_0(\theta),\theta)
+$$
+
+- Step 2. 爲了求 $\hat\lambda_0(\theta)$，先視 $\theta$ 爲不變的，對上式 \@ref(eq:infer10-1) 求 $\lambda_0$ 的微分：
+
+$$
+\frac{\partial\ell(\lambda_0,\theta)}{\partial\lambda_0}=\frac{k}{\lambda_0} - (p_0+\theta p_1)
+$$
+
+把該微分方程等於0，推導出 $\hat\lambda_0=\frac{k}{p_0+\theta p_1}$ 就是 $\theta$ 在取值範圍內所有能使對數似然方程 \@ref(eq:infer10-1) 取極大值的對應 $\lambda_0$。
+
+- Step 3. 將這個 $\theta$ 表示的 $\lambda_0\text{ MLE}$ 代替 $\lambda_0$ 代入對數似然方程 \@ref(eq:infer10-1) 中去：
+
+$$
+\begin{aligned}
+\ell_p(\theta) &= k\text{log}\frac{k}{p_0 + \theta p_1} + k_1 \text{log}\theta - k \\
+\text{Ignoring} &\text{ items not involving } \theta\\
+\Rightarrow &= k_1\text{log}\theta - k\text{log}(p_0+\theta p_1)
+\end{aligned}
+$$
+
+這個用子集似然法推導的關於參數 $\theta$ 的似然方程和前一章用條件似然法 (Section \@ref(condilikeli)) 推導的結果是完全一致的 \@ref(eq:inference9-2)。
+
+## 子集似然法推導的過程總結
+
+1. 多個參數中區分出我們感興趣的參數 $\psi$ 和其餘的障礙(噪音)參數 $\lambda$；
+2. 爲了從對數似然方程中消除噪音參數，把它們一一通過微分求極值的辦法表達成用 $\psi$ 標記的表達式，用這些包含了 $\psi$ 的 $\text{MLE}$ 代替所有的噪音參數；
+3. 整理最終獲得的只有感興趣的參數的對數似然方程，記得把不包含參數的部分忽略掉。
+
+### 子集對數似然方程的分佈
+
+$$
+-2pllr(\psi) = -2\{ \ell_p(\psi) - \ell(\hat\psi)\} \stackrel{\cdot}{\sim} \chi^2_r
+$$
+
+其中自由度 $r$ 是想要檢驗的零假設中受限制的參數的個數。Degree of freedom $r$ is the number of parameters restricted under the null hypothesis. 所以，如果 $\psi$ 是一個維度 (dimension) 爲 $p$ 的向量，如果零假設是 $\text{H}_0: \psi = \psi_0$，那麼自由度就是 $p$。
+
+### 假設檢驗過程舉例
+
+兩個獨立的二項分佈樣本：$K_0 \sim \text{Bin}(n_0, \pi_0), K_1 \sim \text{Bin}(n_1, \pi_1)$。它們的聯合對數似然爲：
+
+$$
+\ell(\pi_0, \pi_1) = \ell(\pi_0) + \ell(\pi_1)
+$$
+
+如果要檢驗的零假設和替代假設分別是 $\text{H}_0: \pi_0 = \pi_1 \text{ v.s. H}_1: \pi_0 \neq \pi_1$。
+
+如果令 $\theta=\frac{\pi_1}{\pi_0}$，那麼要檢驗的零假設和替代假設就變成了：
+
+$$
+\text{H}_0: \theta = 1 \text{ v.s. H}_1: \theta \neq 1 \\
+\Rightarrow -2 pllr \stackrel{\cdot}{\sim} \chi^2_1
+$$
+
+而且在零假設條件下，$\text{H}_0: K_0+K_1 \sim \text{Bin}(n_0+n_1, \pi)$，那麼自己對數似然比檢驗的統計量是：
+
+$$
+\begin{aligned}
+-2 pllr & = -2\{ \text{max}[\underset{\text{H}_0}{\ell(\pi_0,\theta\pi_0)}] -\text{max}[\underset{\text{H}_1}{\ell(\pi_0,\theta\pi_0)}] \} \\
+\Rightarrow -2 pllr & =  -2\{ \text{max}[\underset{\text{H}_0}{\ell(\pi,\theta\pi)}] -\text{max}[\underset{\text{H}_1}{\ell(\pi_0,\pi_1)}] \} \\
+\Rightarrow -2 pllr & = -2\{ \ell{(\hat\pi)} - \ell{(\hat\pi_0, \hat\pi_1)} \}
+\end{aligned}
+$$
