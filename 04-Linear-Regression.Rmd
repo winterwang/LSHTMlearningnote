@@ -1957,7 +1957,7 @@ print(anova(Model1, Model2), digits = 5)
 
 ### 偏迴歸係數方差的改變
 
-偏迴歸係數矩陣 $\mathbf{\hat\beta}$ 的方差 $\mathbf{X^\prime X)^{-1}\sigma^2}$ \@ref(eq:lm5-5)，取決於
+偏迴歸係數矩陣 $\mathbf{\hat\beta}$ 的方差 $\mathbf{(X^\prime X)^{-1}\sigma^2}$ \@ref(eq:lm5-5)，取決於
 
 1. 殘差方差 (residual variance) $\sigma^2$；
 2. 樣本量大小 (sample size) $n$；
@@ -2004,10 +2004,231 @@ print(anova(Model1, Model2), digits = 5)
 
 1. 收縮期血壓，舒張期血壓兩個變量是高度相關的，不能一起放入模型中。如果需要同時考慮兩個變量，可以用其中一個，另一個預測變量用二者之差；
 2. 身高，體重常常是高度相關的，儘量不要一起放入模型中，可以使用他們的結合形式體質指數 (BMI, $\text{kg/m}^2$)；
-3. 當使用二次方程進行模型擬合的時候，用 $(x_i - \bar{x}^2)$ 取代 $x_i^2$。
+3. 當使用二次方程進行模型擬合的時候，用 $(x_i - \bar{x})^2$ 取代 $x_i^2$。
 
-## 練習
+## 實戰演習
 
+### 數據 1， 血清維生素 C 濃度的預測變量
+
+數據來自與某個橫斷面研究，其目的是找出與血清維生素 C 濃度相關的預測變量。
+
+數據中個變量含義如下表所示。
+
+
+```{r echo=FALSE, eval=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/vitC.csv", header = T)
+kable(dt, "html",  col.names = c("Variable name","content"), align = "l",caption = "Data set of serum vitamin C level explained") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 30.3: Data set of serum vitamin C level explained</caption>
+ <thead><tr>
+<th style="text-align:left;"> Variable name </th>
+   <th style="text-align:left;"> content </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;"> `serial` </td>
+   <td style="text-align:left;"> Patient identifier </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `age` </td>
+   <td style="text-align:left;"> Age of subjects in years </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `height` </td>
+   <td style="text-align:left;"> Height in metres </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `cigs` </td>
+   <td style="text-align:left;"> Smoking status (0=non-smoker; 1=smoker) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `weight` </td>
+   <td style="text-align:left;"> Weight in kg </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `sex` </td>
+   <td style="text-align:left;"> Gender (0=men; 1=women) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `seruvitc` </td>
+   <td style="text-align:left;"> Serum Vitamin C level ($\mu\text{mol/L}$) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `ctakers` </td>
+   <td style="text-align:left;"> Vitamin C supplements taken (1=yes, 0=no) </td>
+  </tr>
+</tbody>
+</table>
+
+1. 在 R 裏讀入數據，並對數據內容總結，對維生素C濃度和其他連續性變量作散點圖，對分類變量如性別，吸菸狀況，和維生素C補充劑服用與否之間的維生素 C 濃度作初步的分析表格。
+
+```{r message=FALSE}
+library(haven)
+vitC <- read_dta("backupfiles/vitC.dta")
+
+##########################################
+# Recoding the categorical variables     #
+##########################################
+
+vitC$sex[vitC$sex == 0] <- "Men"
+vitC$sex[vitC$sex == 1] <- "Women"
+vitC$sex <- as.factor(vitC$sex)
+vitC$cigs[vitC$cigs == 0] <- "Non-smoker"
+vitC$cigs[vitC$cigs == 1] <- "Smoker"
+vitC$cigs <- as.factor(vitC$cigs)
+vitC$ctakers[vitC$ctakers == 0] <- "No"
+vitC$ctakers[vitC$ctakers == 1] <- "Yes"
+vitC$ctakers <- as.factor(vitC$ctakers)
+
+############################################
+# End of recoding the categorical variables#
+############################################
+
+summary(vitC) #Basic summary without any package
+head(vitC) #See the first 6 observations
+library(psych) #some detailed summary function from this package
+describe(vitC)
+library(epiDisplay) #some STATA-like simple summary function
+summ(vitC)
+vitC$serial[which(is.na(vitC$height))]
+vitC$serial[which(is.na(vitC$weight))]
+```
+
+從初步的熟悉數據結構和歸納結果可以看出，身高體重兩個數據有出現缺損值 (編號 24 的患者)。
+
+```{r}
+summ(vitC$seruvitc, by=vitC$sex, graph = FALSE) # From package "epiDisplay"
+summ(vitC$seruvitc, by=vitC$cigs, graph = FALSE)
+summ(vitC$seruvitc, by=vitC$ctakers, graph = FALSE)
+
+# You can also get similar detailed descriptive statistics by groups from package "psych"
+describeBy(vitC$seruvitc, group = vitC$sex)
+describeBy(vitC$seruvitc, group = vitC$cigs)
+describeBy(vitC$seruvitc, group = vitC$ctakers)
+```
+
+所以，血清維生素水平在女性，非吸菸者，和服用補充劑(廢話) 的人中較高。
+
+
+
+```{r practicalfig1, fig.width=7, fig.height=6.5, fig.cap='Scatter plots between serum ascorbate and age/weight/height', fig.align='center', out.width='80%'}
+par(mfrow=c(2,2))
+plot(vitC$age, vitC$seruvitc, pch = 20, xlab = "age on study entry", ylab = "Serum ascorbate")
+plot(vitC$weight, vitC$seruvitc, pch = 20, xlab = "Clothed weight", ylab = "Serum ascorbate")
+plot(vitC$height, vitC$seruvitc, pch = 20, xlab = "Height", ylab = "Serum ascorbate")
+```
+
+散點圖似乎沒有證據提示血清維生素 C 濃度和連續型變量，年齡，身高，體重之間有什麼相關性。
+
+2. 建立維生素 C 和其他預測變量的簡單線性迴歸模型，你有什麼結論？
+
+```{r}
+summary(lm(seruvitc ~ age, data = vitC))
+confint(lm(seruvitc ~ age, data = vitC))
+```
+
+血清維生素 C 濃度隨着年齡增加遞減，但是迴歸係數不具有統計學意義 ($p=0.32$)。年齡每增加 1 歲，血清維生素平均下降 $0.864 \:\mu\text{mol/L， 95% CI:} (-2.57, 0.840)$，
+
+
+```{r}
+summary(lm(seruvitc ~ height, data = vitC))
+confint(lm(seruvitc ~ height, data = vitC))
+```
+
+血清維生素 C 濃度隨着身高增加遞減，但是迴歸係數不具有統計學意義 ($p=0.134$)。身高每增加 1cm，血清維生素平均下降 $0.378 \:\mu\text{mol/L， 95% CI:} (-0.874, 0.118)$，
+
+
+```{r}
+summary(lm(seruvitc ~ cigs, data = vitC))
+confint(lm(seruvitc ~ cigs, data = vitC))
+```
+
+血清維生素 C 濃度與在吸菸人羣中較低，與不吸菸人羣相比，吸菸人羣的血清維生素 C 濃度平均低 $14.8 \:\mu\text{mol/L， 95% CI:} (0.394, 29.2)$，這個濃度差具有臨界統計學意義 $(p=0.044)$。
+
+```{r}
+summary(lm(seruvitc ~ weight, data = vitC))
+confint(lm(seruvitc ~ weight, data = vitC))
+```
+
+維生素濃度和體重關係幾乎可以忽略 $(p=0.96)$。
+
+```{r}
+summary(lm(seruvitc ~ sex, data = vitC))
+confint(lm(seruvitc ~ sex, data = vitC))
+```
+
+血清維生素 C 濃度與在女性中較高，與男性相比，女性的血清維生素 C 濃度平均高 $13.6 \:\mu\text{mol/L， 95% CI:} (4.12, 23.2)$，這個濃度差具有顯著統計學意義 $(p=0.005)$。
+
+```{r}
+summary(lm(seruvitc ~ ctakers, data = vitC))
+confint(lm(seruvitc ~ ctakers, data = vitC))
+```
+
+血清維生素 C 濃度與在服用補充劑的人中較高，與不服用補充劑的人相比，服用者的血清維生素 C 濃度平均高 $22.1 \:\mu\text{mol/L， 95% CI:} (10.7, 33.4)$，這個濃度差具有顯著統計學意義 $(p=0.00021)$。
+
+
+3. 擬合一個多元線性迴歸模型，因變量爲血清維生素 C 濃度，預測變量使用 性別，吸菸狀態，和 是否服用維生素補充劑。解釋輸出結果的數字的含義。跟這些預測變量單獨和血清維生素 C 濃度建立的簡單線性迴歸模型作比較。說明哪些結果發生了改變，爲什麼。
+
+```{r}
+summary(lm(seruvitc ~ sex + cigs + ctakers, data = vitC))
+print(anova(lm(seruvitc ~ sex + cigs + ctakers, data = vitC)), digits = 5)
+confint(lm(seruvitc ~ sex + cigs + ctakers, data = vitC))
+```
+
+從這個多元線性迴歸的輸出報告來看，血清維生素 C 濃度
+
+- 在吸菸者中較低 $-11.6 \:\mu\text{mol/L， 95% CI:} (-24.8, +1.67), p = 0.086$；
+- 在女性中較高 $+10.7 \:\mu\text{mol/L， 95% CI:} (1.69, 19.6), p = 0.020$；
+- 在服用維生素補充劑的人中較高 $+20.3 \:\mu\text{mol/L， 95% CI:} (9.29, 31.2), p = 0.0004$。
+
+故，本次數據告訴我們，服用維生素補充劑是最強的預測變量。在多元線性迴歸模型的結果中可以看到：
+
+- 性別之間維生素 C 濃度差變小了 ($+13.6 \rightarrow +10.7$) <br> 這是因爲女性中有較多人服用維生素補充劑。即便如此，性別差在多元線性迴歸模型中仍然是有意義的。
+
+```{r}
+a <- Epi::stat.table(list("Vitamin C taker"=ctakers, "Gender" = sex), list(count(),percent(ctakers)), data = vitC, margins = TRUE)
+print(a, digits = c(percent = 2))
+```
+
+- 吸菸與非吸菸者之間的維生素 C 濃度差也變小了 ($-14.8 \rightarrow -11.6$)，因爲儘管吸菸與非吸菸者的維生素補充劑服用比例差不不大，但是吸菸者中大部分是男性。(詳見下表) <br> 吸菸者和非吸菸者之間維生素 C 濃度差經過多元線性迴歸調整後變得不再有統計學意義 $(p=0.086)$。
+
+
+```{r}
+a <- Epi::stat.table(list("Vitamin C taker"=ctakers, "Smoker" = cigs), list(count(),percent(ctakers)), data = vitC, margins = TRUE)
+print(a, digits = c(percent = 2))
+a <- Epi::stat.table(list("Gender" = sex, "Smoker" = cigs), list(count(),percent(sex)), data = vitC, margins = TRUE)
+print(a, digits = c(percent = 2))
+```
+
+4. 在前一個模型中加入年齡，身高，體重作爲新的預測變量。先解釋新的模型中報告的個數值的意義，利用方差分析表格比較兩個模型的差別 (先手計算，再用 R 計算確認你的答案)。
+
+由於身高體重有缺損值(serial=24)，所以要比較預測變量增加前後的模型，需要先把之前的模型中 serial=24 的觀察對象刪除掉才公平。
+
+```{r}
+Model1 <- lm(seruvitc ~ sex + cigs + ctakers, data = vitC[-24,])
+summary(Model1);anova(Model1)
+
+Model2 <- lm(seruvitc ~ sex + cigs + ctakers + age + weight + height, data = vitC[-24,])
+summary(Model2);anova(Model2)
+```
+
+利用偏 $F$ 檢驗的公式
+
+$$
+F=\frac{(205.2889295+132.9899543+0.6280691)/3}{38079.42/84} = 0.2492713
+$$
+
+
+```{r}
+anova(Model1, Model2)
+```
+
+所以檢驗統計量對應的 $p=0.86$ 告訴我們沒有證明據證明調整了性別，吸菸狀況，服用補充劑與否之後，增加的年齡，體重，身高作爲預測變量和觀察對象的血清維生素 C 濃度有關係。模型 2 比模型 1 不能解釋更多的模型殘差 (不比模型 1 更加擬合數據)。
 
 # Checking the assumption of the linear model
 
