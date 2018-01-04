@@ -2008,7 +2008,7 @@ print(anova(Model1, Model2), digits = 5)
 
 ## 實戰演習
 
-### 數據 1， 血清維生素 C 濃度的預測變量
+### 血清維生素 C 濃度的預測變量
 
 數據來自與某個橫斷面研究，其目的是找出與血清維生素 C 濃度相關的預測變量。
 
@@ -2229,6 +2229,126 @@ anova(Model1, Model2)
 ```
 
 所以檢驗統計量對應的 $p=0.86$ 告訴我們沒有證明據證明調整了性別，吸菸狀況，服用補充劑與否之後，增加的年齡，體重，身高作爲預測變量和觀察對象的血清維生素 C 濃度有關係。模型 2 比模型 1 不能解釋更多的模型殘差 (不比模型 1 更加擬合數據)。
+
+### 紅細胞容積與血紅蛋白
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 30.4: Data set of haemoglobin and PCV explained</caption>
+ <thead><tr>
+<th style="text-align:left;"> Variable name </th>
+   <th style="text-align:left;"> content </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;"> `hb` </td>
+   <td style="text-align:left;"> Haemoglobin (gm/dl) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `pcv` </td>
+   <td style="text-align:left;"> Pack cell volume % </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `age` </td>
+   <td style="text-align:left;"> Age (years) </td>
+  </tr>
+<tr>
+</tbody>
+</table>
+
+5. 把數據導入 R，並且建立因變量爲血紅蛋白，預測變量爲 PCV 和 年齡的多元線性迴歸模型
+
+```{r message=FALSE}
+library(haven)
+haem <- read_dta("backupfiles/haem.dta")
+psych::describe(haem)
+Model3 <- lm(hb ~ pcv + age, data = haem)
+summary(Model3)
+haem$e_hat <- Model3$residuals
+haem$y_hat <- Model3$fitted.values
+print(haem)
+```
+6. 利用 R 的矩陣計算重現迴歸模型的計算結果
+
+- 計算因變量和兩個預測變量各自的和
+```{r}
+sumy <- sum(haem$hb)
+sumx1 <- sum(haem$pcv)
+sumx2 <- sum(haem$age)
+```
+
+- 計算因變量和兩個預測變量各自的平方和
+```{r}
+sumy2 <- sum((haem$hb)^2)
+sumx1y <- sum(haem$hb*haem$pcv)
+sumx2y <- sum(haem$hb*haem$age)
+sumx12 <- sum((haem$pcv)^2)
+sumx22 <- sum((haem$age)^2)
+sumx1x2 <- sum(haem$pcv*haem$age)
+```
+
+- 生成一個數值爲 1 的變量，名爲 `one`
+```{r}
+one <- rep(1,12)
+```
+
+- 用 `matrix()` 命令生成矩陣
+```{r}
+Rownames <- NULL
+for(i in 1:12) {
+  a <- paste("row", i, sep = "")
+  Rownames <- c(Rownames,a); rm(a)
+  }
+
+Y <- matrix(haem$hb ,dimnames = list(Rownames, "hb"))
+Y
+
+X <- matrix(c(one, haem$pcv, haem$age), nrow = 12, dimnames = list(Rownames, c("one", "pcv", "age")))
+X
+```
+
+- 用公式 \@ref(eq:lm5-4) 計算估計 $\mathbf{\hat\beta}$ 矩陣
+```{r}
+XX <- t(X) %*% X # these are the sum of squares of each variable and the sum of the cross products of the pairs of variables
+XX
+(data.frame(sumx1,sumx12,sumx2,sumx22, sumx1x2))
+XY <- t(X) %*% Y # this is the cross-product matrix of predictors against outcome
+XY
+(data.frame(sumy, sumx1y, sumx2y))
+betahat <- solve( t(X) %*% X ) %*% t(X) %*% Y
+betahat
+###or equivalently you can use
+betahat <- solve( crossprod(X) ) %*% crossprod( X, Y )
+betahat
+```
+可以看到 `betahat` 的結果和多元迴歸模型輸出的迴歸係數估計是一致的。
+
+- 計算擬合值
+
+```{r}
+Fitted <- X%*%betahat
+Fitted
+```
+
+- 估計迴歸係數的方差協方差矩陣
+
+```{r}
+e_hat <- Y-Fitted # residuals
+e_hat
+SSres <- t(e_hat) %*% e_hat # residual sum of squares
+SSres
+Sigma2 <- SSres %*% (1/(12-(2+1))) # residual variance
+Sigma2
+
+# multiply the inverse of the cross-product matrix for the predictors 
+# by the residual variance to get the variance-covariance matrix of 
+# the coefficients
+V <- solve( crossprod(X) ) * as.numeric(Sigma2)
+V
+# the square root of the diagonal terms in the above matrix are the standard errors shown in the regression output
+sqrt(diag(V))
+```
+
 
 # Checking the assumption of the linear model
 
