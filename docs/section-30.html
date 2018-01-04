@@ -484,6 +484,14 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="30.3.3" data-path="section-30.html"><a href="section-30.html#section-30.3.3"><i class="fa fa-check"></i><b>30.3.3</b> 迴歸方程的顯著性檢驗</a></li>
 <li class="chapter" data-level="30.3.4" data-path="ANOVA.html"><a href="ANOVA.html#-f-"><i class="fa fa-check"></i><b>30.3.4</b> 偏 <span class="math inline">\(F\)</span> 檢驗</a></li>
 </ul></li>
+<li class="chapter" data-level="30.4" data-path="section-30.html"><a href="section-30.html#section-30.4"><i class="fa fa-check"></i><b>30.4</b> 添加新變量對迴歸模型的影響</a><ul>
+<li class="chapter" data-level="30.4.1" data-path="section-30.html"><a href="section-30.html#section-30.4.1"><i class="fa fa-check"></i><b>30.4.1</b> 偏迴歸係數方差的改變</a></li>
+<li class="chapter" data-level="30.4.2" data-path="section-30.html"><a href="section-30.html#section-30.4.2"><i class="fa fa-check"></i><b>30.4.2</b> 偏迴歸係數檢驗結果的改變</a></li>
+<li class="chapter" data-level="30.4.3" data-path="section-30.html"><a href="section-30.html#section-30.4.3"><i class="fa fa-check"></i><b>30.4.3</b> 擬合值的改變</a></li>
+<li class="chapter" data-level="30.4.4" data-path="section-30.html"><a href="section-30.html#section-30.4.4"><i class="fa fa-check"></i><b>30.4.4</b> 決定係數的改變</a></li>
+<li class="chapter" data-level="30.4.5" data-path="section-30.html"><a href="section-30.html#-collinearity"><i class="fa fa-check"></i><b>30.4.5</b> 共線性 collinearity</a></li>
+</ul></li>
+<li class="chapter" data-level="30.5" data-path="section-16.html"><a href="section-16.html#-3"><i class="fa fa-check"></i><b>30.5</b> 練習</a></li>
 </ul></li>
 <li class="chapter" data-level="31" data-path="checking-the-assumption-of-the-linear-model.html"><a href="checking-the-assumption-of-the-linear-model.html"><i class="fa fa-check"></i><b>31</b> Checking the assumption of the linear model</a></li>
 <li class="chapter" data-level="32" data-path="interactions.html"><a href="interactions.html"><i class="fa fa-check"></i><b>32</b> Interactions</a></li>
@@ -689,7 +697,7 @@ SS_{RES} &amp; = \sum_{i=1}^n \hat\varepsilon_i^2 =  \sum_{i=1}^n(y_i-\hat{y})^2
 <p>公式 <a href="section-30.html#eq:lm5-4">(30.4)</a> 是參數矩陣 <span class="math inline">\(\mathbf{\beta}\)</span> 的無偏估計，且服從方差協方差矩陣爲 <span class="math inline">\(\mathbf{(X^\prime X)^{-1}\sigma^2}\)</span> 的多元正態分佈：</p>
 <p><span class="math display" id="eq:lm5-5">\[
 \begin{equation}
-\mathbf{\hat\beta} =  N(\mathbf{\beta, (X^\prime X)^{-1}\sigma^2})
+\mathbf{\hat\beta} \sim  N(\mathbf{\beta, (X^\prime X)^{-1}\sigma^2})
 \end{equation}
 \tag{30.5}
 \]</span></p>
@@ -1059,15 +1067,78 @@ F=\frac{(SS_{REG-B}-SS_{REG-A})/k}{MS_{RES-B}} \sim F_{k, [n-(p+1)]}
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">1</span> <span class="op">-</span><span class="st"> </span><span class="kw">pf</span>(<span class="dt">df1 =</span> <span class="dv">2</span>,<span class="dt">df2 =</span> <span class="dv">186</span>,<span class="dt">q =</span> (<span class="fl">0.4116944</span><span class="op">+</span><span class="fl">1.7330862</span>)<span class="op">/</span>(<span class="dv">2</span><span class="op">*</span><span class="fl">0.9067645</span>))</code></pre></div>
 <pre><code>## [1] 0.3088</code></pre>
 <p>更方便的是直接用 <code>anova()</code> 進行偏 <span class="math inline">\(F\)</span> 檢驗：</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">anova</span>(Model1, Model2)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">anova</span>(Model1, Model2), <span class="dt">digits =</span> <span class="dv">5</span>)</code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Model 1: wt ~ len
 ## Model 2: wt ~ len + age + sex
-##   Res.Df RSS Df Sum of Sq    F Pr(&gt;F)
-## 1    188 171                         
-## 2    186 169  2      2.15 1.18   0.31</code></pre>
+##   Res.Df    RSS Df Sum of Sq      F Pr(&gt;F)
+## 1    188 170.80                           
+## 2    186 168.66  2    2.1448 1.1827 0.3088</code></pre>
 </div>
+</div>
+<div id="section-30.4" class="section level2">
+<h2><span class="header-section-number">30.4</span> 添加新變量對迴歸模型的影響</h2>
+<p>當你決定給建立的模型 <span class="math inline">\(\mathbf{A}\)</span> 增加新的預測變量時，輸出的結果<strong>改變</strong>的有：</p>
+<ol style="list-style-type: decimal">
+<li>模型 <span class="math inline">\(\mathbf{A}\)</span> 原先的預測變量的<strong>偏迴歸係數</strong>會改變；</li>
+<li>模型 <span class="math inline">\(\mathbf{A}\)</span> 原先的預測變量的<strong>偏迴歸係數的方差</strong>會改變；</li>
+<li>模型 <span class="math inline">\(\mathbf{A}\)</span> 原先的預測變量的<strong>偏迴歸係數的檢驗結果</strong>會改變；</li>
+<li>模型 <span class="math inline">\(\mathbf{A}\)</span> 原先的 <strong>擬合值 (predicted values/fitted values)</strong>會改變；</li>
+<li>決定係數 <span class="math inline">\(R^2\)</span> 會改變。</li>
+</ol>
+<div id="section-30.4.1" class="section level3">
+<h3><span class="header-section-number">30.4.1</span> 偏迴歸係數方差的改變</h3>
+<p>偏迴歸係數矩陣 <span class="math inline">\(\mathbf{\hat\beta}\)</span> 的方差 <span class="math inline">\(\mathbf{X^\prime X)^{-1}\sigma^2}\)</span> <a href="section-30.html#eq:lm5-5">(30.5)</a>，取決於</p>
+<ol style="list-style-type: decimal">
+<li>殘差方差 (residual variance) <span class="math inline">\(\sigma^2\)</span>；</li>
+<li>樣本量大小 (sample size) <span class="math inline">\(n\)</span>；</li>
+<li>預測變量之間的協方差 (covariance between the predictor variable in question and the others)。</li>
+</ol>
+<p>在簡單線性迴歸中，預測變量的變化性 (variability，用方差或標準差衡量) 越大，迴歸係數的估計就越精確。類似地，多元線性迴歸中，預測變量之間的協方差之所以重要，因爲它決定了<strong>其他預測變量保持不變時</strong>，該預測變量的變化性。如果某兩個預測變量之間高度相關 (high covariance)，那麼當一個預測變量保持不變時，另一個的變化性就很小。</p>
+<p>所以當給一個模型加入新的預測變量時，可能觀察的現象是原先模型中已有的預測變量的偏迴歸係數的方差<strong>可能升高，也可能降低</strong>。</p>
+<ul>
+<li>如果新加入的變量能解釋很大比例的殘差方差，那麼其他原有變量的偏迴歸係數會降低 (變精確)；</li>
+<li>如果新加入的變量和原模型中的某個變量高度相關，那麼加入新變量後，原模型中與之高度相關的預測變量的方差會升高 (不精確)，這個現象會在共線性 (collinearity) 中繼續討論。</li>
+</ul>
+</div>
+<div id="section-30.4.2" class="section level3">
+<h3><span class="header-section-number">30.4.2</span> 偏迴歸係數檢驗結果的改變</h3>
+<p>加入新預測變量時，原有的偏迴歸係數的檢驗結果發生的改變可以歸類成兩種情況：</p>
+<ol style="list-style-type: decimal">
+<li>估計的偏迴歸係數本身發生了改變；</li>
+<li>偏迴歸係數的方差改變，導致了檢驗結果發生變化。</li>
+</ol>
+</div>
+<div id="section-30.4.3" class="section level3">
+<h3><span class="header-section-number">30.4.3</span> 擬合值的改變</h3>
+<p>很明顯，當模型中加入新的變量，觀察對象的擬合值會發生改變，但是通常這樣的影響要遠遠小於對偏迴歸係數估計 (和其方差) 的影響。</p>
+</div>
+<div id="section-30.4.4" class="section level3">
+<h3><span class="header-section-number">30.4.4</span> 決定係數的改變</h3>
+<p>模型中增加新的預測變量，那麼模型的決定係數不會減少，只會增加。</p>
+</div>
+<div id="-collinearity" class="section level3">
+<h3><span class="header-section-number">30.4.5</span> 共線性 collinearity</h3>
+<p>當預測變量 <span class="math inline">\(X_1\)</span> 和另一個預測變量 <span class="math inline">\(X_2\)</span> 之間呈高度線性關係時被定義爲共線性現象。如果這兩個變量的關係是<strong>完全線性 (exact linear)</strong>，那麼多元迴歸其實是無法進行的，因爲這兩個變量中的一個隨着另一個改變，無法像我們設想的那樣把其中一個變量保持不變，從而估計另一個變量的迴歸係數。用矩陣表示多元預測變量時 <span class="math inline">\(\mathbf{X}\)</span> 是<strong><a href="https://www.youtube.com/watch?v=UqyN7-tRS00">奇異矩陣 singular matrix</a></strong>，<span class="math inline">\(\mathbf{(X^\prime X)^{-1}}\)</span> 是不存在的。</p>
+<p>完全線性的最佳例子是我們在對分類變量使用啞變量的情況下。每個啞變量之間都是完全線性的關係，因而我們只能用 <span class="math inline">\(0,1\)</span> 來編碼啞變量，當某個啞變量存在時，其餘的啞變量取 <span class="math inline">\(0\)</span> 從模型中消失。否則模型將無法擬合。</p>
+<p>如果某兩個變量之間高度相關，那麼他們的預測變量矩陣接近 <strong>奇異矩陣</strong>，把這兩個變量同時作爲預測變量放入模型中會引起共線性現象，表現出來的形式有：</p>
+<ol style="list-style-type: decimal">
+<li>偏迴歸係數的方差變得很大；</li>
+<li>偏迴歸係數本身的絕對值變得異常大；</li>
+<li>某些已知的重要預測變量的偏迴歸係數變得過小且不再有意義；</li>
+<li>雖然會有 1-3 描述的異常現象出現，但是擬合值的變化卻可能微不足道。</li>
+</ol>
+<p>所以擬合多元線性迴歸模型時，<strong>極爲重要的一點是要避免共線性</strong>。如果有些變量高度相關，必須考慮改變他們放入模型的形式：</p>
+<ol style="list-style-type: decimal">
+<li>收縮期血壓，舒張期血壓兩個變量是高度相關的，不能一起放入模型中。如果需要同時考慮兩個變量，可以用其中一個，另一個預測變量用二者之差；</li>
+<li>身高，體重常常是高度相關的，儘量不要一起放入模型中，可以使用他們的結合形式體質指數 (BMI, <span class="math inline">\(\text{kg/m}^2\)</span>)；</li>
+<li>當使用二次方程進行模型擬合的時候，用 <span class="math inline">\((x_i - \bar{x}^2)\)</span> 取代 <span class="math inline">\(x_i^2\)</span>。</li>
+</ol>
+</div>
+</div>
+<div id="-3" class="section level2">
+<h2><span class="header-section-number">30.5</span> 練習</h2>
 </div>
 </div>
             </section>
