@@ -1756,7 +1756,7 @@ $$
 
 ### 殘差
 
-殘差的觀察值 $\mathbf{\hat\epsilon}$ 被定義爲觀察值和擬合值的差。根據前節 \@ref(eq:lm5-8) 推導：
+殘差的觀察值 $\mathbf{\hat\varepsilon}$ 被定義爲觀察值和擬合值的差。根據前節 \@ref(eq:lm5-8) 推導：
 
 $$
 \begin{equation}
@@ -1852,7 +1852,98 @@ F = \frac{MS_{REG}}{MS_{RES}} \sim F_{p, [n-(p+1)]}
 (\#eq:lm5-13)
 $$
 
+在零假設條件下，$F$ 的期望值接近 $1$，而替代假設條件下的 $F$ 總是會大於此，所以和 $F$ 分佈比較特徵值時只需要比較單側的 (右側的) 值，即可獲得雙側 $p$ 值。
 
+在 R 裏面，迴歸方程的結果的最底下會出現統計量 $F$ 的大小，但是 $MS_{REG}, MS_{RES}$ 要用 `anova()` 代碼獲得：
+
+```{r}
+library(haven)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+growgam1$sex <- as.factor(growgam1$sex)
+
+Model1 <- lm(wt ~ age + len, data=growgam1)
+print(summary(Model1), digits = 5)
+print(anova(Model1), digits = 5)
+```
+
+可以看到 `summary()` 輸出結果的最後一行是關於迴歸方程整體的 $F$ 檢驗結果 `F-statistic: 270.84 on 2 and 187 DF,  p-value: < 2.22e-16`，從 `anova()` 結果中可以獲得 $MS_{REG} = \frac{359.0632 + 134.5153}{2} = 246.7892$。$F_{2,187} = \frac{246.7892}{0.9111833} = 270.84$。這個檢驗結果證明了，兩個預測變量 “體重” 和 “身長” 至少有一個的迴歸係數不等於零。
+
+### 偏 $F$ 檢驗
+
+如果我們建立兩個模型，一個稍微複雜一些 $(B)$，比起略簡單的模型 $(A)$，增加了 $k$ 個預測變量。兩個模型放在一起的方差分析表格可以歸納成：
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 30.2: Analysis of Variance table comparing the fit of a model $(B)$ with $p$ predictor variables with that of one (model $A$) with $p-k$ predictor variables</caption>
+ <thead><tr>
+<th style="text-align:center;"> Source of <br>Variation </th>
+   <th style="text-align:center;"> Sum of <br>Squares </th>
+   <th style="text-align:center;"> Degrees of <br>Freedom </th>
+   <th style="text-align:center;"> Mean Sum of <br>Squares </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:center;"> Explained by <br> model $A$</td>
+   <td style="text-align:center;"> $SS_{REG-A}$ </td>
+   <td style="text-align:center;"> $p-k$ </td>
+   <td style="text-align:center;"> $MS_{REG-A} = \frac{SS_{REG-A}}{p-k}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Extra Explained <br> by model $B$</td>
+   <td style="text-align:center;"> $SS_{REG-B}-SS_{REG-A}$ </td>
+   <td style="text-align:center;"> $k$ </td>
+   <td style="text-align:center;"> $\frac{SS_{REG-B}-SS_{REG-A}}{k}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Residual from <br> model $B$ </td>
+   <td style="text-align:center;"> $SS_{RES-B}$ </td>
+   <td style="text-align:center;"> $n-(p+1)$ </td>
+   <td style="text-align:center;"> $MS_{RES} = \frac{SS_{RES}}{[n-(p+1)]}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> $SS_{yy}$ </td>
+   <td style="text-align:center;"> $n-1$ </td>
+   <td style="text-align:center;"> $\frac{SS_{yy}}{(n-1)}$ </td>
+  </tr>
+</tbody>
+</table>
+
+那麼偏 $F$ 檢驗的零假設就是：$B$ 模型中包含，$A$ 模型中不包含的 $k$ 個預測變量的迴歸係數都等於零。
+
+$$
+\begin{equation}
+F=\frac{(SS_{REG-B}-SS_{REG-A})/k}{MS_{RES-B}} \sim F_{k, [n-(p+1)]}
+\end{equation}
+(\#eq:lm5-14)
+$$
+
+在 R 裏建立兩個模型：
+
+
+```{r}
+Model1 <- lm(wt ~ len, data=growgam1)
+print(summary(Model1), digits = 5)
+print(anova(Model1), digits = 5)
+
+Model2 <- lm(wt ~ len + age + sex, data = growgam1)
+print(summary(Model2), digits = 5)
+print(anova(Model2), digits = 5)
+```
+
+根據公式 \@ref(eq:lm5-14)，$F=\frac{0.4116944+1.7330862}{2\times0.9067645} = 1.18$。$p$ 值可以在 R 裏面這樣計算：
+
+```{r}
+1 - pf(df1 = 2,df2 = 186,q = (0.4116944+1.7330862)/(2*0.9067645))
+```
+
+更方便的是直接用 `anova()` 進行偏 $F$ 檢驗：
+
+
+
+```{r}
+anova(Model1, Model2)
+```
 
 
 
