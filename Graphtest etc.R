@@ -189,3 +189,11 @@ x10000 <- rmvnorm(n=10000, mean=c(0,0), sigma=sigma.zero)#乱数1000個
     (results <- data.frame(Transformation, Formula, W.statistic, p.value))
   }  
   
+  
+  
+  
+  library(gvlma)
+  gvmodel <- gvlma(Model1) 
+  summary(gvmodel)
+  plot.gvlma(gvmodel)
+  

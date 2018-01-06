@@ -1839,7 +1839,7 @@ $$
 </table>
 
 
-### 迴歸方程的顯著性檢驗
+### 迴歸方程的顯著性檢驗 {#globalsig}
 
 整個方程的顯著性檢驗，檢驗的是所有的迴歸係數都等於零的零假設，其對應的替代假設則是：“迴歸係數**不全爲零**”。就是至少有一個不等於零。
 
@@ -1868,7 +1868,7 @@ print(anova(Model1), digits = 5)
 
 可以看到 `summary()` 輸出結果的最後一行是關於迴歸方程整體的 $F$ 檢驗結果 `F-statistic: 270.84 on 2 and 187 DF,  p-value: < 2.22e-16`，從 `anova()` 結果中可以獲得 $MS_{REG} = \frac{359.0632 + 134.5153}{2} = 246.7892$。$F_{2,187} = \frac{246.7892}{0.9111833} = 270.84$。這個檢驗結果證明了，兩個預測變量 “體重” 和 “身長” 至少有一個的迴歸係數不等於零。
 
-### 偏 $F$ 檢驗
+### $\text{partial }F$ 檢驗
 
 如果我們建立兩個模型，一個稍微複雜一些 $(B)$，比起略簡單的模型 $(A)$，增加了 $k$ 個預測變量。兩個模型放在一起的方差分析表格可以歸納成：
 
@@ -2340,8 +2340,8 @@ SSres
 Sigma2 <- SSres %*% (1/(12-(2+1))) # residual variance
 Sigma2
 
-# multiply the inverse of the cross-product matrix for the predictors 
-# by the residual variance to get the variance-covariance matrix of 
+# multiply the inverse of the cross-product matrix for the predictors
+# by the residual variance to get the variance-covariance matrix of
 # the coefficients
 V <- solve( crossprod(X) ) * as.numeric(Sigma2)
 V
@@ -2350,6 +2350,90 @@ sqrt(diag(V))
 ```
 
 
-# Checking the assumption of the linear model
+# 線性迴歸的模型診斷
 
-# Interactions
+和其他的統計學模型一樣，線性迴歸也有自己的前提條件，而且所以從模型結果作出的各種推斷都依賴這些前提條件的成立。所以，我們需要有一些統計學的手段來檢查線性迴歸模型中這些前提是否得到滿足。理想總是很豐滿，現實通常又太骨感。你不大可能找到一組真實的數據能夠 100% 完美的滿足所需要的前提條件。當然不是說不能滿足模型的前提條件，我們就無法進行統計推斷了。而且我們也有不少結果穩健 (robust) 的統計學手段，讓我們可以不必考慮太多前提條件。檢查數據，瞭解數據內容，理解數據本身的結構永遠都是有助於數據分析的。
+
+還要記得一點就是，根據中心極限定理，(即使有一些前提假設不能成立) 大型數據分析結果的穩健性/可靠性，要高於小型數據的分析。
+
+## 線性迴歸模型的前提條件
+
+1. 因變量和各個預測變量之間的關係都是線性 linear relationship 的；
+2. 因變量之間相互獨立；
+3. 真實 **true** 殘差的方差是恆定不變的 constant。這裏的含義是在真實迴歸直線上下散佈的因變量的點，在任意一個預測變量值的位置的方差 (分散) 要保持恆定不變。這個特性被描述成方差齊性 homoscedasticity (殘差方差的一致性 homogeneity of the residual variance)，與之相對的定義是異方差性 heteroscedasticity (殘差方差的不同質性，heterogeneity of the residual variance)。
+4. 真實殘差服從正態分佈。(儘管你發現統計忍者包裏丟入隨便什麼數據都能給你個線性迴歸的報告來，但是，如果你真想用其結果做統計推斷，p CI 的話，這條前提必須滿足。)
+
+本章着重討論第 1，3，4 前提條件的診斷法。因爲觀測數據之間是否獨立性 (第 2 條) 並不是你光盯着數據看就能知道的。你要去問給你數據的 (沒良心的) 人。
+
+## 用圖形來視覺診斷
+
+```{r fig6-1, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Illustration the usefullness of scatter plots of the dependent variable against the predictor variable in simple linear regression', fig.align='center', out.width='80%'}
+knitr::include_graphics("img/Selection_109.png")
+```
+
+圖 \@ref(fig:fig6-1) 中展示了四種實例。把預測變量和因變量做散點圖，這常常是甄別出異方差性 (Example C)，非線性 (Example A)，異常值 (Example D) 的最好方法。其中右上角的 Example B 是良好的迴歸模型的散點圖應該有的樣子。
+
+建議進行視覺判斷的時候把擬合曲線去掉再作一次，看看有迴歸直線和沒有迴歸直線前後的散點圖差別，更容易看出數據的分佈特徵。但是光看散點圖作判斷的方法，在多元線性迴歸模型中只能看看能否找到一些異常值，對輔助判斷方差齊性和線性關係就沒有太大的用處。殘差點圖就更加實用。
+
+## 殘差圖
+
+如果線性迴歸模型的前提條件能夠得到滿足，那麼擬合模型後的殘差，一定會服從正態分佈且方差均勻一致。所以另一個診斷異方差性的辦法可以通過作觀察殘差和擬合值之間的散點圖來輔助判斷。下圖 \@ref(fig:fig6-2) 是各個簡單線性迴歸擬合後的**殘差和擬合值**之間的散點圖。可以看出左下角的 Example C 的異方差性展現得更加明顯了。同樣此圖也能幫助判斷線性關係，如左上角的 Example A 所示，如果預測變量和因變量之間不是線性關係，那麼殘差就不可能均勻的分佈在 $0$ 的兩側。
+
+```{r fig6-2, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Plots of residuals agianst fitted values for the examples in the previous figure', fig.align='center', out.width='80%'}
+knitr::include_graphics("img/Selection_111.png")
+```
+
+對於一個簡單線性迴歸模型來說，擬合值僅僅只是預測變量的一個線性數學轉換，所以上面圖中的殘差和擬合值的散點圖，其實等價於殘差和預測變量的散點圖。所以圖 \@ref(fig:fig6-1) 和圖 \@ref(fig:fig6-2) 兩圖展現的信息量此時是一樣的。
+
+但是，多元線性迴歸時，殘差和擬合值的散點圖會比殘差和預測變量散點圖更適合判斷異方差性，和線性關係的假設。
+
+## 殘差正態圖 normal plot of residuals
+
+正態圖在分析技巧的章節也有介紹 (Section \@ref(normalplot))。這是最佳的判斷數據是否服從正態分佈的視覺圖。所以用它來繪製線性迴歸擬合後的殘差，是個很好的辦法。可惜的是殘差正態圖無法用於判斷異方差性，和線性關係兩個假設。
+
+```{r fig6-3, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Normal plots of residuals for the examples in the previous figure', fig.align='center', out.width='80%'}
+knitr::include_graphics("img/Selection_112.png")
+```
+
+有時後觀察殘差 (observed residuals) 可能不能滿足齊方差性質而真實殘差 (true residuals) 反而滿足。所以一些統計學家建議把計算的殘差標準化 (standardised residuals) 以後再作正態圖。
+
+### 模型診斷實例
+
+前面建立過的兒童體重和年齡，身長之間的多元迴歸模型的診斷 (Section \@ref(globalsig)) 見下圖。所有四個圖都沒有證據證明非線性關係和異方差性。看不見顯著的異常值。正態圖看出殘差有那麼一點點不太正態分佈，但是不嚴重到讓人懷疑模型給出的推斷是否受到重大影響。
+
+```{r fig6-4, echo=FALSE, fig.width=7, fig.height=6.5, fig.cap="Residual plots for the linear regression relating a child's weight to their age and length", fig.align='center', out.width='100%'}
+library(haven)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+growgam1$sex <- as.factor(growgam1$sex)
+
+Model1 <- lm(wt ~ age + len, data=growgam1)
+Res <- resid(Model1)
+Fitted <- fitted(Model1)
+par(mfrow=c(2,2))
+plot(growgam1$age, Res, main = "Residuals vs Age",
+     xlab = "Age (month)", ylab = "Residual (kg)")
+plot(growgam1$len, Res, main = "Residuals vs Length",
+     xlab = "Length (cm)", ylab = "Residual (kg)")
+plot(Fitted, Res, main = "Residuals vs Fitted Values",
+     xlab = "Fitted values", ylab = "Residual (kg)")
+plot(Model1, 2)
+```
+
+## 前提條件的統計學檢驗
+
+### 二次方程迴歸法檢驗非線性
+
+二次方程迴歸法是一種多元迴歸模型，它包含了兩個預測變量，一個是另一個的平方。數學模型可以標記成爲：
+
+
+$$
+\begin{aligned}
+y_i & = \alpha + \beta_1 x_i + \beta_2 x_i^2 + \varepsilon_i \\
+\text{Where } & \varepsilon_i \sim \text{NID}(0, \sigma^2)
+\end{aligned}
+(\#eq:lm6-1)
+$$
+
+儘管你看到了二次方程在這裏，但是這仍然是一個線性迴歸模型。但是二次方程的迴歸模型描述的是兩個變量之間的非線性關係。
+
+# 交互作用 Interactions
