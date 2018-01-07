@@ -507,6 +507,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="31.5.1" data-path="section-31.html"><a href="section-31.html#section-31.5.1"><i class="fa fa-check"></i><b>31.5.1</b> 二次方程迴歸法檢驗非線性</a></li>
 <li class="chapter" data-level="31.5.2" data-path="section-31.html"><a href="section-31.html#section-31.5.2"><i class="fa fa-check"></i><b>31.5.2</b> 非線性關係模型</a></li>
 </ul></li>
+<li class="chapter" data-level="31.6" data-path="section-31.html"><a href="section-31.html#section-31.6"><i class="fa fa-check"></i><b>31.6</b> 異常值，槓桿值，和庫克距離</a><ul>
+<li class="chapter" data-level="31.6.1" data-path="section-31.html"><a href="section-31.html#section-31.6.1"><i class="fa fa-check"></i><b>31.6.1</b> 異常值和標準化殘差</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="32" data-path="-interactions.html"><a href="-interactions.html"><i class="fa fa-check"></i><b>32</b> 交互作用 Interactions</a></li>
 <li class="part"><span><b>V 臨床實驗 Clinical Trials</b></span></li>
@@ -727,7 +730,30 @@ Model2 &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="
 </div>
 <div id="section-31.5.2" class="section level3">
 <h3><span class="header-section-number">31.5.2</span> 非線性關係模型</h3>
-<p>二次方程的迴歸模型的應用在非線性模型中的應用其實有許許多多的缺陷。例如二次方程迴歸只能默認有一個極致點。也就是在二次方程模型中，預測變量和因變量的關係要麼是先下降後升高，要麼是先升高再下降。不光如此，二次方程迴歸還默認二者之間的關係在極致點是左右對稱的。這無論如何在現實中都很難有成這樣關係的兩個變量。</p>
+<p>二次方程的迴歸模型的應用在非線性模型中的應用其實有許許多多的缺陷。例如二次方程迴歸只能默認有一個極致點。也就是在二次方程模型中，預測變量和因變量的關係要麼是先下降後升高，要麼是先升高再下降。不光如此，二次方程迴歸還默認二者之間的關係在極致點是左右對稱的。這無論如何在現實中都很難有成這樣關係的兩個變量。所以，假如你使用二次方程模型迴歸之後發現非線性的證據是有意義的，那麼更好的辦法是接下來擬合一個更加符合實際情況的非線性模型-多項式曲線迴歸模型。</p>
+<p>二次方程回顧模型是多項式曲線迴歸模型的最簡單形式，其次是三次方程模型 (其實就是在公式 <a href="section-31.html#eq:lm6-1">(31.1)</a> 裏面加一個 <span class="math inline">\(+\beta_3 x_i^3\)</span>)。另一種更加靈活的模型是擬合一個精確的分段式多項式模型，即允許在不同範圍 (被描述爲 “結點 knots”) 的預測變量 <span class="math inline">\(X\)</span> 內擬合不同的模型。其中一種叫做 <strong>限制性立方曲線模型</strong> restricted cubic spline model (<a href="http://wangcc.me/publication/hpylorimeta/">點這裏看我用了這種方法的論文</a>)：</p>
+<ol style="list-style-type: decimal">
+<li>默認第一個節點之前和最後一個節點以後爲直線模型；</li>
+<li>其餘節點之間默認用三次方迴歸模型擬合數據；</li>
+<li>在節點處的兩個方程之間用平滑的曲線連接 (強制兩個方程的一階二階導數相等即可 constraining the first and second derivatives of adjacent functions to agree when they meet at the knot point)</li>
+</ol>
+</div>
+</div>
+<div id="section-31.6" class="section level2">
+<h2><span class="header-section-number">31.6</span> 異常值，槓桿值，和庫克距離</h2>
+<p>觀測值中的異常值很顯然對模型的擬合會有較大的影響。如果某個觀測值對應的擬合值是異常值的話，那麼這樣的值被認爲槓桿值很大。庫克距離 (Cook’s Distance) 是另一種用來衡量異常值的手段。</p>
+<div id="section-31.6.1" class="section level3">
+<h3><span class="header-section-number">31.6.1</span> 異常值和標準化殘差</h3>
+<p>異常值指的是那些通過模型擬合過後，觀測值和擬合值差異很大的那些觀察對象。這些值需要被甄別出來因爲它們</p>
+<ol style="list-style-type: decimal">
+<li>可能是數據錄入階段造成的人爲失誤，或者是有什麼別的原因導致的系統性異常需要讓輸入數據的人員進行進一步的調查；</li>
+<li>異常值可能較大的影響迴歸係數的方差估計，造成不精確甚至錯誤的結果；</li>
+<li>異常值也會影響迴歸係數本身的估計。</li>
+</ol>
+<p>觀測值和擬合值之間的差，被命名爲觀測殘差 (observed residuals)。線性迴歸模型的前提之一是 <strong>真實殘差</strong> 獨立且方差維持恆定不變。但是<strong>觀測殘差卻無可能做到獨立且方差恆定不變</strong>。</p>
+<p>之所以說觀測殘差不是獨立的，可以這樣來理解：假如擬合某個線性迴歸模型，預測變量是二分類的，且其中一個分類只有兩個觀測值，那麼擬合的直線會通過這兩個觀測值的中心點 (均值)，那麼這兩個觀測值的觀測殘差就恰好分佈在迴歸直線的兩側 (相加之和爲零，呈完美負相關)，它們是<strong>相關的</strong>！！！</p>
+<p>觀測殘差的方差不可能恆定的理由，可以這樣來理解：同樣假如擬合某個預測變量是二分類的線性迴歸模型，其中一個分類只有一個觀測值，那麼迴歸直線在這個觀測值處的殘差方差是零。</p>
+<p>標準化殘差 (standardized residuals)，被定義爲每個觀測值的殘差和模型估計的殘差標準誤相除獲得的數據。所以符合前提條件的模型擬合後，計算的標準化殘差會服從標準正態分佈。從標準正態分佈的知識你也應該知道，<strong><span class="math inline">\(95\%\)</span> 的觀測值的標準化殘差必須分佈在數值 <span class="math inline">\(-2, 2\)</span> 範圍內</strong>。</p>
 </div>
 </div>
 </div>
