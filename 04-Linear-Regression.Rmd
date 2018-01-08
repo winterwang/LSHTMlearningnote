@@ -465,7 +465,7 @@ ggplot(Chol, aes(x=chol1, y=chol2)) + geom_point(shape=20, colour="grey40") +
 相似的，第一次膽固醇水平低的人，第二次膽固醇水平低於平均值，但是卻沒有第一次低於平均值的部分多。這一現象被叫做 “向均數迴歸-regression to the mean”
 
 
-### 下面的代碼用於模型的假設診斷
+### 下面的代碼用於模型的假設診斷 {#diagnosis}
 ```{r}
 M <- lm(chol2~chol1, data=Chol)
 par(mfrow = c(2, 2))  # Split the plotting panel into a 2 x 2 grid
@@ -1736,7 +1736,7 @@ $$
 \begin{aligned}
 \mathbf{\hat Y} & = \mathbf{X\hat\beta} \\
                 & = \mathbf{X(X^\prime X)^{-1}X^\prime Y}= \mathbf{PY} \\
-\text{Where } \mathbf{P} &= X(X^\prime X)^{-1}X^\prime
+\text{Where } \mathbf{P} &= \mathbf{X(X^\prime X)^{-1}X^\prime}
 \end{aligned}
 (\#eq:lm5-7)
 $$
@@ -2434,7 +2434,7 @@ y_i & = \alpha + \beta_1 x_i + \beta_2 x_i^2 + \varepsilon_i \\
 (\#eq:lm6-1)
 $$
 
-儘管你看到了二次方程在這裏，但是這仍然是一個線性迴歸模型。但是二次方程的迴歸模型描述的是 $Y, X$ 兩個變量之間的非線性關係。如果你把方程 $\hat{y}_i = \hat\alpha + \hat\beta_1x_i + \hat\beta_2x^2_i$ 對 $x_i$ 求微分，你會得到 $\hat\beta_1+\2\hat\beta_2 x_i$。這是二次方程的曲率方程。所以如果結果中報告 $\hat\beta_2$ 是有統計學意義的，就等於是有證據證明這兩個變量之間的關係不是線性的。
+儘管你看到了二次方程在這裏，但是這仍然是一個線性迴歸模型。但是二次方程的迴歸模型描述的是 $Y, X$ 兩個變量之間的非線性關係。如果你把方程 $\hat{y}_i = \hat\alpha + \hat\beta_1x_i + \hat\beta_2x^2_i$ 對 $x_i$ 求微分，你會得到 $\hat\beta_1+2\hat\beta_2 x_i$。這是二次方程的曲率方程。所以如果結果中報告 $\hat\beta_2$ 是有統計學意義的，就等於是有證據證明這兩個變量之間的關係不是線性的。
 
 ```{r}
 growgam1$age2 <- (growgam1$age)^2
@@ -2473,6 +2473,65 @@ print(summary(Model2), digits = 5)
 
 觀測殘差的方差不可能恆定的理由，可以這樣來理解：同樣假如擬合某個預測變量是二分類的線性迴歸模型，其中一個分類只有一個觀測值，那麼迴歸直線在這個觀測值處的殘差方差是零。
 
-標準化殘差 (standardized residuals)，被定義爲每個觀測值的殘差和模型估計的殘差標準誤相除獲得的數據。所以符合前提條件的模型擬合後，計算的標準化殘差會服從標準正態分佈。從標準正態分佈的知識你也應該知道，**$95\%$ 的觀測值的標準化殘差必須分佈在數值 $-2, 2$ 範圍內**。另外一種標準化殘差的方法叫做內學生化殘差 (studentised residual)
+標準化殘差 (standardized residuals) $(r_i)$，被定義爲每個觀測值的殘差和模型估計的殘差標準誤相除獲得的數據。所以符合前提條件的線性模型擬合後，計算的標準化殘差會服從標準正態分佈。從標準正態分佈的知識你也應該知道，**$95\%$ 的觀測值的標準化殘差必須分佈在數值 $-2, 2$ 範圍內**。另外一種標準化殘差的方法叫做**內學生化殘差 (studentised residual)**。內學生化殘差是把觀測值的殘差除以每一個觀測值各自的估計標準誤。在 R 裏面可以通過 `rstandard()` 命令計算迴歸模型每個觀測值的內學生化殘差。**內學生化殘差也是服從標準正態分佈的**。
+
+### 槓桿值 Leverage
+
+如果一個觀測值的擬合值十分極端，那麼該觀測值本身可能對迴歸模型的參數估計影響很大。這個影響程度大小用槓桿值衡量。簡單線性迴歸時，每個觀測值的槓桿值計算公式爲：
+
+$$
+\begin{aligned}
+l_i = \frac{1}{n} + \frac{x_i-\bar{x}}{SS_{xx}}
+\end{aligned}
+(\#eq:lm6-4)
+$$
+
+多元線性迴歸時的槓桿值計算公式和 \@ref(eq:lm5-7) 中的帽子矩陣 $\mathbf{P}$ 有關：
+
+
+$$
+\begin{aligned}
+ & l_i = \mathbf{P}_{ii} \text{ The } i\text{ th diagonal element of } \\
+ & \mathbf{X(X^\prime X)^{-1}X^\prime}
+\end{aligned}
+(\#eq:lm6-5)
+$$
+
+槓桿值的範圍是 $\frac{1}{n}, 1$ 之間。槓桿值越大，該觀測值就有越大的可能性對模型擬合造成影響。如果槓桿值大到等於 $1$，那麼槓桿效應造成的影響極大，觀測值和擬合值就完全一致。意味着在這個觀測值附近，只有它自己，沒有其他觀測值。
+
+### 庫克距離 Cook's Distance
+
+當通過計算觀測值的槓桿值之後，發現具有較大槓桿值的那些觀測點，應該被視爲對模型的穩定性有**“潛在威脅”**。此時就輪到庫克距離的登場。庫克距離可以用來衡量一個觀測值對模型的影響大小 (比較把觀測值移除出模型前後的模型變化)。
+
+對於一個有 $p$ 個預測變量的迴歸模型來說，如果殘差方差的估計值爲 $\hat\sigma^2$，那麼第 $i$ 個觀測值的庫克距離的計算過程就是把該觀測值移除，重新擬合相同的模型，計算獲得該點的新的擬合值 $\hat y_{j(i)}$：
+
+$$
+\begin{aligned}
+D_i = \frac{\sum^n_{j=1}(\hat y_{j(i)} - \hat y_j)^2}{(p+1)\hat\sigma^2}
+\end{aligned}
+(\#eq:lm6-6)
+$$
+
+可以被證明的是，庫克距離其實是結合標準化殘差值 $(r_i)$，和槓桿值 $(l_i)$ 的一個綜合量：
+
+$$
+\begin{aligned}
+D_i & = \frac{\sum^n_{j=1}(\hat y_{j(i)} - \hat y_j)^2}{(p+1)\hat\sigma^2} \\
+    & = \frac{r^2_il_i}{(p+1)(1-l_i)}
+\end{aligned}
+(\#eq:lm6-7)
+$$
+
+
+所以從庫克距離和標準化殘差，以及槓桿值之間的關係公式 \@ref(eq:lm6-7) 也可以看出，當槓桿值大同時標準化殘差值的絕對值也大的觀測值，庫克距離就會很大。用線性迴歸時，把每個觀測值得庫克距離和擬合值作散點圖，或者把槓桿值和標準化殘差作散點圖是常用的判斷異常值的手段。
+
+## 在統計忍者包裏面對模型診斷作圖
+
+擬合好了一個線性迴歸模型以後，`plot(Modelname)` 即可看到四個診斷圖 {Section \@ref(diagnosis)}。
+
+
+
+
+
 
 # 交互作用 Interactions
