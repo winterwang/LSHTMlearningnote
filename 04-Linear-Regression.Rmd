@@ -615,7 +615,7 @@ $$
 
 上面的公式 \@ref(eq:varhatalpha) \@ref(eq:varhatbeta) \@ref(eq:covaralphabeta) 都包含了真實的殘差方差 $\sigma^2$。這個量對於我們“人類”來說是未知的。
 
-### 中心化 centring
+### 中心化 centring {#centring}
 
 簡單線性迴歸模型常用的一個技巧是將預測變量中心化。即，求預測變量的均值，然後將每個觀測值減去均值之後再用這個新的預測變量擬合簡單線性迴歸模型。這樣做其實完全不影響回顧係數，卻會影響截距的大小。此時新的迴歸直線的截距，就等於因變量 (體重) 的均值。
 
@@ -2619,3 +2619,64 @@ $$
 
 
 前面 (Section \@ref(interaction-cont-bin)) 已經討論過，一個是連續型變量 $X_1$，另一個是分類變量時 $X_2$，線性迴歸的交互作用項迴歸係數的含義是因變量 $Y$ 和連續性變量 $X_1$ 在不同的 $X_2$ 組中的迴歸係數之差(斜率之差)。但是，當兩個預測變量 $X_1, X_2$ 都是連續型變量時，交互作用項的迴歸係數該如何解釋呢？直觀的說，此時的交互作用項迴歸係數應該被理解爲：**預測變量 $X_2$ 每增加一個單位時，$Y, X_1$ 之間關係的迴歸方程的斜率變化**。爲了更好地解釋這個概念，我們沿用前面兒童年齡和身長預測其身高的模型 (Section \@ref(globalsig))，加入年齡和身高的交互作用項結果如下：
+
+
+
+```{r}
+library(haven)
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+growgam1$sex <- as.factor(growgam1$sex)
+
+Model1 <- lm(wt ~ age + len + age*len, data=growgam1)
+# or equivalently use lm(wt ~  age*len, data=growgam1)
+
+summary(Model1)
+confint(Model1)
+```
+
+這裏的模型中，兒童的身長和年齡相乘的部分構成了一個交互作用項。我們用這個擬合的迴歸方程寫出當兒童年齡爲 12 個月時，身長預測體重的方程：
+
+$$
+\begin{aligned}
+E(\text{weight|age}=12) & = (-4.5196 - 0.2849\times12) + (0.1878 + 0.0034\times12)\times\text{Length} \\
+                        & = -7.9384 + 0.2286\times \text{Length}
+\end{aligned}
+$$
+
+類似地，年齡 13 個月時， 預測體重的方程是：
+
+$$
+\begin{aligned}
+E(\text{weight|age}=13) & = (-4.5196 - 0.2849\times13) + (0.1878 + 0.0034\times13)\times\text{Length} \\
+                        & = -8.2233 + 0.2320\times \text{Length}
+\end{aligned}
+$$
+
+年齡 13 個月時， 預測體重的方程是：
+
+$$
+\begin{aligned}
+E(\text{weight|age}=14) & = (-4.5196 - 0.2849\times14) + (0.1878 + 0.0034\times14)\times\text{Length} \\
+                        & = -8.5082 + 0.2354\times \text{Length}
+\end{aligned}
+$$
+
+所以你會看到每個給定的兒童年齡時的方程身長預測體重的方程都是線性方程，截距和斜率都在變化。兒童的年齡每增加 $1$ 個月，身長和體重的相關係數增加 $0.034 \text{kg/cm}$。除了迴歸係數，其餘的數字都是不能用正常的數據來理解的 (沒有兒童身長 或者 體重會等於零)。如果非要解釋，那麼需要把數據全部中心化 (Section \@ref(centring))。
+
+
+
+```{r}
+epiDisplay::summ(growgam1$age); epiDisplay::summ(growgam1$len)
+growgam1$age_c <- growgam1$age-mean(growgam1$age)
+growgam1$len_c <- growgam1$len-mean(growgam1$len)
+
+Model2 <- lm(wt ~ age_c + len_c + age_c*len_c, data=growgam1)
+# or equivalently use lm(wt ~  age_c*len_c, data=growgam1)
+summary(Model2)
+confint(Model2)
+```
+
+你會解釋上面中心化數據以後擬合的迴歸方程的結果，和各個參數估計的意義嗎？
+
+
+### 
