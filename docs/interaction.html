@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="index.html">
-<link rel="next" href="intro.html">
+<link rel="prev" href="section-31.html">
+<link rel="next" href="sample-size.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -642,11 +642,179 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="author" class="section level1 unnumbered">
-<h1>我是誰</h1>
-<p>歡迎參觀我的<a href="https://winterwang.github.io">個人主頁</a>。</p>
+<div id="interaction" class="section level1">
+<h1><span class="header-section-number">第 32 章</span> 交互作用 Interactions</h1>
+<p>線性迴歸部分目前爲止我們討論過如何用多元迴歸模型來控制 (或調整) 特定的預測變量 <span class="math inline">\((X)\)</span> 之外的變量。多元迴歸的目的之一是爲了估計預測變量和因變量之間的迴歸係數的同時，保持其他 (想要被調整的) 變量不變。如此一來，其實等於是假定了無論其餘的調整變量取值如何，<span class="math inline">\(X,Y\)</span> 之間的迴歸係數<strong>總是相同</strong> (繪製的迴歸線是一組平行線)。本章討論的交互作用，就是探討其中某個變量<strong>改變了 <span class="math inline">\(X,Y\)</span> 之間的關係 (modification effect)</strong> 的情況。放寬了之前強制所有直線都平行的限制，探討兩個變量之間的線性關係是否因爲某個變量而發生了質的改變。這樣的關係，在流行病學中被定義爲 <strong>交互作用 interaction</strong>。</p>
+<p>本站會探討如何利用線性迴歸模型分析交互作用，如何理解並解釋統計忍者包輸出的報告結果的意義。具體涉及的例子爲：兩個連續型變量，兩個分類型變量，以及一個連續型，一個分類型變量之間的關係的交互作用。</p>
+<div id="section-32.1" class="section level2">
+<h2><span class="header-section-number">32.1</span> 兩個預測變量之間的線性模型交互作用</h2>
+<div id="section-32.1.1" class="section level3">
+<h3><span class="header-section-number">32.1.1</span> 交互作用線性模型的一般表達式</h3>
+<p>假如準備擬合的模型是一個因變量 <span class="math inline">\(Y\)</span>，兩個預測變量 <span class="math inline">\(X_1, X_2\)</span>。同時模型考慮根據 <span class="math inline">\(X_2\)</span> 的值，<span class="math inline">\(X_1, Y\)</span> 之間關係的迴歸係數可以不相等 (直線的斜率不同，即會出現兩條相交的迴歸直線)。這樣的模型其實只要在原有的兩個預測變量的迴歸線性模型中增加一個新的預測變量，新的預測變量是 <span class="math inline">\(X_1, X_2\)</span> 的乘積即可。很簡單，不是麼？</p>
+<p><span class="math display" id="eq:lm7-1">\[
+\begin{aligned}
+y_i  &amp; = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3 x_{3i} + \varepsilon_i \\
+\text{Where, } &amp; \varepsilon_i \sim \text{NID}(0,\sigma^2) \\
+y_i  &amp; = \text{value of the dependent variable} \\
+x_{1i} &amp; = \text{value of the first predictor variable} \\
+x_{2i} &amp; = \text{value of the second predictor variable} \\
+x_{3i} &amp; = x_{1i} \times x_{2i} \\
+\end{aligned}
+\tag{32.1}
+\]</span></p>
+<p>爲什麼增加一個 <span class="math inline">\(X_1\times X_2\)</span> 就能夠分析交互作用呢 (不同直線的斜率)？ 要理解其中的奧妙，我們可以這樣來理解：當像普通的線性迴歸模型那樣調整了 <span class="math inline">\(X_2\)</span> 之後，也就是當 <span class="math inline">\(X_2\)</span> 固定不變時 <span class="math inline">\((X_2=k)\)</span>，迴歸方程 <a href="interaction.html#eq:lm7-1">(32.1)</a>，就變成了：</p>
+<p><span class="math display" id="eq:lm7-2">\[
+\begin{equation}
+y_i  = (\alpha + \beta_2 k) + (\beta_1 + \beta_3 k)x_{1i} + \varepsilon_i
+\end{equation}
+\tag{32.2}
+\]</span></p>
+<p>此時的 <span class="math inline">\(X_1\)</span> 的斜率從 <span class="math inline">\(\beta_1\)</span> 變成了 <span class="math inline">\((\beta_1 + \beta_3 k)\)</span>，截距從 <span class="math inline">\(\alpha\)</span> 變成了 <span class="math inline">\((\alpha + \beta_2 k)\)</span>。</p>
+</div>
+<div id="interaction-cont-bin" class="section level3">
+<h3><span class="header-section-number">32.1.2</span> 連續型變量和二分類變量之間的交互作用</h3>
+<p>一個連續型變臉一個二分類變量的交互作用迴歸方程十分容易理解 (利用啞變量建立模型)：</p>
+<p><span class="math display" id="eq:lm7-4">\[
+\begin{array}{ll}
+y_i  = \alpha + \beta_1 x_1i + \varepsilon_i  &amp;   \text{ when } X_2 = 0 \\
+y_i  = (\alpha + \beta_2) + (\beta_1+\beta_3)x_{1i} + \varepsilon_i &amp; \text{ when } X_2 =1
+\end{array}
+\tag{32.3}
+\]</span></p>
+<p>所以，<span class="math inline">\(X_2\)</span> 取零 或者 取 <span class="math inline">\(1\)</span> 代表了不同的分組，上面的迴歸方程就可以擬合 <span class="math inline">\(Y, X_1\)</span> 在 <span class="math inline">\(X_2\)</span> 的兩組中不同截距，不同斜率的兩條直線。其中各個參數估計，用人話來解釋就是：</p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(\alpha\)</span> 是當 <span class="math inline">\(X_2 = 0\)</span> 時的<strong>截距</strong>；</li>
+<li><span class="math inline">\(\alpha + \beta_2\)</span> 是當 <span class="math inline">\(X_2 = 1\)</span> 時的截距，所以 <span class="math inline">\(\beta_2\)</span> 就是二分類預測變量 <span class="math inline">\(X_2\)</span> 的兩組之間<strong>截距的差</strong>；</li>
+<li><span class="math inline">\(\beta_1\)</span> 是當 <span class="math inline">\(X_2 = 0\)</span> 時的<strong>斜率</strong>；</li>
+<li><span class="math inline">\((\beta_1+\beta_3)\)</span> 是當 <span class="math inline">\(X_2 = 1\)</span> 時的截距，所以 <span class="math inline">\(\beta_3\)</span> 就是二分類預測變量 <span class="math inline">\(X_2\)</span> 的兩組之間<strong>斜率的差</strong>。</li>
+</ol>
+</div>
+<div id="section-32.1.3" class="section level3">
+<h3><span class="header-section-number">32.1.3</span> 兩個二分類變量之間的交互作用</h3>
+<p>當兩個預測變量都是二分類變量時，可以用兩個啞變量來編碼各自的分組，擬合下面的迴歸模型：</p>
+<p><span class="math display" id="eq:lm7-5">\[
+\begin{array}{lll}
+y_i = \alpha + \varepsilon_i   &amp;  \text{ when } X_1 = 0 \&amp; X_2 = 0  &amp; \mu_{00} \\
+y_i = \alpha + \beta_1 + \varepsilon_i &amp; \text{ when } X_1 = 1 \&amp; X_2 =0  &amp; \mu_{10} \\
+y_i = \alpha + \beta_2 + \varepsilon_i &amp; \text{ when } X_1 = 0 \&amp; X_2 =1  &amp; \mu_{01} \\
+y_i = \alpha + \beta_1 + \beta_2+ \beta_3 + \varepsilon_i &amp; \text{ when } X_1 = 1 \&amp; X_2 = 1 &amp; \mu_{11}
+\end{array}
+\tag{32.4}
+\]</span></p>
+<p>如果用 <span class="math inline">\(\mu_{ij}\)</span> 表示 <span class="math inline">\(X_1 = i, X_2 = j\)</span> 時的總體均值 (population mean)，那麼模型 <a href="interaction.html#eq:lm7-5">(32.4)</a> 各個參數估計及其意義爲：</p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(\alpha\)</span> 是當 <span class="math inline">\(X_1 = 0, \&amp; X_2 = 0\)</span> 時 <span class="math inline">\(Y\)</span> 的均值估計 <span class="math inline">\((\mu_{00})\)</span>；</li>
+<li><span class="math inline">\(\alpha+\beta_1\)</span> 是當 <span class="math inline">\(X_1 = 1 \&amp; X_2 = 0\)</span> 時 <span class="math inline">\(Y\)</span> 的均值估計 <span class="math inline">\(\mu_{10}\)</span>，所以 <span class="math inline">\(\beta_1\)</span> 是 <span class="math inline">\(X_2 = 0\)</span> 時 <span class="math inline">\(X_1\)</span> 的兩組之間 <span class="math inline">\(Y\)</span> 的均值差，<span class="math inline">\(\mu_{10}-\mu_{00}\)</span>；</li>
+<li><span class="math inline">\(\alpha+\beta_2\)</span> 是當 <span class="math inline">\(X_1 = 0 \&amp; X_2 = 1\)</span> 時 <span class="math inline">\(Y\)</span> 的均值估計 <span class="math inline">\(\mu_{01}\)</span>，所以 <span class="math inline">\(\beta_2\)</span> 是 <span class="math inline">\(X_1 = 0\)</span> 時 <span class="math inline">\(X_2\)</span> 的兩組之間 <span class="math inline">\(Y\)</span> 的均值差，<span class="math inline">\(\mu_{01}-\mu_{00}\)</span>；</li>
+<li><span class="math inline">\(\alpha + \beta_1 + \beta_2 + \beta_3\)</span> 是當 <span class="math inline">\(X_1 = 1 \&amp; X_2 = 1\)</span> 時的均值估計 <span class="math inline">\(\mu_{11}\)</span>，所以 <span class="math inline">\(\beta_3\)</span> 是 <span class="math inline">\(X_1 = 1\)</span> 時，<span class="math inline">\(X_2\)</span> 的兩組之間 <span class="math inline">\(Y\)</span> 的均值差 <span class="math inline">\(\mu_{11}-\mu_{10}\)</span> <strong>減去</strong> <span class="math inline">\(X_2 = 0\)</span> 時，<span class="math inline">\(X_1\)</span> 的兩組之間的均值差 <span class="math inline">\(\mu_{01}-\mu_{00}\)</span>：<span class="math inline">\((\mu_{11}-\mu_{10}) - (\mu_{01}-\mu_{00})\)</span>。</li>
+</ol>
+<p>當 <span class="math inline">\(X_1\)</span> 是連續型變量時，交互作用項的迴歸係數 <span class="math inline">\(\beta_3\)</span> 的幾何意義是兩個迴歸直線斜率的差。但是本例中，兩個預測變量都是二分類變量的情況下，<span class="math inline">\(\beta_3\)</span> 的實際意義就變成了，被 <span class="math inline">\(X_2\)</span> 定義的兩組 <span class="math inline">\(X_1\)</span> 之間因變量差的差，<span class="math inline">\((\mu_{11}-\mu_{10}) - (\mu_{01}-\mu_{00})\)</span>。</p>
+</div>
+<div id="section-32.1.4" class="section level3">
+<h3><span class="header-section-number">32.1.4</span> 兩個連續變量之間的交互作用</h3>
+<p>前面 (Section <a href="interaction.html#interaction-cont-bin">32.1.2</a>) 已經討論過，一個是連續型變量 <span class="math inline">\(X_1\)</span>，另一個是分類變量時 <span class="math inline">\(X_2\)</span>，線性迴歸的交互作用項迴歸係數的含義是因變量 <span class="math inline">\(Y\)</span> 和連續性變量 <span class="math inline">\(X_1\)</span> 在不同的 <span class="math inline">\(X_2\)</span> 組中的迴歸係數之差(斜率之差)。但是，當兩個預測變量 <span class="math inline">\(X_1, X_2\)</span> 都是連續型變量時，交互作用項的迴歸係數該如何解釋呢？直觀的說，此時的交互作用項迴歸係數應該被理解爲：<strong>預測變量 <span class="math inline">\(X_2\)</span> 每增加一個單位時，<span class="math inline">\(Y, X_1\)</span> 之間關係的迴歸方程的斜率變化</strong>。爲了更好地解釋這個概念，我們沿用前面兒童年齡和身長預測其身高的模型 (Section <a href="section-30.html#globalsig">30.3.3</a>)，加入年齡和身高的交互作用項結果如下：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(haven)
+growgam1 &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/growgam1.dta&quot;</span>)
+growgam1<span class="op">$</span>sex &lt;-<span class="st"> </span><span class="kw">as.factor</span>(growgam1<span class="op">$</span>sex)
 
+Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>len <span class="op">+</span><span class="st"> </span>age<span class="op">*</span>len, <span class="dt">data=</span>growgam1)
+<span class="co"># or equivalently use lm(wt ~  age*len, data=growgam1)</span>
 
+<span class="kw">summary</span>(Model1)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = wt ~ age + len + age * len, data = growgam1)
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -3.200 -0.651  0.003  0.522  2.895 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) -4.51956    1.90918   -2.37   0.0189 *  
+## age         -0.28490    0.10496   -2.71   0.0073 ** 
+## len          0.18777    0.02681    7.00  4.4e-11 ***
+## age:len      0.00340    0.00129    2.64   0.0090 ** 
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.94 on 186 degrees of freedom
+## Multiple R-squared:  0.753,  Adjusted R-squared:  0.749 
+## F-statistic:  189 on 3 and 186 DF,  p-value: &lt;2e-16</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">confint</span>(Model1)</code></pre></div>
+<pre><code>##                  2.5 %    97.5 %
+## (Intercept) -8.2859887 -0.753130
+## age         -0.4919562 -0.077844
+## len          0.1348837  0.240657
+## age:len      0.0008588  0.005937</code></pre>
+<p>這裏的模型中，兒童的身長和年齡相乘的部分構成了一個交互作用項。我們用這個擬合的迴歸方程寫出當兒童年齡爲 12 個月時，身長預測體重的方程：</p>
+<p><span class="math display">\[
+\begin{aligned}
+E(\text{weight|age}=12) &amp; = (-4.5196 - 0.2849\times12) \\
+                        &amp; \;\;\;\;\;\;\;\;+ (0.1878 + 0.0034\times12)\times\text{Length} \\
+                        &amp; = -7.9384 + 0.2286\times \text{Length}
+\end{aligned}
+\]</span></p>
+<p>類似地，年齡 13 個月時， 預測體重的方程是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+E(\text{weight|age}=13) &amp; = (-4.5196 - 0.2849\times13) \\
+                        &amp; \;\;\;\;\;\;\;\;+ (0.1878 + 0.0034\times13)\times\text{Length} \\
+                        &amp; = -8.2233 + 0.2320\times \text{Length}
+\end{aligned}
+\]</span></p>
+<p>年齡 13 個月時， 預測體重的方程是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+E(\text{weight|age}=14) &amp; = (-4.5196 - 0.2849\times14) \\
+                        &amp; \;\;\;\;\;\;\;\;+ (0.1878 + 0.0034\times14)\times\text{Length} \\
+                        &amp; = -8.5082 + 0.2354\times \text{Length}
+\end{aligned}
+\]</span></p>
+<p>所以你會看到每個給定的兒童年齡時的方程身長預測體重的方程都是線性方程，截距和斜率都在變化。兒童的年齡每增加 <span class="math inline">\(1\)</span> 個月，身長和體重的相關係數增加 <span class="math inline">\(0.0034 \text{kg/cm}\)</span>。除了迴歸係數，其餘的數字都是不能用正常的數據來理解的 (沒有兒童身長 或者 體重會等於零)。如果非要解釋，那麼需要把數據全部中心化 (Section <a href="-ordinary-least-squares-estimators-and-inference.html#centring">27.3.1</a>)。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">epiDisplay<span class="op">::</span><span class="kw">summ</span>(growgam1<span class="op">$</span>age, <span class="dt">graph=</span><span class="ot">FALSE</span>); epiDisplay<span class="op">::</span><span class="kw">summ</span>(growgam1<span class="op">$</span>len, <span class="dt">graph=</span><span class="ot">FALSE</span>)</code></pre></div>
+<pre><code>##  obs. mean   median  s.d.   min.   max.  
+##  190  16.979 16      8.337  5      36</code></pre>
+<pre><code>##  obs. mean   median  s.d.   min.   max.  
+##  190  76.697 76.05   7.156  60.1   95.5</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">growgam1<span class="op">$</span>age_c &lt;-<span class="st"> </span>growgam1<span class="op">$</span>age<span class="op">-</span><span class="kw">mean</span>(growgam1<span class="op">$</span>age)
+growgam1<span class="op">$</span>len_c &lt;-<span class="st"> </span>growgam1<span class="op">$</span>len<span class="op">-</span><span class="kw">mean</span>(growgam1<span class="op">$</span>len)
+
+Model2 &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age_c <span class="op">+</span><span class="st"> </span>len_c <span class="op">+</span><span class="st"> </span>age_c<span class="op">*</span>len_c, <span class="dt">data=</span>growgam1)
+<span class="co"># or equivalently use lm(wt ~  age_c*len_c, data=growgam1)</span>
+<span class="kw">summary</span>(Model2)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = wt ~ age_c + len_c + age_c * len_c, data = growgam1)
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -3.200 -0.651  0.003  0.522  2.895 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  9.46978    0.09507   99.60   &lt;2e-16 ***
+## age_c       -0.02427    0.01721   -1.41    0.160    
+## len_c        0.24547    0.01947   12.61   &lt;2e-16 ***
+## age_c:len_c  0.00340    0.00129    2.64    0.009 ** 
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.94 on 186 degrees of freedom
+## Multiple R-squared:  0.753,  Adjusted R-squared:  0.749 
+## F-statistic:  189 on 3 and 186 DF,  p-value: &lt;2e-16</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">confint</span>(Model2)</code></pre></div>
+<pre><code>##                  2.5 %   97.5 %
+## (Intercept)  9.2822177 9.657345
+## age_c       -0.0582290 0.009680
+## len_c        0.2070560 0.283877
+## age_c:len_c  0.0008588 0.005937</code></pre>
+<p>你會解釋上面中心化數據以後擬合的迴歸方程的結果，和各個參數估計的意義嗎？</p>
+
+</div>
+</div>
 </div>
 
 
@@ -656,8 +824,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           </div>
         </div>
       </div>
-<a href="index.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="intro.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="section-31.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="sample-size.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -686,7 +854,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/00-author.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/04-Linear-Regression.Rmd",
 "text": "編輯"
 },
 "download": ["bookdown.pdf", "bookdown.epub"],
