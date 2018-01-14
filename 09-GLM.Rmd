@@ -397,7 +397,7 @@ Log likelihood   =  -185.707106                   BIC             =   450.8676
 
 回到 R 來， 當儲存了一個 `Model2` 向量在 R 裏之後，你可以用下面的各種命令獲取你想要的各種有用的信息。
 
-```{r}
+```{r message=FALSE}
 confint(Model2) # 95% CI for the coefficients
 exp(coef(Model2)) # exponentiated coefficients
 exp(confint(Model2)) # 95% CI for exponentiated coefficients
@@ -405,9 +405,11 @@ head(predict(Model2, type="response")) # predicted values
 head(residuals(Model2, type="deviance")) # residuals
 ```
 
+### `margins` 命令
+
 一個在 STATA 裏面十分有用的用於**預測**的命令 `margins`，在 R 裏，下載了 `margins` 包以後就可以調用它的類似命令。
 
-假如我們用擬合的模型預測當注射前精神病檢測值分別是 0，6，12 分時三組之間的注射後精神病檢測值可以這樣求：
+假如我們用擬合的模型預測當注射前精神病檢測值分別是 0，6，12 分時三組之間的注射後精神病檢測值差，可以這樣求：
 
 ```{r}
 library(margins)
@@ -453,7 +455,25 @@ dy/dx w.r.t. : 2.trt 3.trt
 Note: dy/dx for factor levels is the discrete change from the base level.
 ```
 
+### `ggplot2::geom_smooth(method = "loess")` 命令
 
+類似 STATA 作散點圖時的 `lowess` 命令，在 R 裏，你可以用 `ggplot2` 包裏自帶的 `geom_smooth(method = "loess")` 選項命令，給散點圖添加平滑曲線。把觀測數據中變量之間的關係視覺化，用於輔助判斷一個模型是否可以被擬合爲線性關係。全稱是 “locally weighted scatterplot smoothing”，縮寫成 "lowess/loess"。[LOWESS 的原理](https://en.wikipedia.org/wiki/Local_regression)簡略說是，通過把預測變量分成幾個部分，分別在各個小區間內擬合迴歸各自的迴歸曲線，如此便可以將**每個觀測值都加權進入整個模型**中，然而正如我們在簡單線性模型中提到過的，這樣的曲線更加擬合觀測數據，而不能說明觀測值來自的人羣的關係。此方法的靈活性在於，你可以選擇平滑的程度，該平滑程度用 `bandwith`(STATA) 或者 `span`(R)表示，取值範圍是 $0 \sim 1$ 之間的任意值，越靠近 $1$，Lowess 曲線越接近簡單線性直線，越靠近 $0$，那麼每個觀測點本身的權重越大，擬合的 Lowess 曲線越接近觀測數據本身。下圖 \@ref(fig:loess-smoother1) 提示，選用的平滑程度 $= 0.8$ 時，精神病測量分數在實驗前後的關係接近線性關係。當我們降低平滑程度，Lowess 曲線接近觀測數據本身，其實是太接近觀測數據本身，反而無法提供太多的信息。
+
+
+```{r loess-smoother1, echo=TRUE, fig.width=7, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.8, for the menetal data", fig.align='center', out.width='100%', cache=TRUE}
+library(ggplot2)
+ggplot(Mental, aes(Before, After)) + geom_point() +
+  geom_smooth(method = "loess",  span = 0.8, se = FALSE) +
+  facet_grid(treatment ~ .)
+```
+
+
+```{r loess-smoother2, echo=TRUE, fig.width=7, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.0.4, for the menetal data", fig.align='center', out.width='100%', cache=TRUE}
+library(ggplot2)
+ggplot(Mental, aes(Before, After)) + geom_point() +
+  geom_smooth(method = "loess",  span = 0.4, se = FALSE) +
+  facet_grid(treatment ~ .)
+```
 
 # 二項分佈的廣義線性迴歸模型
 
