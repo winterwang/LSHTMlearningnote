@@ -457,7 +457,7 @@ Note: dy/dx for factor levels is the discrete change from the base level.
 
 ### `ggplot2::geom_smooth(method = "loess")` 命令
 
-類似 STATA 作散點圖時的 `lowess` 命令，在 R 裏，你可以用 `ggplot2` 包裏自帶的 `geom_smooth(method = "loess")` 選項命令，給散點圖添加平滑曲線。把觀測數據中變量之間的關係視覺化，用於輔助判斷一個模型是否可以被擬合爲線性關係。全稱是 “locally weighted scatterplot smoothing”，縮寫成 "lowess/loess"。[LOWESS 的原理](https://en.wikipedia.org/wiki/Local_regression)簡略說是，通過把預測變量分成幾個部分，分別在各個小區間內擬合迴歸各自的迴歸曲線，如此便可以將**每個觀測值都以各自不同的的加權值進入整個模型**中，然而正如我們在簡單線性模型中提到過的，這樣的曲線更加擬合觀測數據，而不能說明觀測值來自的人羣的關係。此方法的靈活性在於，你可以選擇平滑的程度，該平滑程度用 `bandwith`(STATA) 或者 `span`(R) 表示，取值範圍是 $0 \sim 1$ 之間的任意值，越靠近 $1$，Lowess 曲線越接近簡單線性直線，越靠近 $0$，那麼每個觀測點本身的權重越大，擬合的 Lowess 曲線越接近觀測數據本身。下圖 \@ref(fig:loess-smoother1) 提示，選用的平滑程度 $= 0.8$ 時，精神病測量分數在 (安慰劑組中) 實驗前後的關係接近線性關係。當我們降低平滑程度，Lowess 曲線接近觀測數據本身，其實是太接近觀測數據本身，反而無法提供太多的信息。
+類似 STATA 作散點圖時的 `lowess` 命令，在 R 裏，你可以用 `ggplot2` 包裏自帶的 `geom_smooth(method = "loess")` 選項命令，給散點圖添加平滑曲線。把觀測數據中變量之間的關係視覺化，用於輔助判斷一個模型是否可以被擬合爲線性關係。全稱是 “locally weighted scatterplot smoothing”，縮寫成 "lowess/loess"。[LOWESS 的原理](https://en.wikipedia.org/wiki/Local_regression)簡略說是，通過把預測變量分成幾個部分，分別在各個小區間內擬合迴歸各自的迴歸曲線，如此便可以將**每個觀測值都以各自不同的加權值放入整個模型**中，然而正如我們在簡單線性模型中提到過的，這樣的曲線更加擬合觀測數據，而不能說明觀測值來自的人羣中，兩個變量之間的關係。此方法的靈活性在於，你可以選擇平滑的程度，該平滑程度用 `bandwith`(STATA) 或者 `span`(R) 表示，取值範圍是 $0 \sim 1$ 之間的任意值，越靠近 $1$，Lowess 曲線越接近簡單線性直線，越靠近 $0$，那麼每個觀測點本身的權重越大，擬合的 Lowess 曲線越接近觀測數據本身。下圖 \@ref(fig:loess-smoother1) 提示，選用的平滑程度 $= 0.8$ 時，精神病測量分數在 (安慰劑組中) 實驗前後的關係接近線性關係。當我們降低平滑程度，Lowess 曲線接近觀測數據本身，其實是太接近觀測數據本身，反而無法提供太多的信息。
 
 
 ```{r loess-smoother1, echo=TRUE, fig.width=7, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.8, for the menetal data", fig.align='center', out.width='100%', cache=TRUE}
@@ -468,14 +468,59 @@ ggplot(Mental, aes(Before, After)) + geom_point() +
 ```
 
 
-```{r loess-smoother2, echo=TRUE, fig.width=7, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.0.4, for the menetal data", fig.align='center', out.width='100%', cache=TRUE, message=FALSE, warning=FALSE}
+```{r loess-smoother2, echo=TRUE, fig.width=7, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.4, for the menetal data", fig.align='center', out.width='100%', cache=TRUE, message=FALSE, warning=FALSE}
 library(ggplot2)
 ggplot(Mental, aes(Before, After)) + geom_point() +
   geom_smooth(method = "loess",  span = 0.4, se = FALSE) +
   facet_grid(treatment ~ .) + theme_bw()
 ```
 
-# 二項分佈的廣義線性迴歸模型
+# 二項分佈數據的廣義線性迴歸模型 logistic regression model
+
+二項分佈數據在醫學研究中很常見，例子有千千萬，下面這些只是作爲拋磚引玉：
+
+1. 心臟搭橋手術和血管成形術兩組病人比較療效時，結果變量可以是：死亡 (是/否)；心肌梗死發作 (是/否)；
+2. 機械心臟瓣膜手術結果：成功/失敗；
+3. 用小鼠作不同劑量二硫化碳暴露下的毒理學實驗，結果變量是：小鼠死亡 (是/否)；
+4. 隊列研究中追蹤對象中出現心肌梗死病例，結果變量是：心肌梗死發作 (是/否)。
+
+## 分組/個人 (grouped / individual) 的二項分佈數據
+
+下面的數據，來自某個毒理學實驗，不同劑量的二硫化碳暴露下小鼠的死亡數和總數的數據：
+
+```{r cache=TRUE, echo=FALSE}
+Insect <- read.table("backupfiles/INSECT.RAW", header =  FALSE, sep ="", col.names = c("dose", "n_deaths", "n_subjects"))
+print(Insect)
+```
+
+很容易理解這是一個典型的分組二項分佈數據 (grouped binary data)。每組不同的劑量，第二列，第三列分別是死亡數和實驗總數。另外一種個人二項分佈數據 (individual binary data) 的形式是這樣的：
+
+```{r echo=FALSE}
+dose <- c(rep("49.06", 10), rep("." , 3))
+death <- c(rep(1, 6), rep(0,4), rep(".", 3))
+data.frame(dose, death)
+```
+個人二項分佈數據其實就是把每個觀察對象的事件發生與否的信息都呈現出來。通常個人二項分佈數據又被稱爲**伯努利數據**，分組型的二項分佈數據被稱爲**二項數據**。兩種表達形式，但是存儲的是一樣的數據。
+
+## 二項分佈數據的廣義線性迴歸模型
+
+而所有的 GLM 一樣，二項分佈的 GLM 包括三個部分：
+
+1. 因變量的分佈 Distribution：因變量應相互獨立，且服從二項分佈 <br> $$\begin{aligned} Y_i &\sim \text{Bin}(n_i, \pi_i), i = 1, \cdots, n \\ E(Y_i) &= \mu_i = n_i\pi_i\end{aligned}$$
+2. 線性預測方程 Linear predictor：第 $i$ 名觀測對象的預測變量的線性迴歸模型 <br> $$\eta_i = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}$$
+3. 鏈接方程 Link function：鏈接方程連接的是 $\mu_i = n\pi_i$ 和線性預測方程。一個二項分佈因變量數據，可以有許多種鏈接方程：
+    1. $\textbf{logit}:$ $$\text{logit}(\pi) = \text{ln}(\frac{\pi}{1-\pi})$$
+    2. $\textbf{probit}:$ $$\text{probit}(\pi) = \Phi^{-1}(\pi)$$
+    3. $\textbf{complementary log-log}:$ $$\text{cloglog}(\pi) = \text{ln}\{ - \text{ln}(1-\pi) \}$$
+    4. $\textbf{log:}$ $$\text{log}(\pi) = \text{ln}(\pi)$$
+
+## 注
+
+1. 概率鏈接方程 $\text{probit}$，$\Phi$ 被定義爲標準正態分佈的累積概率方程： $$\Phi(z) = \text{Pr}(Z \leqslant z), \text{ for } Z\sim N(0,1)$$
+
+
+
+
 
 # 模型比較和擬合優度
 
