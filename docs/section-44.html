@@ -615,6 +615,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li class="chapter" data-level="44.2" data-path="section-44.html"><a href="section-44.html#section-44.2"><i class="fa fa-check"></i><b>44.2</b> 廣義線性迴歸模型之定義</a></li>
 <li class="chapter" data-level="44.3" data-path="section-44.html"><a href="section-44.html#section-44.3"><i class="fa fa-check"></i><b>44.3</b> 注意</a></li>
+<li class="chapter" data-level="44.4" data-path="section-44.html"><a href="section-44.html#-r--glm"><i class="fa fa-check"></i><b>44.4</b> 如何在 R 裏擬合 “GLM”</a></li>
 </ul></li>
 <li class="chapter" data-level="45" data-path="section-45.html"><a href="section-45.html"><i class="fa fa-check"></i><b>45</b> 二項分佈的廣義線性迴歸模型</a></li>
 <li class="chapter" data-level="46" data-path="section-46.html"><a href="section-46.html"><i class="fa fa-check"></i><b>46</b> 模型比較和擬合優度</a></li>
@@ -725,10 +726,11 @@ f(y) &amp; = \text{Pr}(Y = y) = \binom{n}{y}\pi^y(1-\pi)^{n-y}, y = 0,1,2,\cdots
 <p><strong>證明</strong></p>
 <p><span class="math display">\[
 \begin{aligned}
-Y \sim \text{exp}(\lambda) &amp; \rightarrow f(y) = \lambda \text{exp}(-y\lambda) y &gt; 0\\
+Y \sim \text{exp}(\lambda) &amp; \rightarrow f(y) = \lambda \text{exp}(-y\lambda), y &gt; 0\\
 \Rightarrow \text{ln}\{ f(y) \} &amp; = - y \lambda + \text{ln}(\lambda) \\
-\text{Let } &amp; \color{red}{\theta = -\lambda, b(\theta) = - \text{ln}(\lambda)，\phi = 1, c(y, \phi) = 0} \\
-\text{Because } E(Y) &amp; = \frac{1}{\lambda}, \text{ the canonical link is } g(\lambda) = -\frac{1}{\lambda}
+\text{Let } &amp; \color{red}{\theta = -\lambda, b(\theta) = - \text{ln}(\lambda), \phi = 1, c(y, \phi) = 0} \\
+\Rightarrow \text{ln}\{f(y)\} &amp; = \frac{y\cdot\theta - b(\theta)}{\phi} - c(y, \theta) \\
+\text{Because } E(Y) &amp; = \frac{1}{\lambda}, \text{ the canonical link is } g(\lambda) = -\frac{1}{\lambda}\\
 \end{aligned}
 \]</span></p>
 <hr />
@@ -758,6 +760,226 @@ Y \sim \text{exp}(\lambda) &amp; \rightarrow f(y) = \lambda \text{exp}(-y\lambda
 <li>“模型的似然函數 the log likelihood of the model”，只是我們偷懶縮短了原文 “在給定數據的前提下，當所有參數均爲 <span class="math inline">\(\text{MLE}\)</span> 時模型的對數似然函數 (the log likelihood function of the model for the given data evaluated at the MLE’s of the parameters)”，就是對數似然函數的極大值的意思 (i.e. the maximum of the log likelihood function)。</li>
 <li>從本節開始往後的章節中 “模型，model”，“廣義線性模型，generalized linear model”，和 “GLM” 將被視爲同義詞。</li>
 </ol>
+</div>
+<div id="-r--glm" class="section level2">
+<h2><span class="header-section-number">44.4</span> 如何在 R 裏擬合 “GLM”</h2>
+<p>這裏我們僅僅討論用極大似然法擬合 “GLM” 模型的方法，。前面一章節的複習也是在告訴我們，利用極大似然法簡單說就是找到模型參數，使得似然函數能夠取到極大值。對於線性迴歸來說， <span class="math inline">\(\text{MLE}\)</span> 可以用一個封閉式函數來計算；但是廣義線性迴歸模型則必須使用<a href="https://www.youtube.com/watch?v=JZIeX3eVyf4">迭代法計算 (iterative methods)</a>。</p>
+<p>在 R 裏面擬合廣義線性模型的命令及其格式是：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">glm</span>(response variable <span class="op">~</span><span class="st"> </span>explanatory variables to form linear predictor, <span class="dt">family=</span>name of <span class="kw">distribution</span>(<span class="dt">link=</span>link <span class="cf">function</span>), <span class="dt">data=</span>dataset)</code></pre></div>
+<p>Tips: See <code>help(glm)</code> for other modeling options. See <code>help(family)</code> for other allowable link functions for each family.</p>
+<p>下面的數據來自一個心理學臨牀實驗，比較的是和安慰劑組相比，注射嗎啡組，注射海洛因組對象的精神病檢測指數的前後變化。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Mental &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;backupfiles/MENTAL.DAT&quot;</span>, <span class="dt">header =</span>  <span class="ot">FALSE</span>, <span class="dt">sep =</span><span class="st">&quot;&quot;</span>, <span class="dt">col.names =</span> <span class="kw">c</span>(<span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;Before&quot;</span>, <span class="st">&quot;After&quot;</span>))
+Mental<span class="op">$</span>treatment[Mental<span class="op">$</span>treatment <span class="op">==</span><span class="st"> </span><span class="dv">1</span>] &lt;-<span class="st"> &quot;placebo&quot;</span>
+Mental<span class="op">$</span>treatment[Mental<span class="op">$</span>treatment <span class="op">==</span><span class="st"> </span><span class="dv">2</span>] &lt;-<span class="st"> &quot;morphine&quot;</span>
+Mental<span class="op">$</span>treatment[Mental<span class="op">$</span>treatment <span class="op">==</span><span class="st"> </span><span class="dv">3</span>] &lt;-<span class="st"> &quot;heroin&quot;</span>
+Mental<span class="op">$</span>treatment &lt;-<span class="st"> </span><span class="kw">factor</span>(Mental<span class="op">$</span>treatment, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;placebo&quot;</span>, <span class="st">&quot;morphine&quot;</span>, <span class="st">&quot;heroin&quot;</span>))
+<span class="kw">head</span>(Mental)</code></pre></div>
+<pre><code>##   treatment Before After
+## 1   placebo      0     7
+## 2   placebo      2     1
+## 3   placebo     14    10
+## 4   placebo      5    10
+## 5   placebo      5     6
+## 6   placebo      4     2</code></pre>
+<p>我們來比較一下簡單線性迴歸的代碼輸出結果和廣義線性迴歸代碼輸出結果是否一致：</p>
+<p>用 <code>lm</code> 命令，擬合因變量爲注射後精神病檢測指數，預測變量爲治療方式和注射錢精神病檢測指數，及兩者的交互作用項：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(After <span class="op">~</span><span class="st"> </span>treatment<span class="op">*</span>Before, <span class="dt">data =</span> Mental)
+<span class="kw">summary</span>(Model1)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = After ~ treatment * Before, data = Mental)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -7.82808 -1.93513 -0.51606  1.41607 11.36012 
+## 
+## Coefficients:
+##                           Estimate Std. Error t value
+## (Intercept)               1.978030   1.294069  1.5285
+## treatmentmorphine        -1.211742   1.750342 -0.6923
+## treatmentheroin          -1.461968   1.771855 -0.8251
+## Before                    0.593939   0.183468  3.2373
+## treatmentmorphine:Before -0.089526   0.248346 -0.3605
+## treatmentheroin:Before   -0.312985   0.250383 -1.2500
+##                          Pr(&gt;|t|)   
+## (Intercept)              0.131158   
+## treatmentmorphine        0.491185   
+## treatmentheroin          0.412284   
+## Before                   0.001889 **
+## treatmentmorphine:Before 0.719633   
+## treatmentheroin:Before   0.215704   
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 3.3329 on 66 degrees of freedom
+## Multiple R-squared:  0.34418,    Adjusted R-squared:  0.29449 
+## F-statistic: 6.9274 on 5 and 66 DF,  p-value: 0.000029744</code></pre>
+<p>同樣的模型也可以用 <code>glm</code> 命令擬合：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model2 &lt;-<span class="st"> </span><span class="kw">glm</span>(After <span class="op">~</span><span class="st"> </span>treatment<span class="op">*</span>Before, <span class="dt">family =</span> <span class="kw">gaussian</span>(<span class="dt">link =</span> <span class="st">&quot;identity&quot;</span>), <span class="dt">data =</span> Mental)
+<span class="kw">summary</span>(Model2)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = After ~ treatment * Before, family = gaussian(link = &quot;identity&quot;), 
+##     data = Mental)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -7.82808  -1.93513  -0.51606   1.41607  11.36012  
+## 
+## Coefficients:
+##                           Estimate Std. Error t value
+## (Intercept)               1.978030   1.294069  1.5285
+## treatmentmorphine        -1.211742   1.750342 -0.6923
+## treatmentheroin          -1.461968   1.771855 -0.8251
+## Before                    0.593939   0.183468  3.2373
+## treatmentmorphine:Before -0.089526   0.248346 -0.3605
+## treatmentheroin:Before   -0.312985   0.250383 -1.2500
+##                          Pr(&gt;|t|)   
+## (Intercept)              0.131158   
+## treatmentmorphine        0.491185   
+## treatmentheroin          0.412284   
+## Before                   0.001889 **
+## treatmentmorphine:Before 0.719633   
+## treatmentheroin:Before   0.215704   
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for gaussian family taken to be 11.107994)
+## 
+##     Null deviance: 1117.875  on 71  degrees of freedom
+## Residual deviance:  733.128  on 66  degrees of freedom
+## AIC: 385.414
+## 
+## Number of Fisher Scoring iterations: 2</code></pre>
+<p>可以看到，<code>glm</code> 命令的輸出結果略多，但是參數估計的部分是完全相同的。<strong>但是如果你用的是坑爹的 STATA，那裏面的 <code>glm</code> 命令中的統計檢驗量和 <span class="math inline">\(p\)</span> 值用的則是正態分佈近似法。所以在 STATA 裏面簡單線性迴歸模型最好不要使用 <code>glm</code> 命令：</strong></p>
+<pre><code> glm After i.treatt##c.Before, family(gaussian) link(identity)
+
+Iteration 0:   log likelihood = -185.70711
+
+Generalized linear models                         No. of obs      =         72
+Optimization     : ML                             Residual df     =         66
+                                                  Scale parameter =   11.10799
+Deviance         =  733.1276068                   (1/df) Deviance =   11.10799
+Pearson          =  733.1276068                   (1/df) Pearson  =   11.10799
+
+Variance function: V(u) = 1                       [Gaussian]
+Link function    : g(u) = u                       [Identity]
+
+                                                  AIC             =   5.325197
+Log likelihood   =  -185.707106                   BIC             =   450.8676
+
+------------------------------------------------------------------------------
+             |                 OIM
+        After|      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |
+          2  |  -1.211742   1.750342    -0.69   0.489    -4.642349    2.218865
+          3  |  -1.461968   1.771855    -0.83   0.409    -4.934741    2.010805
+             |
+      Before |   .5939394   .1834682     3.24   0.001     .2343483    .9535305
+             |
+ treat#Before|
+          2  |  -.0895258   .2483459    -0.36   0.718    -.5762749    .3972233
+          3  |  -.3129855   .2503829    -1.25   0.211     -.803727    .1777561
+             |
+       _cons |    1.97803   1.294069     1.53   0.126    -.5582981    4.514359
+------------------------------------------------------------------------------</code></pre>
+<p>回到 R 來， 當儲存了一個 <code>Model2</code> 向量在 R 裏之後，你可以用下面的各種命令獲取你想要的各種有用的信息。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">confint</span>(Model2) <span class="co"># 95% CI for the coefficients</span></code></pre></div>
+<pre><code>## Waiting for profiling to be done...</code></pre>
+<pre><code>##                                2.5 %     97.5 %
+## (Intercept)              -0.55829809 4.51435869
+## treatmentmorphine        -4.64234925 2.21886536
+## treatmentheroin          -4.93474055 2.01080452
+## Before                    0.23434829 0.95353050
+## treatmentmorphine:Before -0.57627487 0.39722332
+## treatmentheroin:Before   -0.80372697 0.17775605</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">exp</span>(<span class="kw">coef</span>(Model2)) <span class="co"># exponentiated coefficients</span></code></pre></div>
+<pre><code>##              (Intercept)        treatmentmorphine 
+##               7.22849102               0.29767829 
+##          treatmentheroin                   Before 
+##               0.23177968               1.81110905 
+## treatmentmorphine:Before   treatmentheroin:Before 
+##               0.91436470               0.73126055</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">exp</span>(<span class="kw">confint</span>(Model2)) <span class="co"># 95% CI for exponentiated coefficients</span></code></pre></div>
+<pre><code>## Waiting for profiling to be done...</code></pre>
+<pre><code>##                                 2.5 %     97.5 %
+## (Intercept)              0.5721820406 91.3189836
+## treatmentmorphine        0.0096350359  9.1968898
+## treatmentheroin          0.0071923267  7.4693242
+## Before                   1.2640846824  2.5948546
+## treatmentmorphine:Before 0.5619879499  1.4876881
+## treatmentheroin:Before   0.4476574460  1.1945339</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">predict</span>(Model2, <span class="dt">type=</span><span class="st">&quot;response&quot;</span>)) <span class="co"># predicted values</span></code></pre></div>
+<pre><code>##          1          2          3          4          5 
+##  1.9780303  3.1659091 10.2931818  4.9477273  4.9477273 
+##          6 
+##  4.3537879</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(<span class="kw">residuals</span>(Model2, <span class="dt">type=</span><span class="st">&quot;deviance&quot;</span>)) <span class="co"># residuals</span></code></pre></div>
+<pre><code>##           1           2           3           4 
+##  5.02196970 -2.16590909 -0.29318182  5.05227273 
+##           5           6 
+##  1.05227273 -2.35378788</code></pre>
+<p>一個在 STATA 裏面十分有用的用於<strong>預測</strong>的命令 <code>margins</code>，在 R 裏，下載了 <code>margins</code> 包以後就可以調用它的類似命令。</p>
+<p>假如我們用擬合的模型預測當注射前精神病檢測值分別是 0，6，12 分時三組之間的注射後精神病檢測值可以這樣求：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(margins)
+<span class="kw">summary</span>(<span class="kw">margins</span>(Model2, <span class="dt">at =</span> <span class="kw">list</span>(<span class="dt">Before=</span><span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">6</span>,<span class="dv">12</span>))))</code></pre></div>
+<pre><code>##             factor Before     AME     SE       z
+##             Before      0  0.4598 0.1004  4.5797
+##             Before      6  0.4598 0.1004  4.5797
+##             Before     12  0.4598 0.1004  4.5798
+##    treatmentheroin      0 -1.4620 1.7719 -0.8251
+##    treatmentheroin      6 -3.3399 0.9624 -3.4705
+##    treatmentheroin     12 -5.2178 1.7963 -2.9048
+##  treatmentmorphine      0 -1.2117 1.7503 -0.6923
+##  treatmentmorphine      6 -1.7489 0.9630 -1.8160
+##  treatmentmorphine     12 -2.2861 1.7977 -1.2716
+##       p   lower   upper
+##  0.0000  0.2630  0.6565
+##  0.0000  0.2630  0.6565
+##  0.0000  0.2630  0.6565
+##  0.4093 -4.9347  2.0108
+##  0.0005 -5.2261 -1.4537
+##  0.0037 -8.7384 -1.6972
+##  0.4888 -4.6423  2.2189
+##  0.0694 -3.6364  0.1386
+##  0.2035 -5.8095  1.2374</code></pre>
+<p>對比 STATA 裏的結果：</p>
+<pre><code> margins, dydx(trt) at(pre = (0 6 12))
+
+Conditional marginal effects                    Number of obs     =         72
+Model VCE    : OIM
+
+Expression   : Predicted mean post, predict()
+dy/dx w.r.t. : 2.trt 3.trt
+
+1._at        : pre             =           0
+
+2._at        : pre             =           6
+
+3._at        : pre             =          12
+
+------------------------------------------------------------------------------
+             |            Delta-method
+             |      dy/dx   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+1.trt        |  (base outcome)
+-------------+----------------------------------------------------------------
+2.trt        |
+         _at |
+          1  |  -1.211742   1.750342    -0.69   0.489    -4.642349    2.218865
+          2  |  -1.748897    .963025    -1.82   0.069    -3.636391    .1385977
+          3  |  -2.286051   1.797717    -1.27   0.204    -5.809513     1.23741
+-------------+----------------------------------------------------------------
+3.trt        |
+         _at |
+          1  |  -1.461968   1.771855    -0.83   0.409    -4.934741    2.010805
+          2  |  -3.339881   .9623512    -3.47   0.001    -5.226054   -1.453707
+          3  |  -5.217794   1.796264    -2.90   0.004    -8.738406   -1.697181
+------------------------------------------------------------------------------
+Note: dy/dx for factor levels is the discrete change from the base level.</code></pre>
 </div>
 </div>
             </section>

@@ -284,10 +284,11 @@ $$
 
 $$
 \begin{aligned}
-Y \sim \text{exp}(\lambda) & \rightarrow f(y) = \lambda \text{exp}(-y\lambda) y > 0\\
+Y \sim \text{exp}(\lambda) & \rightarrow f(y) = \lambda \text{exp}(-y\lambda), y > 0\\
 \Rightarrow \text{ln}\{ f(y) \} & = - y \lambda + \text{ln}(\lambda) \\
-\text{Let } & \color{red}{\theta = -\lambda, b(\theta) = - \text{ln}(\lambda)，\phi = 1, c(y, \phi) = 0} \\
-\text{Because } E(Y) & = \frac{1}{\lambda}, \text{ the canonical link is } g(\lambda) = -\frac{1}{\lambda}
+\text{Let } & \color{red}{\theta = -\lambda, b(\theta) = - \text{ln}(\lambda), \phi = 1, c(y, \phi) = 0} \\
+\Rightarrow \text{ln}\{f(y)\} & = \frac{y\cdot\theta - b(\theta)}{\phi} - c(y, \theta) \\
+\text{Because } E(Y) & = \frac{1}{\lambda}, \text{ the canonical link is } g(\lambda) = -\frac{1}{\lambda}\\
 \end{aligned}
 $$
 
@@ -317,6 +318,141 @@ $$
 3. 通常選用的鏈接方程，要能夠使線性預測方程的取值範圍達到所有實數 $-\infty,+\infty$。
 4. “模型的似然函數 the log likelihood of the model”，只是我們偷懶縮短了原文 “在給定數據的前提下，當所有參數均爲 $\text{MLE}$ 時模型的對數似然函數 (the log likelihood function of the model for the given data evaluated at the MLE's of the parameters)”，就是對數似然函數的極大值的意思 (i.e. the maximum of the log likelihood function)。
 5. 從本節開始往後的章節中 “模型，model”，“廣義線性模型，generalized linear model”，和 "GLM" 將被視爲同義詞。
+
+## 如何在 R 裏擬合 "GLM"
+
+這裏我們僅僅討論用極大似然法擬合 "GLM" 模型的方法，。前面一章節的複習也是在告訴我們，利用極大似然法簡單說就是找到模型參數，使得似然函數能夠取到極大值。對於線性迴歸來說， $\text{MLE}$ 可以用一個封閉式函數來計算；但是廣義線性迴歸模型則必須使用[迭代法計算 (iterative methods)](https://www.youtube.com/watch?v=JZIeX3eVyf4)。
+
+在 R 裏面擬合廣義線性模型的命令及其格式是：
+
+```{r eval=FALSE}
+glm(response variable ~ explanatory variables to form linear predictor, family=name of distribution(link=link function), data=dataset)
+```
+
+Tips: See `help(glm)` for other modeling options. See `help(family)` for other allowable link functions for each family.
+
+下面的數據來自一個心理學臨牀實驗，比較的是和安慰劑組相比，注射嗎啡組，注射海洛因組對象的精神病檢測指數的前後變化。
+
+```{r cache = TRUE}
+Mental <- read.table("backupfiles/MENTAL.DAT", header =  FALSE, sep ="", col.names = c("treatment", "Before", "After"))
+Mental$treatment[Mental$treatment == 1] <- "placebo"
+Mental$treatment[Mental$treatment == 2] <- "morphine"
+Mental$treatment[Mental$treatment == 3] <- "heroin"
+Mental$treatment <- factor(Mental$treatment, levels = c("placebo", "morphine", "heroin"))
+head(Mental)
+```
+
+我們來比較一下簡單線性迴歸的代碼輸出結果和廣義線性迴歸代碼輸出結果是否一致：
+
+用 `lm` 命令，擬合因變量爲注射後精神病檢測指數，預測變量爲治療方式和注射錢精神病檢測指數，及兩者的交互作用項：
+
+```{r}
+Model1 <- lm(After ~ treatment*Before, data = Mental)
+summary(Model1)
+```
+
+同樣的模型也可以用 `glm` 命令擬合：
+
+```{r}
+Model2 <- glm(After ~ treatment*Before, family = gaussian(link = "identity"), data = Mental)
+summary(Model2)
+```
+
+可以看到，`glm` 命令的輸出結果略多，但是參數估計的部分是完全相同的。**但是如果你用的是坑爹的 STATA，那裏面的 `glm` 命令中的統計檢驗量和 $p$ 值用的則是正態分佈近似法。所以在 STATA 裏面簡單線性迴歸模型最好不要使用 `glm` 命令：**
+
+```
+ glm After i.treatt##c.Before, family(gaussian) link(identity)
+
+Iteration 0:   log likelihood = -185.70711
+
+Generalized linear models                         No. of obs      =         72
+Optimization     : ML                             Residual df     =         66
+                                                  Scale parameter =   11.10799
+Deviance         =  733.1276068                   (1/df) Deviance =   11.10799
+Pearson          =  733.1276068                   (1/df) Pearson  =   11.10799
+
+Variance function: V(u) = 1                       [Gaussian]
+Link function    : g(u) = u                       [Identity]
+
+                                                  AIC             =   5.325197
+Log likelihood   =  -185.707106                   BIC             =   450.8676
+
+------------------------------------------------------------------------------
+             |                 OIM
+        After|      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       treat |
+          2  |  -1.211742   1.750342    -0.69   0.489    -4.642349    2.218865
+          3  |  -1.461968   1.771855    -0.83   0.409    -4.934741    2.010805
+             |
+      Before |   .5939394   .1834682     3.24   0.001     .2343483    .9535305
+             |
+ treat#Before|
+          2  |  -.0895258   .2483459    -0.36   0.718    -.5762749    .3972233
+          3  |  -.3129855   .2503829    -1.25   0.211     -.803727    .1777561
+             |
+       _cons |    1.97803   1.294069     1.53   0.126    -.5582981    4.514359
+------------------------------------------------------------------------------
+```
+
+回到 R 來， 當儲存了一個 `Model2` 向量在 R 裏之後，你可以用下面的各種命令獲取你想要的各種有用的信息。
+
+```{r}
+confint(Model2) # 95% CI for the coefficients
+exp(coef(Model2)) # exponentiated coefficients
+exp(confint(Model2)) # 95% CI for exponentiated coefficients
+head(predict(Model2, type="response")) # predicted values
+head(residuals(Model2, type="deviance")) # residuals
+```
+
+一個在 STATA 裏面十分有用的用於**預測**的命令 `margins`，在 R 裏，下載了 `margins` 包以後就可以調用它的類似命令。
+
+假如我們用擬合的模型預測當注射前精神病檢測值分別是 0，6，12 分時三組之間的注射後精神病檢測值可以這樣求：
+
+```{r}
+library(margins)
+summary(margins(Model2, at = list(Before=c(0,6,12))))
+```
+
+
+對比 STATA 裏的結果：
+
+```
+ margins, dydx(trt) at(pre = (0 6 12))
+
+Conditional marginal effects                    Number of obs     =         72
+Model VCE    : OIM
+
+Expression   : Predicted mean post, predict()
+dy/dx w.r.t. : 2.trt 3.trt
+
+1._at        : pre             =           0
+
+2._at        : pre             =           6
+
+3._at        : pre             =          12
+
+------------------------------------------------------------------------------
+             |            Delta-method
+             |      dy/dx   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+1.trt        |  (base outcome)
+-------------+----------------------------------------------------------------
+2.trt        |
+         _at |
+          1  |  -1.211742   1.750342    -0.69   0.489    -4.642349    2.218865
+          2  |  -1.748897    .963025    -1.82   0.069    -3.636391    .1385977
+          3  |  -2.286051   1.797717    -1.27   0.204    -5.809513     1.23741
+-------------+----------------------------------------------------------------
+3.trt        |
+         _at |
+          1  |  -1.461968   1.771855    -0.83   0.409    -4.934741    2.010805
+          2  |  -3.339881   .9623512    -3.47   0.001    -5.226054   -1.453707
+          3  |  -5.217794   1.796264    -2.90   0.004    -8.738406   -1.697181
+------------------------------------------------------------------------------
+Note: dy/dx for factor levels is the discrete change from the base level.
+```
+
 
 
 # 二項分佈的廣義線性迴歸模型
