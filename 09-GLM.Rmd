@@ -633,11 +633,57 @@ $$
 \end{aligned}
 $$
 
-```{r}
+```{r message=FALSE}
 Model1 <- glm(cbind(infect, cattle - infect) ~ factor(group) + dfactor, family = binomial(link = logit), data = Cattle)
 summary(Model1)
+epiDisplay::logistic.display(Model1)
 ```
 
+於是，我們可以寫下這個邏輯迴歸的數學模型：
+
+$$
+\begin{aligned}
+\text{logit}(\hat\pi_i) & = \text{ln}(\frac{\hat\pi_i}{1-\hat\pi_i})  = \hat\alpha + \hat\beta_1 x_{i1} + \hat\beta_2 x_{i2} \\
+                        & = 2.1310 - 0.7874 \times \text{dfactor} + 1.3059 \times \text{group}
+\end{aligned}
+$$
+
+**解讀這些參數估計的意義**
+
+- 截距 $\hat\alpha = 2.1310$ 的含義是，當 $x_{1}, x_{2}$ 都等於零，i.e. 飼料濃度 0，在第一羣的那些牲畜感染瘋牛病的**對數比值 (log-odds)**；
+- 斜率 $\hat\beta_1 = -0.7874$ 的含義是，當牲畜羣不變時，飼料濃度每增加一個單位，牲畜感染瘋牛病的**對數比值的估計變化量 (estimated increase in log odds of infection)**；
+- 迴歸係數 $\hat\beta_2 = 1.3059$ 的含義是，當飼料濃度不變時，兩羣牲畜之間感染瘋牛病的**對數比值比 (log-Odds Ratio)**，所以第二羣牲畜比第一羣牲畜感染瘋牛病的比值比的估計量，以及 $95\%\text{CI}$ 的計算方法就是：<br>  $$\begin{aligned} \text{exp}(\hat\beta_2) & = \text{exp}(1.3059) = 3.69,\\ \text{ with 95% CI: } & \text{exp}(\hat\beta_2 \pm 1.96\times \text{Std.Error}_{\hat\beta_2}) \\  & = (1.48, 9.19) \end{aligned}$$
+
+### 模型 2 增加交互作用項 飼料 $\times$ 羣
+
+飼料濃度與瘋牛病感染之間的關係，是否因爲牲畜所在的 “羣” 不同而發生改變？
+
+定義增加了飼料和羣交互作用項的邏輯迴歸模型：
+
+$$
+\text{logit}(\pi_i) = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i1}\times x_{i2}
+$$
+
+
+```{r}
+Model2 <- glm(cbind(infect, cattle - infect) ~ factor(group) + dfactor + factor(group)*dfactor, family = binomial(link = logit), data = Cattle)
+summary(Model2)
+epiDisplay::logistic.display(Model2)
+```
+
+從輸出的報告來看，增加了交互作用項以後，在第一羣牲畜中，飼料濃度每增加一個單位，感染瘋牛病的比值比 (OR) 是
+
+$$
+\text{exp}(-0.7051) = 0.49
+$$
+
+在第二羣牲畜中，飼料濃度每增加一個單位，感染瘋牛病的比值比 (OR) 變成了
+
+$$
+\text{exp}(-0.7051 - 0.2058) = 0.40
+$$
+
+通過對 $\hat\beta_3 = 0$ 的假設檢驗，就可以推斷飼料濃度和感染瘋牛病之間的關係是否因爲不同牲畜 “羣” 而不同。所以上面的報告中也已經有了交互作用項的檢驗結果 $p = 0.584$，所以，此處可以下的結論是：沒有足夠的證據證明交互作用存在。
 
 
 # 模型比較和擬合優度

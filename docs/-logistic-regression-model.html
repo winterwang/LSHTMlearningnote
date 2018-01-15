@@ -630,6 +630,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="45.5" data-path="-logistic-regression-model.html"><a href="-logistic-regression-model.html#section-45.5"><i class="fa fa-check"></i><b>45.5</b> 邏輯迴歸實際案例</a><ul>
 <li class="chapter" data-level="45.5.1" data-path="-logistic-regression-model.html"><a href="-logistic-regression-model.html#section-45.5.1"><i class="fa fa-check"></i><b>45.5.1</b> 分析目的</a></li>
 <li class="chapter" data-level="45.5.2" data-path="-logistic-regression-model.html"><a href="-logistic-regression-model.html#-1--"><i class="fa fa-check"></i><b>45.5.2</b> 模型 1 飼料 + 羣</a></li>
+<li class="chapter" data-level="45.5.3" data-path="-logistic-regression-model.html"><a href="-logistic-regression-model.html#-2---times-"><i class="fa fa-check"></i><b>45.5.3</b> 模型 2 增加交互作用項 飼料 <span class="math inline">\(\times\)</span> 羣</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="46" data-path="section-46.html"><a href="section-46.html"><i class="fa fa-check"></i><b>46</b> 模型比較和擬合優度</a></li>
@@ -855,6 +856,88 @@ x_{jp} &amp; = x_{ip} + 1\\
 ## AIC: 32.2537
 ## 
 ## Number of Fisher Scoring iterations: 4</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model1)</code></pre></div>
+<pre><code>##  
+##                        OR  lower95ci  upper95ci
+## factor(group)2 3.69102114 1.48251011 9.18957451
+## dfactor        0.45500721 0.31889988 0.64920551
+##                      Pr(&gt;|Z|)
+## factor(group)2 0.005016342395
+## dfactor        0.000014109282</code></pre>
+<p>於是，我們可以寫下這個邏輯迴歸的數學模型：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{logit}(\hat\pi_i) &amp; = \text{ln}(\frac{\hat\pi_i}{1-\hat\pi_i})  = \hat\alpha + \hat\beta_1 x_{i1} + \hat\beta_2 x_{i2} \\
+                        &amp; = 2.1310 - 0.7874 \times \text{dfactor} + 1.3059 \times \text{group}
+\end{aligned}
+\]</span></p>
+<p><strong>解讀這些參數估計的意義</strong></p>
+<ul>
+<li>截距 <span class="math inline">\(\hat\alpha = 2.1310\)</span> 的含義是，當 <span class="math inline">\(x_{1}, x_{2}\)</span> 都等於零，i.e. 飼料濃度 0，在第一羣的那些牲畜感染瘋牛病的<strong>對數比值 (log-odds)</strong>；</li>
+<li>斜率 <span class="math inline">\(\hat\beta_1 = -0.7874\)</span> 的含義是，當牲畜羣不變時，飼料濃度每增加一個單位，牲畜感染瘋牛病的<strong>對數比值的估計變化量 (estimated increase in log odds of infection)</strong>；</li>
+<li>迴歸係數 <span class="math inline">\(\hat\beta_2 = 1.3059\)</span> 的含義是，當飼料濃度不變時，兩羣牲畜之間感染瘋牛病的<strong>對數比值比 (log-Odds Ratio)</strong>，所以第二羣牲畜比第一羣牲畜感染瘋牛病的比值比的估計量，以及 <span class="math inline">\(95\%\text{CI}\)</span> 的計算方法就是：<br> <span class="math display">\[\begin{aligned} \text{exp}(\hat\beta_2) &amp; = \text{exp}(1.3059) = 3.69,\\ \text{ with 95% CI: } &amp; \text{exp}(\hat\beta_2 \pm 1.96\times \text{Std.Error}_{\hat\beta_2}) \\  &amp; = (1.48, 9.19) \end{aligned}\]</span></li>
+</ul>
+</div>
+<div id="-2---times-" class="section level3">
+<h3><span class="header-section-number">45.5.3</span> 模型 2 增加交互作用項 飼料 <span class="math inline">\(\times\)</span> 羣</h3>
+<p>飼料濃度與瘋牛病感染之間的關係，是否因爲牲畜所在的 “羣” 不同而發生改變？</p>
+<p>定義增加了飼料和羣交互作用項的邏輯迴歸模型：</p>
+<p><span class="math display">\[
+\text{logit}(\pi_i) = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i1}\times x_{i2}
+\]</span></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model2 &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw">cbind</span>(infect, cattle <span class="op">-</span><span class="st"> </span>infect) <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(group) <span class="op">+</span><span class="st"> </span>dfactor <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(group)<span class="op">*</span>dfactor, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit), <span class="dt">data =</span> Cattle)
+<span class="kw">summary</span>(Model2)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = cbind(infect, cattle - infect) ~ factor(group) + 
+##     dfactor + factor(group) * dfactor, family = binomial(link = logit), 
+##     data = Cattle)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -0.71914  -0.16508  -0.02111   0.34451   1.00127  
+## 
+## Coefficients:
+##                        Estimate Std. Error z value
+## (Intercept)             1.89028    0.73584  2.5689
+## factor(group)2          1.98867    1.34471  1.4789
+## dfactor                -0.70508    0.22955 -3.0716
+## factor(group)2:dfactor -0.20583    0.37553 -0.5481
+##                        Pr(&gt;|z|)   
+## (Intercept)            0.010203 * 
+## factor(group)2         0.139172   
+## dfactor                0.002129 **
+## factor(group)2:dfactor 0.583619   
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 33.52556  on 9  degrees of freedom
+## Residual deviance:  2.14476  on 6  degrees of freedom
+## AIC: 33.9477
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model2)</code></pre></div>
+<pre><code>##  
+##                                OR  lower95ci
+## factor(group)2         7.30580425 0.52365757
+## dfactor                0.49406759 0.31506152
+## factor(group)2:dfactor 0.81396890 0.38989883
+##                           upper95ci     Pr(&gt;|Z|)
+## factor(group)2         101.92686809 0.1391720038
+## dfactor                  0.77477816 0.0021289774
+## factor(group)2:dfactor   1.69927508 0.5836187644</code></pre>
+<p>從輸出的報告來看，增加了交互作用項以後，在第一羣牲畜中，飼料濃度每增加一個單位，感染瘋牛病的比值比 (OR) 是</p>
+<p><span class="math display">\[
+\text{exp}(-0.7051) = 0.49
+\]</span></p>
+<p>在第二羣牲畜中，飼料濃度每增加一個單位，感染瘋牛病的比值比 (OR) 變成了</p>
+<p><span class="math display">\[
+\text{exp}(-0.7051 - 0.2058) = 0.40
+\]</span></p>
+<p>通過對 <span class="math inline">\(\hat\beta_3 = 0\)</span> 的假設檢驗，就可以推斷飼料濃度和感染瘋牛病之間的關係是否因爲不同牲畜 “羣” 而不同。所以上面的報告中也已經有了交互作用項的檢驗結果 <span class="math inline">\(p = 0.584\)</span>，所以，此處可以下的結論是：沒有足夠的證據證明交互作用存在。</p>
 </div>
 </div>
 </div>
