@@ -810,7 +810,7 @@ hosmer(lbw$low, fitted(Modelgof), group=5)
 ```
 
 
-# 計數型因變量
+# 計數型因變量 Poisson regression
 
 計數型變量在醫學研究中也十分常見，下面是一些例子：
 
@@ -837,6 +837,101 @@ Y_i & \sim \text{Po}(\mu_i) \\
 \text{log}(\mu_i) & = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}
 \end{aligned}
 $$
+
+觀測對象 1，用模型中全部的預測變量 $\mathbf{x_1}=(x_{11},\cdots,x_{1p})$ 計算獲得的擬合值，和另一個觀測對象 0 的擬合值之比爲：
+
+$$
+\begin{aligned}
+  & \frac{\text{exp}(\alpha + \beta_1 x_{11} + \cdots + \beta_p x_{1p})}{\text{exp}(\alpha + \beta_1 x_{01} + \cdots + \beta_p x_{0p})} \\
+= & exp(\beta_1(x_{11}-x_{01}) + \cdots + \beta_p(x_{1p} - x_{0p}))
+\end{aligned}
+$$
+
+其中，
+
+- 線性預測方程 linear predictor 中的截距 $\alpha$ 的含義是，**當所有的預測變量均等於零 $\mathbf{x_1} = 0$** 時，**因變量 $Y$ 的均值之對數**。
+- $\beta_1$ 的含義是，**其餘預測變量保持不變時，預測變量 $x_1$ 每增加一個單位時，因變量變化量的對數**。
+- 迴歸係數的指數 (自然底數) 大小，可以被理解爲是**率比 (rate ratio)** (詳見下一章率的 GLM)。
+
+
+## 泊松迴歸實例
+
+下列數據來自 [UCLA 的統計學網站](https://stats.idre.ucla.edu/r/dae/poisson-regression/)。數據內容是某高中全部學生，獲獎的次數。預測變量包括，1) 獲獎種類 “一般 General”，“學術類 Academic”，“技能類 Vocational”；和所有學生期末數學考試分數。
+
+
+
+```{r}
+p <- read.csv("https://stats.idre.ucla.edu/stat/data/poisson_sim.csv")
+p <- within(p, {
+  prog <- factor(prog, levels=1:3, labels=c("General", "Academic",
+                                                     "Vocational"))
+  id <- factor(id)
+})
+summary(p)
+```
+
+下面的代碼擬合因變量爲獲獎次數，預測變量爲獲獎種類 (分類) 和數學成績 (連續) 的泊松分佈，泊松分佈默認的鏈接方程就是 $\text{log}$，所以你可以像第一行那樣把鏈接方程部分省略。結果也是一樣的。
+
+```{r}
+m1 <- glm(num_awards ~ prog, family="poisson", data=p)
+m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
+summary(m1); summary(m2)
+```
+
+輸出結果的迴歸係數部分，
+
+- 該學校學生獲得學術類獎項的平均次數和獲得一般獎項的平均次數的比值是 $\text{exp}(1.6094) = 4.999$，所以獲得的學術類獎平均次數要高於一般獎次數 $390\%$；
+- 獲得技能類獎的平均次數和一般獎平均次數的比值是 $\text{exp}(0.1823) = 1.199$，也就是高出了 $19.9\%$；
+- 該校學生獲得一般類獎的次數平均每人是 $\text{exp}(-1.6094) = 0.20$ 次；
+- 該校學生獲得學術獎的次數平均每人是 $\text{exp}(-1.6094 + 1.6094) = 1$ 次；(一人一次夠流弊)
+- 該校學生獲得技能類獎的次數平均每人是 $\text{exp}(-1.6094 + 0.182) = 0.24$ 次。
+
+
+看來該校師生很重視學術。
+
+當然也可以用下面定義的函數來幫助我們計算上面這些數值，及其信賴區間。
+
+```{r}
+glm.RR <- function(GLM.RESULT, digits = 2) {
+
+    if (GLM.RESULT$family$family == "binomial") {
+        LABEL <- "OR"
+    } else if (GLM.RESULT$family$family == "poisson") {
+        LABEL <- "RR"
+    } else {
+        stop("Not logistic or Poisson model")
+    }
+
+    COEF      <- stats::coef(GLM.RESULT)
+    CONFINT   <- stats::confint(GLM.RESULT)
+    TABLE     <- cbind(coef=COEF, CONFINT)
+    TABLE.EXP <- round(exp(TABLE), digits)
+
+    colnames(TABLE.EXP)[1] <- LABEL
+
+    TABLE.EXP
+}
+```
+
+```{r}
+glm.RR(m1)
+```
+
+## 過度離散 overdispersion
+
+泊松分佈的前提條件之一是，方差和均值相等。這是一個**非常強的假設**，很多計數型數據其實是無法滿足這個條件的。許多時候 (包括上面的例子也是) 方差要大於或者小於均值：
+
+```{r}
+epiDisplay::summ(p$num_awards[p$prog == "Academic"])
+epiDisplay::summ(p$num_awards[p$prog == "General"])
+epiDisplay::summ(p$num_awards[p$prog == "Vocational"])
+```
+
+試想一下，實際的數據中其實是經常出現這樣的違反泊松分佈前提的計數型數據的。例如某兩個觀測對象，如果他們二者的線性預測方程給出相等的結果 (他們各自的預測變量可以完全不同)，會被認爲服從相同均值，相同方差的泊松分佈，這顯然是不合理的。例如本章用到的學校學生獲獎的例子，有的學生成績好，那麼獲得學術類獎的平均次數 (及其方差) 自然和成績排在後面的學生不同，強制這樣的兩個學生服從相同均值，相同方差的泊松分佈顯然是不合情理的。手工好的學生，可能更傾向於獲得更多得技能類獎。實際情況下，還有許許多多其他的未知因素會影響學生獲獎的次數，例如家庭教育背景的不同，有些學生鋼琴獲獎多，因爲他每天都去練習彈鋼琴等等，這些都是沒有被收集道德數據。
+
+
+
+
 
 # 率的廣義線性迴歸
 
