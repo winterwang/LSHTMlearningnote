@@ -987,8 +987,86 @@ with(m2, cbind(res.deviance = deviance, df = df.residual,
   p = pchisq(deviance, df.residual, lower.tail=FALSE)))
 ```
 
+另一種獲取沒有被低估的迴歸係數的標準誤的方法來自穩健統計學手段。在 R 裏，擬合完普通泊松迴歸以後，用 `sandwich` 包裏的 `vcovHC()` 命令進行穩健的參數誤差估計 (具體說是夾心方差矩陣估計 sandwich estimator of variance)：
 
-# 率的廣義線性迴歸
+
+```{r}
+library(sandwich)
+m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
+cov.m2 <- vcovHC(m2, type = "HC0")
+std.err <- sqrt(diag(cov.m2))
+robust.est <- cbind(Estimate= coef(m2), "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(m2)/std.err), lower.tail=FALSE),
+LL = coef(m1) - 1.96 * std.err,
+UL = coef(m1) + 1.96 * std.err)
+robust.est
+```
+
+
+
+
+# 率的廣義線性迴歸 Poisson GLM for rates
+
+## 醫學中的率
+
+前章介紹的事件發生次數，使用的是泊松迴歸。本章介紹同樣利用泊松迴歸，對事件發生率類型數據的泊松模型。
+
+- 肺癌發病率
+- 工廠職工的死亡率
+- 術後後遺症的發病率
+
+下列數據來自英國醫生調查 (British doctors study)，研究的是男性醫生中吸菸與否和冠心病死亡之間的關係。最後一列是每組觀測對象被追蹤的人年 (person-year)。
+
+```{r echo=FALSE}
+agegrp <- c("35-44","45-54","55-64","65-74","75+","35-44","45-54","55-64","65-74","75+")
+smokes <- c(rep("Smoker",5), rep("Non-smoker",5))
+deaths <- c(32,104,206,186,102,2,12,28,28,31)
+pyrs <- c(52407, 43248, 28612, 12663, 5317, 18790, 10673, 5710, 2585, 1462)
+BritishD <- data.frame(agegrp, smokes, deaths, pyrs)
+print(BritishD)
+```
+
+這是一個已經被整理過的數據，我們沒有辦法從這樣的數據還原到每個觀察對象的個人水平數據。冠心病的粗死亡率 (crude death rate) 可以被計算如下表 (忽略年齡分組)，此時默認的前提是死亡事件在追蹤的過程中發生的概率不發生改變。
+
+
+```{r PoissonRates, echo=FALSE, eval=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/PoissonRates.csv", header = T)
+names(dt) <- c("Group", "Person-years of follow-up", "CHD deaths", "Death Rate per 1000 person-years", "Rate Ratios")
+kable(dt, "html",  align = "c", caption = "Death rates due to CHD in smokers and non-smokers, collapsed over age group") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+## 泊松過程
+
+設 $Y$ 是代表某段時間 $t$ 內**事件發生次數 (死亡)** 的隨機變量。如果可以假設：
+
+- 每次事件的發生，是互相獨立的，即在沒有重疊的時間線上，每個時間的發生是隨機的。
+- 在一個無限小的時間段 $\delta t$ 內，事件發生的概率是 $\lambda\times\delta t$，其中 $\delta t \rightarrow 0$。
+
+那麼根據泊松分佈 (Section \@ref(poisson)) 的定義，在這個時間段內，隨機變量 $Y$ 事件發生次數服從泊松分佈：
+
+$$
+Y & \sim \text{Po}(\mu) \\
+\text{Where } \mu & = \lambda t, \text{ and } \lambda \text{ is the Rate}
+$$
+
+所以，從泊松過程可以看到，我們關心的參數是事件發生率 $\lambda$。
+
+## 率的模型
+
+既然關心的參數只是發生率，且我們已知泊松分佈是指數分佈的家族成員，可以用廣義線性模型的概念來建模。
+
+1. 因變量分佈，distribution of dependent variable $$Y_i \sim \text{Po}(\mu_i), \text{ where } \mu_i = \lambda_i t_i$$
+2. 線性預測方程，linear predictor $$\eta_i = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}$$
+3. 標準鏈接方程，canonical link function $$\text{log}(\lambda_i) = \text{log}(\frac{\mu_i}{t_i})$$
+
+所以，將率的模型整理一下，就變成了
+
+$$
+\text{log}(\mu_i) - \text{log}(t_i)
+$$
 
 # 混雜，調整，交互作用
 

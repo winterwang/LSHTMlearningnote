@@ -32,7 +32,7 @@
   
   
 <link rel="prev" href="section-46.html">
-<link rel="next" href="section-48.html">
+<link rel="next" href="-poisson-glm-for-rates.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -650,7 +650,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="47.3.2" data-path="-poisson-regression.html"><a href="-poisson-regression.html#-negative-binomial-model"><i class="fa fa-check"></i><b>47.3.2</b> 負二項式分佈模型 negative binomial model</a></li>
 </ul></li>
 </ul></li>
-<li class="chapter" data-level="48" data-path="section-48.html"><a href="section-48.html"><i class="fa fa-check"></i><b>48</b> 率的廣義線性迴歸</a></li>
+<li class="chapter" data-level="48" data-path="-poisson-glm-for-rates.html"><a href="-poisson-glm-for-rates.html"><i class="fa fa-check"></i><b>48</b> 率的廣義線性迴歸 Poisson GLM for rates</a><ul>
+<li class="chapter" data-level="48.1" data-path="-poisson-glm-for-rates.html"><a href="-poisson-glm-for-rates.html#section-48.1"><i class="fa fa-check"></i><b>48.1</b> 醫學中的率</a></li>
+<li class="chapter" data-level="48.2" data-path="-poisson-glm-for-rates.html"><a href="-poisson-glm-for-rates.html#section-48.2"><i class="fa fa-check"></i><b>48.2</b> 泊松過程</a></li>
+<li class="chapter" data-level="48.3" data-path="-poisson-glm-for-rates.html"><a href="-poisson-glm-for-rates.html#section-48.3"><i class="fa fa-check"></i><b>48.3</b> 率的模型</a></li>
+</ul></li>
 <li class="chapter" data-level="49" data-path="section-49.html"><a href="section-49.html"><i class="fa fa-check"></i><b>49</b> 混雜，調整，交互作用</a></li>
 <li class="chapter" data-level="50" data-path="section-50.html"><a href="section-50.html"><i class="fa fa-check"></i><b>50</b> 邏輯迴歸</a></li>
 <li class="chapter" data-level="51" data-path="section-51.html"><a href="section-51.html"><i class="fa fa-check"></i><b>51</b> 分析策略</a></li>
@@ -660,6 +664,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="55" data-path="section-55.html"><a href="section-55.html"><i class="fa fa-check"></i><b>55</b> 條件邏輯迴歸</a></li>
 <li class="chapter" data-level="56" data-path="multinomial-logistic-regression.html"><a href="multinomial-logistic-regression.html"><i class="fa fa-check"></i><b>56</b> Multinomial Logistic Regression</a></li>
 <li class="chapter" data-level="57" data-path="ordinal-logistic-regression.html"><a href="ordinal-logistic-regression.html"><i class="fa fa-check"></i><b>57</b> Ordinal Logistic Regression</a></li>
+<li class="part"><span><b>IX Statistical Methods in Epidemiology</b></span></li>
+<li class="chapter" data-level="58" data-path="section.html"><a href="section.html"><i class="fa fa-check"></i><b>58</b> </a></li>
 <li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>参考文献</a></li>
 <li class="divider"></li>
 <li><a href="https://bookdown.org" target="blank">本书由 bookdown 强力驱动</a></li>
@@ -964,6 +970,24 @@ m2 &lt;-<span class="st"> </span><span class="kw">glm</span>(num_awards <span cl
   <span class="dt">p =</span> <span class="kw">pchisq</span>(deviance, df.residual, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)))</code></pre></div>
 <pre><code>##      res.deviance  df           p
 ## [1,]    234.45997 197 0.034961171</code></pre>
+<p>另一種獲取沒有被低估的迴歸係數的標準誤的方法來自穩健統計學手段。在 R 裏，擬合完普通泊松迴歸以後，用 <code>sandwich</code> 包裏的 <code>vcovHC()</code> 命令進行穩健的參數誤差估計 (具體說是夾心方差矩陣估計 sandwich estimator of variance)：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(sandwich)
+m2 &lt;-<span class="st"> </span><span class="kw">glm</span>(num_awards <span class="op">~</span><span class="st"> </span>prog, <span class="dt">family=</span><span class="kw">poisson</span>(<span class="dt">link =</span> log), <span class="dt">data=</span>p)
+cov.m2 &lt;-<span class="st"> </span><span class="kw">vcovHC</span>(m2, <span class="dt">type =</span> <span class="st">&quot;HC0&quot;</span>)
+std.err &lt;-<span class="st"> </span><span class="kw">sqrt</span>(<span class="kw">diag</span>(cov.m2))
+robust.est &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">Estimate=</span> <span class="kw">coef</span>(m2), <span class="st">&quot;Robust SE&quot;</span> =<span class="st"> </span>std.err,
+<span class="st">&quot;Pr(&gt;|z|)&quot;</span> =<span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span><span class="kw">pnorm</span>(<span class="kw">abs</span>(<span class="kw">coef</span>(m2)<span class="op">/</span>std.err), <span class="dt">lower.tail=</span><span class="ot">FALSE</span>),
+<span class="dt">LL =</span> <span class="kw">coef</span>(m1) <span class="op">-</span><span class="st"> </span><span class="fl">1.96</span> <span class="op">*</span><span class="st"> </span>std.err,
+<span class="dt">UL =</span> <span class="kw">coef</span>(m1) <span class="op">+</span><span class="st"> </span><span class="fl">1.96</span> <span class="op">*</span><span class="st"> </span>std.err)
+robust.est</code></pre></div>
+<pre><code>##                   Estimate  Robust SE      Pr(&gt;|z|)
+## (Intercept)    -1.60943791 0.29814240 6.7305731e-08
+## progAcademic    1.60943791 0.32296809 6.2517920e-07
+## progVocational  0.18232156 0.42426407 6.6738767e-01
+##                         LL         UL
+## (Intercept)    -2.19379701 -1.0250788
+## progAcademic    0.97642045  2.2424554
+## progVocational -0.64923602  1.0138791</code></pre>
 </div>
 </div>
 </div>
@@ -973,7 +997,7 @@ m2 &lt;-<span class="st"> </span><span class="kw">glm</span>(num_awards <span cl
         </div>
       </div>
 <a href="section-46.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="section-48.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="-poisson-glm-for-rates.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
