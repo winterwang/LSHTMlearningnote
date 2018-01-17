@@ -647,6 +647,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="47.2" data-path="-poisson-regression.html"><a href="-poisson-regression.html#section-47.2"><i class="fa fa-check"></i><b>47.2</b> 泊松迴歸實例</a></li>
 <li class="chapter" data-level="47.3" data-path="-poisson-regression.html"><a href="-poisson-regression.html#-overdispersion"><i class="fa fa-check"></i><b>47.3</b> 過度離散 overdispersion</a><ul>
 <li class="chapter" data-level="47.3.1" data-path="-poisson-regression.html"><a href="-poisson-regression.html#section-47.3.1"><i class="fa fa-check"></i><b>47.3.1</b> 過度離散怎麼查？</a></li>
+<li class="chapter" data-level="47.3.2" data-path="-poisson-regression.html"><a href="-poisson-regression.html#-negative-binomial-model"><i class="fa fa-check"></i><b>47.3.2</b> 負二項式分佈模型 negative binomial model</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="48" data-path="section-48.html"><a href="section-48.html"><i class="fa fa-check"></i><b>48</b> 率的廣義線性迴歸</a></li>
@@ -868,6 +869,101 @@ E(Y_i) = E(E(Y_i | \mu_i)) = E(\mu_i) = \mu
 \]</span></p>
 <div id="section-47.3.1" class="section level3">
 <h3><span class="header-section-number">47.3.1</span> 過度離散怎麼查？</h3>
+<p>結果中的的模型偏差 deviance，可以用來初步判斷整體模型的擬合優度。如果模型偏差除以殘差獲得的殘差偏差 (residual deviance) 足夠小，說明擬合的模型跟數據本身比較接近，也就是模型和數據擬合程度較好，反之則提示模型本身具有較高的過度離散 overdispersion。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">with</span>(m1, <span class="kw">cbind</span>(<span class="dt">res.deviance =</span> deviance, <span class="dt">df =</span> df.residual,
+  <span class="dt">p =</span> <span class="kw">pchisq</span>(deviance, df.residual, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)))</code></pre></div>
+<pre><code>##      res.deviance  df           p
+## [1,]    234.45997 197 0.034961171</code></pre>
+<p>結果提示本模型<strong>可能存在過度離散</strong>，數據擬合度不理想。值得注意的是當樣本很大，模型偏差的檢驗統計量不再服從卡方分佈，應用的時候一定要慎重。</p>
+</div>
+<div id="-negative-binomial-model" class="section level3">
+<h3><span class="header-section-number">47.3.2</span> 負二項式分佈模型 negative binomial model</h3>
+<p>如果普通泊松迴歸模型擬合數據時，發現數據本身有過度離散的嫌疑，那麼建議使用負二項式分佈模型來重新擬合數據。負二項式分佈模型其實是泊松分佈的擴展版本，即考慮了個體的方差和均值的隨機效應 subject-specific random effect。如果設每個觀測對象的隨機效應部分爲 <span class="math inline">\(a_i\)</span>，預測變量爲向量 <span class="math inline">\(\mathbf{x_i} = (x_{i1}, \cdots, x_{ip})\)</span>，那麼因變量 <span class="math inline">\(Y_i\)</span> 服從均值爲 <span class="math inline">\(\text{exp}(\beta^T\mathbf{x_i}+a_i)\)</span> 泊松分佈。在負二項式分佈中，個體的隨機效應部分的自然底數的指數 <span class="math inline">\(e^{a_i}\)</span> 其實是服從均值爲 1， 方差爲 <span class="math inline">\(\alpha\)</span> 的<a href="https://cosx.org/2013/01/lda-math-gamma-function/">伽馬分佈 (gamma distribution)</a>。<span class="math inline">\(\alpha\)</span> 越大，说明过度离散越明显。</p>
+<p>接下來用相同的數據，使用負二項式分佈模型在 R 裏作模型的擬合，你就會看到巨大的差別：</p>
+<p>R 裏擬合負二項式分佈模型的函數 <code>glm.nb</code> 在基本包 <code>MASS</code> 裏。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(MASS)
+m1 &lt;-<span class="st"> </span><span class="kw">glm.nb</span>(num_awards <span class="op">~</span><span class="st"> </span>prog, <span class="dt">data =</span> p)
+m2 &lt;-<span class="st"> </span><span class="kw">glm</span>(num_awards <span class="op">~</span><span class="st"> </span>prog, <span class="dt">family=</span><span class="kw">poisson</span>(<span class="dt">link =</span> log), <span class="dt">data=</span>p)
+<span class="kw">summary</span>(m1)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm.nb(formula = num_awards ~ prog, data = p, init.theta = 1.72267107, 
+##     link = log)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.25581  -0.67036  -0.61517   0.00000   2.32349  
+## 
+## Coefficients:
+##                Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept)    -1.60944    0.35215 -4.5703 4.87e-06
+## progAcademic    1.60944    0.37291  4.3159 1.59e-05
+## progVocational  0.18232    0.46793  0.3896   0.6968
+##                   
+## (Intercept)    ***
+## progAcademic   ***
+## progVocational    
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for Negative Binomial(1.7227) family taken to be 1)
+## 
+##     Null deviance: 211.264  on 199  degrees of freedom
+## Residual deviance: 171.066  on 197  degrees of freedom
+## AIC: 406.532
+## 
+## Number of Fisher Scoring iterations: 1
+## 
+## 
+##               Theta:  1.723 
+##           Std. Err.:  0.717 
+## 
+##  2 x log-likelihood:  -398.532</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(m2)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = num_awards ~ prog, family = poisson(link = log), 
+##     data = p)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.41421  -0.69282  -0.63246   0.00000   3.39133  
+## 
+## Coefficients:
+##                Estimate Std. Error z value  Pr(&gt;|z|)
+## (Intercept)    -1.60944    0.33333 -4.8283 1.377e-06
+## progAcademic    1.60944    0.34733  4.6338 3.590e-06
+## progVocational  0.18232    0.44096  0.4135    0.6793
+##                   
+## (Intercept)    ***
+## progAcademic   ***
+## progVocational    
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for poisson family taken to be 1)
+## 
+##     Null deviance: 287.672  on 199  degrees of freedom
+## Residual deviance: 234.460  on 197  degrees of freedom
+## AIC: 416.515
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<p>仔細比較普通泊松分佈迴歸和負二項式分佈迴歸的輸出結果，你會發現</p>
+<ol style="list-style-type: decimal">
+<li>迴歸係數的計算是完全相同的 (由於我們只放了一個簡單的分類型變量作爲預測變量，一般來說泊松迴歸和負二項式分佈迴歸計算的迴歸係數會有些許不同)；</li>
+<li>另外一個變化是標準誤的估計量在負二項式分佈模型中明顯變大了，這就是我們放寬了前提條件，允許模型考慮個體的隨機效應的體現。如果泊松模型被數據本身的過度離散影響顯著，那麼泊松迴歸計算獲得的參數標準無是偏低的；</li>
+<li>負二項式分佈迴歸的結果最底下出現的 <code>Theta:  1.723</code> 部分，它的倒數是前面提到的歌廳效應部分 <span class="math inline">\(a_i\)</span> 服從的伽馬分佈的方差 <span class="math inline">\(\alpha\)</span>。它是關鍵的離散程度參數 (dispersion parameter)。在 STATA 裏，如果用 <code>nbreg</code> 擬合負二項式分佈迴歸的模型，輸出的結果最底下會有 <span class="math inline">\(\alpha\)</span> 值的報告，注意它和 R 輸出的 <code>Theta</code> 結果互爲倒數，但是同樣意義是離散程度參數，另外，STATA 的輸出結果還會對 <span class="math inline">\(\alpha = 0\)</span> 直接進行檢驗。在 R 裏面則需要給兩個模型分別進行擬合優度檢驗，多數情況下你會發現負二項式分佈迴歸的模型更加擬合數據：</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">with</span>(m1, <span class="kw">cbind</span>(<span class="dt">res.deviance =</span> deviance, <span class="dt">df =</span> df.residual,
+  <span class="dt">p =</span> <span class="kw">pchisq</span>(deviance, df.residual, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)))</code></pre></div>
+<pre><code>##      res.deviance  df          p
+## [1,]    171.06608 197 0.90901874</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">with</span>(m2, <span class="kw">cbind</span>(<span class="dt">res.deviance =</span> deviance, <span class="dt">df =</span> df.residual,
+  <span class="dt">p =</span> <span class="kw">pchisq</span>(deviance, df.residual, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)))</code></pre></div>
+<pre><code>##      res.deviance  df           p
+## [1,]    234.45997 197 0.034961171</code></pre>
 </div>
 </div>
 </div>

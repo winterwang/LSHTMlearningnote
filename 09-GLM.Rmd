@@ -949,7 +949,43 @@ $$
 
 ### 過度離散怎麼查？
 
+結果中的的模型偏差 deviance，可以用來初步判斷整體模型的擬合優度。如果模型偏差除以殘差獲得的殘差偏差 (residual deviance) 足夠小，說明擬合的模型跟數據本身比較接近，也就是模型和數據擬合程度較好，反之則提示模型本身具有較高的過度離散 overdispersion。
 
+```{r}
+with(m1, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+結果提示本模型**可能存在過度離散**，數據擬合度不理想。值得注意的是當樣本很大，模型偏差的檢驗統計量不再服從卡方分佈，應用的時候一定要慎重。
+
+### 負二項式分佈模型 negative binomial model
+
+如果普通泊松迴歸模型擬合數據時，發現數據本身有過度離散的嫌疑，那麼建議使用負二項式分佈模型來重新擬合數據。負二項式分佈模型其實是泊松分佈的擴展版本，即考慮了個體的方差和均值的隨機效應 subject-specific random effect。如果設每個觀測對象的隨機效應部分爲 $a_i$，預測變量爲向量 $\mathbf{x_i} = (x_{i1}, \cdots, x_{ip})$，那麼因變量 $Y_i$ 服從均值爲 $\text{exp}(\beta^T\mathbf{x_i}+a_i)$ 泊松分佈。在負二項式分佈中，個體的隨機效應部分的自然底數的指數 $e^{a_i}$ 其實是服從均值爲 1， 方差爲 $\alpha$ 的[伽馬分佈 (gamma distribution)](https://cosx.org/2013/01/lda-math-gamma-function/)。$\alpha$ 越大，说明过度离散越明显。
+
+接下來用相同的數據，使用負二項式分佈模型在 R 裏作模型的擬合，你就會看到巨大的差別：
+
+R 裏擬合負二項式分佈模型的函數 `glm.nb` 在基本包 `MASS` 裏。
+
+```{r message=FALSE}
+library(MASS)
+m1 <- glm.nb(num_awards ~ prog, data = p)
+m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
+summary(m1)
+summary(m2)
+```
+
+仔細比較普通泊松分佈迴歸和負二項式分佈迴歸的輸出結果，你會發現
+
+1. 迴歸係數的計算是完全相同的 (由於我們只放了一個簡單的分類型變量作爲預測變量，一般來說泊松迴歸和負二項式分佈迴歸計算的迴歸係數會有些許不同)；
+2. 另外一個變化是標準誤的估計量在負二項式分佈模型中明顯變大了，這就是我們放寬了前提條件，允許模型考慮個體的隨機效應的體現。如果泊松模型被數據本身的過度離散影響顯著，那麼泊松迴歸計算獲得的參數標準無是偏低的；
+3. 負二項式分佈迴歸的結果最底下出現的 `Theta:  1.723` 部分，它的倒數是前面提到的歌廳效應部分 $a_i$ 服從的伽馬分佈的方差 $\alpha$。它是關鍵的離散程度參數 (dispersion parameter)。在 STATA 裏，如果用 `nbreg` 擬合負二項式分佈迴歸的模型，輸出的結果最底下會有 $\alpha$ 值的報告，注意它和 R 輸出的 `Theta` 結果互爲倒數，但是同樣意義是離散程度參數，另外，STATA 的輸出結果還會對 $\alpha = 0$ 直接進行檢驗。在 R 裏面則需要給兩個模型分別進行擬合優度檢驗，多數情況下你會發現負二項式分佈迴歸的模型更加擬合數據：
+
+```{r}
+with(m1, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+with(m2, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
 
 
 # 率的廣義線性迴歸
