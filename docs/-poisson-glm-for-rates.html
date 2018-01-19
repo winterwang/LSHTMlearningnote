@@ -655,6 +655,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="48.2" data-path="-poisson-glm-for-rates.html"><a href="-poisson-glm-for-rates.html#section-48.2"><i class="fa fa-check"></i><b>48.2</b> 泊松過程</a></li>
 <li class="chapter" data-level="48.3" data-path="-poisson-glm-for-rates.html"><a href="-poisson-glm-for-rates.html#section-48.3"><i class="fa fa-check"></i><b>48.3</b> 率的模型</a></li>
 <li class="chapter" data-level="48.4" data-path="-poisson-regression.html"><a href="-poisson-regression.html#-glm"><i class="fa fa-check"></i><b>48.4</b> 率的 GLM</a></li>
+<li class="chapter" data-level="48.5" data-path="-poisson-glm-for-rates.html"><a href="-poisson-glm-for-rates.html#section-48.5"><i class="fa fa-check"></i><b>48.5</b> 實戰演練</a><ul>
+<li class="chapter" data-level="48.5.1" data-path="section-7.html"><a href="section-7.html#-1"><i class="fa fa-check"></i><b>48.5.1</b> 模型 1</a></li>
+<li class="chapter" data-level="48.5.2" data-path="-construction-of-a-hypothesis-test.html"><a href="-construction-of-a-hypothesis-test.html#-2"><i class="fa fa-check"></i><b>48.5.2</b> 模型 2</a></li>
+<li class="chapter" data-level="48.5.3" data-path="section-16.html"><a href="section-16.html#-3"><i class="fa fa-check"></i><b>48.5.3</b> 模型 3</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="49" data-path="section-49.html"><a href="section-49.html"><i class="fa fa-check"></i><b>49</b> 混雜，調整，交互作用</a></li>
 <li class="chapter" data-level="50" data-path="section-50.html"><a href="section-50.html"><i class="fa fa-check"></i><b>50</b> 邏輯迴歸</a></li>
@@ -810,8 +815,195 @@ Y &amp; \sim \text{Po}(\mu) \\
 <p>所以我們一起來把率的 GLM 正式定義一下，它包含三個部分：</p>
 <ol style="list-style-type: decimal">
 <li>可被認爲互相獨立的因變量觀測值的分佈服從泊松分佈 <span class="math display">\[Y_i \sim \text{Po}(\mu_i)\]</span> <br> 其中 <span class="math inline">\(E(Y_i) = \mu_i = \lambda_i t_i\)</span>，<span class="math inline">\(t_i\)</span> 是第 <span class="math inline">\(i\)</span> 個觀察對象 (或者觀察組) 的追蹤人年 (person-time)。</li>
-<li></li>
+<li>線性預測方程 <span class="math display">\[\eta_i = \text{log}(t_i) + \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}\]</span></li>
+<li>鏈接方程是均值的對數方程 <span class="math display">\[\text{log}(\mu_i) = \eta_i\]</span></li>
 </ol>
+<p>和分組型二項分佈數據相似，如果泊松 GLM 擬合的數據也是分組型數據，如本章開頭的英國醫生隊列數據。那麼模型偏差值 (deviance) 可以用來衡量模型擬合的好壞。在零假設條件下，模型偏差值服從自由度爲 <span class="math inline">\(n-p\)</span> 的卡方分佈 (這裏的 <span class="math inline">\(n\)</span> 是分組型數據中的“組的數量”，也就是飽和模型中參數的數量，<span class="math inline">\(p\)</span> 是擬合的線性預測方程中參數的數量)。</p>
+</div>
+<div id="section-48.5" class="section level2">
+<h2><span class="header-section-number">48.5</span> 實戰演練</h2>
+<p>數據是本章開頭使用的英國醫生隊列</p>
+<pre><code>##    agegrp     smokes deaths  pyrs
+## 1   35-44     Smoker     32 52407
+## 2   45-54     Smoker    104 43248
+## 3   55-64     Smoker    206 28612
+## 4   65-74     Smoker    186 12663
+## 5     75+     Smoker    102  5317
+## 6   35-44 Non-smoker      2 18790
+## 7   45-54 Non-smoker     12 10673
+## 8   55-64 Non-smoker     28  5710
+## 9   65-74 Non-smoker     28  2585
+## 10    75+ Non-smoker     31  1462</code></pre>
+<ul>
+<li>每組的死亡人數用 <span class="math inline">\(y_i, i=1,\cdots,10\)</span> 標記；</li>
+<li>每組追蹤的人年用 <span class="math inline">\(t_i\)</span> 標記；</li>
+<li><span class="math inline">\(x_{i1} = 0\)</span> 時對象是吸菸者，<span class="math inline">\(x_{i1} = 1\)</span> 時對象是非吸菸者；</li>
+<li><span class="math inline">\(x_{i2}, x_{i3}, x_{i4}, x_{i5}\)</span> 作爲5個年齡組的啞變量。</li>
+</ul>
+<p>分析目的是：</p>
+<ol style="list-style-type: decimal">
+<li>調查吸菸與冠心病死亡率的關係 (不調整年齡)；</li>
+<li>調查吸菸與冠心病死亡率的年齡調整後關係；</li>
+<li>調查年齡是否對吸菸與冠心病死亡率的關係起到交互作用。</li>
+</ol>
+<div id="-1" class="section level3">
+<h3><span class="header-section-number">48.5.1</span> 模型 1</h3>
+<p>第一個模型可以用下面的數學表達式：</p>
+<p><span class="math display">\[
+\text{log}(\mu_i)  = \text{log}(t_i) + \alpha + \beta_1 x_{i1}
+\]</span></p>
+<p>在 R 裏面用下面的代碼來擬合這個模型，仔細閱讀輸出的結果：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># the following 2 models are equivalent</span>
+Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(deaths <span class="op">~</span><span class="st"> </span>smokes <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(pyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> BritishD)
+Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(deaths <span class="op">~</span><span class="st"> </span>smokes, <span class="dt">offset =</span> <span class="kw">log</span>(pyrs), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> BritishD)
+<span class="kw">summary</span>(Model1)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = deaths ~ smokes, family = poisson(link = &quot;log&quot;), 
+##     data = BritishD, offset = log(pyrs))
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -16.5348   -6.0313    4.6116    8.1617   13.6441  
+## 
+## Coefficients:
+##               Estimate Std. Error  z value  Pr(&gt;|z|)
+## (Intercept)  -5.961822   0.099504 -59.9157 &lt; 2.2e-16
+## smokesSmoker  0.542221   0.107183   5.0588 4.219e-07
+##                 
+## (Intercept)  ***
+## smokesSmoker ***
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for poisson family taken to be 1)
+## 
+##     Null deviance: 935.067  on 9  degrees of freedom
+## Residual deviance: 905.976  on 8  degrees of freedom
+## AIC: 965.044
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<p>輸出報告中的參數估計部分 <code>Estimate</code> 就是我們擬合模型中參數的估計 <span class="math inline">\(\hat\alpha, \hat\beta_1\)</span>，他們各自的含義是：</p>
+<ul>
+<li><span class="math inline">\(\hat\alpha = -5.96\)</span>：非吸菸者的冠心病估計死亡率的對數 (the estimated log rate for non-smokers)；</li>
+<li><span class="math inline">\(\hat\beta_1 = 0.547\)</span>：非吸菸者和吸菸者兩組之間冠心病死亡率對數之差 (the estimated difference in log rate between non-smokers and smokers)。</li>
+</ul>
+<p>注意看報告中間部分模型偏差部分的數字 <code>Residual deviance: 905.98  on 8  degrees of freedom</code>，如果對 模型 1 進行擬合優度檢驗：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">with</span>(Model1, <span class="kw">cbind</span>(<span class="dt">res.deviance =</span> deviance, <span class="dt">df =</span> df.residual,
+  <span class="dt">p =</span> <span class="kw">pchisq</span>(deviance, df.residual, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)))</code></pre></div>
+<pre><code>##      res.deviance df              p
+## [1,]    905.97619  8 2.9024145e-190</code></pre>
+<p>擬合優度檢驗結果提示，這個模型對數據的擬合非常差 (poor fit)。可能的原因是，模型 1 中忽略了“年齡”這一重要的因素，使得當僅僅使用 吸菸與否 的信息擬合的泊松迴歸模型的擬合值和觀察值之間的差異的波動非常大，大到很可能無法滿足泊松分佈的前提假設。</p>
+</div>
+<div id="-2" class="section level3">
+<h3><span class="header-section-number">48.5.2</span> 模型 2</h3>
+<p>第二個模型的線性預測方程可以寫作：</p>
+<p><span class="math display">\[
+\text{log}(\mu_i) = \text{ln}(t_i) + \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5}
+\]</span></p>
+<p>在 R 裏面用下面的代碼來擬合這個模型，仔細閱讀輸出的結果：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model2 &lt;-<span class="st"> </span><span class="kw">glm</span>(deaths <span class="op">~</span><span class="st"> </span>smokes <span class="op">+</span><span class="st"> </span>agegrp <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(pyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> BritishD)
+<span class="kw">summary</span>(Model2)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = deaths ~ smokes + agegrp + offset(log(pyrs)), family = poisson(link = &quot;log&quot;), 
+##     data = BritishD)
+## 
+## Deviance Residuals: 
+##         1          2          3          4          5  
+##  0.901600   0.510379   0.051347  -0.087318  -0.912369  
+##         6          7          8          9         10  
+## -2.179780  -1.308000  -0.137907   0.228819   1.919020  
+## 
+## Coefficients:
+##              Estimate Std. Error  z value  Pr(&gt;|z|)
+## (Intercept)  -7.91933    0.19176 -41.2978 &lt; 2.2e-16
+## smokesSmoker  0.35454    0.10737   3.3019 0.0009604
+## agegrp45-54   1.48401    0.19510   7.6063 2.821e-14
+## agegrp55-64   2.62751    0.18373  14.3012 &lt; 2.2e-16
+## agegrp65-74   3.35049    0.18480  18.1305 &lt; 2.2e-16
+## agegrp75+     3.70010    0.19222  19.2494 &lt; 2.2e-16
+##                 
+## (Intercept)  ***
+## smokesSmoker ***
+## agegrp45-54  ***
+## agegrp55-64  ***
+## agegrp65-74  ***
+## agegrp75+    ***
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for poisson family taken to be 1)
+## 
+##     Null deviance: 935.0673  on 9  degrees of freedom
+## Residual deviance:  12.1324  on 4  degrees of freedom
+## AIC: 79.2003
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<p>此時可以計算吸菸者與非吸菸者相比時，年齡調整後冠心病死亡率的比爲：</p>
+<p><span class="math display">\[
+\begin{aligned}
+e^{0.3545} &amp; = 1.43 \text{ with } 95\% \text{ CI: } \\
+(e^{0.3545 - 1.96\times0.1074}, &amp; e^{0.3545 + 1.96\times0.1074}) = (1.16, 1.76)
+\end{aligned}
+\]</span></p>
+<p>報告中還包含了對吸菸項迴歸係數的 Wald 檢驗結果 <code>smokesSmoker   0.3545     0.1074   3.302  0.00096 ***</code>，從這一結果來看，數據提供了強有力的證據證明了年齡調整以後，吸菸會引起冠心病死亡率的顯著升高。再利用模型擬合報告中模型偏差部分的數據 <code>Residual deviance: 905.98  on 8  degrees of freedom</code>，模型的擬合優度檢驗結果爲：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">with</span>(Model2, <span class="kw">cbind</span>(<span class="dt">res.deviance =</span> deviance, <span class="dt">df =</span> df.residual,
+  <span class="dt">p =</span> <span class="kw">pchisq</span>(deviance, df.residual, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)))</code></pre></div>
+<pre><code>##      res.deviance df           p
+## [1,]    12.132366  4 0.016393625</code></pre>
+<p>結果依然提示，即使家了年齡組進入這個泊松迴歸，模型對數據的擬合程度依然非常的不好。所以，到這裏，在即使調整了年齡之後擬合度依然不理想的情況下 (這是需要加交互作用項的證據)，我們需要在模型中加入年齡和吸菸的交互作用項 (結果是加入交互作用項的模型就變成了飽和模型)。</p>
+</div>
+<div id="-3" class="section level3">
+<h3><span class="header-section-number">48.5.3</span> 模型 3</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model3 &lt;-<span class="st"> </span><span class="kw">glm</span>(deaths <span class="op">~</span><span class="st"> </span>smokes<span class="op">*</span>agegrp <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(pyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> BritishD)
+<span class="kw">summary</span>(Model3)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = deaths ~ smokes * agegrp + offset(log(pyrs)), family = poisson(link = &quot;log&quot;), 
+##     data = BritishD)
+## 
+## Deviance Residuals: 
+##  [1]  0  0  0  0  0  0  0  0  0  0
+## 
+## Coefficients:
+##                          Estimate Std. Error  z value
+## (Intercept)              -9.14793    0.70711 -12.9371
+## smokesSmoker              1.74687    0.72887   2.3967
+## agegrp45-54               2.35737    0.76376   3.0865
+## agegrp55-64               3.83016    0.73192   5.2330
+## agegrp65-74               4.62266    0.73192   6.3158
+## agegrp75+                 5.29436    0.72956   7.2569
+## smokesSmoker:agegrp45-54 -0.98662    0.79006  -1.2488
+## smokesSmoker:agegrp55-64 -1.36281    0.75619  -1.8022
+## smokesSmoker:agegrp65-74 -1.44229    0.75653  -1.9065
+## smokesSmoker:agegrp75+   -1.84699    0.75717  -2.4393
+##                           Pr(&gt;|z|)    
+## (Intercept)              &lt; 2.2e-16 ***
+## smokesSmoker              0.016544 *  
+## agegrp45-54               0.002025 ** 
+## agegrp55-64              1.668e-07 ***
+## agegrp65-74              2.688e-10 ***
+## agegrp75+                3.960e-13 ***
+## smokesSmoker:agegrp45-54  0.211741    
+## smokesSmoker:agegrp55-64  0.071512 .  
+## smokesSmoker:agegrp65-74  0.056592 .  
+## smokesSmoker:agegrp75+    0.014715 *  
+## ---
+## Signif. codes:  
+## 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for poisson family taken to be 1)
+## 
+##     Null deviance: 9.35067e+02  on 9  degrees of freedom
+## Residual deviance: 4.44089e-15  on 0  degrees of freedom
+## AIC: 75.0679
+## 
+## Number of Fisher Scoring iterations: 3</code></pre>
+<p>此時你會看到模型的偏差已經幾乎接近於零，因爲這已經是一個飽和模型。</p>
+</div>
 </div>
 </div>
             </section>

@@ -1017,7 +1017,7 @@ robust.est
 
 下列數據來自英國醫生調查 (British doctors study)，研究的是男性醫生中吸菸與否和冠心病死亡之間的關係。最後一列是每組觀測對象被追蹤的人年 (person-year)。
 
-```{r echo=FALSE}
+```{r echo=FALSE, cache = TRUE}
 agegrp <- c("35-44","45-54","55-64","65-74","75+","35-44","45-54","55-64","65-74","75+")
 smokes <- c(rep("Smoker",5), rep("Non-smoker",5))
 deaths <- c(32,104,206,186,102,2,12,28,28,31)
@@ -1083,7 +1083,103 @@ $$
 2. 線性預測方程 $$\eta_i = \text{log}(t_i) + \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}$$
 3. 鏈接方程是均值的對數方程 $$\text{log}(\mu_i) = \eta_i$$
 
+和分組型二項分佈數據相似，如果泊松 GLM 擬合的數據也是分組型數據，如本章開頭的英國醫生隊列數據。那麼模型偏差值 (deviance) 可以用來衡量模型擬合的好壞。在零假設條件下，模型偏差值服從自由度爲 $n-p$ 的卡方分佈 (這裏的 $n$ 是分組型數據中的“組的數量”，也就是飽和模型中參數的數量，$p$ 是擬合的線性預測方程中參數的數量)。
 
+## 實戰演練
+
+數據是本章開頭使用的英國醫生隊列
+
+```{r echo=FALSE}
+print(BritishD)
+```
+
+- 每組的死亡人數用 $y_i, i=1,\cdots,10$ 標記；
+- 每組追蹤的人年用 $t_i$ 標記；
+- $x_{i1} = 0$ 時對象是吸菸者，$x_{i1} = 1$ 時對象是非吸菸者；
+- $x_{i2}, x_{i3}, x_{i4}, x_{i5}$ 作爲5個年齡組的啞變量。
+
+
+分析目的是：
+
+1. 調查吸菸與冠心病死亡率的關係 (不調整年齡)；
+2. 調查吸菸與冠心病死亡率的年齡調整後關係；
+3. 調查年齡是否對吸菸與冠心病死亡率的關係起到交互作用。
+
+### 模型 1
+
+第一個模型可以用下面的數學表達式：
+
+$$
+\text{log}(\mu_i)  = \text{log}(t_i) + \alpha + \beta_1 x_{i1}
+$$
+
+在 R 裏面用下面的代碼來擬合這個模型，仔細閱讀輸出的結果：
+
+```{r}
+# the following 2 models are equivalent
+Model1 <- glm(deaths ~ smokes + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
+Model1 <- glm(deaths ~ smokes, offset = log(pyrs), family = poisson(link = "log"), data = BritishD)
+summary(Model1)
+```
+
+輸出報告中的參數估計部分 `Estimate` 就是我們擬合模型中參數的估計 $\hat\alpha, \hat\beta_1$，他們各自的含義是：
+
+- $\hat\alpha = -5.96$：非吸菸者的冠心病估計死亡率的對數 (the estimated log rate for non-smokers)；
+- $\hat\beta_1 = 0.547$：非吸菸者和吸菸者兩組之間冠心病死亡率對數之差 (the estimated difference in log rate between non-smokers and smokers)。
+
+注意看報告中間部分模型偏差部分的數字 `Residual deviance: 905.98  on 8  degrees of freedom`，如果對 模型 1 進行擬合優度檢驗：
+
+
+```{r}
+with(Model1, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+擬合優度檢驗結果提示，這個模型對數據的擬合非常差 (poor fit)。可能的原因是，模型 1 中忽略了“年齡”這一重要的因素，使得當僅僅使用 吸菸與否 的信息擬合的泊松迴歸模型的擬合值和觀察值之間的差異的波動非常大，大到很可能無法滿足泊松分佈的前提假設。
+
+### 模型 2
+
+第二個模型的線性預測方程可以寫作：
+
+$$
+\text{log}(\mu_i) = \text{ln}(t_i) + \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5}
+$$
+
+在 R 裏面用下面的代碼來擬合這個模型，仔細閱讀輸出的結果：
+
+```{r}
+Model2 <- glm(deaths ~ smokes + agegrp + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
+summary(Model2)
+```
+
+此時可以計算吸菸者與非吸菸者相比時，年齡調整後冠心病死亡率的比爲：
+
+$$
+\begin{aligned}
+e^{0.3545} & = 1.43 \text{ with } 95\% \text{ CI: } \\
+(e^{0.3545 - 1.96\times0.1074}, & e^{0.3545 + 1.96\times0.1074}) = (1.16, 1.76)
+\end{aligned}
+$$
+
+報告中還包含了對吸菸項迴歸係數的 Wald 檢驗結果 `smokesSmoker   0.3545     0.1074   3.302  0.00096 ***`，從這一結果來看，數據提供了強有力的證據證明了年齡調整以後，吸菸會引起冠心病死亡率的顯著升高。再利用模型擬合報告中模型偏差部分的數據 `Residual deviance: 905.98  on 8  degrees of freedom`，模型的擬合優度檢驗結果爲：
+
+```{r}
+with(Model2, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+結果依然提示，即使家了年齡組進入這個泊松迴歸，模型對數據的擬合程度依然非常的不好。所以，到這裏，在即使調整了年齡之後擬合度依然不理想的情況下 (這是需要加交互作用項的證據)，我們需要在模型中加入年齡和吸菸的交互作用項 (結果是加入交互作用項的模型就變成了飽和模型)。
+
+
+### 模型 3
+
+
+```{r}
+Model3 <- glm(deaths ~ smokes*agegrp + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
+summary(Model3)
+```
+
+此時你會看到模型的偏差已經幾乎接近於零，因爲這已經是一個飽和模型。
 
 
 # 混雜，調整，交互作用
