@@ -1501,7 +1501,7 @@ w_1 = \frac{1}{\text{Var}(\text{log}\hat\Psi_1)} = 4.74 ; \;& w_2 = \frac{1}{\te
 \end{aligned}
 $$
 
-Woolf 的計算調整後的合併比值比的方法是**在線性迴歸和廣義線性迴歸被發現之前誕生的**，但是其想法之精妙，確實令人感嘆。可惜最大的缺陷是無法用這樣的方法進行連續型變量的調整，也很難同時進行多個變量的調整。現在我們有了廣義線性迴歸模型這一更強大的工具，只要把變量加入廣義線性模型進行調整就可以計算曾經難以計算和擴展的調整後的合併比值比。從下面的代碼計算獲得的調整後比值比 $1.43 (0.91, 2.34)$ 也可以看出，Woolf 方法的計算結果也是足夠令人滿意的。
+Woolf 的計算調整後的合併比值比的方法是**在線性迴歸和廣義線性迴歸被發現之前誕生的**，但是其想法之精妙，確實令人感嘆。可惜其最大的缺陷是無法用這樣的方法進行連續型變量的調整，也很難同時進行多個變量的調整，所以現在這一算法已經逐漸被淘汰。現在我們有了廣義線性迴歸模型這一更強大的工具，只要把變量加入廣義線性模型進行調整就可以計算曾經難以計算和擴展的調整後的合併比值比。從下面的代碼計算獲得的調整後比值比 $1.43 (0.91, 2.34)$ 也可以看出，Woolf 方法的計算結果也是足夠令人滿意的。
 
 ```{r}
 size <- c("< 2cm", "< 2cm", ">= 2cm", ">= 2cm")
@@ -1514,12 +1514,31 @@ summary(ModelStone)
 epiDisplay::logistic.display(ModelStone)
 ```
 
+所以，此次分析的結論是，在 5% 的顯著性水平下，數據無法提供有效證據證明，當調整了結石尺寸之後，外科手術和超聲碎石術治療腎結石有差別。
+We can conclude that there is no evidence at the 5% level for an effect of surgery, adjusted for stone size.
 
 
+## 交互作用
 
+我們決定調整一個混雜因素的時候，其實同時包含了 “在不同混雜因素的程度下，暴露變量和結果變量之間的關係不變/This implicitly assumes that the effect of the exposure is the same irrespective of the levels of the confounder.” 的假設。但是，一個混雜因素，它可能同時還扮演了改變暴露變量和結果變量之間關係的角色 (effect modifier/交互作用效應)。另外還有的情況下，某變量可能改變了暴露變量和結果變量之間的關係，卻不一定是一個混雜因素。此時我們說這個起到改變關係的變量和暴露變量之間發生了交互作用。
 
+如果暴露變量在某個分組變量的不同層 (strata) 之間是不同質的 (hetergeneous, not constant)，我們建議**要分析且報告不同層各自的**比值比。惟一的例外是 RCT 臨牀試驗的時候，我們更加關心調整後合併比值比。因爲一項治療藥物對不同的 “個體” 有不同的療效是必然的，但是，RCT 的目的是要評價的其實是這個藥物或者新療法在整個人羣中的療效是怎樣的。
 
+我們給腎結石數據加上治療方案和結石尺寸大小的交互作用項，結果如下：
 
+```{r}
+ModelStone2 <- glm(cbind(Success, n - Success) ~ treatment*size, family = binomial(link = logit), data = Stone)
+summary(ModelStone2)
+epiDisplay::logistic.display(ModelStone2)
+```
+
+交互作用項的迴歸係數是否爲零的檢驗結果是 $p = 0.329$，提示數據無法提供足夠的證據證明結石尺寸對治療方案和手術成功與否之間的關係造成有意義的交互作用 (There is no evidence of an interaction between stone size and surgery)。所以此次的數據分析我們就可以報告結石尺寸調整後的手術成功比值比就可以了。其中，交互作用項的迴歸係數 $-0.5245 = log(0.59)$，的含義是當結石尺寸 $\geslant 2 \text{cm}$ 時，外科手術和超聲碎石術成功**比值比的對數的差**。我們可以看到一開始我們計算的分層比值比的比值 $\frac{1.23}{2.08} = 0.59$。注意到這已經是一個飽和模型 (模型偏差爲零)，模型的擬合值和我們的觀測值是完全相同的。
+
+另外一點不得不提的是，交互作用項的迴歸係數的點估計 $0.59$ 其實低於零假設時的 $1$ 挺多的，它的 $95\%$ 信賴區間也相當的寬 $(0.21,1.70)$，所以其實這裏我們沒有獲得足夠的證據證明替代假設 (有交互作用)，很難說不是因爲樣本量不足導致的統計效能較低，所以我們沒有辦法從這個數據完全排除結石尺寸對治療方案的選擇和手術成功的關係之間的交互作用。(We really cannot be sure that there is no interaction in truth - the data are consistent with quite large interactions between size and surgery effect.) 因此，**有些統計學家可能會傾向於報告分層的比值比，因爲我們沒有辦法從這個樣本數據排除有較強交互作用存在的可能性**。
+
+## 可壓縮性  collapsibility
+
+模型可壓縮性的概念可以這樣來理解，
 
 # 邏輯迴歸
 
