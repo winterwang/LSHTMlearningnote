@@ -1538,7 +1538,124 @@ epiDisplay::logistic.display(ModelStone2)
 
 ## 可壓縮性  collapsibility
 
-模型可壓縮性的概念可以這樣來理解，
+模型可壓縮性的概念可以這樣來理解：
+
+當我們把一個 **我們認爲很重要的混雜因子** 加到模型中去時，自然而然我們會期待其對結果變量的 **效果估計 (effect estimate)** (迴歸係數)在調整前後發生變化。如果是反過來，當我們把一個 **我們認爲不重要的非混雜因子** 加到模型中去時，我們也會自然而然地期待其對結果變量的 **效果估計 (effect estimate)** 在調整前後不會發生改變才是。不幸的是，我們這種理想中的想當然，僅僅在某些情境下成立，其中之一是簡單線性迴歸 (Section \@ref(lm))。
+
+### 線性迴歸
+
+**證明**
+
+令 $Y$ 標記結果變量，$X$ 標記暴露變量，$Z$ 則標記我們想要調整的莫個混雜因子：
+
+$$
+Y = \alpha + \beta_X X + \beta_Z Z + \varepsilon, \text{ where } \varepsilon \sim N(0, \sigma^2)
+$$
+
+然後把等式兩邊同時取以暴露變量 $X$ 爲條件的期待值：
+
+$$
+E(Y | X) = \alpha + \beta_X X + \beta_Z E(Z|X)
+$$
+
+如果 $Z$ 和 $X$ 是相互獨立的 (即，不是 $X, Y$ 之間關係的混淆因子)，那麼 $E(Z|X) = E(Z) = \mu_Z$，因爲 $X$ 不能提供任何 $Z$ 的有效信息。所以，等式就變爲：
+
+$$
+E(Y|X) = \alpha + \beta_Z \mu_Z + \beta_X X
+$$
+
+所以，當我們用簡單線性迴歸來擬合 $X,Y$ 之間的關係時，如果 $Z,X$ 是相互獨立的，模型中增加了 $Z$，不會影響 $X$ 的迴歸係數。線性迴歸的這個性質被定義爲模型的可壓縮性 (linear regression models are collapsible)。
+
+### 邏輯鏈接方程
+
+使用對數鏈接方程 ($\text{log link}$) 的迴歸模型，同樣具有和線性迴歸類似的可壓縮性。但是，邏輯鏈接方程 ($\text{logit link}$) 的迴歸模型則不具有可壓縮性。下面舉例的分層表格和壓縮表格，證明了邏輯鏈接方程不具有可壓縮性：
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 49.6: **Non-collapsibility** of logit link in GLM **(stratified data)**</caption>
+ <thead>
+  <tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;> Strata 1 </div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;> Strata 2 </div></th>
+</tr>
+<tr>
+   <th style="text-align:center;"> Outcome </th>
+   <th style="text-align:center;"> Exposure $+$ </th>
+   <th style="text-align:center;"> Exposure $-$ </th>
+   <th style="text-align:center;"> Exposure $+$ </th>
+   <th style="text-align:center;"> Exposure $-$ </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> Success </td>
+   <td style="text-align:center;"> 90 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 10 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Failure </td>
+   <td style="text-align:center;"> 10 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 90 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 100 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Odds Ratios </td>
+   <td style="text-align:center;"> 9 </td>
+   <td style="text-align:center;">  </td>
+   <td style="text-align:center;"> 9 </td>
+   <td style="text-align:center;">  </td>
+  </tr>
+</tbody>
+</table>
+
+從表格的數據計算可知，要被調整的分組變量的兩層數據中，暴露變量和結果變量的關係相同，比值比都是 $9$，沒有交互作用，也沒有混雜效應 (每一層中暴露與非暴露均佔相同的 $50\%$)。但是，你如果把這個觀測數據合併：
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 49.7: **Non-collapsibility** of logit link in GLM **(collapsed data)**</caption>
+ <thead>
+  <tr>
+   <th style="text-align:center;"> Outcome </th>
+   <th style="text-align:center;"> Exposure $+$ </th>
+   <th style="text-align:center;"> Exposure $-$ </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> Success </td>
+   <td style="text-align:center;"> 140 </td>
+   <td style="text-align:center;"> 60 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Failure </td>
+   <td style="text-align:center;"> 60 </td>
+   <td style="text-align:center;"> 140 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> 200 </td>
+   <td style="text-align:center;"> 200 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Odds ratio </td>
+   <td style="text-align:center;"> 5.4 </td>
+   <td style="text-align:center;">  </td>
+  </tr>
+</tbody>
+</table>
+
+既然已知我們拿來分層的變量對暴露和結果的關係既沒有交互作用，也沒有混雜效應，那麼壓縮數據以後的合併比值比應該和分層比值比一樣才說的通，可惜我們獲得了截然不同的合併比值比 (非調整的)。所以在應用邏輯鏈接方程建立廣義線性迴歸模型的時候，一定不能忘記其不可壓縮性的特徵。所以，**即使加入一個非混淆因子，暴露變量的邏輯迴歸的效應估計 (係數) 也會發生改變**。調整了 $Z$ 以後的比值比被叫做條件 (或直接使用分層) 比值比。如同表格中實例所示，條件比值比會比邊緣比值比 (非調整) 看起來要大一些。
 
 # 邏輯迴歸
 
