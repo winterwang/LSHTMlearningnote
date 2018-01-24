@@ -10,7 +10,12 @@ apikey = "498375134"
 keyfrom = "JustForTestYouDao"
 
 
-
+pkg <- c("knitr", "kfigr", "tidyverse", "survival", "ggfortify", "survminer", "plotly",
+         "gridExtra", "Epi", "KMsurv", "gnm", "cmprsk", "mstate", "flexsurv", "splines",
+         "epitools", "eha", "shiny")
+new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+if (length(new.pkg)) install.packages(new.pkg, dependencies = TRUE)
+sapply(pkg, require, character.only = TRUE)
 
 
 

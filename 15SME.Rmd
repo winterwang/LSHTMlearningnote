@@ -1,3 +1,44 @@
 # (PART) Statistical Methods in Epidemiology {-}
 
-# 流行病學中的統計
+這部分內容，不討論任何理論的東西，着重強調用 R 進行實際數據的分析，並加強對輸出結果的理解。
+
+# Crude and stratified rate ratios
+
+此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。
+
+```{r cache=TRUE}
+library(haven)
+library(tidyverse)
+library(survival)
+library(epitools)
+whitehal <- read_dta("backupfiles/whitehal.dta")
+whitehal$followupyrs <- (whitehal$timeout - whitehal$timein)/365.25
+max(whitehal$followupyrs*365.25) # time difference in days
+summary(whitehal$followupyrs <- as.numeric(whitehal$followupyrs)) # time difference in years
+
+# categorize agein into groups (40-44, 45-49, 50-54, ... , 65-69)
+whitehal$agecat <- cut(whitehal$agein, breaks = seq(40, 70, 5), right = FALSE)
+with(whitehal, table(agecat))
+
+# examine how mortality rates change with age at entry 
+
+with(whitehal %>% group_by(agecat) %>%
+  summarise(D = sum(all),
+            Y = sum(followupyrs)),
+  cbind(agecat, pois.exact(x = D, pt = Y/1000)))
+
+
+## rate ratios and 95% CIs for each age category compare with [40,44) age group
+Model0 <- glm(all ~ agecat + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model0)
+
+#su_obj <- Surv(whitehal$followupyrs, whitehal$all)
+
+
+with(whitehal %>% group_by(grade) %>%
+  summarise(D = sum(all),
+            Y = sum(followupyrs)),
+  cbind(grade, pois.exact(x = D, pt = Y/1000)))
+
+Model1 <- glm(all ~ factor(grade) + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model1)
+```
+
