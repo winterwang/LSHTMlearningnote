@@ -717,13 +717,17 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
             <section class="normal" id="section-">
 <div id="crude-and-stratified-rate-ratios" class="section level1">
 <h1><span class="header-section-number">第 58 章</span> Crude and stratified rate ratios</h1>
+<p>本徵內容不討論任何理論的東西，着重強調用 R 進行實際數據的分析，並加強對輸出結果的理解。</p>
 <p>此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(haven)
-<span class="kw">library</span>(tidyverse)
-<span class="kw">library</span>(survival)
-<span class="kw">library</span>(epitools)
-<span class="kw">library</span>(Epi)
-whitehal &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/whitehal.dta&quot;</span>)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pkg &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;knitr&quot;</span>, <span class="st">&quot;kfigr&quot;</span>, <span class="st">&quot;tidyverse&quot;</span>, <span class="st">&quot;survival&quot;</span>, <span class="st">&quot;ggfortify&quot;</span>, <span class="st">&quot;survminer&quot;</span>, <span class="st">&quot;plotly&quot;</span>,<span class="st">&quot;gridExtra&quot;</span>, <span class="st">&quot;Epi&quot;</span>, <span class="st">&quot;KMsurv&quot;</span>, <span class="st">&quot;gnm&quot;</span>, <span class="st">&quot;cmprsk&quot;</span>, <span class="st">&quot;mstate&quot;</span>, <span class="st">&quot;flexsurv&quot;</span>, <span class="st">&quot;splines&quot;</span>, <span class="st">&quot;epitools&quot;</span>, <span class="st">&quot;eha&quot;</span>, <span class="st">&quot;shiny&quot;</span>, <span class="st">&quot;epiR&quot;</span>)
+<span class="kw">sapply</span>(pkg, require, <span class="dt">character.only =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>##     knitr     kfigr tidyverse  survival ggfortify survminer    plotly gridExtra       Epi 
+##      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE 
+##    KMsurv       gnm    cmprsk    mstate  flexsurv   splines  epitools       eha     shiny 
+##      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE 
+##      epiR 
+##      TRUE</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">whitehal &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/whitehal.dta&quot;</span>)
 whitehal<span class="op">$</span>followupyrs &lt;-<span class="st"> </span>(whitehal<span class="op">$</span>timeout <span class="op">-</span><span class="st"> </span>whitehal<span class="op">$</span>timein)<span class="op">/</span><span class="fl">365.25</span>
 <span class="kw">max</span>(whitehal<span class="op">$</span>followupyrs<span class="op">*</span><span class="fl">365.25</span>) <span class="co"># time difference in days</span></code></pre></div>
 <pre><code>## Time difference of 7078.9927 days</code></pre>
@@ -736,7 +740,7 @@ whitehal<span class="op">$</span>agecat &lt;-<span class="st"> </span><span clas
 <pre><code>## agecat
 ## [40,45) [45,50) [50,55) [55,60) [60,65) [65,70) 
 ##     277     445     362     340     215      38</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># examine how mortality rates change with age at entry </span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># examine how mortality rates change with age at entry</span>
 
 <span class="kw">with</span>(whitehal <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(agecat) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">summarise</span>(<span class="dt">D =</span> <span class="kw">sum</span>(all),
@@ -758,9 +762,9 @@ Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class
 ## agecat[55,60)  4.5784055712  2.9519678778  7.1009572062
 ## agecat[60,65)  6.6882727538  4.2856745766 10.4377949444
 ## agecat[65,70) 17.1110624279 10.1140257533 28.9487553770</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## The rate ratios are increasing with age although there is no statistical evidence 
-## at 5% level that the rate among 45-49 year olds is different to the rate among men 
-## who are &lt;40 years 
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## The rate ratios are increasing with age although there is no statistical evidence
+## at 5% level that the rate among 45-49 year olds is different to the rate among men
+## who are &lt;40 years
 
 
 <span class="kw">with</span>(whitehal <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(grade) <span class="op">%&gt;%</span>
@@ -774,6 +778,79 @@ Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class
 <pre><code>##                  exp(Est.)         2.5%       97.5%
 ## (Intercept)    0.010865404 0.0095233128 0.012396632
 ## factor(grade)2 2.305446287 1.8947528380 2.805158793</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## There is strong evidence that the all cause mortality rate differs between high
+## and low grade workers.
+
+## To examine whether the estimated RR for grade is confounded by age at entry
+## we compare the crude RR =2.31 (1.90, 2.81) with the Mantel-Haenszel summary
+## estimate.
+
+whitehal_table &lt;-<span class="st"> </span><span class="kw">aggregate</span>(<span class="kw">cbind</span>(all, followupyrs) <span class="op">~</span><span class="st"> </span>grade <span class="op">+</span><span class="st"> </span>agecat, <span class="dt">data=</span>whitehal, sum)
+<span class="kw">library</span>(abind)
+whitehal_array &lt;-<span class="st"> </span><span class="kw">abind</span>(<span class="kw">split</span>(whitehal_table, whitehal_table<span class="op">$</span>agecat), <span class="dt">along=</span><span class="dv">3</span>)
+
+stmh_array &lt;-<span class="st"> </span><span class="kw">array</span>(<span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">20</span>,   <span class="fl">693.1284</span>,<span class="fl">4225.4893</span>,
+                      <span class="dv">10</span>,<span class="dv">35</span>,   <span class="fl">1363.821</span>,<span class="fl">6491.072</span>,
+                      <span class="dv">30</span>,<span class="dv">52</span>,  <span class="fl">1399.63</span>, <span class="fl">4660.12</span>,                                                        <span class="dv">51</span>,<span class="dv">67</span>,   <span class="fl">1832.169</span>,<span class="fl">3449.846</span>,
+                      <span class="dv">59</span>,<span class="dv">42</span>,   <span class="fl">1660.597</span>,<span class="fl">1434.251</span>,
+                      <span class="dv">28</span>,  <span class="dv">5</span>,    <span class="fl">316.23840</span>, <span class="fl">79.00879</span>),
+                    <span class="dt">dim=</span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">6</span>),
+                    <span class="dt">dimnames =</span> <span class="kw">list</span>(
+                      <span class="dt">Grade=</span><span class="kw">c</span>(<span class="st">&quot;2&quot;</span>,<span class="st">&quot;1&quot;</span>),
+                      <span class="kw">c</span>(<span class="st">&quot;death&quot;</span>, <span class="st">&quot;Person_years&quot;</span>),
+                      <span class="dt">Agecat=</span><span class="kw">names</span>(<span class="kw">table</span>(whitehal<span class="op">$</span>agecat))
+                    ))
+
+mhgrade_age &lt;-<span class="st"> </span><span class="kw">epi.2by2</span>(stmh_array, <span class="dt">method =</span> <span class="st">&quot;cohort.time&quot;</span>, <span class="dt">units =</span> <span class="dv">1000</span>)
+mhgrade_age</code></pre></div>
+<pre><code>##              Outcome +    Time at risk        Inc rate *
+## Exposed +          182            7266              25.0
+## Exposed -          221           20340              10.9
+## Total              403           27605              14.6
+## 
+## Point estimates and 95 % CIs:
+## -------------------------------------------------------------------
+## Inc rate ratio (crude)                       2.31 (1.88, 2.82)
+## Inc rate ratio (M-H)                         1.43 (1.16, 1.76)
+## Inc rate ratio (crude:M-H)                   1.61
+## Attrib rate (crude) *                        14.18 (10.27, 18.10)
+## Attrib rate (M-H) *                          6.28 (2.42, 10.15)
+## Attrib rate (crude:M-H)                      2.26
+## -------------------------------------------------------------------
+##  Wald confidence limits
+##  M-H: Mantel-Haenszel
+##  * Outcomes per 1000 units of population time at risk</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## Overall estimate and Wald 95% confidence intervals,
+## controlling for agecate
+mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.mh.wald</code></pre></div>
+<pre><code>##        est     lower     upper
+## 1 1.429211 1.1598631 1.7611078</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>chisq.mh ## p-value for age-adjusted MH rate ratio</code></pre></div>
+<pre><code>##   test.statistic df      p.value
+## 1      10.760807  1 0.0010367217</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## The Mantel-Haenszel summary estimate RR = 1.43 (1.16, 1.76).
+## The result shows that the crude estimate of the effect of grade was
+## partly confounded by age at entry.
+
+## To assess whether there is effect modification betwee grade and
+## agecat we examine the stratum specific estimates and assess
+## whether there is evidence of important variation between them.
+mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.strata.wald</code></pre></div>
+<pre><code>##         est      lower     upper
+## 1 1.2192515 0.30302945 3.6397113
+## 2 1.3598500 0.60057144 2.8059055
+## 3 1.9208868 1.18309546 3.0676307
+## 4 1.4332751 0.97576189 2.0941999
+## 5 1.2132872 0.80308583 1.8474726
+## 6 1.3991002 0.53338106 4.6404658</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## The result indicates that the data are compatible with the assumption
+## of no interaction/effect modification (p=0.79)
+
+## test for unequal RRs (effect modification):
+mhgrade_age<span class="op">$</span>res<span class="op">$</span>RR.homog</code></pre></div>
+<pre><code>##   test.statistic df    p.value
+## 1       2.407279  5 0.79038965</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## Hence, we do not need to present the stratum-specific estimates.</code></pre></div>
 
 </div>
             </section>

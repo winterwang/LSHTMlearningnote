@@ -1,17 +1,17 @@
 # (PART) Statistical Methods in Epidemiology {-}
 
-這部分內容，不討論任何理論的東西，着重強調用 R 進行實際數據的分析，並加強對輸出結果的理解。
 
 # Crude and stratified rate ratios
 
+本章內容不討論任何理論的東西，着重強調用 R 進行實際數據的分析，並加強對輸出結果的理解。
+
+
 此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。
 
-```{r cache=TRUE, message=FALSE}
-library(haven)
-library(tidyverse)
-library(survival)
-library(epitools)
-library(Epi)
+```{r cache=TRUE, message=FALSE, warning=FALSE}
+pkg <- c("knitr", "kfigr", "tidyverse", "survival", "ggfortify", "survminer", "plotly","gridExtra", "Epi", "KMsurv", "gnm", "cmprsk", "mstate", "flexsurv", "splines", "epitools", "eha", "shiny", "epiR")
+sapply(pkg, require, character.only = TRUE)
+
 whitehal <- read_dta("backupfiles/whitehal.dta")
 whitehal$followupyrs <- (whitehal$timeout - whitehal$timein)/365.25
 max(whitehal$followupyrs*365.25) # time difference in days
@@ -21,7 +21,7 @@ summary(whitehal$followupyrs <- as.numeric(whitehal$followupyrs)) # time differe
 whitehal$agecat <- cut(whitehal$agein, breaks = seq(40, 70, 5), right = FALSE)
 with(whitehal, table(agecat))
 
-# examine how mortality rates change with age at entry 
+# examine how mortality rates change with age at entry
 
 with(whitehal %>% group_by(agecat) %>%
   summarise(D = sum(all),
@@ -32,9 +32,9 @@ with(whitehal %>% group_by(agecat) %>%
 ## rate ratios and 95% CIs for each age category compare with [40,44) age group
 Model0 <- glm(all ~ agecat + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model0)
 
-## The rate ratios are increasing with age although there is no statistical evidence 
-## at 5% level that the rate among 45-49 year olds is different to the rate among men 
-## who are <40 years 
+## The rate ratios are increasing with age although there is no statistical evidence
+## at 5% level that the rate among 45-49 year olds is different to the rate among men
+## who are <40 years
 
 
 with(whitehal %>% group_by(grade) %>%
@@ -43,5 +43,54 @@ with(whitehal %>% group_by(grade) %>%
   cbind(grade, pois.exact(x = D, pt = Y/1000)))
 
 Model1 <- glm(all ~ factor(grade) + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model1)
-```
 
+## There is strong evidence that the all cause mortality rate differs between high
+## and low grade workers.
+
+## To examine whether the estimated RR for grade is confounded by age at entry
+## we compare the crude RR =2.31 (1.90, 2.81) with the Mantel-Haenszel summary
+## estimate.
+
+whitehal_table <- aggregate(cbind(all, followupyrs) ~ grade + agecat, data=whitehal, sum)
+library(abind)
+whitehal_array <- abind(split(whitehal_table, whitehal_table$agecat), along=3)
+
+stmh_array <- array(c(4, 20,   693.1284,4225.4893,
+                      10,35,   1363.821,6491.072,
+                      30,52,  1399.63, 4660.12,                                                        51,67,   1832.169,3449.846,
+                      59,42,   1660.597,1434.251,
+                      28,  5,    316.23840, 79.00879),
+                    dim=c(2,2,6),
+                    dimnames = list(
+                      Grade=c("2","1"),
+                      c("death", "Person_years"),
+                      Agecat=names(table(whitehal$agecat))
+                    ))
+
+mhgrade_age <- epi.2by2(stmh_array, method = "cohort.time", units = 1000)
+mhgrade_age
+
+
+## Overall estimate and Wald 95% confidence intervals,
+## controlling for agecate
+mhgrade_age$massoc$IRR.mh.wald
+mhgrade_age$massoc$chisq.mh ## p-value for age-adjusted MH rate ratio
+
+
+
+## The Mantel-Haenszel summary estimate RR = 1.43 (1.16, 1.76).
+## The result shows that the crude estimate of the effect of grade was
+## partly confounded by age at entry.
+
+## To assess whether there is effect modification betwee grade and
+## agecat we examine the stratum specific estimates and assess
+## whether there is evidence of important variation between them.
+mhgrade_age$massoc$IRR.strata.wald
+## The result indicates that the data are compatible with the assumption
+## of no interaction/effect modification (p=0.79)
+
+## test for unequal RRs (effect modification):
+mhgrade_age$res$RR.homog
+
+## Hence, we do not need to present the stratum-specific estimates.
+```
