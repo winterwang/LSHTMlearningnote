@@ -1007,8 +1007,153 @@ Odds ratio
 <ol style="list-style-type: decimal">
 <li>第一步，分析主要暴露變量和結果變量之間的未調整前 (粗) 關係： <br> <span class="math display">\[g\{ E(Y|X_1) \} = \alpha + \beta_1 X_1\]</span></li>
 <li>第二步，逐個分析<strong>其餘的變量和主要暴露變量之間的關係</strong>，以及這些<strong>潛在的混雜因子和結果變量之間的關係</strong>。注意，這一步可能耗時較長，但是它並不是決定模型中是否要加入某個或某些非主要暴露變量的步驟，通過<strong>這一步過程有助於我們分析和理解，進一步分析中調整前後的參數估計變化</strong>。</li>
-<li>第三步，建立主要暴露變量和這些潛在混雜因子同時放入模型中的 GLM，逐步放入，<strong>一次放入一個 (one at a time) 潛在混雜因子</strong>，和上一步分析的三者之間的關係相結合，分析調整該潛在混雜因子前後，主要暴露變量的迴歸係數的參數估計變化的原因。<br> <span class="math display">\[g\{ E(Y|X_1, X_k) \} = \alpha^* + \beta_1^*X_1 + \beta_kX_k, k= 1,\cdots,Q\]</span></li>
+<li>第三步，建立主要暴露變量和這些潛在混雜因子同時放入模型中的 GLM，逐步放入，<strong>一次放入一個 (one at a time) 潛在混雜因子</strong>，和上一步分析的三者之間的關係相結合，分析調整該潛在混雜因子前後，主要暴露變量的迴歸係數的參數估計變化的原因。<br> <span class="math display">\[g\{ E(Y|X_1, X_k) \} = \alpha^* + \beta_1^*X_1 + \beta_kX_k,\; k= 1,\cdots,Q\]</span></li>
 </ol>
+<p>我們來分析這個可以從 <a href="http://www.stata-press.com/data/r12/lbw.dta">Stata 網站上下載的數據</a>：</p>
+<ul>
+<li>第一步，先看看暴露變量和結果變量之間的關係</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(haven)
+lbw &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;http://www.stata-press.com/data/r12/lbw.dta&quot;</span>)
+a &lt;-<span class="st"> </span>Epi<span class="op">::</span><span class="kw">stat.table</span>(<span class="kw">list</span>(<span class="st">&quot;Birthweight &lt;2500g&quot;</span> =<span class="st"> </span>low, <span class="st">&quot;History of hypertension&quot;</span>=ht), <span class="kw">list</span>(<span class="kw">count</span>(),<span class="kw">percent</span>(low)), <span class="dt">data =</span> lbw, <span class="dt">margins =</span> <span class="ot">TRUE</span>)
+<span class="co"># We first tabulate the data</span>
+<span class="kw">print</span>(a, <span class="dt">digits =</span> <span class="kw">c</span>(<span class="dt">percent =</span> <span class="dv">2</span>))</code></pre></div>
+<pre><code>##  -------------------------------------- 
+##               -History of hypertension- 
+##  Birthweight         0       1   Total  
+##  &lt;2500g                                 
+##  -------------------------------------- 
+##  0                 125       5     130  
+##                  70.62   41.67   68.78  
+##                                         
+##  1                  52       7      59  
+##                  29.38   58.33   31.22  
+##                                         
+##                                         
+##  Total             177      12     189  
+##                 100.00  100.00  100.00  
+##  --------------------------------------</code></pre>
+<ul>
+<li>第二步，分析母親高血壓病史和嬰兒低出生體重之間的調整前 (粗) 關係。</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(low<span class="op">~</span><span class="kw">factor</span>(ht), <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
+<span class="kw">summary</span>(Model0); Epi<span class="op">::</span><span class="kw">ci.exp</span>(Model0)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = low ~ factor(ht), family = binomial(link = &quot;logit&quot;), 
+##     data = lbw)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.32323  -0.83407  -0.83407   1.56519   1.56519  
+## 
+## Coefficients:
+##             Estimate Std. Error z value  Pr(&gt;|z|)    
+## (Intercept) -0.87707    0.16502 -5.3150 1.066e-07 ***
+## factor(ht)1  1.21354    0.60835  1.9948   0.04606 *  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 234.672  on 188  degrees of freedom
+## Residual deviance: 230.650  on 187  degrees of freedom
+## AIC: 234.65
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<pre><code>##             exp(Est.)       2.5%       97.5%
+## (Intercept) 0.4160000 0.30104421  0.57485245
+## factor(ht)1 3.3653846 1.02142747 11.08822106</code></pre>
+<p>所以，數據提供了一些證據證明母親的高血壓病史和嬰兒低出生體重之間可能存在正關係，這個調整前的關係是，粗比值比 (crude odds ratio) 爲 3.37 (1.02, 11.09)。</p>
+<ul>
+<li>接下來，分析潛在的混雜因子是否和主要暴露變量相關：</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># lwt is the last weight of mothers before pregnancy</span>
+Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(lwt <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(ht), <span class="dt">data =</span> lbw)
+<span class="kw">summary</span>(Model1)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = lwt ~ factor(ht), data = lbw)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -62.5000 -17.9435  -7.9435  10.0565 122.0565 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) 127.9435     2.2390 57.1426  &lt; 2e-16 ***
+## factor(ht)1  29.5565     8.8858  3.3262  0.00106 ** 
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 29.788 on 187 degrees of freedom
+## Multiple R-squared:  0.05586,    Adjusted R-squared:  0.050811 
+## F-statistic: 11.064 on 1 and 187 DF,  p-value: 0.0010596</code></pre>
+<p>可見，有高血壓病史的母親，孕前體重較高。再看其與結果變量是否有關係：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model2 &lt;-<span class="st"> </span><span class="kw">glm</span>(low <span class="op">~</span><span class="st"> </span>lwt, <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
+<span class="kw">summary</span>(Model2); Epi<span class="op">::</span><span class="kw">ci.exp</span>(Model2)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = low ~ lwt, family = binomial(link = &quot;logit&quot;), data = lbw)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.09482  -0.90217  -0.80197   1.36105   1.98141  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)  
+## (Intercept)  0.9957634  0.7852434  1.2681  0.20476  
+## lwt         -0.0140371  0.0061685 -2.2756  0.02287 *
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 234.672  on 188  degrees of freedom
+## Residual deviance: 228.708  on 187  degrees of freedom
+## AIC: 232.708
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<pre><code>##              exp(Est.)       2.5%       97.5%
+## (Intercept) 2.70678989 0.58083679 12.61406231
+## lwt         0.98606094 0.97421116  0.99805486</code></pre>
+<p>由此知，母親孕前體重較高的人，有較低的可能剩下低出生體重的嬰兒。這兩個單獨的關係，各自看都具有 5% 的統計學意義，但是這 (或者其他變量分析的結果沒有統計學意義時) 並不是決定模型中是否加入母親孕前體重這一潛在的混雜因子的理由。接下來，我們通過模型中加入母親孕前體重這一變量前後模型的參數估計變化來分析：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model3 &lt;-<span class="st"> </span><span class="kw">glm</span>(low <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(ht) <span class="op">+</span><span class="st"> </span>lwt, <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
+<span class="kw">summary</span>(Model3);epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model3)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = low ~ factor(ht) + lwt, family = binomial(link = &quot;logit&quot;), 
+##     data = lbw)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.85912  -0.87274  -0.73845   1.29224   2.17964  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)   
+## (Intercept)  1.4478621  0.8208975  1.7638 0.077773 . 
+## factor(ht)1  1.8544773  0.7008245  2.6461 0.008142 **
+## lwt         -0.0186285  0.0065928 -2.8256 0.004720 **
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 234.672  on 188  degrees of freedom
+## Residual deviance: 221.165  on 186  degrees of freedom
+## AIC: 227.165
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<pre><code>##  
+##                     OR  lower95ci   upper95ci     Pr(&gt;|Z|)
+## factor(ht)1 6.38835829 1.61750776 25.23086610 0.0081416944
+## lwt         0.98154393 0.96894233  0.99430943 0.0047195524</code></pre>
+<p>加入了孕前體重的模型給出的母親是否有高血壓病史對嬰兒的低出生體重關係的比值比估計爲 <span class="math inline">\(6.39\)</span>，這很明顯比調整孕前體重前的粗比值比 <span class="math inline">\((3.37)\)</span> 大了很多。這個比值比估計的變化有兩個原因：</p>
+<ol style="list-style-type: decimal">
+<li>(常被忽略的) 邏輯迴歸模型的不可壓縮性導致的；</li>
+<li>母親孕前體重對高血壓病史和嬰兒的低出生體重之間的關係造成了混雜效應。</li>
+</ol>
+<p>上面的分析結果，告訴我們，數據提供了足夠的證據證明母親孕前體重和是否有高血壓病史，在調整了彼此之後，仍然獨立地和嬰兒低出生體重的發生有相關性。這裏，我們可以下結論認爲，模型中假如母親孕前體重作爲混雜因子，是合情合理的。</p>
 </div>
 </div>
 <div id="-2--3--predictive-models" class="section level2">

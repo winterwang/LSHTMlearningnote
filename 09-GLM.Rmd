@@ -2203,10 +2203,55 @@ summary(Model2)
 2. 第二步，逐個分析**其餘的變量和主要暴露變量之間的關係**，以及這些**潛在的混雜因子和結果變量之間的關係**。注意，這一步可能耗時較長，但是它並不是決定模型中是否要加入某個或某些非主要暴露變量的步驟，通過**這一步過程有助於我們分析和理解，進一步分析中調整前後的參數估計變化**。
 3. 第三步，建立主要暴露變量和這些潛在混雜因子同時放入模型中的 GLM，逐步放入，**一次放入一個 (one at a time) 潛在混雜因子**，和上一步分析的三者之間的關係相結合，分析調整該潛在混雜因子前後，主要暴露變量的迴歸係數的參數估計變化的原因。<br> $$g\{ E(Y|X_1, X_k) \} = \alpha^* + \beta_1^*X_1 + \beta_kX_k,\; k= 1,\cdots,Q$$
 
-```{r}
+我們來分析這個可以從 [Stata 網站上下載的數據](http://www.stata-press.com/data/r12/lbw.dta)：
+
+- 第一步，先看看暴露變量和結果變量之間的關係
+
+```{r cache=TRUE, warning=FALSE, message=FALSE}
 library(haven)
 lbw <- read.dta("http://www.stata-press.com/data/r12/lbw.dta")
+a <- Epi::stat.table(list("Birthweight <2500g" = low, "History of hypertension"=ht), list(count(),percent(low)), data = lbw, margins = TRUE)
+# We first tabulate the data
+print(a, digits = c(percent = 2))
 ```
+
+- 第二步，分析母親高血壓病史和嬰兒低出生體重之間的調整前 (粗) 關係。
+
+```{r}
+Model0 <- glm(low~factor(ht), data = lbw, family = binomial(link = "logit"))
+summary(Model0); Epi::ci.exp(Model0)
+```
+
+所以，數據提供了一些證據證明母親的高血壓病史和嬰兒低出生體重之間可能存在正關係，這個調整前的關係是，粗比值比 (crude odds ratio) 爲 3.37 (1.02, 11.09)。
+
+- 接下來，分析潛在的混雜因子是否和主要暴露變量相關：
+
+```{r}
+# lwt is the last weight of mothers before pregnancy
+Model1 <- lm(lwt ~ factor(ht), data = lbw)
+summary(Model1)
+```
+
+可見，有高血壓病史的母親，孕前體重較高。再看其與結果變量是否有關係：
+
+```{r}
+Model2 <- glm(low ~ lwt, data = lbw, family = binomial(link = "logit"))
+summary(Model2); Epi::ci.exp(Model2)
+```
+
+由此知，母親孕前體重較高的人，有較低的可能剩下低出生體重的嬰兒。這兩個單獨的關係，各自看都具有 5% 的統計學意義，但是這 (或者其他變量分析的結果沒有統計學意義時) 並不是決定模型中是否加入母親孕前體重這一潛在的混雜因子的理由。接下來，我們通過模型中加入母親孕前體重這一變量前後模型的參數估計變化來分析：
+
+```{r}
+Model3 <- glm(low ~ factor(ht) + lwt, data = lbw, family = binomial(link = "logit"))
+summary(Model3);epiDisplay::logistic.display(Model3)
+```
+
+加入了孕前體重的模型給出的母親是否有高血壓病史對嬰兒的低出生體重關係的比值比估計爲 $6.39$，這很明顯比調整孕前體重前的粗比值比 $(3.37)$ 大了很多。這個比值比估計的變化有兩個原因：
+
+1. (常被忽略的) 邏輯迴歸模型的不可壓縮性導致的；
+2. 母親孕前體重對高血壓病史和嬰兒的低出生體重之間的關係造成了混雜效應。
+
+上面的分析結果，告訴我們，數據提供了足夠的證據證明母親孕前體重和是否有高血壓病史，在調整了彼此之後，仍然獨立地和嬰兒低出生體重的發生有相關性。這裏，我們可以下結論認爲，模型中假如母親孕前體重作爲混雜因子，是合情合理的。
 
 
 ## 分析目的 2 和 3 -- 建立預測模型 (predictive models)
