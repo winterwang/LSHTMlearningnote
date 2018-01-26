@@ -692,6 +692,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li class="chapter" data-level="51.3" data-path="section-51.html"><a href="section-51.html#-1.2--exposure-effect"><i class="fa fa-check"></i><b>51.3</b> 分析目的 1.2 – 估計流行病學研究中暴露變量和結果變量的關係 (exposure effect)</a><ul>
 <li class="chapter" data-level="51.3.1" data-path="section-51.html"><a href="section-51.html#section-51.3.1"><i class="fa fa-check"></i><b>51.3.1</b> 不成熟的小策略</a></li>
+<li class="chapter" data-level="51.3.2" data-path="section-51.html"><a href="section-51.html#section-51.3.2"><i class="fa fa-check"></i><b>51.3.2</b> 補充</a></li>
 </ul></li>
 <li class="chapter" data-level="51.4" data-path="section-51.html"><a href="section-51.html#-2--3--predictive-models"><i class="fa fa-check"></i><b>51.4</b> 分析目的 2 和 3 – 建立預測模型 (predictive models)</a></li>
 </ul></li>
@@ -1014,7 +1015,10 @@ Odds ratio
 <li>第一步，先看看暴露變量和結果變量之間的關係</li>
 </ul>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(haven)
-lbw &lt;-<span class="st"> </span><span class="kw">read.dta</span>(<span class="st">&quot;http://www.stata-press.com/data/r12/lbw.dta&quot;</span>)
+lbw &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;http://www.stata-press.com/data/r12/lbw.dta&quot;</span>)
+lbw<span class="op">$</span>race &lt;-<span class="st"> </span><span class="kw">factor</span>(lbw<span class="op">$</span>race)
+lbw<span class="op">$</span>smoke &lt;-<span class="st"> </span><span class="kw">factor</span>(lbw<span class="op">$</span>smoke)
+lbw<span class="op">$</span>ht &lt;-<span class="st"> </span><span class="kw">factor</span>(lbw<span class="op">$</span>ht)
 a &lt;-<span class="st"> </span>Epi<span class="op">::</span><span class="kw">stat.table</span>(<span class="kw">list</span>(<span class="st">&quot;Birthweight &lt;2500g&quot;</span> =<span class="st"> </span>low, <span class="st">&quot;History of hypertension&quot;</span>=ht), <span class="kw">list</span>(<span class="kw">count</span>(),<span class="kw">percent</span>(low)), <span class="dt">data =</span> lbw, <span class="dt">margins =</span> <span class="ot">TRUE</span>)
 <span class="co"># We first tabulate the data</span>
 <span class="kw">print</span>(a, <span class="dt">digits =</span> <span class="kw">c</span>(<span class="dt">percent =</span> <span class="dv">2</span>))</code></pre></div>
@@ -1036,12 +1040,11 @@ a &lt;-<span class="st"> </span>Epi<span class="op">::</span><span class="kw">st
 <ul>
 <li>第二步，分析母親高血壓病史和嬰兒低出生體重之間的調整前 (粗) 關係。</li>
 </ul>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(low<span class="op">~</span><span class="kw">factor</span>(ht), <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
-<span class="kw">summary</span>(Model0); Epi<span class="op">::</span><span class="kw">ci.exp</span>(Model0)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(low<span class="op">~</span>ht, <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
+<span class="kw">summary</span>(Model0); epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model0)</code></pre></div>
 <pre><code>## 
 ## Call:
-## glm(formula = low ~ factor(ht), family = binomial(link = &quot;logit&quot;), 
-##     data = lbw)
+## glm(formula = low ~ ht, family = binomial(link = &quot;logit&quot;), data = lbw)
 ## 
 ## Deviance Residuals: 
 ##      Min        1Q    Median        3Q       Max  
@@ -1050,7 +1053,7 @@ a &lt;-<span class="st"> </span>Epi<span class="op">::</span><span class="kw">st
 ## Coefficients:
 ##             Estimate Std. Error z value  Pr(&gt;|z|)    
 ## (Intercept) -0.87707    0.16502 -5.3150 1.066e-07 ***
-## factor(ht)1  1.21354    0.60835  1.9948   0.04606 *  
+## ht1          1.21354    0.60835  1.9948   0.04606 *  
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
@@ -1061,19 +1064,25 @@ a &lt;-<span class="st"> </span>Epi<span class="op">::</span><span class="kw">st
 ## AIC: 234.65
 ## 
 ## Number of Fisher Scoring iterations: 4</code></pre>
-<pre><code>##             exp(Est.)       2.5%       97.5%
-## (Intercept) 0.4160000 0.30104421  0.57485245
-## factor(ht)1 3.3653846 1.02142747 11.08822106</code></pre>
+<pre><code>## 
+## Logistic regression predicting low 
+##  
+##            OR(95%CI)          P(Wald&#39;s test) P(LR-test)
+## ht: 1 vs 0 3.37 (1.02,11.09)  0.046          0.045     
+##                                                        
+## Log-likelihood = -115.3249
+## No. of observations = 189
+## AIC value = 234.6499</code></pre>
 <p>所以，數據提供了一些證據證明母親的高血壓病史和嬰兒低出生體重之間可能存在正關係，這個調整前的關係是，粗比值比 (crude odds ratio) 爲 3.37 (1.02, 11.09)。</p>
 <ul>
 <li>接下來，分析潛在的混雜因子是否和主要暴露變量相關：</li>
 </ul>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># lwt is the last weight of mothers before pregnancy</span>
-Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(lwt <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(ht), <span class="dt">data =</span> lbw)
-<span class="kw">summary</span>(Model1)</code></pre></div>
+Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(lwt <span class="op">~</span><span class="st"> </span>ht, <span class="dt">data =</span> lbw)
+<span class="kw">summary</span>(Model1); epiDisplay<span class="op">::</span><span class="kw">regress.display</span>(Model1)</code></pre></div>
 <pre><code>## 
 ## Call:
-## lm(formula = lwt ~ factor(ht), data = lbw)
+## lm(formula = lwt ~ ht, data = lbw)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
@@ -1082,16 +1091,22 @@ Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(lwt <span class=
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(&gt;|t|)    
 ## (Intercept) 127.9435     2.2390 57.1426  &lt; 2e-16 ***
-## factor(ht)1  29.5565     8.8858  3.3262  0.00106 ** 
+## ht1          29.5565     8.8858  3.3262  0.00106 ** 
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 29.788 on 187 degrees of freedom
 ## Multiple R-squared:  0.05586,    Adjusted R-squared:  0.050811 
 ## F-statistic: 11.064 on 1 and 187 DF,  p-value: 0.0010596</code></pre>
+<pre><code>## Linear regression predicting lwt
+##  
+##            Coeff.(95%CI)        P(t-test) P(F-test)
+## ht: 1 vs 0 29.56 (12.03,47.09)  0.001     0.001    
+##                                                    
+## No. of observations = 189</code></pre>
 <p>可見，有高血壓病史的母親，孕前體重較高。再看其與結果變量是否有關係：</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model2 &lt;-<span class="st"> </span><span class="kw">glm</span>(low <span class="op">~</span><span class="st"> </span>lwt, <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
-<span class="kw">summary</span>(Model2); Epi<span class="op">::</span><span class="kw">ci.exp</span>(Model2)</code></pre></div>
+<span class="kw">summary</span>(Model2); epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model2)</code></pre></div>
 <pre><code>## 
 ## Call:
 ## glm(formula = low ~ lwt, family = binomial(link = &quot;logit&quot;), data = lbw)
@@ -1114,15 +1129,21 @@ Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(lwt <span class=
 ## AIC: 232.708
 ## 
 ## Number of Fisher Scoring iterations: 4</code></pre>
-<pre><code>##              exp(Est.)       2.5%       97.5%
-## (Intercept) 2.70678989 0.58083679 12.61406231
-## lwt         0.98606094 0.97421116  0.99805486</code></pre>
+<pre><code>## 
+## Logistic regression predicting low 
+##  
+##                  OR(95%CI)      P(Wald&#39;s test) P(LR-test)
+## lwt (cont. var.) 0.99 (0.97,1)  0.023          0.015     
+##                                                          
+## Log-likelihood = -114.354
+## No. of observations = 189
+## AIC value = 232.7081</code></pre>
 <p>由此知，母親孕前體重較高的人，有較低的可能剩下低出生體重的嬰兒。這兩個單獨的關係，各自看都具有 5% 的統計學意義，但是這 (或者其他變量分析的結果沒有統計學意義時) 並不是決定模型中是否加入母親孕前體重這一潛在的混雜因子的理由。接下來，我們通過模型中加入母親孕前體重這一變量前後模型的參數估計變化來分析：</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model3 &lt;-<span class="st"> </span><span class="kw">glm</span>(low <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(ht) <span class="op">+</span><span class="st"> </span>lwt, <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model3 &lt;-<span class="st"> </span><span class="kw">glm</span>(low <span class="op">~</span><span class="st"> </span>ht <span class="op">+</span><span class="st"> </span>lwt, <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>))
 <span class="kw">summary</span>(Model3);epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model3)</code></pre></div>
 <pre><code>## 
 ## Call:
-## glm(formula = low ~ factor(ht) + lwt, family = binomial(link = &quot;logit&quot;), 
+## glm(formula = low ~ ht + lwt, family = binomial(link = &quot;logit&quot;), 
 ##     data = lbw)
 ## 
 ## Deviance Residuals: 
@@ -1132,7 +1153,7 @@ Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(lwt <span class=
 ## Coefficients:
 ##               Estimate Std. Error z value Pr(&gt;|z|)   
 ## (Intercept)  1.4478621  0.8208975  1.7638 0.077773 . 
-## factor(ht)1  1.8544773  0.7008245  2.6461 0.008142 **
+## ht1          1.8544773  0.7008245  2.6461 0.008142 **
 ## lwt         -0.0186285  0.0065928 -2.8256 0.004720 **
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
@@ -1144,26 +1165,206 @@ Model1 &lt;-<span class="st"> </span><span class="kw">lm</span>(lwt <span class=
 ## AIC: 227.165
 ## 
 ## Number of Fisher Scoring iterations: 4</code></pre>
-<pre><code>##  
-##                     OR  lower95ci   upper95ci     Pr(&gt;|Z|)
-## factor(ht)1 6.38835829 1.61750776 25.23086610 0.0081416944
-## lwt         0.98154393 0.96894233  0.99430943 0.0047195524</code></pre>
+<pre><code>## 
+## Logistic regression predicting low 
+##  
+##                  crude OR(95%CI)    adj. OR(95%CI)     P(Wald&#39;s test) P(LR-test)
+## ht: 1 vs 0       3.37 (1.02,11.09)  6.39 (1.62,25.23)  0.008          0.006     
+##                                                                                 
+## lwt (cont. var.) 0.99 (0.97,1)      0.98 (0.97,0.99)   0.005          0.002     
+##                                                                                 
+## Log-likelihood = -110.5827
+## No. of observations = 189
+## AIC value = 227.1654</code></pre>
 <p>加入了孕前體重的模型給出的母親是否有高血壓病史對嬰兒的低出生體重關係的比值比估計爲 <span class="math inline">\(6.39\)</span>，這很明顯比調整孕前體重前的粗比值比 <span class="math inline">\((3.37)\)</span> 大了很多。這個比值比估計的變化有兩個原因：</p>
 <ol style="list-style-type: decimal">
 <li>(常被忽略的) 邏輯迴歸模型的不可壓縮性導致的；</li>
 <li>母親孕前體重對高血壓病史和嬰兒的低出生體重之間的關係造成了混雜效應。</li>
 </ol>
-<p>上面的分析結果，告訴我們，數據提供了足夠的證據證明母親孕前體重和是否有高血壓病史，在調整了彼此之後，仍然獨立地和嬰兒低出生體重的發生有相關性。這裏，我們可以下結論認爲，模型中假如母親孕前體重作爲混雜因子，是合情合理的。</p>
+<p>上面的分析結果，告訴我們，數據提供了足夠的證據證明母親孕前體重和是否有高血壓病史，在調整了彼此之後，仍然獨立地和嬰兒低出生體重的發生有相關性。這裏，我們可以下結論認爲，模型中加入母親孕前體重作爲混雜因子，是合情合理的。</p>
+<p>完成了目前爲止的初步分析和混雜因子的判斷以後，下一階段的分析側重於尋找有沒有任何第三方的預測變量，會對主要暴露變量 <span class="math inline">\(X_1\)</span> (孕期高血壓) 與結果變量 <span class="math inline">\(Y\)</span> (嬰兒出生體重過低) 之間的關係產生交互作用。如果數據中的預測變量有多個，那可能導致需要分析潛在的交互作用有許多對，通常建議在遇到多個預測變量之間的複雜關係需要討論的時候，建議不要一股腦全部作交互作用的分析，而是限定一個或者幾個最有可能有交互作用的變量就可以了。否則模型過於複雜，反而不利於理解。一般生物醫學的統計分析中考慮的重要交互作用分析，需要有重要的生物學意義，常見的例子是年齡，性別等。</p>
+<p>本節使用的例子中，令人感興趣的是，母親的孕前體重，會不會對妊娠高血壓的有無與嬰兒出生體重過低之間的關係造成交互作用：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model4 &lt;-<span class="st"> </span><span class="kw">glm</span>(low <span class="op">~</span><span class="st"> </span>ht<span class="op">*</span>lwt, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> <span class="st">&quot;logit&quot;</span>), <span class="dt">data =</span> lbw)
+<span class="kw">summary</span>(Model4); epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model4)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = low ~ ht * lwt, family = binomial(link = &quot;logit&quot;), 
+##     data = lbw)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.77338  -0.87349  -0.74658   1.28246   2.20403  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)   
+## (Intercept)  1.5393115  0.9174755  1.6778 0.093392 . 
+## ht1          1.2869895  2.5493528  0.5048 0.613678   
+## lwt         -0.0193796  0.0074129 -2.6143 0.008941 **
+## ht1:lwt      0.0037324  0.0161735  0.2308 0.817490   
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 234.672  on 188  degrees of freedom
+## Residual deviance: 221.113  on 185  degrees of freedom
+## AIC: 229.113
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<pre><code>## 
+## Logistic regression predicting low 
+##  
+##                  crude OR(95%CI)    adj. OR(95%CI)          P(Wald&#39;s test) P(LR-test)
+## ht: 1 vs 0       3.37 (1.02,11.09)  3.62 (0.02,535.73)      0.614          0.605     
+##                                                                                      
+## lwt (cont. var.) 0.99 (0.97,1)      0.98 (0.97,1)           0.009          1         
+##                                                                                      
+## ht1:lwt          -                  1.0037 (0.9724,1.0361)  0.817          0.819     
+##                                                                                      
+## Log-likelihood = -110.5567
+## No. of observations = 189
+## AIC value = 229.1133</code></pre>
+<p>由於交互作用項結果爲 <code>ht1:lwt      0.003732   0.016173   0.231  0.81749</code>，無足夠的證據證明孕前體重會對妊娠高血壓和嬰兒出生體重過低之間的關係造成交互作用。</p>
+<p>如果確認沒有交互作用，建立本例最終模型前的幾個建議：</p>
+<ol style="list-style-type: decimal">
+<li>最終分析 <span class="math inline">\(X_1, Y\)</span> 之間關係的模型，需要加入我們逐一甄別之後確認過的混淆因子，此時稱爲<strong>模型 1</strong>；</li>
+<li>對於確認不是 <span class="math inline">\(X_1, Y\)</span> 之間關係的混淆因子的那些剩餘變量，逐一加入<strong>模型 1</strong>，比較前後是否模型中各個混淆因子的參數估計是否發生了變化 (有沒有混淆因子的混淆因子？)；</li>
+<li>最終模型中的變量，需要包含前兩步確認過的全部混淆因子；</li>
+<li>在報告中把調整前後的參數估計整理成表格。</li>
+</ol>
+<p>如果在分析過程中發現了有重要意義的交互作用，那麼除了包含全部的混淆因子之外，你的最終模型中還需加入重要的交互作用項。此時需要報告的參數估計是有交互作用項部分的分層比值比/其他指標。</p>
+</div>
+<div id="section-51.3.2" class="section level3">
+<h3><span class="header-section-number">51.3.2</span> 補充</h3>
+<p>除了使用二項分佈的邏輯迴歸之外，當結果變量是連續型或者計數型，也就是分析模型使用線性迴歸 (ANCOVA)，或者 (可能過度離散的) 泊松迴歸時，爲了提高模型的統計效能，減小參數估計的標準誤，模型可以選擇進一步調整一個或幾個<strong>只和結果變量有關的基線變量</strong>。此時，在你寫論文或者報告時，<strong>必須把這些變量和確認是混雜因子的變量加以區分</strong>，因爲加它們進入模型的目的不同。</p>
 </div>
 </div>
 <div id="-2--3--predictive-models" class="section level2">
 <h2><span class="header-section-number">51.4</span> 分析目的 2 和 3 – 建立預測模型 (predictive models)</h2>
+<p>建立預測模型的過程，其實就是選擇哪個或者那些變量進入模型的過程。方法有很多，可惜的是，沒有哪種是公認完美的。這裏只介紹兩種最常見，也最常被批評的方法 – 前/後 逐步選擇法 (forward stepwise selection/backward elimination)。強調一下，逐步法本身並不是神奇法術，不同的算法選擇的變量自然會有不同，如果你用了逐步選擇法，選出來的模型變量僅僅只能作爲參考，而不能作爲最終結論。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">vitc &lt;-<span class="st"> </span>haven<span class="op">::</span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/vitC.dta&quot;</span>)
+vitc<span class="op">$</span>ctakers &lt;-<span class="st"> </span><span class="kw">factor</span>(vitc<span class="op">$</span>ctakers)
+vitc<span class="op">$</span>sex &lt;-<span class="st"> </span><span class="kw">factor</span>(vitc<span class="op">$</span>sex)
+
+<span class="kw">step</span>(<span class="kw">lm</span>(seruvitc<span class="op">~</span><span class="dv">1</span>,<span class="dt">data=</span>vitc[<span class="kw">complete.cases</span>(vitc),]),<span class="dt">direction=</span><span class="st">&quot;forward&quot;</span>,<span class="dt">scope=</span><span class="op">~</span>age<span class="op">+</span>height<span class="op">+</span>weight<span class="op">+</span>sex<span class="op">+</span>cigs<span class="op">+</span>ctakers)</code></pre></div>
+<pre><code>## Start:  AIC=575.43
+## seruvitc ~ 1
+## 
+##           Df Sum of Sq     RSS     AIC
+## + ctakers  1   6967.43 42659.6 563.663
+## + sex      1   3688.53 45938.5 570.402
+## + cigs     1   2470.90 47156.1 572.783
+## + height   1   1243.73 48383.3 575.121
+## &lt;none&gt;                 49627.0 575.430
+## + age      1    273.59 49353.4 576.927
+## + weight   1      1.53 49625.5 577.427
+## 
+## Step:  AIC=563.66
+## seruvitc ~ ctakers
+## 
+##          Df Sum of Sq     RSS     AIC
+## + sex     1  2713.526 39946.0 559.683
+## + cigs    1  2150.581 40509.0 560.956
+## + height  1  1049.000 41610.6 563.398
+## &lt;none&gt;                42659.6 563.663
+## + age     1   247.944 42411.6 565.133
+## + weight  1    18.227 42641.3 565.625
+## 
+## Step:  AIC=559.68
+## seruvitc ~ ctakers + sex
+## 
+##          Df Sum of Sq     RSS     AIC
+## + cigs    1  1527.704 38418.3 558.134
+## &lt;none&gt;                39946.0 559.683
+## + weight  1   445.296 39500.7 560.663
+## + age     1   183.277 39762.8 561.264
+## + height  1   131.722 39814.3 561.382
+## 
+## Step:  AIC=558.13
+## seruvitc ~ ctakers + sex + cigs
+## 
+##          Df Sum of Sq     RSS     AIC
+## &lt;none&gt;                38418.3 558.134
+## + weight  1  257.1523 38161.2 559.523
+## + age     1  205.2889 38213.0 559.647
+## + height  1   58.2745 38360.1 559.996</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = seruvitc ~ ctakers + sex + cigs, data = vitc[complete.cases(vitc), 
+##     ])
+## 
+## Coefficients:
+## (Intercept)     ctakers1         sex1         cigs  
+##     46.0283      19.8317       9.7642     -12.2550</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">step</span>(<span class="kw">lm</span>(seruvitc<span class="op">~</span>.,<span class="dt">data=</span>vitc[<span class="kw">complete.cases</span>(vitc),]),<span class="dt">direction=</span><span class="st">&quot;backward&quot;</span>)</code></pre></div>
+<pre><code>## Start:  AIC=563.38
+## seruvitc ~ serial + age + height + cigs + weight + sex + ctakers
+## 
+##           Df Sum of Sq     RSS     AIC
+## - height   1      1.48 37272.5 561.379
+## - age      1     64.18 37335.2 561.532
+## - weight   1    174.65 37445.7 561.801
+## - serial   1    808.36 38079.4 563.328
+## &lt;none&gt;                 37271.1 563.375
+## - cigs     1    979.26 38250.3 563.735
+## - sex      1   1123.50 38394.6 564.078
+## - ctakers  1   6407.24 43678.3 575.811
+## 
+## Step:  AIC=561.38
+## seruvitc ~ serial + age + cigs + weight + sex + ctakers
+## 
+##           Df Sum of Sq     RSS     AIC
+## - age      1     65.27 37337.8 559.538
+## - weight   1    217.51 37490.0 559.908
+## - serial   1    807.51 38080.1 561.329
+## &lt;none&gt;                 37272.5 561.379
+## - cigs     1    977.97 38250.5 561.736
+## - sex      1   2584.37 39856.9 565.479
+## - ctakers  1   6442.37 43714.9 573.887
+## 
+## Step:  AIC=559.54
+## seruvitc ~ serial + cigs + weight + sex + ctakers
+## 
+##           Df Sum of Sq     RSS     AIC
+## - weight   1    366.60 37704.4 558.427
+## - serial   1    823.37 38161.2 559.523
+## &lt;none&gt;                 37337.8 559.538
+## - cigs     1    944.21 38282.0 559.811
+## - sex      1   2816.28 40154.1 564.155
+## - ctakers  1   6462.15 43800.0 572.064
+## 
+## Step:  AIC=558.43
+## seruvitc ~ serial + cigs + sex + ctakers
+## 
+##           Df Sum of Sq     RSS     AIC
+## - serial   1    713.92 38418.3 558.134
+## &lt;none&gt;                 37704.4 558.427
+## - cigs     1   1156.10 38860.5 559.176
+## - sex      1   2451.95 40156.4 562.161
+## - ctakers  1   6385.14 44089.5 570.664
+## 
+## Step:  AIC=558.13
+## seruvitc ~ cigs + sex + ctakers
+## 
+##           Df Sum of Sq     RSS     AIC
+## &lt;none&gt;                 38418.3 558.134
+## - cigs     1   1527.70 39946.0 559.683
+## - sex      1   2090.65 40509.0 560.956
+## - ctakers  1   5841.01 44259.3 569.014</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = seruvitc ~ cigs + sex + ctakers, data = vitc[complete.cases(vitc), 
+##     ])
+## 
+## Coefficients:
+## (Intercept)         cigs         sex1     ctakers1  
+##     46.0283     -12.2550       9.7642      19.8317</code></pre>
 </div>
 </div>
 <h3>参考文献</h3>
 <div id="refs" class="references">
 <div id="ref-Robinson1991">
-<p>Robinson, Laurence D, and Nicholas P Jewell. 1991. “Some Surprising Results About Covariate Adjustment in Logistic Regression Models.” <em>International Statistical Review/Revue Internationale de Statistique</em>. JSTOR, 227–40.</p>
+<p>Robinson, Laurence D, and Nicholas P Jewell. 1991. “Some Surprising Results About Covariate Adjustment in Logistic Regression Models.” <em>International Statistical Review</em>. JSTOR, 227–40.</p>
 </div>
 </div>
             </section>

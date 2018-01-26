@@ -801,10 +801,13 @@ hosmer <- function(y, fv, groups=10, table=TRUE, type=2) {
  }
 ```
 
-```{r}
+```{r lbw, cache=TRUE}
 library(haven)
-lbw <- read.dta("http://www.stata-press.com/data/r12/lbw.dta")
-Modelgof <- glm(low ~ age + lwt + factor(race) + factor(smoke) + ptl + ht + ui, data = lbw, family = binomial(link = logit))
+lbw <- read_dta("http://www.stata-press.com/data/r12/lbw.dta")
+lbw$race <- factor(lbw$race)
+lbw$smoke <- factor(lbw$smoke)
+lbw$ht <- factor(lbw$ht)
+Modelgof <- glm(low ~ age + lwt + race + smoke + ptl + ht + ui, data = lbw, family = binomial(link = logit))
 hosmer(lbw$low, fitted(Modelgof))
 hosmer(lbw$low, fitted(Modelgof), group=5)
 ```
@@ -2209,7 +2212,10 @@ summary(Model2)
 
 ```{r cache=TRUE, warning=FALSE, message=FALSE}
 library(haven)
-lbw <- read.dta("http://www.stata-press.com/data/r12/lbw.dta")
+lbw <- read_dta("http://www.stata-press.com/data/r12/lbw.dta")
+lbw$race <- factor(lbw$race)
+lbw$smoke <- factor(lbw$smoke)
+lbw$ht <- factor(lbw$ht)
 a <- Epi::stat.table(list("Birthweight <2500g" = low, "History of hypertension"=ht), list(count(),percent(low)), data = lbw, margins = TRUE)
 # We first tabulate the data
 print(a, digits = c(percent = 2))
@@ -2218,8 +2224,8 @@ print(a, digits = c(percent = 2))
 - 第二步，分析母親高血壓病史和嬰兒低出生體重之間的調整前 (粗) 關係。
 
 ```{r}
-Model0 <- glm(low~factor(ht), data = lbw, family = binomial(link = "logit"))
-summary(Model0); Epi::ci.exp(Model0)
+Model0 <- glm(low~ht, data = lbw, family = binomial(link = "logit"))
+summary(Model0); epiDisplay::logistic.display(Model0)
 ```
 
 所以，數據提供了一些證據證明母親的高血壓病史和嬰兒低出生體重之間可能存在正關係，這個調整前的關係是，粗比值比 (crude odds ratio) 爲 3.37 (1.02, 11.09)。
@@ -2228,21 +2234,21 @@ summary(Model0); Epi::ci.exp(Model0)
 
 ```{r}
 # lwt is the last weight of mothers before pregnancy
-Model1 <- lm(lwt ~ factor(ht), data = lbw)
-summary(Model1)
+Model1 <- lm(lwt ~ ht, data = lbw)
+summary(Model1); epiDisplay::regress.display(Model1)
 ```
 
 可見，有高血壓病史的母親，孕前體重較高。再看其與結果變量是否有關係：
 
 ```{r}
 Model2 <- glm(low ~ lwt, data = lbw, family = binomial(link = "logit"))
-summary(Model2); Epi::ci.exp(Model2)
+summary(Model2); epiDisplay::logistic.display(Model2)
 ```
 
 由此知，母親孕前體重較高的人，有較低的可能剩下低出生體重的嬰兒。這兩個單獨的關係，各自看都具有 5% 的統計學意義，但是這 (或者其他變量分析的結果沒有統計學意義時) 並不是決定模型中是否加入母親孕前體重這一潛在的混雜因子的理由。接下來，我們通過模型中加入母親孕前體重這一變量前後模型的參數估計變化來分析：
 
 ```{r}
-Model3 <- glm(low ~ factor(ht) + lwt, data = lbw, family = binomial(link = "logit"))
+Model3 <- glm(low ~ ht + lwt, data = lbw, family = binomial(link = "logit"))
 summary(Model3);epiDisplay::logistic.display(Model3)
 ```
 
@@ -2251,10 +2257,48 @@ summary(Model3);epiDisplay::logistic.display(Model3)
 1. (常被忽略的) 邏輯迴歸模型的不可壓縮性導致的；
 2. 母親孕前體重對高血壓病史和嬰兒的低出生體重之間的關係造成了混雜效應。
 
-上面的分析結果，告訴我們，數據提供了足夠的證據證明母親孕前體重和是否有高血壓病史，在調整了彼此之後，仍然獨立地和嬰兒低出生體重的發生有相關性。這裏，我們可以下結論認爲，模型中假如母親孕前體重作爲混雜因子，是合情合理的。
+上面的分析結果，告訴我們，數據提供了足夠的證據證明母親孕前體重和是否有高血壓病史，在調整了彼此之後，仍然獨立地和嬰兒低出生體重的發生有相關性。這裏，我們可以下結論認爲，模型中加入母親孕前體重作爲混雜因子，是合情合理的。
+
+完成了目前爲止的初步分析和混雜因子的判斷以後，下一階段的分析側重於尋找有沒有任何第三方的預測變量，會對主要暴露變量 $X_1$ (孕期高血壓) 與結果變量 $Y$ (嬰兒出生體重過低) 之間的關係產生交互作用。如果數據中的預測變量有多個，那可能導致需要分析潛在的交互作用有許多對，通常建議在遇到多個預測變量之間的複雜關係需要討論的時候，建議不要一股腦全部作交互作用的分析，而是限定一個或者幾個最有可能有交互作用的變量就可以了。否則模型過於複雜，反而不利於理解。一般生物醫學的統計分析中考慮的重要交互作用分析，需要有重要的生物學意義，常見的例子是年齡，性別等。
+
+
+本節使用的例子中，令人感興趣的是，母親的孕前體重，會不會對妊娠高血壓的有無與嬰兒出生體重過低之間的關係造成交互作用：
+
+```{r cache=TRUE, message=FALSE, warning=FALSE}
+Model4 <- glm(low ~ ht*lwt, family = binomial(link = "logit"), data = lbw)
+summary(Model4); epiDisplay::logistic.display(Model4)
+```
+
+由於交互作用項結果爲 `ht1:lwt      0.003732   0.016173   0.231  0.81749`，無足夠的證據證明孕前體重會對妊娠高血壓和嬰兒出生體重過低之間的關係造成交互作用。
+
+如果確認沒有交互作用，建立本例最終模型前的幾個建議：
+
+1. 最終分析 $X_1, Y$ 之間關係的模型，需要加入我們逐一甄別之後確認過的混淆因子，此時稱爲**模型 1**；
+2. 對於確認不是 $X_1, Y$ 之間關係的混淆因子的那些剩餘變量，逐一加入**模型 1**，比較前後是否模型中各個混淆因子的參數估計是否發生了變化 (有沒有混淆因子的混淆因子？)；
+3. 最終模型中的變量，需要包含前兩步確認過的全部混淆因子；
+4. 在報告中把調整前後的參數估計整理成表格。
+
+如果在分析過程中發現了有重要意義的交互作用，那麼除了包含全部的混淆因子之外，你的最終模型中還需加入重要的交互作用項。此時需要報告的參數估計是有交互作用項部分的分層比值比/其他指標。
+
+### 補充
+
+除了使用二項分佈的邏輯迴歸之外，當結果變量是連續型或者計數型，也就是分析模型使用線性迴歸 (ANCOVA)，或者 (可能過度離散的) 泊松迴歸時，爲了提高模型的統計效能，減小參數估計的標準誤，模型可以選擇進一步調整一個或幾個**只和結果變量有關的基線變量**。此時，在你寫論文或者報告時，**必須把這些變量和確認是混雜因子的變量加以區分**，因爲加它們進入模型的目的不同。
 
 
 ## 分析目的 2 和 3 -- 建立預測模型 (predictive models)
+
+建立預測模型的過程，其實就是選擇哪個或者那些變量進入模型的過程。方法有很多，可惜的是，沒有哪種是公認完美的。這裏只介紹兩種最常見，也最常被批評的方法 -- 前/後 逐步選擇法 (forward stepwise selection/backward elimination)。強調一下，逐步法本身並不是神奇法術，不同的算法選擇的變量自然會有不同，如果你用了逐步選擇法，選出來的模型變量僅僅只能作爲參考，而不能作爲最終結論。
+
+```{r}
+vitc <- haven::read_dta("backupfiles/vitC.dta")
+vitc$ctakers <- factor(vitc$ctakers)
+vitc$sex <- factor(vitc$sex)
+
+step(lm(seruvitc~1,data=vitc[complete.cases(vitc),]),direction="forward",scope=~age+height+weight+sex+cigs+ctakers)
+
+step(lm(seruvitc~.,data=vitc[complete.cases(vitc),]),direction="backward")
+```
+
 
 
 # 模型檢查
