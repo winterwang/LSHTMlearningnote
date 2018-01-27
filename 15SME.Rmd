@@ -9,9 +9,6 @@
 此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。
 
 ```{r cache=TRUE, message=FALSE, warning=FALSE}
-pkg <- c("knitr", "kfigr", "tidyverse", "survival", "ggfortify", "survminer", "plotly","gridExtra", "Epi", "KMsurv", "gnm", "cmprsk", "mstate", "flexsurv", "splines", "epitools", "eha", "shiny", "epiR")
-sapply(pkg, require, character.only = TRUE)
-
 whitehal <- read_dta("backupfiles/whitehal.dta")
 whitehal$followupyrs <- (whitehal$timeout - whitehal$timein)/365.25
 max(whitehal$followupyrs*365.25) # time difference in days
@@ -26,7 +23,7 @@ with(whitehal, table(agecat))
 with(whitehal %>% group_by(agecat) %>%
   summarise(D = sum(all),
             Y = sum(followupyrs)),
-  cbind(agecat, pois.exact(x = D, pt = Y/1000)))
+  cbind(whitehal$agecat, pois.exact(x = D, pt = Y/1000)))
 
 
 ## rate ratios and 95% CIs for each age category compare with [40,44) age group
@@ -40,7 +37,7 @@ Model0 <- glm(all ~ agecat + offset(log(followupyrs)), family = poisson(link = "
 with(whitehal %>% group_by(grade) %>%
   summarise(D = sum(all),
             Y = sum(followupyrs)),
-  cbind(grade, pois.exact(x = D, pt = Y/1000)))
+  cbind(whitehal$grade, pois.exact(x = D, pt = Y/1000)))
 
 Model1 <- glm(all ~ factor(grade) + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model1)
 

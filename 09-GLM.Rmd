@@ -327,7 +327,7 @@ $$
 
 在 R 裏面擬合廣義線性模型的命令及其格式是：
 
-```{r eval=FALSE}
+```{r eval = FALSE}
 glm(response variable ~ explanatory variables to form linear predictor, family=name of distribution(link=link function), data=dataset)
 ```
 
@@ -414,7 +414,6 @@ head(residuals(Model2, type="deviance")) # residuals
 假如我們用擬合的模型預測當注射前精神病檢測值分別是 0，6，12 分時三組之間的注射後精神病檢測值差，可以這樣求：
 
 ```{r}
-library(margins)
 summary(margins(Model2, at = list(Before=c(0,6,12))))
 ```
 
@@ -463,7 +462,6 @@ Note: dy/dx for factor levels is the discrete change from the base level.
 
 
 ```{r loess-smoother1, echo=TRUE, fig.width=7, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.8, for the mental data", fig.align='center', out.width='100%', cache=TRUE}
-library(ggplot2)
 ggplot(Mental, aes(Before, After)) + geom_point() +
   geom_smooth(method = "loess",  span = 0.8, se = FALSE) +
   facet_grid(treatment ~ .) + theme_bw()
@@ -471,7 +469,6 @@ ggplot(Mental, aes(Before, After)) + geom_point() +
 
 
 ```{r loess-smoother2, echo=TRUE, fig.width=7, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.4, for the mental data", fig.align='center', out.width='100%', cache=TRUE, message=FALSE, warning=FALSE}
-library(ggplot2)
 ggplot(Mental, aes(Before, After)) + geom_point() +
   geom_smooth(method = "loess",  span = 0.4, se = FALSE) +
   facet_grid(treatment ~ .) + theme_bw()
@@ -768,7 +765,7 @@ lmtest::lrtest(Model1, Model2)
 
 飽和模型 saturated model，是指一個模型中所有可能放入的參數都被放進去的時候，模型達到飽和，自由度爲零。其實就是模型中參數的數量和觀測值個數相等的情況。飽和模型的情況下，所有的擬合值和對應的觀測值相等。所以，對於給定的數據庫，飽和模型提供了所有模型中最 “完美” 的擬合值，因爲擬合值和觀測值完全一致，所以飽和模型的對數似然，比其他所有你建立的模型的對數似然都要大。但是多數情況下，飽和模型並不是合理的模型，不能用來預測也無法拿來解釋數據，因爲它本身就是數據。
 
-### 模型偏差 deviance
+### 模型偏差 deviance {#deviance}
 
 令 $L_c$ 是目前擬合模型的對數似然，$L_s$ 是數據的飽和模型的對數似然，所以兩個模型的對數似然比是 $\frac{L_c}{L_s}$。那麼尺度化的模型偏差 (scaled deviance) $S$ 被定義爲：
 
@@ -783,7 +780,7 @@ $$
 **但是，模型偏差只適用於分組型二項分佈數據。當數據是個人的二分類數據時 (inidividual binary data)，模型的偏差值變得不再適用，無法用來比較模型對數據的擬合程度。** 這是因爲當你的觀測值 (個人數據) 有很多時，擬合飽和模型所需要的參數個數會趨向於無窮大，這違背了子集對數似然比檢驗的條件。
 
 
-## 個人數據擬合模型的優度檢驗
+## 個人數據擬合模型的優度檢驗 {#gof}
 
 在 R 裏面，進行邏輯迴歸模型的擬合優度檢驗的自定義方程如下，參考[網站](http://data.princeton.edu/wws509/r/c3s8.html)：
 
@@ -802,7 +799,6 @@ hosmer <- function(y, fv, groups=10, table=TRUE, type=2) {
 ```
 
 ```{r lbw, cache=TRUE}
-library(haven)
 lbw <- read_dta("http://www.stata-press.com/data/r12/lbw.dta")
 lbw$race <- factor(lbw$race)
 lbw$smoke <- factor(lbw$smoke)
@@ -863,7 +859,7 @@ $$
 
 
 
-```{r}
+```{r cache=TRUE}
 p <- read.csv("https://stats.idre.ucla.edu/stat/data/poisson_sim.csv")
 p <- within(p, {
   prog <- factor(prog, levels=1:3, labels=c("General", "Academic",
@@ -894,7 +890,7 @@ summary(m1); summary(m2)
 
 當然也可以用下面定義的函數來幫助我們計算上面這些數值，及其信賴區間。
 
-```{r}
+```{r }
 glm.RR <- function(GLM.RESULT, digits = 2) {
 
     if (GLM.RESULT$family$family == "binomial") {
@@ -969,8 +965,7 @@ Goodness of fit 檢驗結果 提示本模型**可能存在過度離散**，數�
 
 R 裏擬合負二項式分佈模型的函數 `glm.nb` 在基本包 `MASS` 裏。
 
-```{r message=FALSE}
-library(MASS)
+```{r message=FALSE , eval = TRUE}
 m1 <- glm.nb(num_awards ~ prog, data = p)
 m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
 summary(m1)
@@ -983,7 +978,7 @@ summary(m2)
 2. 另外一個變化是標準誤的估計量在負二項式分佈模型中明顯變大了，這就是我們放寬了前提條件，允許模型考慮個體的隨機效應的體現。如果泊松模型被數據本身的過度離散影響顯著，那麼泊松迴歸計算獲得的參數標準無是偏低的；
 3. 負二項式分佈迴歸的結果最底下出現的 `Theta:  1.723` 部分，它的倒數是前面提到的歌廳效應部分 $a_i$ 服從的伽馬分佈的方差 $\alpha$。它是關鍵的離散程度參數 (dispersion parameter)。在 STATA 裏，如果用 `nbreg` 擬合負二項式分佈迴歸的模型，輸出的結果最底下會有 $\alpha$ 值的報告，注意它和 R 輸出的 `Theta` 結果互爲倒數。另外，STATA 的輸出結果還會對 $\alpha = 0$ 直接進行檢驗。在 R 裏面則需要給兩個模型分別進行擬合優度檢驗，多數情況下你會發現負二項式分佈迴歸的模型更加擬合數據：
 
-```{r}
+```{r , eval = TRUE}
 with(m1, cbind(res.deviance = deviance, df = df.residual,
   p = pchisq(deviance, df.residual, lower.tail=FALSE)))
 with(m2, cbind(res.deviance = deviance, df = df.residual,
@@ -993,8 +988,7 @@ with(m2, cbind(res.deviance = deviance, df = df.residual,
 另一種獲取沒有被低估的迴歸係數的標準誤的方法來自穩健統計學手段。在 R 裏，擬合完普通泊松迴歸以後，用 `sandwich` 包裏的 `vcovHC()` 命令進行穩健的參數誤差估計 (具體說是夾心方差矩陣估計 sandwich estimator of variance)：
 
 
-```{r}
-library(sandwich)
+```{r , eval = TRUE}
 m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
 cov.m2 <- vcovHC(m2, type = "HC0")
 std.err <- sqrt(diag(cov.m2))
@@ -1033,8 +1027,6 @@ print(BritishD)
 
 
 ```{r PoissonRates, echo=FALSE, cache=TRUE}
-library(knitr)
-library(kableExtra)
 dt <- read.csv("backupfiles/PoissonRates.csv", header = T)
 names(dt) <- c("Group", "Person-years of follow-up", "CHD deaths", "Death Rate per 1000 person-years", "Rate Ratios")
 kable(dt, "html",  align = "c", caption = "Death rates due to CHD in smokers and non-smokers, collapsed over age group") %>%
@@ -1198,9 +1190,7 @@ summary(Model3)
 
 下面的統計數據來自一個比較手術和超聲碎石術對於腎結石治療結果的評價。已知大多數醫生都公認，腎結石的直徑小於 2 公分時治療成功的概率較高。
 
-```{r Lithotripsy, echo=FALSE, eval=FALSE, cache=TRUE}
-library(knitr)
-library(kableExtra)
+```{r Lithotripsy, echo=FALSE, eval = TRUE, cache=TRUE}
 dt <- read.csv("backupfiles/Lithotripsy.csv", header = T)
 names(dt) <- c("Group", "Surgery", "Lithotripsy", "Surgery", "Lithotripsy")
 kable(dt, "html",  align = "c", caption = "Lithotripsy") %>%
@@ -1260,9 +1250,7 @@ kable(dt, "html",  align = "c", caption = "Lithotripsy") %>%
 
 
 
-```{r Lithotripsy-collapsed, echo=FALSE, eval=FALSE}
-library(knitr)
-library(kableExtra)
+```{r Lithotripsy-collapsed, echo=FALSE, eval = TRUE}
 dt <- read.csv("backupfiles/Lithotripsy-col.csv", header = T)
 #names(dt) <- c("Group", "Surgery", "Lithotripsy", "Surgery", "Lithotripsy")
 kable(dt, "html",  align = "c", caption = "Lithotripsy collapsed") %>%
@@ -1414,9 +1402,7 @@ knitr::include_graphics("img/Selection_113.png")
 
 現在假設我們關心的是某種疾病的患病與否 (是/否)，和某個暴露變量 (是/否) 之間的關係，但是同時想要調整另一個具有 $k$ 個分層的混雜因素變量。
 
-```{r woolf, echo=FALSE, eval=FALSE}
-library(knitr)
-library(kableExtra)
+```{r woolf, echo=FALSE, eval = TRUE}
 dt <- read.csv("backupfiles/woolf.csv", header = T)
 names(dt) <- c(" ", " ", "1", "2", " ")
 kable(dt, "html",  align = "c", caption = "") %>%
@@ -1663,7 +1649,7 @@ $$
 
 邏輯迴歸的不可壓縮性給我們的啓示是，加入某個變量進入邏輯迴歸模型前後，其他預測變量的迴歸係數發生的變化可能僅僅是由於模型的不可壓縮性導致的變化，而非由於新加入的變量對原先變量與結果之間的關係起到了交互作用或者混雜效應。所以，**擬合迴歸模型的時候，如果你要考慮對莫個因素進行調整，必須做的一件事是，先分析它和其他模型中已有的預測變量之間的關係，從而有助於分析，當把要調整的變量放進模型前後的迴歸係數變化是否是真的來自於交互作用或者混雜效應。**
 
-## 交互作用對尺度的依賴性
+## 交互作用對尺度的依賴性 {#interaction-depend-scale}
 
 GLM 模型中的交互作用檢驗，對選用的尺度 (比值比 OR，還是危險度比 RR) 依賴性極高。用模型可壓縮性的數據例子也可以說明交互作用對尺度的依賴性。上文書說到，兩個分層中的比值比都是 9，該分層變量既沒有交互作用，也不是混淆因子 (當使用比值比的時候)。如果我們改用危險度比 (risk ratio, RR)，在分類變量的第一層 (Strata 1) 中，暴露的危險度比是 $\frac{90/100}{50/100} = 1.8$；分類變量的第二層 (Strata 2) 中，暴露的危險度比是 $\frac{50/100}{10/100} = 5$。所以使用危險度比作爲評價指標的時候，被調整的分類變量就突然搖身一變變成了有交互作用的因子。這裏，我們用數據，證明了交互作用的存在與否，對尺度的選用依賴性極高。**這就導致我們在描述一個變量是否對我們關心的暴露和結果之間的關係有交互作用時，必須明確指出所使用的是比值比，還是危險度比進行的交互作用評價。**
 
@@ -2211,7 +2197,6 @@ summary(Model2)
 - 第一步，先看看暴露變量和結果變量之間的關係
 
 ```{r cache=TRUE, warning=FALSE, message=FALSE}
-library(haven)
 lbw <- read_dta("http://www.stata-press.com/data/r12/lbw.dta")
 lbw$race <- factor(lbw$race)
 lbw$smoke <- factor(lbw$smoke)
@@ -2303,10 +2288,13 @@ step(lm(seruvitc~.,data=vitc[complete.cases(vitc),]),direction="backward")
 
 # 檢查你的模型 Model Checking
 
-每次定義一個 GLM 模型的時候 (Section \@ref{defineaGLM})，均分三步走，所以一個模型會出錯的部分，就在這三步驟中的任何一步：
+每次定義一個 GLM 模型的時候 (Section \@ref(defineaGLM))，均分三步走，所以一個模型會出錯的部分，就在這三步驟中的任何一步：
 
 1. 因變量分佈定義錯誤 (或者分佈的假設不成立) mis-specified distribution: 因變量之間**是否相互獨立**，且**服從某個已知的分佈**，這兩個條件中的任意一個不能滿足，第一步都無法成立。例如，最常見的是我們用泊松迴歸模型來擬合計數型數據時，因爲缺乏一些關鍵變量，導致模型遇到過度離散的問題 (over-dispersed for a Poisson distribution due to an omitted covariate)；
-2. 線性預測方程定義錯誤 mis-specified linear predictor: 
+2. 線性預測方程定義錯誤 mis-specified linear predictor: 線性預測方程中放入的變量，有的可能需要被轉換 (連續型轉換成分類型，或者是需要數學轉換)。或者是應該加入的交互作用項被我們粗心忽略了；
+3. 鏈接方程錯誤 mis-specified link function: 對前一步定義好的線性預測方程，第三步的鏈接方程指定很可能出現錯誤。或者是，我們可以考慮選用別的鏈接方程 ($\text{log instead of logit}$)，改變了鏈接方程之後，很可能原先認爲有交互作用的變量之間交互作用就消失了 (Section \@ref(interaction-depend-scale))。
+
+本章介紹一些廣義線性迴歸模型診斷的方法，這些手段雖然偶爾有一些檢驗方法，但更多的診斷方法需要繪圖通過視覺判斷。介紹邏輯迴歸時解釋過模型比較時使用的模型偏差 (deviance) 概念 (Section \@ref(deviance)) Pearson 的擬合優度檢驗，以及使用 Hosmer-Lemeshow 檢驗法檢驗個人二分類變量數據的邏輯迴歸擬合優度 (Section \@ref(gof)) 法。值得注意的是，這些方法是一種整體檢驗 (global test)，其零假設是 “**模型可以擬合數據**”，如果擬合優度檢驗的結果是拒絕這個零假設，那麼可以認爲模型建立的不佳，即**接受 “模型不能擬合數據” 的替代假設**。如果擬合優度檢驗的結果是無法拒絕零假設，那麼我們僅僅只能認爲**無證據證明 “模型不可以擬合數據”**，而**不能證明設計的模型可以良好的擬合數據**。所以，擬合優度的檢驗結果可以警告我們模型擬合有沒有錯誤，卻不能證明這個模型到底是不是一個良好的模型 (個人感覺應把擬合優度檢驗 goodness of fit 的名稱改爲 **擬合劣度檢驗 badness of fit**)。
 
 
 # Assessing model performance
