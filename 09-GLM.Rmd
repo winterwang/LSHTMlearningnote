@@ -2375,8 +2375,10 @@ resid(modelname)                   ## 可以獲取 deviance residuals
 
 ## NHANES 飲酒量數據實例
 
+數據的變量和每個變量的解釋如下表，總樣本量是 2548 人，飲酒量大於 5 杯每日者被定義爲重度飲酒者。
+
 Variable  |  Description      |
-:--------:|:----------------: |
+:--------|:---------------- |
 `gender`  |  1=male, 2=female
 `ageyrs`  | Age in years at survey
 `bmi`     | Body mass index $(\text{kg/m}^2)$
@@ -2391,8 +2393,7 @@ NHANES$gender <- factor(NHANES$gender, levels = c("Male", "Female"))
 with(NHANES, table(gender))
 NHANES <- mutate(NHANES, Heavydrinker = ALQ130 > 5)
 Model_NH <- glm(Heavydrinker ~ gender + ageyrs, data = NHANES, family = binomial(link = "logit"))
-logistic.display(Model_NH)
-summary(Model_NH)
+logistic.display(Model_NH);summary(Model_NH)
 ```
 
 當用邏輯迴歸模型擬合數據，線性迴歸方程加入年齡和性別時，數據給出了極強的證據證明性別和年齡和是否爲重度飲酒者都有很大的關係。但是，擬合完這樣一個邏輯迴歸模型之後，我們最大的擔心是，模型中的年齡變量和 $\text{logit}(\text{P}(Y=1))$ 之間的關係，用簡單線性是不是恰當？要檢驗這樣的擔憂，最好的方法是追加一個非線性轉換後的年齡值，去看看模型的擬合程度是否得到改善：
@@ -2401,8 +2402,7 @@ summary(Model_NH)
 ```{r cache=TRUE}
 NHANES <- mutate(NHANES, age2 = ageyrs^2)
 Model_NH2 <- glm(Heavydrinker ~ gender + ageyrs + age2, data = NHANES, family = binomial(link = "logit"))
-summary(Model_NH2)
-logistic.display(Model_NH2)
+logistic.display(Model_NH2) ; summary(Model_NH2)
 ```
 
 擬合了年齡的平方 (`age2`) 進入邏輯迴歸模型中之後，`age2` 的迴歸係數的 Wald 檢驗結果是 $p = 0.073$，這證明用簡單的線性關係把年齡放在模型裏**並不算不妥當 (not unreasonable)**。
@@ -2410,7 +2410,8 @@ logistic.display(Model_NH2)
 另外，可以提取 `Model_NH` 的標準化 Pearson 殘差和年齡作如下的散點圖：
 
 ```{r stPearsonAge, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Standardized Pearson residuals agianst age, in logistic model with gender and linear age as covariates', fig.align='center', out.width='80%', cache=TRUE, message=FALSE, warning=FALSE}
-NHANES$stresPearson <- resid(Model_NH, type = "pearson")
+#NHANES$stresPearson <- resid(Model_NH, type = "pearson")
+NHANES$stresPearson <- boot::glm.diag(Model_NH)$rp       ## 可以獲取 standardized Pearson residuals
 ggplot(NHANES, aes(x=ageyrs, y=stresPearson)) +
   geom_point() +
   theme_bw() +
@@ -2431,14 +2432,15 @@ ggplot(NHANES, aes(x=ageyrs, y=stresPearson)) +
 
 ```{r cache=TRUE}
 Model_NH3 <- glm(Heavydrinker ~ gender + ageyrs + bmi, data = NHANES, family = binomial(link = "logit"))
-summary(Model_NH3)
-logistic.display(Model_NH3)
+logistic.display(Model_NH3) ; summary(Model_NH3)
 ```
 
 BMI的迴歸係數是否爲零的 Wald 檢驗 $p=0.477$，提示數據無法提供證據去反對零假設：“調整了年齡和性別之後，BMI 和是否是重度飲酒者的概率的對數比值 $\text{log-odds}$ 之間無線性關係”，也就是二者之間可能有非線性關係。如果把 Pearson 標準化殘差和 BMI 作殘差散點圖，如下所示：
 
 ```{r stPearsonBMI, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Standardized Pearson residuals agianst BMI, in logistic model with gender and linear age as covariates', fig.align='center', out.width='80%', cache=TRUE, message=FALSE, warning=FALSE}
-NHANES$stresPearson_bmi <- resid(Model_NH3, type = "pearson")
+#NHANES$stresPearson_bmi <- resid(Model_NH3, type = "pearson")
+NHANES$stresPearson_bmi <- boot::glm.diag(Model_NH3)$rp       ## 可以獲取 standardized Pearson residuals
+
 ggplot(NHANES, aes(x=bmi, y=stresPearson_bmi)) +
   geom_point() +
   theme_bw() +
@@ -2465,6 +2467,20 @@ lmtest::lrtest(Model_NH, Model_NH4)
 ```
 
 通過似然比檢驗比較加了 `bmi, bmi2` 兩個共變量的模型和只有 `gender, ageyrs` 兩個共變量的模型 $(p=0.022)$，提示我們 BMI 和是否是重度飲酒者 (概率的對數比值 $\text{log-odds}$) 之間的關係並非簡單的線性關係。不過這樣的關係似乎並不是特別的明顯，圖 \@ref(fig:stPearsonBMI) 的平滑曲線的彎曲程度也沒有特別明顯。所以，在這樣的情況下，有的統計學家可能還是會選擇不放 BMI 進入模型裏。
+
+## Practical 10
+
+本次練習繼續沿用 NHANES 數據，此次練習我們把重點放在收集到的收縮期血壓數據上。假設定義收縮期血壓大於 140 $\text{mmHg}$ 者爲高血壓患者。
+
+
+```{r NHANEhyt, cache=TRUE}
+# 1. load the data and define a binary variable indicating whether 
+#    each observation has hypertension (1) or not (0)
+NHANES <- read_dta("backupfiles/nhanesglm.dta")
+NHANES <- mutate(NHANES, Gender = )
+
+NHANES <- mutate(NHANES, hypertension = sbp >= 140)
+```
 
 
 # Assessing model performance
