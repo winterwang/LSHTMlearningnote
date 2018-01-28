@@ -2310,7 +2310,7 @@ $$Y_i\sim\text{Bin}(n_i, \pi_i), \\
 \text{where n is the number of subjects in one group} \\
 \text{logit}(\pi_i) = \eta_i$$
 
-其第 $i$ 個觀測值的殘差，是
+其第 $i$ 個觀測值的原始殘差 (raw residual)，是
 
 $$
 \begin{aligned}
@@ -2319,8 +2319,113 @@ r_i & = y_i - \hat\mu_i \\
 \end{aligned}
 $$
 
-觀測值 $Y_i$ 的變化程度 (variability) 本身並不是一成不變的 (會根據模型中加入的共變量而改變)，其變化程度可能是觀測值 $Y_i$ 的方差導致的。二項分佈數據的方差已知是 $\text{Var}(Y_i) = n_i\pi_i(1-\pi_i)$。舉個栗子，如果 $n_i = 10, \hat\pi_i = 0.01, Y_i = 10$，那麼 $r_i \approx 10$，這是一個很差的擬合效果。如果，$n_i = 100000, \hat\pi_i = 0.5, Y_i = 5010$，那麼 $r_i = 10$，此時的殘差 $10$ 又證明了這是一個擬合效果良好的模型。
+觀測值 $Y_i$ 的變化程度 (variability) 本身並不是一成不變的 (會根據模型中加入的共變量而改變)，其變化程度可能是觀測值 $Y_i$ 的方差導致的。二項分佈數據的方差已知是 $\text{Var}(Y_i) = n_i\pi_i(1-\pi_i)$。舉個栗子，如果 $n_i = 10, \hat\pi_i = 0.01, Y_i = 10$，那麼 $r_i \approx 10$，這是一個很差的擬合效果。如果，$n_i = 100000, \hat\pi_i = 0.5, Y_i = 5010$，那麼 $r_i = 10$，此時的殘差也是 $10$ 又證明了這是一個擬合效果良好的模型。相同的殘差，由於方差不同，判斷則不一樣，所以我們需要有一個類似簡單線性迴歸中標準化殘差 (Section \@ref(standardres)) 的過程 -- **Pearson 殘差**:
 
+$$
+p_i = \frac{r_i}{\sqrt{\hat{\text{Var}}}(Y_i)}
+$$
+
+所以，二項分佈數據的 Pearson 殘差公式爲
+
+$$
+p_i = \frac{r_i}{\sqrt{n_i\hat\pi_i(1-\hat\pi_i)}}
+$$
+
+Pearson 殘差的平方和，就是 Pearson 卡方統計量：
+
+$$
+\sum_i^Np^2_i = \text{Pearson's } \chi^2 \text{ statistic}
+$$
+
+和標準化 Pearson 殘差相似地，另一個選項是使用**偏差殘差 (deviance residual)**。只要使偏差殘差 $d_i$ 和原始殘差 $r_i$ 保持相同的符號，偏差殘差也可以被標準化用於模型診斷。
+
+用二項分佈數據的例子，
+
+$$
+\begin{aligned}
+d_i & = \text{sign}(r_i)\sqrt{2\{ y_i\text{ln}(\frac{y_i}{\hat\mu_i}) + (n_i - y_i)\text{ln}(\frac{n_i-y_i}{n_i - \hat\mu_i})\}} \\
+\sum_{i=1}^n d^2 = D & = 2\sum_{i=1}^N\{ y_i\text{ln}(\frac{y_i}{\hat\mu_i}) + (n_i - y_i)\text{ln}(\frac{n_i - y_i}{n_i - \hat\mu_i}) \}
+\end{aligned}
+$$
+
+
+### GLM 在 R 裏獲取殘差
+
+```{r eval=FALSE}
+boot::glm.diag(modelname)$rp       ## 可以獲取 standardized Pearson residuals
+resid(modelname, type = "pearson") ## 可以獲取 Pearson residuals
+rstandard(modelname)               ## 可以獲取 standardized deviance residuals
+resid(modelname)                   ## 可以獲取 deviance residuals
+```
+
+### 如何利用獲得的殘差
+
+1. 將殘差和觀測值的排序作散點圖--查看是否有觀測值擁有過大的標準化殘差；
+2. 作殘差和線性預測方程值的散點圖--如果模型合理的話，這兩者之間視覺上可以判斷是沒有關係的 (no systematic relationship)；
+3. 作殘差和模型中任意一個連續型變量 (如果有的話) -- 可以判定該連續型變量的放入方式是否合理；
+4. 作殘差和數據中尚未加入模型的新變量之間的散點圖 (甚至是已有變量的二次/三次方值)--如果二者之間有明顯的相關性，需要考慮是否加入這個新變量到模型中去。
+
+做這些散點圖時，推薦都加上 `lowess` 的非線性平滑曲線，用於輔助判斷是否變量之間存在特殊關係。
+
+## 共變量模式殘差 covariate pattern residuals
+
+
+
+## 鏈接方程
+
+## NHANES 飲酒量數據實例
+
+Variable  |  Description
+----------|------------------
+`gender`  |  1=male, 2=female
+`ageyrs`  | Age in years at survey
+`bmi`     | Body mass index $(\text{kg/m}^2)$
+`sbp`     | Systolic blood pressure $(\text{mmHg})$
+`ALQ130`  | Reported average number of drinks per day
+
+```{r cache=TRUE}
+NHANES <- read_dta("backupfiles/nhanesglm.dta")
+NHANES$gender[NHANES$gender == 1] <- "Male"
+NHANES$gender[NHANES$gender == 2] <- "Female"
+NHANES$gender <- factor(NHANES$gender, levels = c("Male", "Female"))
+with(NHANES, table(gender))
+NHANES <- mutate(NHANES, Heavydrinker = ALQ130 > 5)
+Model_NH <- glm(Heavydrinker ~ gender + ageyrs, data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH)
+summary(Model_NH)
+```
+
+當用邏輯迴歸模型擬合數據，線性迴歸方程加入年齡和性別時，數據給出了極強的證據證明性別和年齡和是否爲重度飲酒者都有很大的關係。但是，擬合完這樣一個邏輯迴歸模型之後，我們最大的擔心是，模型中的年齡變量和 $\text{logit}(\text{P}(Y=1))$ 之間的關係，用簡單線性是不是恰當？要檢驗這樣的擔憂，最好的方法是追加一個非線性轉換後的年齡值，去看看模型的擬合程度是否得到改善：
+
+
+```{r cache=TRUE}
+NHANES <- mutate(NHANES, age2 = ageyrs^2)
+Model_NH2 <- glm(Heavydrinker ~ gender + ageyrs + age2, data = NHANES, family = binomial(link = "logit"))
+summary(Model_NH2)
+logistic.display(Model_NH2)
+```
+
+擬合了年齡的平方 (`age2`) 進入邏輯迴歸模型中之後，`age2` 的迴歸係數的 Wald 檢驗結果是 $p = 0.073$，這證明用簡單的線性關係把年齡放在模型裏並不算不妥當。
+
+另外，可以把標準化 Pearson 殘差和年齡作如下的散點圖：
+
+```{r stPearsonAge, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Standardized Pearson residuals agianst age, in logistic model with gender and linear age as covariates', fig.align='center', out.width='80%', cache=TRUE, message=FALSE, warning=FALSE}
+NHANES$stresPearson <- resid(Model_NH, type = "pearson")
+ggplot(NHANES, aes(x=ageyrs, y=stresPearson)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(span = 0.8) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age in Years", y = "Standardized Pearson residual")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+圖 \@ref(stPearsonAge) 中靠近橫軸的藍色實線是 LOWESS 平滑曲線，它十分接近平直的橫線，也證明了 Pearson 標準化殘差值和年齡本身並無關聯。這同時也佐證了，將年齡以連續型共變量的形式放入本次邏輯迴歸模型中並非不合理。
 
 # Assessing model performance
 
