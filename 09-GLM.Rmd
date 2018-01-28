@@ -2375,8 +2375,8 @@ resid(modelname)                   ## 可以獲取 deviance residuals
 
 ## NHANES 飲酒量數據實例
 
-Variable  |  Description
-----------|------------------
+Variable  |  Description      |
+:--------:|:----------------: |
 `gender`  |  1=male, 2=female
 `ageyrs`  | Age in years at survey
 `bmi`     | Body mass index $(\text{kg/m}^2)$
@@ -2405,9 +2405,9 @@ summary(Model_NH2)
 logistic.display(Model_NH2)
 ```
 
-擬合了年齡的平方 (`age2`) 進入邏輯迴歸模型中之後，`age2` 的迴歸係數的 Wald 檢驗結果是 $p = 0.073$，這證明用簡單的線性關係把年齡放在模型裏並不算不妥當。
+擬合了年齡的平方 (`age2`) 進入邏輯迴歸模型中之後，`age2` 的迴歸係數的 Wald 檢驗結果是 $p = 0.073$，這證明用簡單的線性關係把年齡放在模型裏**並不算不妥當 (not unreasonable)**。
 
-另外，可以把標準化 Pearson 殘差和年齡作如下的散點圖：
+另外，可以提取 `Model_NH` 的標準化 Pearson 殘差和年齡作如下的散點圖：
 
 ```{r stPearsonAge, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Standardized Pearson residuals agianst age, in logistic model with gender and linear age as covariates', fig.align='center', out.width='80%', cache=TRUE, message=FALSE, warning=FALSE}
 NHANES$stresPearson <- resid(Model_NH, type = "pearson")
@@ -2425,7 +2425,47 @@ ggplot(NHANES, aes(x=ageyrs, y=stresPearson)) +
     panel.background = element_blank())
 ```
 
-圖 \@ref(stPearsonAge) 中靠近橫軸的藍色實線是 LOWESS 平滑曲線，它十分接近平直的橫線，也證明了 Pearson 標準化殘差值和年齡本身並無關聯。這同時也佐證了，將年齡以連續型共變量的形式放入本次邏輯迴歸模型中並非不合理。
+圖 \@ref(fig:stPearsonAge) 中靠近橫軸的藍色實線是 LOWESS 平滑曲線，它十分接近平直的橫線，也證明了 Pearson 標準化殘差值和年齡本身並無關聯。這同時也佐證了，將年齡以連續型共變量的形式放入本次邏輯迴歸模型中**並非不合理 (no unreasonable)**。
+
+下一步，我們再來考慮，模型中加入 `bmi` 是否合理 (能改善模型的擬合度)：
+
+```{r cache=TRUE}
+Model_NH3 <- glm(Heavydrinker ~ gender + ageyrs + bmi, data = NHANES, family = binomial(link = "logit"))
+summary(Model_NH3)
+logistic.display(Model_NH3)
+```
+
+BMI的迴歸係數是否爲零的 Wald 檢驗 $p=0.477$，提示數據無法提供證據去反對零假設：“調整了年齡和性別之後，BMI 和是否是重度飲酒者的概率的對數比值 $\text{log-odds}$ 之間無線性關係”，也就是二者之間可能有非線性關係。如果把 Pearson 標準化殘差和 BMI 作殘差散點圖，如下所示：
+
+```{r stPearsonBMI, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Standardized Pearson residuals agianst BMI, in logistic model with gender and linear age as covariates', fig.align='center', out.width='80%', cache=TRUE, message=FALSE, warning=FALSE}
+NHANES$stresPearson_bmi <- resid(Model_NH3, type = "pearson")
+ggplot(NHANES, aes(x=bmi, y=stresPearson_bmi)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(span = 0.8) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Body Mass Index", y = "Standardized Pearson residual")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+此殘差圖 \@ref(fig:stPearsonBMI) 的 LOWESS 平滑曲線卻提示我們，BMI 和殘差之間不完全是毫無關係的 (應該是非線性的，拋物線關係？)。如果我們把 BMI 取平方放入模型中再看其結果：
+
+
+```{r cache=TRUE}
+NHANES <- mutate(NHANES, bmi2 = bmi^2)
+Model_NH4 <- glm(Heavydrinker ~ gender + ageyrs + bmi + bmi2, data = NHANES, family = binomial(link = "logit"))
+summary(Model_NH4)
+logistic.display(Model_NH4)
+lmtest::lrtest(Model_NH, Model_NH4)
+```
+
+通過似然比檢驗比較加了 `bmi, bmi2` 兩個共變量的模型和只有 `gender, ageyrs` 兩個共變量的模型 $(p=0.022)$，提示我們 BMI 和是否是重度飲酒者 (概率的對數比值 $\text{log-odds}$) 之間的關係並非簡單的線性關係。不過這樣的關係似乎並不是特別的明顯，圖 \@ref(fig:stPearsonBMI) 的平滑曲線的彎曲程度也沒有特別明顯。所以，在這樣的情況下，有的統計學家可能還是會選擇不放 BMI 進入模型裏。
+
 
 # Assessing model performance
 
