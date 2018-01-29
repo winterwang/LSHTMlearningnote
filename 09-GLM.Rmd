@@ -2373,7 +2373,7 @@ resid(modelname)                   ## 可以獲取 deviance residuals
 
 ## 鏈接方程
 
-## NHANES 飲酒量數據實例
+## NHANES 飲酒量數據實例 {#NHANESdrinker}
 
 數據的變量和每個變量的解釋如下表，總樣本量是 2548 人，飲酒量大於 5 杯每日者被定義爲重度飲酒者。
 
@@ -2387,9 +2387,9 @@ Variable  |  Description      |
 
 ```{r cache=TRUE}
 NHANES <- read_dta("backupfiles/nhanesglm.dta")
-NHANES$gender[NHANES$gender == 1] <- "Male"
-NHANES$gender[NHANES$gender == 2] <- "Female"
-NHANES$gender <- factor(NHANES$gender, levels = c("Male", "Female"))
+NHANES <- NHANES %>%
+  mutate(Gender = ifelse(gender == 1, "Male", "Female")) %>%
+    mutate(Gender = factor(Gender, levels = c("Male", "Female")))
 with(NHANES, table(gender))
 NHANES <- mutate(NHANES, Heavydrinker = ALQ130 > 5)
 Model_NH <- glm(Heavydrinker ~ gender + ageyrs, data = NHANES, family = binomial(link = "logit"))
@@ -2426,7 +2426,7 @@ ggplot(NHANES, aes(x=ageyrs, y=stresPearson)) +
     panel.background = element_blank())
 ```
 
-圖 \@ref(fig:stPearsonAge) 中靠近橫軸的藍色實線是 LOWESS 平滑曲線，它十分接近平直的橫線，也證明了 Pearson 標準化殘差值和年齡本身並無關聯。這同時也佐證了，將年齡以連續型共變量的形式放入本次邏輯迴歸模型中**並非不合理 (no unreasonable)**。
+圖 \@ref(fig:stPearsonAge) 中靠近橫軸的藍色實線是 LOWESS 平滑曲線，它十分接近平直的橫線，也證明了 Pearson 標準化殘差值和年齡本身並無關聯。這同時也佐證了，將年齡以連續型共變量的形式放入本次邏輯迴歸模型中**並非不合理 (not unreasonable)**。
 
 下一步，我們再來考慮，模型中加入 `bmi` 是否合理 (能改善模型的擬合度)：
 
@@ -2470,7 +2470,7 @@ lmtest::lrtest(Model_NH, Model_NH4)
 
 ## Practical 10
 
-本次練習繼續沿用 NHANES 數據，此次練習我們把重點放在收集到的收縮期血壓數據上。定義收縮期血壓大於 140 $\text{mmHg}$ 者爲高血壓患者。
+繼續沿用 NHANES 數據，此次練習我們把重點放在收集到的收縮期血壓數據上。定義收縮期血壓大於 140 $\text{mmHg}$ 者爲高血壓患者。
 
 
 ```{r NHANEhyt, cache=TRUE}
@@ -2640,7 +2640,45 @@ cbind(Point_pred_women, PredictCI_women_L, PredictCI_women_U)
 
 
 
-# Assessing model performance
+# 評價模型的表現 Assessing model performance
+
+在廣義線性迴歸的模型表現中，還有幾個重要的概念，**精準度 (calibration)，變異度 (variation)，和分辨能力 (descrimination)**，本章繼續用二分類結果變量和多個共變量的廣義線性迴歸模型來理解這幾個概念。本章使用邏輯迴歸，也就是 $\text{logit}$ 鏈接方程的 GLM 來解釋，但是實際上使用其他鏈接方程時，這些概念也是一樣通用的。
+
+當用邏輯迴歸模型擬合了觀測數據。我們可以通過擬合的模型來計算每個觀測對象的預測“成功”概率 (the predicted probability of "success" for each subject)。當使用 $\text{logit}$ 作鏈接方程時，每個人的預測概率 (predicted probability) 爲：
+
+$$
+\hat\pi_i = \frac{\text{exp}(\hat\alpha + \hat\beta_1x_{i1} + \cdots + \hat\beta_px_{ip})}{1+\text{exp}(\hat\alpha + \hat\beta_1x_{i1} + \cdots + \hat\beta_px_{ip})}
+$$
+
+
+## 精準度 calibration
+
+模型具有良好的精準度時，其計算獲得的每個觀測對象的預測概率，和每個觀測對象本身“成功”的**概率期望值**保持一致。
+
+$$
+E(Y|\hat\pi = p) = p
+$$
+
+當一個 GLM 具有良好精準度時，我們可以利用它在臨牀醫學中發揮重要的作用 (如預測患者死亡，發病或療效等)。如果模型的精準度不佳，那可能導致的嚴重後果有：治療不必要治療的“健康人”，或者漏掉應該治療的“患者”。當一個模型的預測變量只包含了分類型變量，比較觀測概率和預測概率的過程較爲簡單，比較各個分類變量的排列組合後，不同共變量類型 (covariate pattern) 的患者的觀測值和預測值即可。
+
+這裏再沿用之前 NHANES 的重度飲酒相關的數據 (Section \@ref(NHANESdrinker))來繼續下面對精準度的說明，先擬合一個只有性別作爲預測變量的邏輯迴歸模型：
+
+```{r performance0, cache=TRUE}
+NHANES <- read_dta("backupfiles/nhanesglm.dta")
+NHANES <- NHANES %>%
+  mutate(Gender = ifelse(gender == 1, "Male", "Female")) %>%
+    mutate(Gender = factor(Gender, levels = c("Male", "Female")))
+with(NHANES, table(Gender))
+NHANES <- mutate(NHANES, Heavydrinker = ALQ130 > 5)
+Model_perf <- glm(Heavydrinker ~ Gender, data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_perf)
+```
+
+
+```{r}
+LOGIT::hlGOF.test(NHANES$Heavydrinker, predict(Model_perf, NHANES, type = "response"), breaks = 2)
+```
+
 
 # Matched studies
 
