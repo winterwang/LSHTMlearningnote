@@ -708,7 +708,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="52.5" data-path="-model-checking.html"><a href="-model-checking.html#practical-10"><i class="fa fa-check"></i><b>52.5</b> Practical 10</a></li>
 </ul></li>
 <li class="chapter" data-level="53" data-path="-assessing-model-performance.html"><a href="-assessing-model-performance.html"><i class="fa fa-check"></i><b>53</b> 評價模型的表現 Assessing model performance</a><ul>
-<li class="chapter" data-level="53.1" data-path="-assessing-model-performance.html"><a href="-assessing-model-performance.html#-calibration"><i class="fa fa-check"></i><b>53.1</b> 精準度 calibration</a></li>
+<li class="chapter" data-level="53.1" data-path="-assessing-model-performance.html"><a href="-assessing-model-performance.html#calibration"><i class="fa fa-check"></i><b>53.1</b> 精準度 calibration</a></li>
+<li class="chapter" data-level="53.2" data-path="-assessing-model-performance.html"><a href="-assessing-model-performance.html#-r2-"><i class="fa fa-check"></i><b>53.2</b> 可解釋變化量和 <span class="math inline">\(R^2\)</span> 決定係數</a></li>
 </ul></li>
 <li class="chapter" data-level="54" data-path="matched-studies.html"><a href="matched-studies.html"><i class="fa fa-check"></i><b>54</b> Matched studies</a></li>
 <li class="chapter" data-level="55" data-path="section-55.html"><a href="section-55.html"><i class="fa fa-check"></i><b>55</b> 條件邏輯迴歸</a></li>
@@ -744,7 +745,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p><span class="math display">\[
 \hat\pi_i = \frac{\text{exp}(\hat\alpha + \hat\beta_1x_{i1} + \cdots + \hat\beta_px_{ip})}{1+\text{exp}(\hat\alpha + \hat\beta_1x_{i1} + \cdots + \hat\beta_px_{ip})}
 \]</span></p>
-<div id="-calibration" class="section level2">
+<div id="calibration" class="section level2">
 <h2><span class="header-section-number">53.1</span> 精準度 calibration</h2>
 <p>模型具有良好的精準度時，其計算獲得的每個觀測對象的預測概率，和每個觀測對象本身“成功”的<strong>概率期望值</strong>保持一致。</p>
 <p><span class="math display">\[
@@ -772,14 +773,50 @@ Model_perf &lt;-<span class="st"> </span><span class="kw">glm</span>(Heavydrinke
 ## Log-likelihood = -834.1079
 ## No. of observations = 2548
 ## AIC value = 1672.2158</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">LogisticDx<span class="op">::</span><span class="kw">dx</span>(Model_perf)</code></pre></div>
-<pre><code>## Warning in sqrt(2 * ((y * log(y/(n * P))) + (n - y) * log((n - y)/(n * (1 - : NaNs produced</code></pre>
-<pre><code>##    (Intercept) GenderFemale   y           P    n yhat             Pr             dr             h
-## 1:           1            0 249 0.179007908 1391  249 -5.0292307e-13 -5.7634949e-07 0.00071890726
-## 2:           1            1  42 0.036300778 1157   42 -7.0696598e-13            NaN 0.00086430424
-##               sPr            sdr        dChisq          dDev         dBhat
-## 1: -5.0310394e-13 -5.7655677e-07 2.5311358e-25 3.3241771e-13 1.8209610e-28
-## 2: -7.0727169e-13            NaN 5.0023325e-25           NaN 4.3272772e-28</code></pre>
+<p>完成這個模型之後，在 STATA 裏可以用簡便的 <code>estat gof, table</code> 命令獲取模型擬合的觀測值和期待值表格，然而 R 裏面需要用到 <a href="https://cran.r-project.org/web/packages/LogisticDx/index.html"><code>LogisticDx</code></a> 包裏的診斷命令 <code>dx</code> 獲取 <del>(我花了好幾個小時才找到這個命令，不得不說 STATA 對於流行病的傳統計算真的是比較方便)</del>：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">LogisticDx<span class="op">::</span><span class="kw">dx</span>(Model_perf)[, <span class="dv">2</span><span class="op">:</span><span class="dv">6</span>]</code></pre></div>
+<pre><code>##    GenderFemale   y           P    n yhat
+## 1:            0 249 0.179007908 1391  249
+## 2:            1  42 0.036300778 1157   42</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># obtain Pearson&#39;s test statistics</span>
+chi2 &lt;-<span class="st"> </span><span class="kw">sum</span>((LogisticDx<span class="op">::</span><span class="kw">dx</span>(Model_perf)<span class="op">$</span>sPr)<span class="op">^</span><span class="dv">2</span>)
+   pval &lt;-<span class="st"> </span><span class="kw">pchisq</span>(chi2, <span class="dv">1</span>, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)
+   <span class="kw">data.frame</span>(<span class="dt">test=</span><span class="st">&quot;Pearson chi2(1)&quot;</span>,<span class="dt">chi.sq=</span>chi2,<span class="dt">pvalue=</span>pval)</code></pre></div>
+<pre><code>##              test        chi.sq pvalue
+## 1 Pearson chi2(1) 7.5334682e-25      1</code></pre>
+<p>在這個只有性別作預測變量的邏輯迴歸模型裏，當然只有男，女，兩種共變量模式 (covariate patterns)。此時，模型的精準度100% (<code>y</code> 是觀測值， <code>yhat</code> 是期待值)。接下來，再在模型中加入一個是否體重超重的二分類變量。再獲取其觀測值和期待值表格如下：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">NHANES &lt;-<span class="st"> </span><span class="kw">mutate</span>(NHANES, <span class="dt">highbmi =</span> bmi <span class="op">&gt;</span><span class="st"> </span><span class="dv">25</span>)
+Model_perf &lt;-<span class="st"> </span><span class="kw">glm</span>(Heavydrinker <span class="op">~</span><span class="st"> </span>Gender <span class="op">+</span><span class="st"> </span>highbmi, <span class="dt">data =</span> NHANES, <span class="dt">family =</span> binomial)
+<span class="kw">logistic.display</span>(Model_perf)</code></pre></div>
+<pre><code>## 
+## Logistic regression predicting Heavydrinker 
+##  
+##                        crude OR(95%CI)   adj. OR(95%CI)    P(Wald&#39;s test) P(LR-test)
+## Gender: Female vs Male 0.17 (0.12,0.24)  0.17 (0.12,0.24)  &lt; 0.001        &lt; 0.001   
+##                                                                                     
+## highbmi                1.21 (0.93,1.58)  1.11 (0.84,1.46)  0.456          0.453     
+##                                                                                     
+## Log-likelihood = -833.8269
+## No. of observations = 2548
+## AIC value = 1673.6539</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">LogisticDx<span class="op">::</span><span class="kw">dx</span>(Model_perf)[,<span class="dv">2</span><span class="op">:</span><span class="dv">7</span>]</code></pre></div>
+<pre><code>##    GenderFemale highbmiTRUE   y           P   n       yhat
+## 1:            0           1 175 0.183662501 961 176.499664
+## 2:            0           0  74 0.168605433 430  72.500336
+## 3:            1           1  29 0.037620159 731  27.500336
+## 4:            1           0  13 0.034036770 426  14.499664</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># obtain Pearson&#39;s test statistics</span>
+chi2 &lt;-<span class="st"> </span><span class="kw">sum</span>((LogisticDx<span class="op">::</span><span class="kw">dx</span>(Model_perf)<span class="op">$</span>sPr)<span class="op">^</span><span class="dv">2</span>)
+   pval &lt;-<span class="st"> </span><span class="kw">pchisq</span>(chi2, <span class="dv">1</span>, <span class="dt">lower.tail=</span><span class="ot">FALSE</span>)
+   <span class="kw">data.frame</span>(<span class="dt">test=</span><span class="st">&quot;Pearson chi2(1)&quot;</span>,<span class="dt">chi.sq=</span>chi2,<span class="dt">pvalue=</span>pval)</code></pre></div>
+<pre><code>##              test     chi.sq     pvalue
+## 1 Pearson chi2(1) 0.29881856 0.58462403</code></pre>
+<p>此時的模型有 4 中共變量模式 (covariate patterns)，其實就是性別和超重與否的四種排列組合。這裏報告的 <code>Pearson's test statisitics</code> 我們在前一章講邏輯迴歸殘差的部分有講過，它就是 Pearson 標準化殘差的平方和。此處它的卡方檢驗，檢驗零假設是“模型制定正確”。所以，我們無足夠的證據 <span class="math inline">\((p=0.58)\)</span> 來反對零假設，數據觀測值和模型的期待值似乎也較爲吻合。</p>
+<p>但是一旦模型裏加入了新的連續型變量，整個模型的共變量模式 (covariate patterns)，將會變得很難進行上面的觀測值和期待值的比較，由於加入的連續型變量會導致模型的共變量模式變得越來越多，甚至接近與樣本量個數 <span class="math inline">\(n\)</span>，也就是每個共變量模式的樣本越來越小，直至等於 <span class="math inline">\(1\)</span>。連續型變量的模型中我們 Hosmer-Lemeshow 檢驗 (Section <a href="section-46.html#gof">46.4</a>) 而不是 Pearson 統計檢驗量。</p>
+</div>
+<div id="-r2-" class="section level2">
+<h2><span class="header-section-number">53.2</span> 可解釋變化量和 <span class="math inline">\(R^2\)</span> 決定係數</h2>
+<p>精準度的確重要，但是模型精準度好，只代表它和過去擬合它的觀測數據之間關係接近，不代表它能準確地預測其他的個體的概率。前文中只有性別作爲預測變量的邏輯迴歸模型就是實例，它和擬合的觀測數據做到了 100% 完美擬合，但是不用大腦思考也知道，除了性別還有其他更多的能預測一個人是否是重度飲酒者的變量，且擁有能提升模型的擬合程度的潛質。</p>
 </div>
 </div>
             </section>

@@ -2331,7 +2331,7 @@ $$
 p_i = \frac{r_i}{\sqrt{n_i\hat\pi_i(1-\hat\pi_i)}}
 $$
 
-Pearson 殘差的平方和，就是 Pearson 卡方統計量：
+Pearson 殘差的平方和，就是 Pearson 卡方統計量，在只有分類變量的邏輯迴歸模型中可以用於擬合度診斷 (Section \@ref(calibration))，自由度爲 $1$：
 
 $$
 \sum_i^Np^2_i = \text{Pearson's } \chi^2 \text{ statistic}
@@ -2651,7 +2651,7 @@ $$
 $$
 
 
-## 精準度 calibration
+## 精準度 calibration {#calibration}
 
 模型具有良好的精準度時，其計算獲得的每個觀測對象的預測概率，和每個觀測對象本身“成功”的**概率期望值**保持一致。
 
@@ -2674,11 +2674,40 @@ Model_perf <- glm(Heavydrinker ~ Gender, data = NHANES, family = binomial(link =
 logistic.display(Model_perf)
 ```
 
+完成這個模型之後，在 STATA 裏可以用簡便的 `estat gof, table` 命令獲取模型擬合的觀測值和期待值表格，然而 R 裏面需要用到 [`LogisticDx`](https://cran.r-project.org/web/packages/LogisticDx/index.html) 包裏的診斷命令 `dx` 獲取 ~~(我花了好幾個小時才找到這個命令，不得不說 STATA 對於流行病的傳統計算真的是比較方便)~~：
 
-```{r}
-LogisticDx::dx(Model_perf)
+```{r, warning=FALSE, cache=TRUE}
+LogisticDx::dx(Model_perf)[, 2:6]
+# obtain Pearson's test statistics
+chi2 <- sum((LogisticDx::dx(Model_perf)$sPr)^2)
+   pval <- pchisq(chi2, 1, lower.tail=FALSE)
+   data.frame(test="Pearson chi2(1)",chi.sq=chi2,pvalue=pval)
 ```
 
+
+在這個只有性別作預測變量的邏輯迴歸模型裏，當然只有男，女，兩種共變量模式 (covariate patterns)。此時，模型的精準度100% (`y` 是觀測值， `yhat` 是期待值)。接下來，再在模型中加入一個是否體重超重的二分類變量。再獲取其觀測值和期待值表格如下：
+
+
+```{r, warning=FALSE, cache=TRUE}
+NHANES <- mutate(NHANES, highbmi = bmi > 25)
+Model_perf <- glm(Heavydrinker ~ Gender + highbmi, data = NHANES, family = binomial)
+logistic.display(Model_perf)
+LogisticDx::dx(Model_perf)[,2:7]
+
+# obtain Pearson's test statistics
+chi2 <- sum((LogisticDx::dx(Model_perf)$sPr)^2)
+   pval <- pchisq(chi2, 1, lower.tail=FALSE)
+   data.frame(test="Pearson chi2(1)",chi.sq=chi2,pvalue=pval)
+```
+
+此時的模型有 4 中共變量模式 (covariate patterns)，其實就是性別和超重與否的四種排列組合。這裏報告的 `Pearson's test statisitics`
+我們在前一章講邏輯迴歸殘差的部分有講過，它就是 Pearson 標準化殘差的平方和。此處它的卡方檢驗，檢驗零假設是“模型制定正確”。所以，我們無足夠的證據 $(p=0.58)$ 來反對零假設，數據觀測值和模型的期待值似乎也較爲吻合。
+
+但是一旦模型裏加入了新的連續型變量，整個模型的共變量模式 (covariate patterns)，將會變得很難進行上面的觀測值和期待值的比較，由於加入的連續型變量會導致模型的共變量模式變得越來越多，甚至接近與樣本量個數 $n$，也就是每個共變量模式的樣本越來越小，直至等於 $1$。連續型變量的模型中我們 Hosmer-Lemeshow 檢驗 (Section \@ref(gof)) 而不是 Pearson 統計檢驗量。
+
+## 可解釋變化量和 $R^2$ 決定係數
+
+精準度的確重要，但是模型精準度好，只代表它和過去擬合它的觀測數據之間關係接近，不代表它能準確地預測其他的個體的概率。前文中只有性別作爲預測變量的邏輯迴歸模型就是實例，它和擬合的觀測數據做到了 100% 完美擬合，但是不用大腦思考也知道，除了性別還有其他更多的能預測一個人是否是重度飲酒者的變量，且擁有能提升模型的擬合程度的潛質。只有性別作預測變量的邏輯迴歸模型，最大的問題在於，它只能解釋個體之間**重度飲酒者概率**的**變化(variation)**極少的部分。事實上，它**只能解釋能夠用性別解釋的個體之間重度飲酒者概率的變化**
 
 # Matched studies
 
