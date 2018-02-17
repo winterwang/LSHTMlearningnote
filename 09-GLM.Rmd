@@ -2850,7 +2850,7 @@ $$
 
 所以，配對實驗的結果變量是連續型變量時，等同於單樣本的假設檢驗，零假設是結果變量在不同實驗條件下的差等於零。
 
-### 檢驗方法
+### 一般檢驗方法
 
 常用的有：
 
@@ -2859,17 +2859,97 @@ $$
 3. 符號檢驗 (Sign test) (Section \@ref(sign-test))。
 
 
+例：17名實驗對象同時給予抗高血壓治療，數據記錄了實驗前後收縮壓的測量值：
+
+```{r warning=FALSE}
+library(haven)
+sbp <- read_dta("backupfiles/sbp.dta")
+sbp
+
+## Wilcoxon signed-rank test
+wilcox.test(sbp$sbp_A, sbp$sbp_B, paired = TRUE, correct = FALSE)
+
+## 秩和檢驗結果提示，數據提供了顯著性水平低於 1% (0.0038567) 的證據
+## 證明實驗前後收縮期血壓值的變化的中位數不等於零。
+## 由此可以下結論，數據能夠提供足夠的證據證明實驗前後的收縮期血壓的
+## 分佈，是不同的。
+## 注意，這不是一個 RCT，所以，這樣的不同不一定是由於抗高血壓治療。
+
+## 3 different methods to conduct sign test
+
+Positive_n <- sum(sbp$diff_AB >0)
+total_n <- length(sbp$diff_AB)
+2*pbinom(total_n-Positive_n, total_n, 0.5) ## sign test -- just p-value
 
 
+binom.test(Positive_n, total_n,0.5) ## sign test through binomial test
 
 
+BSDA::SIGN.test(sbp$sbp_A, sbp$sbp_B) ## sign-test from BSDA package
+```
+
+符號檢驗的結果，相比 Wilcoxon 秩和檢驗的結果來說， P 值稍大，由於符號檢驗需要的假設前提比 Wilcoxon 秩和檢驗更少，更穩健 (檢驗效能更低, lacks power)。即便如此，數據依然提供足夠的證據 (p = 0.01273) 證明，實驗前後的收縮期血壓的中位數之差不等於零。
+
+下面是 STATA 中同樣數據的 Wilcoxon 秩和檢驗和符號檢驗的結果，和上面的 R 輸出結果作比較：
 
 
+```
+. signrank sbp_A = sbp_B
+
+Wilcoxon signed-rank test
+
+        sign |      obs   sum ranks    expected
+-------------+---------------------------------
+    positive |       14       137.5        76.5
+    negative |        3        15.5        76.5
+        zero |        0           0           0
+-------------+---------------------------------
+         all |       17         153         153
+
+unadjusted variance      446.25
+adjustment for ties       -0.63
+adjustment for zeros       0.00
+                     ----------
+adjusted variance        445.63
+
+Ho: sbp_A = sbp_B
+             z =   2.890
+    Prob > |z| =   0.0039
+
+. signtest sbp_A = sbp_B
+
+Sign test
+
+        sign |    observed    expected
+-------------+------------------------
+    positive |          14         8.5
+    negative |           3         8.5
+        zero |           0           0
+-------------+------------------------
+         all |          17          17
+
+One-sided tests:
+  Ho: median of sbp_A - sbp_B = 0 vs.
+  Ha: median of sbp_A - sbp_B > 0
+      Pr(#positive >= 14) =
+         Binomial(n = 17, x >= 14, p = 0.5) =  0.0064
+
+  Ho: median of sbp_A - sbp_B = 0 vs.
+  Ha: median of sbp_A - sbp_B < 0
+      Pr(#negative >= 3) =
+         Binomial(n = 17, x >= 3, p = 0.5) =  0.9988
+
+Two-sided test:
+  Ho: median of sbp_A - sbp_B = 0 vs.
+  Ha: median of sbp_A - sbp_B != 0
+      Pr(#positive >= 14 or #negative >= 14) =
+         min(1, 2*Binomial(n = 17, x >= 14, p = 0.5)) =  0.0127
+```
 
 
+### 用迴歸法分析
 
-
-
+配對實驗數據還可以使用迴歸手段分析。
 
 # 條件邏輯迴歸
 
