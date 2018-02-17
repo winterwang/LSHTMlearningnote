@@ -2995,11 +2995,52 @@ Y_i = \beta_0 + \beta_1 X_i + \beta_2^TW_i + \delta_i
 (\#eq:GLM12-5)
 $$
 
-需要指出的是，這兩個模型，都是合理有效的迴歸模型，理論上會給出相同或者十分近似的 $\beta_1$ 估計。因爲配對，意味着在該樣本中，$X_i$ 和 $W_i$
+需要指出的是，這兩個模型，都是合理有效的迴歸模型，理論上會給出相同或者十分近似的 $\beta_1$ 估計。因爲配對，意味着在該樣本中，$X_i$ 和 $W_i$ 是無關的，所以加入 $W_i$ 不會影響 $\beta_1$ 的估計值。即使，實驗樣本所來自的潛在人羣 (the unerlying population) 中，$X_i, W_i$  是相關的 (也是最主要的要拿 $W_i$ 進行配對的動機所在)，兩個模型給出的 $\beta_1$ 估計理論上也不會有太大差距。但是，如果說配對是爲了控制混雜 (即人羣中 $X_i, W_i$ 是相關的)，那麼建議使用模型 (\@ref(eq:GLM12-5))。因爲模型 (\@ref(eq:GLM12-5)) 給出的 $\beta_1$ 的標準誤估計會比較小 (更小的 95% 信賴區間，更精確)。
+
+前一節提到的一般檢驗法，是直接把“配對”這個條件放在檢驗過程中，它們只關心差異大小是否有意義。本小節討論的迴歸方法，則需要一些前提假設 (參考簡單線性迴歸的前提和邏輯迴歸的前提)。當前提條件可以滿足時，我們會更推薦使用迴歸方法對配對數據進行檢驗。因爲通常除了拿來配對的變量，我們對觀察對象還收集了其他的潛在混雜因子數據，使用迴歸方法可以進一步對其餘未用於配對的變量進行調整。
+
+## 結果變量是二分類變量的配對實驗
+
+用 $Y_{i1}, Y_{i2} (i = 1,\cdots,n)$ 標記 $n$ 個配對的二分類型的結果變量，其對應的暴露變量是 $X_{i1}, X_{i2}$。
+
+這樣的數據，有兩種方法來分析暴露和結果之間是否相關：
+
+1. McNemar's test;
+2. Odds ratio.
+
+用前文中糖尿病患者眼底病變和是否變盲的例子來說明就是：第 $i$ 個實驗對象，他/她接受標準治療的眼睛是否變盲，決定了 $Y_{i1} = 1 \text{ or } 0$；他/她接受新的治療的那隻眼睛是否變盲決定了 $Y_{i2} = 1 \text{ or } 0$。
+
+但是，用病例對照實驗 (肺癌例) 來解釋時，20 名肺癌患者被一一和同性別，年齡相近的 20 名非肺癌對象配對，每個實驗對象都被詢問其吸菸史。這樣的配對病例對照實驗的設計，決定了其實際上是把我們關心的問題 (吸菸是否導致肺癌) 逆轉了的 (肺癌患者中吸菸的比例是否大於沒有患肺癌的人)。此時應當使用 **比值比 Odds ratio** 來評價吸菸和肺癌之間的關係。
+
+### 第一步 對數據作表格
+
+有兩種方式對結果變量是二分類變量的實驗數據作表格歸納。其一，配對與否的信息被忽略掉 (圖 \@ref(fig:unmatchedGLM12-1a))；其二，包含配對信息 (圖 \@ref(fig:matchedGLM12-1b))。
 
 
 
+```{r unmatchedGLM12-1a, echo=FALSE, cache=TRUE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/GLM12-1.csv", header = T)
+names(dt) <- c("", "New treatment", "Standard treatment")
+kable(dt, "html",  align = "c", caption = "Unmatched presentation of data from a study with binary outcome and binary treatment") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
+```
 
+
+```{r matchedGLM12-1b, echo=FALSE, cache=TRUE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/GLM12-1b.csv", header = T)
+names(dt) <- c("","", "Blind", "Not blind", " ")
+kable(dt, "html",  align = "c", caption = "Matched presentation of data from a study with binary outcome and binary treatment") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+  column_spec(1, bold = TRUE) %>%
+      collapse_rows(columns = c(1)) %>%
+  add_header_above(c(" " = 1,"Standard treatment" = 4))
+```
+
+### McNemar's test
 
 
 
