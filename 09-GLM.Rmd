@@ -3014,7 +3014,7 @@ $$
 
 ### 第一步 對數據作表格
 
-有兩種方式對結果變量是二分類變量的實驗數據作表格歸納。其一，配對與否的信息被忽略掉 (圖 \@ref(fig:unmatchedGLM12-1a))；其二，包含配對信息 (圖 \@ref(fig:matchedGLM12-1b))。
+有兩種方式對結果變量是二分類變量的實驗數據作表格歸納。其一，配對與否的信息被忽略掉 (表格 \@ref(tab:unmatchedGLM12-1a))；其二，包含配對信息 (表格 \@ref(tab:matchedGLM12-1b))。
 
 
 
@@ -3024,7 +3024,7 @@ library(kableExtra)
 dt <- read.csv("backupfiles/GLM12-1.csv", header = T)
 names(dt) <- c("", "New treatment", "Standard treatment")
 kable(dt, "html",  align = "c", caption = "Unmatched presentation of data from a study with binary outcome and binary treatment") %>%
-  kable_styling(bootstrap_options = c("striped", "bordered"))
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center")
 ```
 
 
@@ -3032,17 +3032,127 @@ kable(dt, "html",  align = "c", caption = "Unmatched presentation of data from a
 library(knitr)
 library(kableExtra)
 dt <- read.csv("backupfiles/GLM12-1b.csv", header = T)
-names(dt) <- c("","", "Blind", "Not blind", " ")
+names(dt) <- c("","", "Not blind", "Blind", " ")
 kable(dt, "html",  align = "c", caption = "Matched presentation of data from a study with binary outcome and binary treatment") %>%
-  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
-  column_spec(1, bold = TRUE) %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") %>%
+  column_spec(1:2, bold = TRUE) %>%
       collapse_rows(columns = c(1)) %>%
-  add_header_above(c(" " = 1,"Standard treatment" = 4))
+  add_header_above(c(" " = 1,"New treatment" = 4))
 ```
 
 ### McNemar's test
 
+下面的表格，是前面表格 \@ref(tab:matchedGLM12-1b) 的一般化形式。可以用於 McNemar 檢驗。在暴露對象中，結果變量等於 $Y_{i1} = 1$ 的配對數量的比例是 $p_1 = (n_{10} + n_{11})/n$；在非暴露對象中，結果變量等於 $Y_{i2} = 2$ 的配對數量的比例是 $p_2 = (n_{01} + n_{11})/n$。
 
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>表 54.3 General arrangement of data for McNemar's test</caption>
+ <thead>
+<tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="4"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Exposed <br> $(j = 1)$</div></th>
+</tr>
+  <tr>
+   <th style="text-align:center;">  </th>
+   <th style="text-align:center;">  </th>
+   <th style="text-align:center;"> Failure <br> $(Y_{i1} = 0)$ </th>
+   <th style="text-align:center;"> Success <br> $(Y_{i1} = 1)$ </th>
+   <th style="text-align:center;">   </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;font-weight: bold;vertical-align: middle !important;" rowspan="3"> Unexposed $(j = 2)$ </td>
+   <td style="text-align:center;"> Failure <br> $(Y_{i2} = 0)$ </td>
+   <td style="text-align:center;"> $n_{00}$ </td>
+   <td style="text-align:center;"> $n_{10}$ </td>
+   <td style="text-align:center;"> $n_{00}+n_{10}$ </td>
+  </tr>
+  <tr>
+
+   <td style="text-align:center;"> Success <br> $(Y_{i2} = 1)$ </td>
+   <td style="text-align:center;"> $n_{01}$ </td>
+   <td style="text-align:center;"> $n_{11}$ </td>
+   <td style="text-align:center;"> $n_{01}+n_{11}$ </td>
+  </tr>
+  <tr>
+
+   <td style="text-align:center;">  </td>
+   <td style="text-align:center;"> $n_{00}+n_{01}$ </td>
+   <td style="text-align:center;"> $n_{10}+n_{11}$ </td>
+   <td style="text-align:center;"> $n$ </td>
+  </tr>
+</tbody>
+</table>
+
+
+McNemar 檢驗的零假設是，$p_2 - p_1 = 0$，其實這等價於比較表格中 $n_{10}, n_{01}$ 是否相等。所以，在零假設條件下：
+
+$$
+n_{10} \sim \text{Binomial}(n_{10} + n_{01}, 0.5)
+$$
+
+此時既可以選用精確的二項分佈檢驗，也可以用正態分佈近似法進行假設檢驗。用表格 \@ref(tab:matchedGLM12-1b) 的數據進行的檢驗結果如下：
+
+
+```{r}
+binom.test(28, 32, 0.5)
+```
+
+
+### 二分類型結果變量配對實驗的比值比
+
+McNemar 檢驗只能用於判斷暴露和結果之間是否有關係。衡量這個關係的大小，還需要用比值比 (odds ratio)。我們已知可以用 Mantel Haenszel 方法來總結以某個分類變量爲條件的分層/合併比值比。同樣的方法也可以用於配對實驗數據的分析。此時的分層變量使用的是配對的實驗區塊 (blocks)。每個實驗區塊的數據可以歸納成下面的表格：
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>表 54.4 Example of matched data in stratum $i$: numbers of individuals in stratum $i$ with each combination</caption>
+ <thead>
+  <tr>
+   <th style="text-align:center;">  </th>
+   <th style="text-align:center;"> Unexposed (0) </th>
+   <th style="text-align:center;"> Exposed (1) </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> Outcome 0 </td>
+   <td style="text-align:center;"> $a_i$ </td>
+   <td style="text-align:center;"> $b_i$ </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Outcome 1 </td>
+   <td style="text-align:center;"> $c_i$ </td>
+   <td style="text-align:center;"> $d_i$ </td>
+  </tr>
+</tbody>
+</table>
+
+實驗區塊 $i$ 的比值比 OR 是：
+
+$$
+\text{OR} = \frac{a_id_i}{b_ic_i}
+$$
+
+Mantel Haenszel 合併 OR 是：
+
+$$
+\Psi = \frac{\sum_i(a_id_i/n_i)}{\sum_i(b_ic_i/n_i)} \\
+\text{where } n_i = 2
+$$
+
+可以繼續推導：
+
+$$
+\begin{aligned}
+\Psi & = \frac{\sum_i(a_id_i/n_i)}{\sum_i(b_ic_i/n_i)} \\
+     & = \frac{\text{number of blocks with } Y_{i1} = 1 \;\&\; Y_{i2} = 0}{\text{number of blocks with } Y_{i1} = 0 \;\&\; Y_{i2} = 1} \\
+     & = \frac{n_{10}}{n_{01}}
+\end{aligned}
+$$
+
+所以，從上述推導可知，在配對實驗中，比值比只取決於那些配對中出現了不同結果的數據。這些結果不一致的配對被命名爲**不一致配對 (discordant pairs)**。那些結果變量相同的配對對最終的比值比估計毫無用處。
+
+### 配對實驗比值比的信賴區間
 
 # 條件邏輯迴歸
 
