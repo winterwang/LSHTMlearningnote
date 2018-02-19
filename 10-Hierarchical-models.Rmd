@@ -46,7 +46,7 @@ wm2                mini wright measure at 2nd occasion
 1. 將 High-School-and-Beyond 數據導入 R 中，熟悉數據結構及內容，特別要注意觀察每個學校的學生特徵。
 
 
-```{r}
+```{r hierex1-1, cache=TRUE}
 library(haven)
 hsb_selected <- read_dta("backupfiles/hsb_selected.dta")
 length(unique(hsb_selected$schoolid)) ## number of school = 160
@@ -63,4 +63,118 @@ with(hsb_selected, tab1(female, graph = FALSE, decimal = 2))
 with(hsb_selected, tab1(minority, graph = FALSE, decimal = 2))
 ```
 
-2.
+2. 爲了簡便起見，接下來的分析只節選數據中前五所學校 188 名學生的數學成績，和 SES。分別計算每所學校的數學成績,及 SES 的平均值。
+
+
+```{r hierex1-2, cache=TRUE}
+hsb5 <- subset(hsb_selected, schoolid < 1320)
+Mean_ses_math <- ddply(hsb5,~schoolid,summarise,mean_ses=mean(ses),mean_math=mean(mathach))
+## the mean SES score ranges from -0.4255 to +0.5280
+## the mean Maths score ranges from 7.636 to 16.255
+Mean_ses_math
+```
+
+3. 先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 (Total regression model)。把該總體模型的預測值提取並存儲在數據庫中。
+
+```{r mathses, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=8, fig.cap='Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+## plot the scatter of mathach and ses among these 5 schools
+
+ggplot(hsb5, aes(x = ses, y = mathach)) + geom_point() +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "SES", y = "Math achievement")  +
+  xlim(-2.05, 2.05)+
+  ylim(-10, 30) +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+
+```{r hierex1-3, cache = TRUE}
+Total_reg <- lm(mathach ~ ses, data = hsb5)
+## the total regression model gives an estimated regression coefficient for the SES
+## of each pupil equal to 3.31 (SE=0.66)
+summary(Total_reg)
+hsb5$Pred_T <- Total_reg$fitted.values # save the fitted values to the dataset
+```
+
+4. 用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 (between regression model)。
+
+```{r hierex1-4, cache=TRUE}
+Btw_reg <- lm(mean_math ~ mean_ses, data = Mean_ses_math)
+## the regression model for the school level variables (between model) gives
+## an estimated regression coefficient of 7.29 (SE=1.41)
+summary(Btw_reg)
+Mean_ses_math$Pred_B <- Btw_reg$fitted.values # save the fitted values to the dataset
+```
+
+5. 分別對每個學校內的學生進行 SES 和數學成績擬合線性迴歸模型。
+
+```{r hierex1-5, cache=TRUE}
+Within_schl1 <- lm(mathach ~ ses, data = hsb5[hsb5$schoolid == 1224,])
+Within_schl2 <- lm(mathach ~ ses, data = hsb5[hsb5$schoolid == 1288,])
+Within_schl3 <- lm(mathach ~ ses, data = hsb5[hsb5$schoolid == 1296,])
+Within_schl4 <- lm(mathach ~ ses, data = hsb5[hsb5$schoolid == 1308,])
+Within_schl5 <- lm(mathach ~ ses, data = hsb5[hsb5$schoolid == 1317,])
+# the within school regressions gives estimated slopes which have a mean of 1.65
+# and which ranges between 0.126 and 3.255
+summary(c(Within_schl1$coefficients[2], Within_schl2$coefficients[2],
+      Within_schl3$coefficients[2], Within_schl4$coefficients[2],
+      Within_schl5$coefficients[2]))
+
+# the SEs ranging between 1.21 and 3.00
+summary(c(summary(Within_schl1)$coefficients[4],
+          summary(Within_schl2)$coefficients[4],
+          summary(Within_schl3)$coefficients[4],
+          summary(Within_schl4)$coefficients[4],
+          summary(Within_schl5)$coefficients[4]))
+
+hsb5$Pred_W <- c(Within_schl1$fitted.values, Within_schl2$fitted.values,
+      Within_schl3$fitted.values, Within_schl4$fitted.values,
+      Within_schl5$fitted.values) ## save the predicted value into the dataset
+```
+
+6. 比較三種模型計算的數學成績的擬合值，他們一致？還是有所不同？爲什麼會有不同？
+
+- 總體模型 (Total regression model) 實際上無視了學生的性別，種族等可能帶來的混雜效果；
+- 學校間模型 (Between model) 估計的實際上是**SES均值**每增加一個單位，與之對應的**數學平均成績**的改變量，**這個模型絕對不可用與評估個人的 SES 與數學成績之間的關係**；
+- 學校內模型 (Within model) 擬合的 SES 與數學成績之間的關係變得十分地不精確 (SEs are fairly large)，變化幅度也很大。
+
+
+7. 把三種模型的數學成績擬合值散點圖繪製在同一張圖內。
+
+
+```{r mathses-3models, cache=TRUE, echo=TRUE, fig.height=6.5, fig.width=8, fig.cap='High-school-and-beyond data: Predicted values by Total, Between, and Within regression models', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+Mean <- Mean_ses_math[, 1:3]
+names(Mean) <- c("schoolid", "ses", "Pred_W")
+
+
+ggplot(hsb5, aes(x = ses, y = Pred_W, group = schoolid)) + 
+  geom_line(linetype = 2, size = 1) + 
+  geom_abline(intercept = Total_reg$coefficients[1], slope = Total_reg$coefficients[2],
+               colour = "dark blue") + 
+  geom_abline(intercept = Btw_reg$coefficients[1], slope = Btw_reg$coefficients[2], 
+               colour = "red") + 
+  geom_point(data = Mean, shape = 17, size = 4, colour = "Red") + 
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "SES", y = "Fitted regression lines (Maths achievement)")  +
+  xlim(-2.05, 2.05)+
+  ylim(5, 20) +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + theme(plot.caption = element_text(size = 12, 
+  hjust = 0)) + labs(caption = "Black dash line: Within regression model; 
+Blue solid line: Total regression model; 
+Red solid line: Between regression model;
+Red triangle: School mean values")
+```
+

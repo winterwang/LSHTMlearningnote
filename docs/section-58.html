@@ -816,14 +816,14 @@ wm2                mini wright measure at 2nd occasion</code></pre>
 <div id="section-58.6.2" class="section level3">
 <h3><span class="header-section-number">58.6.2</span> 問題</h3>
 <ol style="list-style-type: decimal">
-<li>將 High-School-and-Beyond 數據導入 R 中，熟悉數據結構及內容，特別要注意每個學校層面的學生特徵。</li>
+<li>將 High-School-and-Beyond 數據導入 R 中，熟悉數據結構及內容，特別要注意觀察每個學校的學生特徵。</li>
 </ol>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(haven)
 hsb_selected &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/hsb_selected.dta&quot;</span>)
-<span class="kw">length</span>(<span class="kw">unique</span>(hsb_selected<span class="op">$</span>schoolid)) ## number of school = 160 </code></pre></div>
+<span class="kw">length</span>(<span class="kw">unique</span>(hsb_selected<span class="op">$</span>schoolid)) ## number of school = 160</code></pre></div>
 <pre><code>## [1] 160</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## create a subset data with only the first observation of each school 
-hsb &lt;-<span class="st"> </span>hsb_selected[<span class="op">!</span><span class="kw">duplicated</span>(hsb_selected<span class="op">$</span>schoolid), ] 
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## create a subset data with only the first observation of each school
+hsb &lt;-<span class="st"> </span>hsb_selected[<span class="op">!</span><span class="kw">duplicated</span>(hsb_selected<span class="op">$</span>schoolid), ]
 
 ## about 44 % of the schools are Catholic schools
 <span class="kw">with</span>(hsb, <span class="kw">tab1</span>(sector, <span class="dt">graph =</span> <span class="ot">FALSE</span>, <span class="dt">decimal =</span> <span class="dv">2</span>))</code></pre></div>
@@ -833,7 +833,7 @@ hsb &lt;-<span class="st"> </span>hsb_selected[<span class="op">!</span><span cl
 ## 1              70   43.75       100.00
 ##   Total       160  100.00       100.00</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## among all the pupils, about 53% are females
-<span class="kw">with</span>(hsb_selected, <span class="kw">tab1</span>(female, <span class="dt">graph =</span> <span class="ot">FALSE</span>, <span class="dt">decimal =</span> <span class="dv">2</span>)) </code></pre></div>
+<span class="kw">with</span>(hsb_selected, <span class="kw">tab1</span>(female, <span class="dt">graph =</span> <span class="ot">FALSE</span>, <span class="dt">decimal =</span> <span class="dv">2</span>))</code></pre></div>
 <pre><code>## female : 
 ##         Frequency Percent Cum. percent
 ## 0            3390   47.18        47.18
@@ -846,6 +846,161 @@ hsb &lt;-<span class="st"> </span>hsb_selected[<span class="op">!</span><span cl
 ## 0            5211   72.53        72.53
 ## 1            1974   27.47       100.00
 ##   Total      7185  100.00       100.00</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>爲了簡便起見，接下來的分析只節選數據中前五所學校 188 名學生的數學成績，和 SES。分別計算每所學校的數學成績,及 SES 的平均值。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hsb5 &lt;-<span class="st"> </span><span class="kw">subset</span>(hsb_selected, schoolid <span class="op">&lt;</span><span class="st"> </span><span class="dv">1320</span>)
+Mean_ses_math &lt;-<span class="st"> </span><span class="kw">ddply</span>(hsb5,<span class="op">~</span>schoolid,summarise,<span class="dt">mean_ses=</span><span class="kw">mean</span>(ses),<span class="dt">mean_math=</span><span class="kw">mean</span>(mathach))
+## the mean SES score ranges from -0.4255 to +0.5280
+## the mean Maths score ranges from 7.636 to 16.255
+Mean_ses_math</code></pre></div>
+<pre><code>##   schoolid    mean_ses  mean_math
+## 1     1224 -0.43438298  9.7154468
+## 2     1288  0.12159999 13.5108000
+## 3     1296 -0.42550000  7.6359583
+## 4     1308  0.52800000 16.2554999
+## 5     1317  0.34533333 13.1776875</code></pre>
+<ol start="3" style="list-style-type: decimal">
+<li>先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 (Total regression model)。把該總體模型的預測值提取並存儲在數據庫中。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## plot the scatter of mathach and ses among these 5 schools
+
+<span class="kw">ggplot</span>(hsb5, <span class="kw">aes</span>(<span class="dt">x =</span> ses, <span class="dt">y =</span> mathach)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
+  <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
+  <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;SES&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Math achievement&quot;</span>)  <span class="op">+</span>
+<span class="st">  </span><span class="kw">xlim</span>(<span class="op">-</span><span class="fl">2.05</span>, <span class="fl">2.05</span>)<span class="op">+</span>
+<span class="st">  </span><span class="kw">ylim</span>(<span class="op">-</span><span class="dv">10</span>, <span class="dv">30</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">17</span>), <span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">8</span>),
+        <span class="dt">axis.line =</span> <span class="kw">element_line</span>(<span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>),
+    <span class="dt">panel.border =</span> <span class="kw">element_blank</span>(),
+    <span class="dt">panel.background =</span> <span class="kw">element_blank</span>())</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:mathses"></span>
+<img src="bookdown_files/figure-html/mathses-1.png" alt="Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent" width="80%" />
+<p class="caption">
+圖 58.1: Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Total_reg &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">data =</span> hsb5)
+## the total regression model gives an estimated regression coefficient for the SES
+## of each pupil equal to 3.31 (SE=0.66)
+<span class="kw">summary</span>(Total_reg)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = mathach ~ ses, data = hsb5)
+## 
+## Residuals:
+##       Min        1Q    Median        3Q       Max 
+## -15.23022  -5.08316  -0.68614   5.11170  14.68513 
+## 
+## Coefficients:
+##             Estimate Std. Error t value  Pr(&gt;|t|)    
+## (Intercept) 11.45652    0.47342 24.1997 &lt; 2.2e-16 ***
+## ses          3.30696    0.66021  5.0089 1.267e-06 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 6.4708 on 186 degrees of freedom
+## Multiple R-squared:  0.11886,    Adjusted R-squared:  0.11412 
+## F-statistic:  25.09 on 1 and 186 DF,  p-value: 1.2667e-06</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hsb5<span class="op">$</span>Pred_T &lt;-<span class="st"> </span>Total_reg<span class="op">$</span>fitted.values <span class="co"># save the fitted values to the dataset</span></code></pre></div>
+<ol start="4" style="list-style-type: decimal">
+<li>用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 (between regression model)。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Btw_reg &lt;-<span class="st"> </span><span class="kw">lm</span>(mean_math <span class="op">~</span><span class="st"> </span>mean_ses, <span class="dt">data =</span> Mean_ses_math)
+## the regression model for the school level variables (between model) gives
+## an estimated regression coefficient of 7.29 (SE=1.41)
+<span class="kw">summary</span>(Btw_reg)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = mean_math ~ mean_ses, data = Mean_ses_math)
+## 
+## Residuals:
+##        1        2        3        4        5 
+##  1.02010  0.76212 -1.12415  0.54401 -1.20209 
+## 
+## Coefficients:
+##             Estimate Std. Error t value  Pr(&gt;|t|)    
+## (Intercept) 11.86216    0.55664 21.3102 0.0002261 ***
+## mean_ses     7.29039    1.40703  5.1814 0.0139557 *  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 1.2418 on 3 degrees of freedom
+## Multiple R-squared:  0.89949,    Adjusted R-squared:  0.86598 
+## F-statistic: 26.847 on 1 and 3 DF,  p-value: 0.013956</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Mean_ses_math<span class="op">$</span>Pred_B &lt;-<span class="st"> </span>Btw_reg<span class="op">$</span>fitted.values <span class="co"># save the fitted values to the dataset</span></code></pre></div>
+<ol start="5" style="list-style-type: decimal">
+<li>分別對每個學校內的學生進行 SES 和數學成績擬合線性迴歸模型。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Within_schl1 &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">data =</span> hsb5[hsb5<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span><span class="dv">1224</span>,])
+Within_schl2 &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">data =</span> hsb5[hsb5<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span><span class="dv">1288</span>,])
+Within_schl3 &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">data =</span> hsb5[hsb5<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span><span class="dv">1296</span>,])
+Within_schl4 &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">data =</span> hsb5[hsb5<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span><span class="dv">1308</span>,])
+Within_schl5 &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">data =</span> hsb5[hsb5<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span><span class="dv">1317</span>,])
+<span class="co"># the within school regressions gives estimated slopes which have a mean of 1.65</span>
+<span class="co"># and which ranges between 0.126 and 3.255</span>
+<span class="kw">summary</span>(<span class="kw">c</span>(Within_schl1<span class="op">$</span>coefficients[<span class="dv">2</span>], Within_schl2<span class="op">$</span>coefficients[<span class="dv">2</span>],
+      Within_schl3<span class="op">$</span>coefficients[<span class="dv">2</span>], Within_schl4<span class="op">$</span>coefficients[<span class="dv">2</span>],
+      Within_schl5<span class="op">$</span>coefficients[<span class="dv">2</span>]))</code></pre></div>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+## 0.12602 1.07596 1.27391 1.64799 2.50858 3.25545</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># the SEs ranging between 1.21 and 3.00</span>
+<span class="kw">summary</span>(<span class="kw">c</span>(<span class="kw">summary</span>(Within_schl1)<span class="op">$</span>coefficients[<span class="dv">4</span>],
+          <span class="kw">summary</span>(Within_schl2)<span class="op">$</span>coefficients[<span class="dv">4</span>],
+          <span class="kw">summary</span>(Within_schl3)<span class="op">$</span>coefficients[<span class="dv">4</span>],
+          <span class="kw">summary</span>(Within_schl4)<span class="op">$</span>coefficients[<span class="dv">4</span>],
+          <span class="kw">summary</span>(Within_schl5)<span class="op">$</span>coefficients[<span class="dv">4</span>]))</code></pre></div>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##  1.2090  1.4359  1.7652  1.8987  2.0797  3.0034</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hsb5<span class="op">$</span>Pred_W &lt;-<span class="st"> </span><span class="kw">c</span>(Within_schl1<span class="op">$</span>fitted.values, Within_schl2<span class="op">$</span>fitted.values,
+      Within_schl3<span class="op">$</span>fitted.values, Within_schl4<span class="op">$</span>fitted.values,
+      Within_schl5<span class="op">$</span>fitted.values) ## save the predicted value into the dataset</code></pre></div>
+<ol start="6" style="list-style-type: decimal">
+<li>比較三種模型計算的數學成績的擬合值，他們一致？還是有所不同？爲什麼會有不同？</li>
+</ol>
+<ul>
+<li>總體模型 (Total regression model) 實際上無視了學生的性別，種族等可能帶來的混雜效果；</li>
+<li>學校間模型 (Between model) 估計的實際上是<strong>SES均值</strong>每增加一個單位，與之對應的<strong>數學平均成績</strong>的改變量，<strong>這個模型絕對不可用與評估個人的 SES 與數學成績之間的關係</strong>；</li>
+<li>學校內模型 (Within model) 擬合的 SES 與數學成績之間的關係變得十分地不精確 (SEs are fairly large)，變化幅度也很大。</li>
+</ul>
+<ol start="7" style="list-style-type: decimal">
+<li>把三種模型的數學成績擬合值散點圖繪製在同一張圖內。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Mean &lt;-<span class="st"> </span>Mean_ses_math[, <span class="dv">1</span><span class="op">:</span><span class="dv">3</span>]
+<span class="kw">names</span>(Mean) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;schoolid&quot;</span>, <span class="st">&quot;ses&quot;</span>, <span class="st">&quot;Pred_W&quot;</span>)
+
+
+<span class="kw">ggplot</span>(hsb5, <span class="kw">aes</span>(<span class="dt">x =</span> ses, <span class="dt">y =</span> Pred_W, <span class="dt">group =</span> schoolid)) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">geom_line</span>(<span class="dt">linetype =</span> <span class="dv">2</span>, <span class="dt">size =</span> <span class="dv">1</span>) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">geom_abline</span>(<span class="dt">intercept =</span> Total_reg<span class="op">$</span>coefficients[<span class="dv">1</span>], <span class="dt">slope =</span> Total_reg<span class="op">$</span>coefficients[<span class="dv">2</span>],
+               <span class="dt">colour =</span> <span class="st">&quot;dark blue&quot;</span>) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">geom_abline</span>(<span class="dt">intercept =</span> Btw_reg<span class="op">$</span>coefficients[<span class="dv">1</span>], <span class="dt">slope =</span> Btw_reg<span class="op">$</span>coefficients[<span class="dv">2</span>], 
+               <span class="dt">colour =</span> <span class="st">&quot;red&quot;</span>) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">data =</span> Mean, <span class="dt">shape =</span> <span class="dv">17</span>, <span class="dt">size =</span> <span class="dv">4</span>, <span class="dt">colour =</span> <span class="st">&quot;Red&quot;</span>) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
+  <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
+  <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;SES&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Fitted regression lines (Maths achievement)&quot;</span>)  <span class="op">+</span>
+<span class="st">  </span><span class="kw">xlim</span>(<span class="op">-</span><span class="fl">2.05</span>, <span class="fl">2.05</span>)<span class="op">+</span>
+<span class="st">  </span><span class="kw">ylim</span>(<span class="dv">5</span>, <span class="dv">20</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">17</span>), <span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">8</span>),
+        <span class="dt">axis.line =</span> <span class="kw">element_line</span>(<span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>),
+    <span class="dt">panel.border =</span> <span class="kw">element_blank</span>(),
+    <span class="dt">panel.background =</span> <span class="kw">element_blank</span>()) <span class="op">+</span><span class="st"> </span><span class="kw">theme</span>(<span class="dt">plot.caption =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">12</span>, 
+  <span class="dt">hjust =</span> <span class="dv">0</span>)) <span class="op">+</span><span class="st"> </span><span class="kw">labs</span>(<span class="dt">caption =</span> <span class="st">&quot;Black dash line: Within regression model; </span>
+<span class="st">Blue solid line: Total regression model; </span>
+<span class="st">Red solid line: Between regression model;</span>
+<span class="st">Red triangle: School mean values&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:mathses-3models"></span>
+<img src="bookdown_files/figure-html/mathses-3models-1.png" alt="High-school-and-beyond data: Predicted values by Total, Between, and Within regression models" width="80%" />
+<p class="caption">
+圖 58.2: High-school-and-beyond data: Predicted values by Total, Between, and Within regression models
+</p>
+</div>
 
 </div>
 </div>
