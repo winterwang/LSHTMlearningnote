@@ -43,7 +43,7 @@ wm2                mini wright measure at 2nd occasion
 
 ### 問題
 
-1. 將 High-School-and-Beyond 數據導入 R 中，熟悉數據結構及內容，特別要注意觀察每個學校的學生特徵。
+#### 將 High-School-and-Beyond 數據導入 R 中，熟悉數據結構及內容，特別要注意觀察每個學校的學生特徵。
 
 
 ```{r hierex1-1, cache=TRUE}
@@ -63,7 +63,7 @@ with(hsb_selected, tab1(female, graph = FALSE, decimal = 2))
 with(hsb_selected, tab1(minority, graph = FALSE, decimal = 2))
 ```
 
-2. 爲了簡便起見，接下來的分析只節選數據中前五所學校 188 名學生的數學成績，和 SES。分別計算每所學校的數學成績,及 SES 的平均值。
+#### 爲了簡便起見，接下來的分析只節選數據中前五所學校 188 名學生的數學成績，和 SES。分別計算每所學校的數學成績,及 SES 的平均值。
 
 
 ```{r hierex1-2, cache=TRUE}
@@ -74,7 +74,7 @@ Mean_ses_math <- ddply(hsb5,~schoolid,summarise,mean_ses=mean(ses),mean_math=mea
 Mean_ses_math
 ```
 
-3. 先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 (Total regression model)。把該總體模型的預測值提取並存儲在數據庫中。
+#### 先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 (Total regression model)。把該總體模型的預測值提取並存儲在數據庫中。
 
 ```{r mathses, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=8, fig.cap='Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 ## plot the scatter of mathach and ses among these 5 schools
@@ -102,7 +102,7 @@ summary(Total_reg)
 hsb5$Pred_T <- Total_reg$fitted.values # save the fitted values to the dataset
 ```
 
-4. 用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 (between regression model)。
+#### 用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 (between regression model)。
 
 ```{r hierex1-4, cache=TRUE}
 Btw_reg <- lm(mean_math ~ mean_ses, data = Mean_ses_math)
@@ -112,7 +112,7 @@ summary(Btw_reg)
 Mean_ses_math$Pred_B <- Btw_reg$fitted.values # save the fitted values to the dataset
 ```
 
-5. 分別對每個學校內的學生進行 SES 和數學成績擬合線性迴歸模型。
+#### 分別對每個學校內的學生進行 SES 和數學成績擬合線性迴歸模型。
 
 ```{r hierex1-5, cache=TRUE}
 Within_schl1 <- lm(mathach ~ ses, data = hsb5[hsb5$schoolid == 1224,])
@@ -138,14 +138,14 @@ hsb5$Pred_W <- c(Within_schl1$fitted.values, Within_schl2$fitted.values,
       Within_schl5$fitted.values) ## save the predicted value into the dataset
 ```
 
-6. 比較三種模型計算的數學成績的擬合值，他們一致？還是有所不同？爲什麼會有不同？
+#### 比較三種模型計算的數學成績的擬合值，他們一致？還是有所不同？爲什麼會有不同？
 
 - 總體模型 (Total regression model) 實際上無視了學生的性別，種族等可能帶來的混雜效果；
 - 學校間模型 (Between model) 估計的實際上是**SES均值**每增加一個單位，與之對應的**數學平均成績**的改變量，**這個模型絕對不可用與評估個人的 SES 與數學成績之間的關係**；
 - 學校內模型 (Within model) 擬合的 SES 與數學成績之間的關係變得十分地不精確 (SEs are fairly large)，變化幅度也很大。
 
 
-7. 把三種模型的數學成績擬合值散點圖繪製在同一張圖內。
+#### 把三種模型的數學成績擬合值散點圖繪製在同一張圖內。
 
 
 ```{r mathses-3models, cache=TRUE, echo=TRUE, fig.height=6.5, fig.width=8, fig.cap='High-school-and-beyond data: Predicted values by Total, Between, and Within regression models', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
@@ -154,13 +154,13 @@ Mean <- Mean_ses_math[, 1:3]
 names(Mean) <- c("schoolid", "ses", "Pred_W")
 
 
-ggplot(hsb5, aes(x = ses, y = Pred_W, group = schoolid)) + 
-  geom_line(linetype = 2, size = 1) + 
+ggplot(hsb5, aes(x = ses, y = Pred_W, group = schoolid)) +
+  geom_line(linetype = 2, size = 1) +
   geom_abline(intercept = Total_reg$coefficients[1], slope = Total_reg$coefficients[2],
-               colour = "dark blue") + 
-  geom_abline(intercept = Btw_reg$coefficients[1], slope = Btw_reg$coefficients[2], 
-               colour = "red") + 
-  geom_point(data = Mean, shape = 17, size = 4, colour = "Red") + 
+               colour = "dark blue") +
+  geom_abline(intercept = Btw_reg$coefficients[1], slope = Btw_reg$coefficients[2],
+               colour = "red") +
+  geom_point(data = Mean, shape = 17, size = 4, colour = "Red") +
   theme_bw() +
   theme(axis.text = element_text(size = 15),
   axis.text.x = element_text(size = 15),
@@ -171,10 +171,141 @@ ggplot(hsb5, aes(x = ses, y = Pred_W, group = schoolid)) +
   theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
         axis.line = element_line(colour = "black"),
     panel.border = element_blank(),
-    panel.background = element_blank()) + theme(plot.caption = element_text(size = 12, 
-  hjust = 0)) + labs(caption = "Black dash line: Within regression model; 
-Blue solid line: Total regression model; 
+    panel.background = element_blank()) + theme(plot.caption = element_text(size = 12,
+  hjust = 0)) + labs(caption = "Black dash line: Within regression model;
+Blue solid line: Total regression model;
 Red solid line: Between regression model;
 Red triangle: School mean values")
+```
+
+#### 用這 5 個學校的數據擬合一個固定效應線性迴歸模型
+
+
+```{r hierex1-8, cache=TRUE}
+Fixed_reg <- lm(mathach ~ ses + factor(schoolid), data = hsb5)
+
+## Fitting a fixed effect model to these data is equivalent to forcing
+## a common slope onto the five within regression models. It gives an
+## estimated slope of 1.789 (SE=0.76), close to their average of 1.64799.
+## Note that controlling for female, minority, and sector but not for
+## schoolid leads to roughly the same estimate (slope = 1.68, SE=0.75)
+
+summary(Fixed_reg)
+summary(lm(mathach ~ ses + female + minority + sector, data = hsb5))
+```
+
+#### 讀入 PEFR 數據。
+
+```{r hierex1-9, cache=TRUE}
+pefr <- read_dta("backupfiles/pefr.dta")
+# the data are in wide format
+pefr
+
+# transform data into long format
+pefr_long <- pefr %>%
+  gather(key, value, -id) %>%
+  separate(key, into = c("measurement", "occasion"), sep = 2) %>%
+  arrange(id, occasion) %>%
+  spread(measurement, value)
+pefr_long
+```
+
+```{r tworecordings, cache=TRUE, echo=TRUE, fig.height=5.5, fig.width=7.5, fig.cap='Two recordings of PEFR taken with the standard Wright meter', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+## figure shows slightly closer agreement between the repeated measures of standard Wright,
+## than between those of Mini Wright
+
+ggplot(pefr_long, aes(x = id, y = wp, fill = occasion)) +
+  geom_point(size = 4, shape = 21) +
+  geom_hline(yintercept = mean(pefr_long$wp), colour = "red") +
+  theme_bw() +
+  scale_x_continuous(breaks = 1:17)+
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Subject ID", y = "W Measurements")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+#### 求每個患者的 `wp` 兩次測量平均值
+
+```{r hierex1-11, cache=TRUE}
+# the means range from 171.5 to 644.5
+
+with(pefr_long, summ(wp, by = id, graph = FALSE))
+```
+
+#### 在 R 裏先用 ANOVA 分析個人的 `wp` 變異。再用 `lme4::lmer` 擬合用 `id` 作隨機效應的混合效應模型。確認後者報告的 `Std.Dev for id effect` 其實可以用 ANOVA 結果的 $\sqrt{\frac{\text{MMS-MSE}}{n}}$ (n 是每個個體重複測量值的個數)。
+
+```{r hierex1-12, cache=TRUE, message=FALSE}
+with(pefr_long, anova(lm(wp~factor(id))))
+
+
+library(lme4)
+( fit <- lmer(wp ~ (1|id), data=pefr_long) )
+
+sqrt((27600 - 234)/2)
+```
+
+#### 擬合結果變量爲 `wp`，解釋變量爲 `id` 的簡單線性迴歸模型。用數學表達式描述這個模型。
+
+
+```{r hierex1-13, cache=TRUE, message=FALSE}
+Reg <- lm(wp ~ factor(id), data = pefr_long)
+
+# The fixed effect regression model leads to the same ANOVA
+# table. To the same estimate of the residual SD = (15.307)
+# However, it does not give an estimate of the "SD of id effect"
+# Instead it gives estimates of mean PEFR for participant number 1
+# = 492 and estimates of the difference in means from him/her
+# for all the other 16 pariticipants
+anova(Reg)
+summary(Reg)
+```
+
+上面的模型用數學表達式來描述就是：
+
+$$
+\begin{aligned}
+Y_{ij} & = \alpha_1 + \delta_i + \varepsilon_{ij} \\
+\text{Where } \delta_j & = \alpha_j - \alpha_1 \\
+\text{and } \delta_1   & = 0
+\end{aligned}
+$$
+
+#### 將 `wp` 中心化之後，重新擬合相同的模型，把截距去除掉。寫下這個模型的數學表達式。
+
+
+```{r hierex1-14, cache=TRUE, message=FALSE}
+Reg1 <- lm((wp - mean(wp)) ~ 0 + factor(id), data = pefr_long)
+
+# it leads to the same ANOVA table again, same residual SD
+anova(Reg1)
+summary(Reg1)
+```
+
+
+上面的模型用數學表達式來描述就是：
+
+$$
+\begin{aligned}
+Y_{ij} - \mu & = \gamma_j + \varepsilon_{ij} \\
+      Y_{ij} & = \mu +  \gamma_j + \varepsilon_{ij} \\
+\text{Where } \mu \text{ is the overall mean} \\
+\text{and } \sum_{j=1}^J\gamma_j & = 0\\
+\end{aligned}
+$$
+
+#### 計算這些迴歸係數的標準差。
+
+
+```{r hierex1-15, cache=TRUE, message=FALSE}
+# the individual level intercepts have mean zero and SD = 117.47, larger than the estimated 
+# Std.Dev for id effect.
+Reg1$coefficients
+summ(Reg1$coefficients, graph = FALSE)
 ```
 
