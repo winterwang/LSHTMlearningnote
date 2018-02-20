@@ -1,4 +1,4 @@
-# (PART) 分層數據的分析 analysis of hierarchical and other dependent data {-}
+# (PART) 等級線性迴歸模型 analysis of hierarchical and other dependent data {-}
 
 
 # 相互依賴數據及簡單的應對方案
@@ -43,11 +43,10 @@ wm2                mini wright measure at 2nd occasion
 
 ### 問題
 
-#### 將 High-School-and-Beyond 數據導入 R 中，熟悉數據結構及內容，特別要注意觀察每個學校的學生特徵。
+### 將 High-School-and-Beyond 數據導入 R 中，熟悉數據結構及內容，特別要注意觀察每個學校的學生特徵。
 
 
 ```{r hierex1-1, cache=TRUE}
-library(haven)
 hsb_selected <- read_dta("backupfiles/hsb_selected.dta")
 length(unique(hsb_selected$schoolid)) ## number of school = 160
 ## create a subset data with only the first observation of each school
@@ -63,7 +62,7 @@ with(hsb_selected, tab1(female, graph = FALSE, decimal = 2))
 with(hsb_selected, tab1(minority, graph = FALSE, decimal = 2))
 ```
 
-#### 爲了簡便起見，接下來的分析只節選數據中前五所學校 188 名學生的數學成績，和 SES。分別計算每所學校的數學成績,及 SES 的平均值。
+### 爲了簡便起見，接下來的分析只節選數據中前五所學校 188 名學生的數學成績，和 SES。分別計算每所學校的數學成績,及 SES 的平均值。
 
 
 ```{r hierex1-2, cache=TRUE}
@@ -74,7 +73,7 @@ Mean_ses_math <- ddply(hsb5,~schoolid,summarise,mean_ses=mean(ses),mean_math=mea
 Mean_ses_math
 ```
 
-#### 先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 (Total regression model)。把該總體模型的預測值提取並存儲在數據庫中。
+### 先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 (Total regression model)。把該總體模型的預測值提取並存儲在數據庫中。
 
 ```{r mathses, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=8, fig.cap='Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 ## plot the scatter of mathach and ses among these 5 schools
@@ -102,7 +101,7 @@ summary(Total_reg)
 hsb5$Pred_T <- Total_reg$fitted.values # save the fitted values to the dataset
 ```
 
-#### 用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 (between regression model)。
+### 用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 (between regression model)。
 
 ```{r hierex1-4, cache=TRUE}
 Btw_reg <- lm(mean_math ~ mean_ses, data = Mean_ses_math)
@@ -112,7 +111,7 @@ summary(Btw_reg)
 Mean_ses_math$Pred_B <- Btw_reg$fitted.values # save the fitted values to the dataset
 ```
 
-#### 分別對每個學校內的學生進行 SES 和數學成績擬合線性迴歸模型。
+### 分別對每個學校內的學生進行 SES 和數學成績擬合線性迴歸模型。
 
 ```{r hierex1-5, cache=TRUE}
 Within_schl1 <- lm(mathach ~ ses, data = hsb5[hsb5$schoolid == 1224,])
@@ -138,14 +137,14 @@ hsb5$Pred_W <- c(Within_schl1$fitted.values, Within_schl2$fitted.values,
       Within_schl5$fitted.values) ## save the predicted value into the dataset
 ```
 
-#### 比較三種模型計算的數學成績的擬合值，他們一致？還是有所不同？爲什麼會有不同？
+### 比較三種模型計算的數學成績的擬合值，他們一致？還是有所不同？爲什麼會有不同？
 
 - 總體模型 (Total regression model) 實際上無視了學生的性別，種族等可能帶來的混雜效果；
 - 學校間模型 (Between model) 估計的實際上是**SES均值**每增加一個單位，與之對應的**數學平均成績**的改變量，**這個模型絕對不可用與評估個人的 SES 與數學成績之間的關係**；
 - 學校內模型 (Within model) 擬合的 SES 與數學成績之間的關係變得十分地不精確 (SEs are fairly large)，變化幅度也很大。
 
 
-#### 把三種模型的數學成績擬合值散點圖繪製在同一張圖內。
+### 把三種模型的數學成績擬合值散點圖繪製在同一張圖內。
 
 
 ```{r mathses-3models, cache=TRUE, echo=TRUE, fig.height=6.5, fig.width=8, fig.cap='High-school-and-beyond data: Predicted values by Total, Between, and Within regression models', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
@@ -178,7 +177,7 @@ Red solid line: Between regression model;
 Red triangle: School mean values")
 ```
 
-#### 用這 5 個學校的數據擬合一個固定效應線性迴歸模型
+### 用這 5 個學校的數據擬合一個固定效應線性迴歸模型
 
 
 ```{r hierex1-8, cache=TRUE}
@@ -194,7 +193,7 @@ summary(Fixed_reg)
 summary(lm(mathach ~ ses + female + minority + sector, data = hsb5))
 ```
 
-#### 讀入 PEFR 數據。
+### 讀入 PEFR 數據。
 
 ```{r hierex1-9, cache=TRUE}
 pefr <- read_dta("backupfiles/pefr.dta")
@@ -230,7 +229,7 @@ ggplot(pefr_long, aes(x = id, y = wp, fill = occasion)) +
     panel.background = element_blank())
 ```
 
-#### 求每個患者的 `wp` 兩次測量平均值
+### 求每個患者的 `wp` 兩次測量平均值
 
 ```{r hierex1-11, cache=TRUE}
 # the means range from 171.5 to 644.5
@@ -238,19 +237,18 @@ ggplot(pefr_long, aes(x = id, y = wp, fill = occasion)) +
 with(pefr_long, summ(wp, by = id, graph = FALSE))
 ```
 
-#### 在 R 裏先用 ANOVA 分析個人的 `wp` 變異。再用 `lme4::lmer` 擬合用 `id` 作隨機效應的混合效應模型。確認後者報告的 `Std.Dev for id effect` 其實可以用 ANOVA 結果的 $\sqrt{\frac{\text{MMS-MSE}}{n}}$ (n 是每個個體重複測量值的個數)。
+### 在 R 裏先用 ANOVA 分析個人的 `wp` 變異。再用 `lme4::lmer` 擬合用 `id` 作隨機效應的混合效應模型。確認後者報告的 `Std.Dev for id effect` 其實可以用 ANOVA 結果的 $\sqrt{\frac{\text{MMS-MSE}}{n}}$ (n 是每個個體重複測量值的個數)。
 
 ```{r hierex1-12, cache=TRUE, message=FALSE}
 with(pefr_long, anova(lm(wp~factor(id))))
 
-
-library(lme4)
+#library(lme4)
 ( fit <- lmer(wp ~ (1|id), data=pefr_long) )
 
 sqrt((27600 - 234)/2)
 ```
 
-#### 擬合結果變量爲 `wp`，解釋變量爲 `id` 的簡單線性迴歸模型。用數學表達式描述這個模型。
+### 擬合結果變量爲 `wp`，解釋變量爲 `id` 的簡單線性迴歸模型。用數學表達式描述這個模型。
 
 
 ```{r hierex1-13, cache=TRUE, message=FALSE}
@@ -276,7 +274,7 @@ Y_{ij} & = \alpha_1 + \delta_i + \varepsilon_{ij} \\
 \end{aligned}
 $$
 
-#### 將 `wp` 中心化之後，重新擬合相同的模型，把截距去除掉。寫下這個模型的數學表達式。
+### 將 `wp` 中心化之後，重新擬合相同的模型，把截距去除掉。寫下這個模型的數學表達式。
 
 
 ```{r hierex1-14, cache=TRUE, message=FALSE}
@@ -294,18 +292,113 @@ $$
 \begin{aligned}
 Y_{ij} - \mu & = \gamma_j + \varepsilon_{ij} \\
       Y_{ij} & = \mu +  \gamma_j + \varepsilon_{ij} \\
-\text{Where } \mu \text{ is the overall mean} \\
+\text{Where } \mu & \text{ is the overall mean} \\
 \text{and } \sum_{j=1}^J\gamma_j & = 0\\
 \end{aligned}
 $$
 
-#### 計算這些迴歸係數的標準差。
+### 計算這些迴歸係數的標準差。
 
 
 ```{r hierex1-15, cache=TRUE, message=FALSE}
-# the individual level intercepts have mean zero and SD = 117.47, larger than the estimated 
+# the individual level intercepts have mean zero and SD = 117.47, larger than the estimated
 # Std.Dev for id effect.
 Reg1$coefficients
 summ(Reg1$coefficients, graph = FALSE)
+```
+
+
+# 隨機截距模型 random intercept model
+
+## 隨機截距模型的定義
+
+## 隨機截距模型的參數估計
+
+## 如何在 R 或 STATA 中進行隨機截距模型的擬合
+
+## 隨機截距模型中的統計推斷
+
+## 練習題
+
+### 數據
+
+1. GHQ 數據 <br> 該數據包含 12 名學生前後兩次回答 General Health Questionnaire (GHQ) 問卷獲得的數據。該問卷用於測量學生的心理壓力，其變量名和含義如下：
+
+
+```
+id        Student identifier
+GHQ1      General Health Questionnaire score- 1st occasion
+GHQ2      General Health Questionnaire score- 2nd occasion
+```
+
+2. Siblings 數據 <br> 該數據是來自一項對 3978 名媽媽關於她們 8604 名孩子的出生體重及健康狀況的問卷調查。該數據的變量名和含義如下：
+
+
+```
+momid     Mother identifier
+idx       Baby identifier
+mage      Maternal age (years)
+meduc     Maternal education
+gestat    gestational age (weeks)
+birwt     Birth weight (g)
+smoke     Maternal smoking (0 = no, 1 = yes)
+male      Baby boy (0 = no, 1 = yes)
+year      Year of birth
+married   Maternal marital status (0 = no, 1 = yes)
+hsgrad    Maternal high school education (0 = no, 1 = yes)
+black     Maternal race (1 = black, 0 = other)
+```
+
+### 問題
+
+### 讀入 GHQ 數據，探索其內容，該數據是否是平衡數據 (balanced)？計算每名學生的兩次問卷成績平均分。
+
+```{r hierex2-1, cache=TRUE, message=FALSE}
+ghq <- read_dta("backupfiles/ghq.dta")
+ghq
+
+ghq <- ghq %>%
+  mutate(mean = (GHQ1 + GHQ2)/2)
+
+# each student has 2 observations (i.e. n_j = n = 2) 
+# and therefore the data are balanced. 
+# the overall mean is 10.167 and its SD is 6.073
+with(ghq, summ(mean, graph = FALSE))
+```
+
+### 把數據從寬 (wide) 改變成長 (long) 的形式
+
+
+```{r hierex2-2, cache=TRUE, message=FALSE}
+
+# transform data into long format
+ghq_long <- ghq %>%
+  gather(key, value, -id, -mean) %>%
+  separate(key, into = c("measurement", "occasion"), sep = 3) %>%
+  arrange(id, occasion) %>%
+  spread(measurement, value)
+ghq_long
+
+# after reshaping there are 24 records. the summary statistics are 
+# overall mean sd and min max
+with(ghq_long, summ(GHQ, graph = FALSE))
+# between groups mean sd and min 
+summ(ghq_long[!duplicated(ghq_long$id), ]$mean, graph = FALSE)
+# within groups mean sd and min (came from the difference between 
+# the overall mean and the within difference) observations for 
+# each group = 2
+ghq_long <- ghq_long %>%
+  mutate(dif_GHQ = mean(GHQ) - (GHQ - mean))
+with(ghq_long, summ(dif_GHQ, graph = FALSE))
+```
+
+###
+
+```{r hierex2-3, cache=TRUE, message=FALSE}
+#with(pefr_long, anova(lm(wp~factor(id))))
+
+#library(lme4)
+#( fit <- lmer(wp ~ (1|id), data=pefr_long) )
+
 ```
 
