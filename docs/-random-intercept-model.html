@@ -772,7 +772,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="59.5.2" data-path="section-7.html"><a href="section-7.html#-1"><i class="fa fa-check"></i><b>59.5.2</b> 問題</a></li>
 <li class="chapter" data-level="59.5.3" data-path="-random-intercept-model.html"><a href="-random-intercept-model.html#-ghq--balanced"><i class="fa fa-check"></i><b>59.5.3</b> 讀入 GHQ 數據，探索其內容，該數據是否是平衡數據 (balanced)？計算每名學生的兩次問卷成績平均分。</a></li>
 <li class="chapter" data-level="59.5.4" data-path="-random-intercept-model.html"><a href="-random-intercept-model.html#-wide--long-"><i class="fa fa-check"></i><b>59.5.4</b> 把數據從寬 (wide) 改變成長 (long) 的形式</a></li>
-<li class="chapter" data-level="59.5.5" data-path="-random-intercept-model.html"><a href="-random-intercept-model.html#section"><i class="fa fa-check"></i><b>59.5.5</b> </a></li>
+<li class="chapter" data-level="59.5.5" data-path="-random-intercept-model.html"><a href="-random-intercept-model.html#-id--anova"><i class="fa fa-check"></i><b>59.5.5</b> 對數據按照 <code>id</code> 進行 ANOVA</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>X 生存分析 survival analysis</b></span></li>
@@ -865,8 +865,8 @@ ghq</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">ghq &lt;-<span class="st"> </span>ghq <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mean =</span> (GHQ1 <span class="op">+</span><span class="st"> </span>GHQ2)<span class="op">/</span><span class="dv">2</span>)
 
-<span class="co"># each student has 2 observations (i.e. n_j = n = 2) </span>
-<span class="co"># and therefore the data are balanced. </span>
+<span class="co"># each student has 2 observations (i.e. n_j = n = 2)</span>
+<span class="co"># and therefore the data are balanced.</span>
 <span class="co"># the overall mean is 10.167 and its SD is 6.073</span>
 <span class="kw">with</span>(ghq, <span class="kw">summ</span>(mean, <span class="dt">graph =</span> <span class="ot">FALSE</span>))</code></pre></div>
 <pre><code>##  obs. mean   median  s.d.   min.   max.  
@@ -895,30 +895,60 @@ ghq_long</code></pre></div>
 ##  9  5.00  9.00 1        10.0 
 ## 10  5.00  9.00 2         8.00
 ## # ... with 14 more rows</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># after reshaping there are 24 records. the summary statistics are </span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># after reshaping there are 24 records. the summary statistics are</span>
 <span class="co"># overall mean sd and min max</span>
 <span class="kw">with</span>(ghq_long, <span class="kw">summ</span>(GHQ, <span class="dt">graph =</span> <span class="ot">FALSE</span>))</code></pre></div>
 <pre><code>##  obs. mean   median  s.d.   min.   max.  
 ##  24   10.167 8       6.098  2      24</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># between groups mean sd and min </span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># between groups mean sd and min</span>
 <span class="kw">summ</span>(ghq_long[<span class="op">!</span><span class="kw">duplicated</span>(ghq_long<span class="op">$</span>id), ]<span class="op">$</span>mean, <span class="dt">graph =</span> <span class="ot">FALSE</span>)</code></pre></div>
 <pre><code>##  obs. mean   median  s.d.   min.   max.  
 ##  12   10.167 8.25    6.073  3.5    23</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># within groups mean sd and min (came from the difference between </span>
-<span class="co"># the overall mean and the within difference) observations for </span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># within groups mean sd and min (came from the difference between</span>
+<span class="co"># the overall mean and the within difference) observations for</span>
 <span class="co"># each group = 2</span>
 ghq_long &lt;-<span class="st"> </span>ghq_long <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">dif_GHQ =</span> <span class="kw">mean</span>(GHQ) <span class="op">-</span><span class="st"> </span>(GHQ <span class="op">-</span><span class="st"> </span>mean))
 <span class="kw">with</span>(ghq_long, <span class="kw">summ</span>(dif_GHQ, <span class="dt">graph =</span> <span class="ot">FALSE</span>))</code></pre></div>
 <pre><code>##  obs. mean   median  s.d.   min.   max.  
 ##  24   10.167 10.167  1.383  7.167  13.167</code></pre>
+<p>GHQ 的分佈並不左右對稱。</p>
+<div class="figure" style="text-align: center"><span id="fig:histGHQ"></span>
+<img src="bookdown_files/figure-html/histGHQ-1.png" alt="Histogram of GHQ by occasion" width="80%" />
+<p class="caption">
+圖 59.1: Histogram of GHQ by occasion
+</p>
 </div>
-<div id="section" class="section level3">
-<h3><span class="header-section-number">59.5.5</span> </h3>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#with(pefr_long, anova(lm(wp~factor(id))))</span>
-
-<span class="co">#library(lme4)</span>
-<span class="co">#( fit &lt;- lmer(wp ~ (1|id), data=pefr_long) )</span></code></pre></div>
+</div>
+<div id="-id--anova" class="section level3">
+<h3><span class="header-section-number">59.5.5</span> 對數據按照 <code>id</code> 進行 ANOVA</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">with</span>(ghq_long, <span class="kw">anova</span>(<span class="kw">lm</span>(GHQ<span class="op">~</span><span class="kw">factor</span>(id))))</code></pre></div>
+<pre><code>## Analysis of Variance Table
+## 
+## Response: GHQ
+##            Df  Sum Sq Mean Sq F value     Pr(&gt;F)    
+## factor(id) 11 811.333 73.7576 20.1157 4.7782e-06 ***
+## Residuals  12  44.000  3.6667                       
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#library(lme4)</span>
+( fit &lt;-<span class="st"> </span><span class="kw">lmer</span>(GHQ <span class="op">~</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>id), <span class="dt">data=</span>ghq_long) )</code></pre></div>
+<pre><code>## Linear mixed model fit by REML [&#39;lmerMod&#39;]
+## Formula: GHQ ~ (1 | id)
+##    Data: ghq_long
+## REML criterion at convergence: 131.3492
+## Random effects:
+##  Groups   Name        Std.Dev.
+##  id       (Intercept) 5.9199  
+##  Residual             1.9149  
+## Number of obs: 24, groups:  id, 12
+## Fixed Effects:
+## (Intercept)  
+##      10.167</code></pre>
+<p><span class="math inline">\(\sigma_u, \sigma_e\)</span> 的估計值分別是 5.92 (between)， 1.91 (within)。可以計算層間相關係數 (intra-class correlation) <span class="math inline">\(\hat\lambda = \frac{\sigma^2_u}{\sigma^2_u + \sigma^2_e} = 0.905\)</span>。且 <span class="math inline">\(\hat\sigma_u = \sqrt{\frac{73.8 - 3.7}{2}} = 5.92\)</span>，和前一次練習一樣地，這個隨機效應的方差，可以通過方差分析表格來直接手動計算。和前面計算的樣本數據比較，樣本層間標準差是高估了的 (sample between variance = 6.073 &gt; 5.92)，相反樣本層內標準差則是低估了的 (sample within variance = 1.383 &lt; 1.91)。兩個層內標準差的關係是：</p>
+<p><span class="math display">\[
+\sqrt{1.383^2\times\frac{23}{12}} = 1.91
+\]</span></p>
 
 </div>
 </div>

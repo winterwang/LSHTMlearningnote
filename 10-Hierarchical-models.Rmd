@@ -360,8 +360,8 @@ ghq
 ghq <- ghq %>%
   mutate(mean = (GHQ1 + GHQ2)/2)
 
-# each student has 2 observations (i.e. n_j = n = 2) 
-# and therefore the data are balanced. 
+# each student has 2 observations (i.e. n_j = n = 2)
+# and therefore the data are balanced.
 # the overall mean is 10.167 and its SD is 6.073
 with(ghq, summ(mean, graph = FALSE))
 ```
@@ -379,26 +379,49 @@ ghq_long <- ghq %>%
   spread(measurement, value)
 ghq_long
 
-# after reshaping there are 24 records. the summary statistics are 
+# after reshaping there are 24 records. the summary statistics are
 # overall mean sd and min max
 with(ghq_long, summ(GHQ, graph = FALSE))
-# between groups mean sd and min 
+# between groups mean sd and min
 summ(ghq_long[!duplicated(ghq_long$id), ]$mean, graph = FALSE)
-# within groups mean sd and min (came from the difference between 
-# the overall mean and the within difference) observations for 
+# within groups mean sd and min (came from the difference between
+# the overall mean and the within difference) observations for
 # each group = 2
 ghq_long <- ghq_long %>%
   mutate(dif_GHQ = mean(GHQ) - (GHQ - mean))
 with(ghq_long, summ(dif_GHQ, graph = FALSE))
 ```
 
-###
+GHQ 的分佈並不左右對稱。
 
-```{r hierex2-3, cache=TRUE, message=FALSE}
-#with(pefr_long, anova(lm(wp~factor(id))))
+```{r  histGHQ, cache=TRUE, echo=FALSE, fig.height=5.5, fig.width=7.5, fig.cap='Histogram of GHQ by occasion', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 
-#library(lme4)
-#( fit <- lmer(wp ~ (1|id), data=pefr_long) )
-
+ggplot(ghq_long, aes(x = GHQ, ..density.. , fill = occasion)) +
+geom_histogram(position = "identity",binwidth= 5.5) + facet_wrap(~occasion) +
+theme_bw() +
+#  scale_x_continuous(breaks = 1:17)+
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "GHQ", y = "Density")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
 ```
 
+
+### 對數據按照 `id` 進行 ANOVA
+
+```{r hierex2-3, cache=TRUE, message=FALSE}
+with(ghq_long, anova(lm(GHQ~factor(id))))
+
+#library(lme4)
+( fit <- lmer(GHQ ~ (1|id), data=ghq_long) )
+```
+
+$\sigma_u, \sigma_e$ 的估計值分別是 5.92 (between)， 1.91 (within)。可以計算層間相關係數 (intra-class correlation) $\hat\lambda = \frac{\sigma^2_u}{\sigma^2_u + \sigma^2_e} = 0.905$。且 $\hat\sigma_u = \sqrt{\frac{73.8 - 3.7}{2}} = 5.92$，和前一次練習一樣地，這個隨機效應的方差，可以通過方差分析表格來直接手動計算。和前面計算的樣本數據比較，樣本層間標準差是高估了的 (sample between variance = 6.073 > 5.92)，相反樣本層內標準差則是低估了的 (sample within variance = 1.383 < 1.91)。兩個層內標準差的關係是：
+
+$$
+\sqrt{1.383^2\times\frac{23}{12}} = 1.91
+$$
