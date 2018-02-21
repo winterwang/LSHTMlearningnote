@@ -429,7 +429,7 @@ $$
 ### 用 R 裏的 `nlme` 包，使用限制性極大似然法 (restricted maximum likelihood, REML) 擬合截距混合效應模型，比較其結果和前文中隨機效應 ANOVA 的結果
 
 ```{r hierex2-4, cache=TRUE, message=FALSE}
-nlme::lme(fixed = GHQ ~ 1, random = ~ 1 | id, data = ghq_long)
+summary(nlme::lme(fixed = GHQ ~ 1, random = ~ 1 | id, data = ghq_long, method = "REML"))
 ```
 
 截距混合效應模型的參數估計和隨機效應 ANOVA 的參數估計是一樣的。
@@ -440,7 +440,7 @@ nlme::lme(fixed = GHQ ~ 1, random = ~ 1 | id, data = ghq_long)
 ```{r hierex2-5, cache=TRUE, message=FALSE}
 #( fit <- lmer(GHQ ~ (1|id), data=ghq_long, REML = FALSE) ) # same but from `lme4` package
 
-lme(fixed = GHQ ~ 1, random = ~ 1 | id, data = ghq_long, method = "ML")
+summary(lme(fixed = GHQ ~ 1, random = ~ 1 | id, data = ghq_long, method = "ML"))
 ```
 
 用極大似然法估計的隨機殘差標準差 $\sigma_e$ 和 REML/ANOVA 法估計的相同，但是隨機效應標準差 $\sigma_u$ 略小 5.65 < 5.92。
@@ -476,7 +476,7 @@ summary(Fixed_simple)
 ### 用分層的穩健法 (三明治標準誤法) 計算簡單線性迴歸時，截距的標準誤差，和簡單線性迴歸時的結果作比較
 
 
-```{r}
+```{r hierex2-9, cache=TRUE, message=FALSE}
 # sandwich robust method with cluster id
 
 robustReg <- clubSandwich::coef_test(Fixed_simple, vcov = "CR1", cluster = ghq_long$id)
@@ -496,3 +496,86 @@ lower.tail = FALSE),
 rownames(better.table)<-c("Constant")
 better.table
 ```
+
+### 讀入 `siblings` 數據。先總結嬰兒的出生體重，思考這個數據中嬰兒出生體重之間是否可能存在關聯性？它的來源是哪裏。用這個數據擬合兩個混合效應模型 (ML, REML)，不加入任何解釋變量。
+
+
+```{r hierex2-10, cache=TRUE, message=FALSE}
+siblings <- read_dta("backupfiles/siblings.dta")
+Fixed_ml <- lme(fixed = birwt ~ 1, random = ~ 1 | momid, data = siblings, method = "ML")
+summary(Fixed_ml)
+
+Fixed_reml <- lme(fixed = birwt ~ 1, random = ~ 1 | momid, data = siblings, method = "REML")
+summary(Fixed_reml)
+```
+
+由於該數據樣本量足夠大 (混合效應模型中等同於說數據的層數足夠多)
+
+
+#  隨機截距模型中加入共變量
+
+## 多重線性迴歸的延伸
+
+## `siblings` 數據中新生兒體重的實例
+
+## 賦值予隨機效應成分
+
+## 混合效應模型的診斷
+
+## 分層階段的協方差
+
+## 層內層間效應估計
+
+## 到底選擇固定還是混合模型？
+
+
+## 練習
+
+### 把 High-school-and-Beyong 數據讀入 R 中。
+
+```{r hierex3-1, cache=TRUE, message=FALSE}
+hsb_selected <- read_dta("backupfiles/hsb_selected.dta")
+length(unique(hsb_selected$schoolid)) ## number of school = 160
+## create a subset data with only the first observation of each school
+hsb <- hsb_selected[!duplicated(hsb_selected$schoolid), ]
+
+## about 44 % of the schools are Catholic schools
+with(hsb, tab1(sector, graph = FALSE, decimal = 2))
+
+## among all the schools, average school size is 1098
+with(hsb, summ(size, graph = FALSE, decimal = 2))
+
+
+## among all the pupils, about 53% are females
+with(hsb_selected, tab1(female, graph = FALSE, decimal = 2))
+
+## among all the pupils, about 27.5% are from ethnic minorities
+with(hsb_selected, tab1(minority, graph = FALSE, decimal = 2))
+```
+
+### 擬合兩個隨機截距模型 (ML, REML)，結果變量用 `mathach`，解釋變量用 `ses`。觀察結果是否不同。
+
+
+```{r hierex3-2, cache=TRUE, message=FALSE}
+Fixed_reml <- lme(fixed = mathach ~ ses, random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Fixed_reml)
+
+Fixed_ml <- lme(fixed = mathach ~ ses, random = ~ 1 | schoolid, data = hsb_selected, method = "ML")
+summary(Fixed_ml)
+```
+
+其實由於樣本量 (層數) 足夠多，兩個隨機截距模型給出的參數估計十分接近。
+
+
+### 觀察學校類型是否爲天主教學校 `sector` 的分佈，把它加入剛擬合的兩個隨機截距模型，它們估計的隨機效應標準差 $\hat\sigma_u$，和隨機誤差標準差 $\hat\sigma_e$，和之前有什麼不同？ “ML，REML” 的選用對結果有影響嗎？
+
+
+```{r hierex3-3, cache=TRUE, message=FALSE}
+Fixed_reml <- lme(fixed = mathach ~ ses + factor(sector), random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Fixed_reml)
+
+Fixed_ml <- lme(fixed = mathach ~ ses + factor(sector), random = ~ 1 | schoolid, data = hsb_selected, method = "ML")
+summary(Fixed_ml)
+```
+
+可以看出，`sector` 變量在學校層面上都是沒有變化的，所以加它進入混合效應的固定部分，只會對隨機效應標準差 $\hat\sigma_u$ 的估計造成影響，隨機誤差標準差 $\hat\sigma_e$ 則幾乎不受影響。同樣的 “ML, REML” 兩種方法對結果的影響微乎其微。
