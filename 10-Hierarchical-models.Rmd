@@ -578,4 +578,145 @@ Fixed_ml <- lme(fixed = mathach ~ ses + factor(sector), random = ~ 1 | schoolid,
 summary(Fixed_ml)
 ```
 
-可以看出，`sector` 變量在學校層面上都是沒有變化的，所以加它進入混合效應的固定部分，只會對隨機效應標準差 $\hat\sigma_u$ 的估計造成影響，隨機誤差標準差 $\hat\sigma_e$ 則幾乎不受影響。同樣的 “ML, REML” 兩種方法對結果的影響微乎其微。
+可以看出，`sector` 變量在學校層面上都是沒有變化的，所以加它進入混合效應的固定部分，只會對隨機效應標準差 (within level/cluster/group error) $\hat\sigma_u$ 的估計造成影響，隨機誤差標準差 $\hat\sigma_e$ 則幾乎不受影響。同樣的 “ML, REML” 兩種方法對結果的影響微乎其微。
+
+### 現在把學校規模 `size` 這一變量加入混合效應模型的固定效應部分，記得先把該變量中心化，並除以 100，會有助於對結果的解釋 (比平均值每增加100名學生)。仔細觀察模型結果中隨機效應標準差和隨機誤差標準殘差的變化。
+
+
+```{r hierex3-4, cache=TRUE, message=FALSE}
+hsb_selected <- hsb_selected %>%
+  mutate(c_size = (size - with(hsb, mean(size)))/100)
+
+Fixed_reml <- lme(fixed = mathach ~ ses + factor(sector) + c_size, random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Fixed_reml)
+
+Fixed_ml <- lme(fixed = mathach ~ ses + factor(sector) + c_size, random = ~ 1 | schoolid, data = hsb_selected, method = "ML")
+summary(Fixed_ml)
+```
+
+增加了 `size` 進入混合效應模型的固定效應部分，對兩種參數估計方法輸出的結果 $(\hat\sigma_u, \hat\sigma_e)$ 並沒有太大的影響。
+
+
+### 在模型的固定效應部分增加 `size*sector` 的交互作用項。觀察輸出結果中該交互作用項是否有意義。用什麼檢驗方法判斷這個交互作用項能否幫助模型更加擬合數據？
+
+
+```{r hierex3-5, cache=TRUE, message=FALSE}
+Fixed_reml <- lme(fixed = mathach ~ ses + factor(sector)*c_size, random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Fixed_reml)
+
+Fixed_ml <- lme(fixed = mathach ~ ses + factor(sector)*c_size, random = ~ 1 | schoolid, data = hsb_selected, method = "ML")
+summary(Fixed_ml)
+```
+
+在兩個估計方法的包工中，交互作用項均不具有統計學意義。
+
+### 把上面八個模型估計的隨機效應標準差，和隨機誤差標準差總結成表格，它們之間有什麼規律嗎？
+
+
+```{r hierex3-6, echo=FALSE, cache=TRUE, eval=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("backupfiles/hierPractical3tb1.csv", header = T)
+names(dt) <- c("Model with", "sigma_u", "sigma_e", "sigma_u", "sigma_e")
+kable(dt, "html",  align = "c", caption = "Random effect sd and random residual sd from previous 8 mixed effect models") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") %>%
+  add_header_above(c(" " = 1,"REML" = 2, "ML" = 2))
+```
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>Random effect sd and random residual sd from previous 8 mixed effect models</caption>
+ <thead>
+<tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">REML</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">ML</div></th>
+</tr>
+  <tr>
+   <th style="text-align:center;"> Model with </th>
+   <th style="text-align:center;"> $\sigma_u$ </th>
+   <th style="text-align:center;"> $\sigma_e$ </th>
+   <th style="text-align:center;"> $\sigma_u$ </th>
+   <th style="text-align:center;"> $\sigma_e$ </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> ses </td>
+   <td style="text-align:center;"> 2.184 </td>
+   <td style="text-align:center;"> 6.085 </td>
+   <td style="text-align:center;"> 2.175 </td>
+   <td style="text-align:center;"> 6.085 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> ses &amp; sector </td>
+   <td style="text-align:center;"> 1.920 </td>
+   <td style="text-align:center;"> 6.086 </td>
+   <td style="text-align:center;"> 1.903 </td>
+   <td style="text-align:center;"> 6.086 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> ses, size &amp; sector </td>
+   <td style="text-align:center;"> 1.907 </td>
+   <td style="text-align:center;"> 6.086 </td>
+   <td style="text-align:center;"> 1.883 </td>
+   <td style="text-align:center;"> 6.085 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> ses, size &amp; sector  <br> &amp; size*sector </td>
+   <td style="text-align:center;"> 1.887 </td>
+   <td style="text-align:center;"> 6.086 </td>
+   <td style="text-align:center;"> 1.854 </td>
+   <td style="text-align:center;"> 6.086 </td>
+  </tr>
+</tbody>
+</table>
+
+$\hat\sigma_e$ 幾乎在所有模型的估計中都保持不變。因爲我們在固定效應中增加的共變量在學校層面 (level 2) 都是一樣的。也就是說對於同一學校的學生，新增的共變量是一模一樣沒有變化的，所以在個人水平 (level 1) 的隨機效應幾乎不會發生變化。且注意到 “ML” 極大似然法估計的隨機效應標準差比 “REML” 限制性極大似然估計法給出的結果略小 1% 左右。
+
+### 在混合效應模型的固定效應部分增加學生性別 `female`，和學生是否是少數族裔 `minority` 兩個變量。再觀察 $\hat\sigma_u, \hat\sigma_e$ 是否發生變化？
+
+
+```{r hierex3-7, echo=FALSE, cache=TRUE}
+Fixed_reml <- lme(fixed = mathach ~ ses + factor(sector) + c_size + factor(female) + factor(minority), random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Fixed_reml)
+
+Fixed_ml <- lme(fixed = mathach ~ ses + factor(sector) + c_size + factor(female) + factor(minority), random = ~ 1 | schoolid, data = hsb_selected, method = "ML")
+summary(Fixed_ml)
+```
+
+混合效應模型的固定效應部分增加了學生性別，以及是否是少數族裔以後，“ML/REML” 估計的 $\hat\sigma_u, \hat\sigma_e$ 均發生了顯著變化。因爲它們在個人水平都不一樣 (level 1, within group random residuals)。
+
+### 檢查學生性別和族裔是否和學校是否是天主教會學校有關係，先作分類型數據的分佈表格，然後把它們各自與 `sector` 的交互作用項加入混合效應模型中的固定效應部分，記錄下此時的 $\hat\sigma_u, \hat\sigma_e$
+
+
+```{r hierex3-8, echo=FALSE, cache=TRUE}
+# Only minority is associated with sector. There are more pupils from
+# ethnic minorities attending catholic schools
+with(hsb_selected, tabpct( sector, minority, graph = FALSE))
+with(hsb_selected, tabpct( sector, female, graph = FALSE))
+
+
+## there was no significant interaction between female sex and sector so
+## this is deleted from the final model
+Fixed_reml <- lme(fixed = mathach ~ ses + factor(sector)*factor(female)  + c_size + factor(minority), random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Fixed_reml)
+
+## There is an interaction between minority and sector
+Fixed_reml <- lme(fixed = mathach ~ ses + factor(sector)*factor(minority)  + c_size + factor(female), random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Fixed_reml)
+```
+
+數據顯示，少數族裔更多地選擇天主教會學校學習。學生性別則與是否是天主教會學校之間沒有顯著的關係。少數族裔和教會學校之間的交互作用同時也被發現具有統計學意義。
+
+### 對上面最後一個模型進行殘差分析和模型的診斷。
+
+```{r hierex3-9, echo=FALSE, cache=TRUE}
+fit <- lmer(mathach ~ ses + factor(sector)*factor(minority) + c_size + 
+              factor(female) + (1| schoolid), data=hsb_selected)
+summary(fit)
+
+sjPlot::sjp.lmer(fit, type = "re.qq")
+
+sjPlot::sjt.lmer(fit, p.kr = FALSE)
+```
+
