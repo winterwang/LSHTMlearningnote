@@ -529,7 +529,8 @@ summary(Fixed_reml)
 ## 到底選擇固定還是混合模型？
 
 
-## 練習
+## 練習題目
+
 
 ### 把 High-school-and-Beyong 數據讀入 R 中。
 
@@ -676,7 +677,7 @@ $\hat\sigma_e$ 幾乎在所有模型的估計中都保持不變。因爲我們�
 ### 在混合效應模型的固定效應部分增加學生性別 `female`，和學生是否是少數族裔 `minority` 兩個變量。再觀察 $\hat\sigma_u, \hat\sigma_e$ 是否發生變化？
 
 
-```{r hierex3-7, echo=FALSE, cache=TRUE}
+```{r hierex3-7, echo=TRUE, cache=TRUE}
 Fixed_reml <- lme(fixed = mathach ~ ses + factor(sector) + c_size + factor(female) + factor(minority), random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
 summary(Fixed_reml)
 
@@ -689,7 +690,7 @@ summary(Fixed_ml)
 ### 檢查學生性別和族裔是否和學校是否是天主教會學校有關係，先作分類型數據的分佈表格，然後把它們各自與 `sector` 的交互作用項加入混合效應模型中的固定效應部分，記錄下此時的 $\hat\sigma_u, \hat\sigma_e$
 
 
-```{r hierex3-8, echo=FALSE, cache=TRUE}
+```{r hierex3-8, echo=TRUE, cache=TRUE}
 # Only minority is associated with sector. There are more pupils from
 # ethnic minorities attending catholic schools
 with(hsb_selected, tabpct( sector, minority, graph = FALSE))
@@ -710,13 +711,36 @@ summary(Fixed_reml)
 
 ### 對上面最後一個模型進行殘差分析和模型的診斷。
 
-```{r hierex3-9, echo=FALSE, cache=TRUE}
-fit <- lmer(mathach ~ ses + factor(sector)*factor(minority) + c_size + 
-              factor(female) + (1| schoolid), data=hsb_selected)
-summary(fit)
 
-sjPlot::sjp.lmer(fit, type = "re.qq")
 
-sjPlot::sjt.lmer(fit, p.kr = FALSE)
+```{r hierex3-9, echo=TRUE, cache=TRUE}
+#fit <- lmer(mathach ~ ses + factor(sector)*factor(minority) + c_size + 
+#              factor(female) + (1| schoolid), data=hsb_selected)
+#summary(fit)
+
+hsb <- hsb %>%
+  mutate(# extract the random effect (EB) residuals (at school level)
+         uhat_eb = ranef(Fixed_reml)$`(Intercept)`, 
+         # number of students in each school
+         npupil = count(hsb_selected$schoolid)[2]$freq, 
+         # shrinkage factor = sigma_u^2/(sigma_u^2+sigma_e^2/n_j)
+         R = 1.474^2/(1.474^2 + (5.981^2)/npupil),
+         # Empirical Bayes prediction of variance of uhat
+         var_eb = R*1.474^2, 
+         # standardize the uhat
+         uhat_st = uhat_eb/sqrt(var_eb))
+
+# extract the standardized random (EB) residuals (at pupil level)
+hsb_selected$ehat <- residuals(Fixed_reml, level = 1, type = "normalized")
 ```
 
+```{r level2-residuals, cache=TRUE, echo=TRUE, fig.height=5.5, fig.width=11, fig.cap='Histogram and Q-Q plot of cluster (school) level standardized residuals for the intercept', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+par(mfrow=c(1,2))
+hist(hsb$uhat_st, freq = FALSE, breaks = 12, col='lightblue')
+qqnorm(hsb$uhat_st, ylab = "Standardized level 1 residuals"); qqline(hsb$uhat_st, col=2)
+```
+```{r level1-residuals, cache=TRUE, echo=TRUE, fig.height=5.5, fig.width=11, fig.cap='Histogram and Q-Q plot of individual (pupil) level standardized residuals for the intercept', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+par(mfrow=c(1,2))
+hist(hsb_selected$ehat, freq = FALSE, breaks = 38, col='lightblue')
+qqnorm(hsb_selected$ehat,  ylab = "Standardized level 1 residuals"); qqline(hsb_selected$ehat, col=2)
+```
