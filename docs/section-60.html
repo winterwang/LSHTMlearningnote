@@ -800,6 +800,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="60.8.8" data-path="section-60.html"><a href="section-60.html#-sector--hatsigma_u-hatsigma_e"><i class="fa fa-check"></i><b>60.8.8</b> 檢查學生性別和族裔是否和學校是否是天主教會學校有關係，先作分類型數據的分佈表格，然後把它們各自與 <code>sector</code> 的交互作用項加入混合效應模型中的固定效應部分，記錄下此時的 <span class="math inline">\(\hat\sigma_u, \hat\sigma_e\)</span></a></li>
 <li class="chapter" data-level="60.8.9" data-path="section-60.html"><a href="section-60.html#section-60.8.9"><i class="fa fa-check"></i><b>60.8.9</b> 對上面最後一個模型進行殘差分析和模型的診斷。</a></li>
 <li class="chapter" data-level="60.8.10" data-path="section-60.html"><a href="section-60.html#section-60.8.10"><i class="fa fa-check"></i><b>60.8.10</b> 通過剛剛所求的隨機效應方差的殘差，確認哪個學校存在相對極端的值。</a></li>
+<li class="chapter" data-level="60.8.11" data-path="section-60.html"><a href="section-60.html#-ses--ses"><i class="fa fa-check"></i><b>60.8.11</b> 計算學校水平的 SES 平均值，以及每個學生自己和所在學校均值之間的差值大小。分別擬合兩個不同的混合效應模型，一個只用 <code>SES</code>，另一個換做使用新計算的組均值和組內均差。</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>X 生存分析 survival analysis</b></span></li>
@@ -1492,18 +1493,98 @@ hsb_selected<span class="op">$</span>ehat &lt;-<span class="st"> </span><span cl
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summ</span>(hsb<span class="op">$</span>uhat_st, <span class="dt">graph =</span> <span class="ot">FALSE</span>)</code></pre></div>
 <pre><code>##  obs. mean   median  s.d.   min.   max.  
 ##  160  -0.001 -0.004  1.007  -3.107 2.71</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hsb[<span class="kw">with</span>(hsb, <span class="kw">which</span>(uhat_st <span class="op">&gt;</span><span class="st"> </span><span class="fl">2.5</span>)),  <span class="kw">c</span>(<span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>)]</code></pre></div>
-<pre><code>## # A tibble: 1 x 3
-##   schoolid  size sector
-##      &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;
-## 1     3427   687   1.00</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hsb[<span class="kw">with</span>(hsb, <span class="kw">which</span>(uhat_st <span class="op">&lt;</span><span class="st"> </span><span class="op">-</span><span class="fl">2.5</span>)), <span class="kw">c</span>(<span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>)]</code></pre></div>
-<pre><code>## # A tibble: 2 x 3
-##   schoolid  size sector
-##      &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;
-## 1     8367   153      0
-## 2     8854   745      0</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hsb[<span class="kw">with</span>(hsb, <span class="kw">which</span>(uhat_st <span class="op">&gt;</span><span class="st"> </span><span class="fl">2.5</span>)),  <span class="kw">c</span>(<span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">12</span>)]</code></pre></div>
+<pre><code>## # A tibble: 1 x 4
+##   schoolid  size sector uhat_st
+##      &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
+## 1     3427   687   1.00    2.71</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hsb[<span class="kw">with</span>(hsb, <span class="kw">which</span>(uhat_st <span class="op">&lt;</span><span class="st"> </span><span class="op">-</span><span class="fl">2.5</span>)), <span class="kw">c</span>(<span class="dv">7</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">12</span>)]</code></pre></div>
+<pre><code>## # A tibble: 2 x 4
+##   schoolid  size sector uhat_st
+##      &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
+## 1     8367   153      0   -3.02
+## 2     8854   745      0   -3.11</code></pre>
 <p>所以，此處可以看出，隨機效應殘差下提示的隨機效應標準差可能比較極端的有上面這三所規模較小的學校。其中一所是天主教會學校，另外兩所是非天主教會學校。</p>
+</div>
+<div id="-ses--ses" class="section level3">
+<h3><span class="header-section-number">60.8.11</span> 計算學校水平的 SES 平均值，以及每個學生自己和所在學校均值之間的差值大小。分別擬合兩個不同的混合效應模型，一個只用 <code>SES</code>，另一個換做使用新計算的組均值和組內均差。</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Mean_ses_math &lt;-<span class="st"> </span><span class="kw">ddply</span>(hsb_selected,<span class="op">~</span>schoolid,summarise,<span class="dt">mean_ses=</span><span class="kw">mean</span>(ses),<span class="dt">mean_math=</span><span class="kw">mean</span>(mathach))
+
+
+hsb_selected<span class="op">$</span>dif_ses &lt;-<span class="st"> </span><span class="ot">NA</span>
+<span class="cf">for</span> (i <span class="cf">in</span> Mean_ses_math<span class="op">$</span>schoolid) {
+  
+hsb_selected<span class="op">$</span>dif_ses[<span class="kw">which</span>(hsb_selected<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span>i)] &lt;-<span class="st"> </span>hsb_selected<span class="op">$</span>ses[<span class="kw">which</span>(hsb_selected<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span>i)] <span class="op">-</span><span class="st"> </span>Mean_ses_math<span class="op">$</span>mean_ses[<span class="kw">which</span>(Mean_ses_math<span class="op">$</span>schoolid <span class="op">==</span><span class="st"> </span>i)]
+}
+
+hsb_selected &lt;-<span class="st"> </span>hsb_selected <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mean_ses =</span> ses <span class="op">-</span><span class="st"> </span>dif_ses)
+
+## total simple model with ses only 
+Simple_reml &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>schoolid, <span class="dt">data =</span> hsb_selected, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>)
+<span class="kw">summary</span>(Simple_reml)</code></pre></div>
+<pre><code>## Linear mixed-effects model fit by REML
+##  Data: hsb_selected 
+##         AIC       BIC     logLik
+##   46653.169 46680.687 -23322.585
+## 
+## Random effects:
+##  Formula: ~1 | schoolid
+##         (Intercept)  Residual
+## StdDev:   2.1836149 6.0855894
+## 
+## Fixed effects: mathach ~ ses 
+##                  Value  Std.Error   DF   t-value p-value
+## (Intercept) 12.6574803 0.18798514 7024 67.332344       0
+## ses          2.3901958 0.10571908 7024 22.608935       0
+##  Correlation: 
+##     (Intr)
+## ses 0.003 
+## 
+## Standardized Within-Group Residuals:
+##          Min           Q1          Med           Q3          Max 
+## -3.126073464 -0.727203135  0.021883209  0.757716938  2.919115780 
+## 
+## Number of Observations: 7185
+## Number of Groups: 160</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## fit the extended model within and between effect separated
+Extend_reml &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> mathach <span class="op">~</span><span class="st"> </span>dif_ses <span class="op">+</span><span class="st"> </span>mean_ses, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>schoolid, <span class="dt">data =</span> hsb_selected, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>)
+## the between schools effect (5.87) seems much larger than the within school effect (2.19) 
+<span class="kw">summary</span>(Extend_reml)</code></pre></div>
+<pre><code>## Linear mixed-effects model fit by REML
+##  Data: hsb_selected 
+##         AIC       BIC     logLik
+##   46578.584 46612.981 -23284.292
+## 
+## Random effects:
+##  Formula: ~1 | schoolid
+##         (Intercept)  Residual
+## StdDev:   1.6408927 6.0843292
+## 
+## Fixed effects: mathach ~ dif_ses + mean_ses 
+##                  Value  Std.Error   DF   t-value p-value
+## (Intercept) 12.6833078 0.14938021 7023 84.906213       0
+## dif_ses      2.1911720 0.10866729 7023 20.164044       0
+## mean_ses     5.8661738 0.36169934 7023 16.218370       0
+##  Correlation: 
+##          (Intr) dif_ss
+## dif_ses  0.00         
+## mean_ses 0.01   0.00  
+## 
+## Standardized Within-Group Residuals:
+##          Min           Q1          Med           Q3          Max 
+## -3.166645211 -0.725430718  0.017440287  0.755777960  2.945401308 
+## 
+## Number of Observations: 7185
+## Number of Groups: 160</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## We find strong evidence to support that the second model gives a better fit to the data
+mod2&lt;-<span class="st"> </span><span class="kw">update</span>(Extend_reml, . <span class="op">~</span><span class="st"> </span>. <span class="op">-</span><span class="st"> </span>dif_ses <span class="op">-</span><span class="st"> </span>mean_ses)
+<span class="kw">anova</span>(Extend_reml, mod2)</code></pre></div>
+<pre><code>## Warning in anova.lme(Extend_reml, mod2): fitted objects with different fixed effects. REML
+## comparisons are not meaningful.</code></pre>
+<pre><code>##             Model df       AIC       BIC     logLik   Test   L.Ratio p-value
+## Extend_reml     1  5 46578.584 46612.981 -23284.292                         
+## mod2            2  3 47122.793 47143.432 -23558.397 1 vs 2 548.20955  &lt;.0001</code></pre>
 
 </div>
 </div>

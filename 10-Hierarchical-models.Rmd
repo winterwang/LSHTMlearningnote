@@ -754,3 +754,34 @@ hsb[with(hsb, which(uhat_st < -2.5)), c(7, 5, 6, 12)]
 ```
 
 所以，此處可以看出，隨機效應殘差下提示的隨機效應標準差可能比較極端的有上面這三所規模較小的學校。其中一所是天主教會學校，另外兩所是非天主教會學校。
+
+### 計算學校水平的 SES 平均值，以及每個學生自己和所在學校均值之間的差值大小。分別擬合兩個不同的混合效應模型，一個只用 `SES`，另一個換做使用新計算的組均值和組內均差。
+
+```{r hierex3-11, echo=TRUE, cache=TRUE}
+Mean_ses_math <- ddply(hsb_selected,~schoolid,summarise,mean_ses=mean(ses),mean_math=mean(mathach))
+
+
+hsb_selected$dif_ses <- NA
+for (i in Mean_ses_math$schoolid) {
+hsb_selected$dif_ses[which(hsb_selected$schoolid == i)] <-  hsb_selected$ses[which(hsb_selected$schoolid == i)] - 
+  Mean_ses_math$mean_ses[which(Mean_ses_math$schoolid == i)]
+}
+
+hsb_selected <- hsb_selected %>%
+  mutate(mean_ses = ses - dif_ses)
+
+## total simple model with ses only 
+Simple_reml <- lme(fixed = mathach ~ ses, random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+summary(Simple_reml)
+
+## fit the extended model within and between effect separated
+Extend_reml <- lme(fixed = mathach ~ dif_ses + mean_ses, random = ~ 1 | schoolid, data = hsb_selected, method = "REML")
+## the between schools effect (5.87) seems much larger than the within school effect (2.19) 
+summary(Extend_reml)
+
+## We find strong evidence to support that the second model gives a better fit to the data
+mod2<- update(Extend_reml, . ~ . - dif_ses - mean_ses)
+anova(Extend_reml, mod2)
+```
+
+
