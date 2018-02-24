@@ -799,15 +799,105 @@ anova(Extend_reml, mod2)
 
 ## 模型擬合後的預測值
 
-## 模型效果評估
+## 模型效果評估 
 
 ## 練習題
 
-1. GCSE data: 數據來自65所中學的學生畢業成績 "the Graduate Certificate of Secondary Education (GCSE) score"，和這些學生在剛剛入學時接受閱讀能力水平測試的成績。其變量和各自含義爲：
+1. GCSE data: 數據來自65所中學的學生畢業成績 "the Graduate Certificate of Secondary Education (GCSE) score"，和這些學生在剛剛入學時接受閱讀能力水平測試 (LRT score) 的成績。其變量和各自含義爲：
 
 ```
 school          school identifier
 student         student identifier
 gcse            GCSE score (multiplied by 10)
+lrt             LRT score (multiplied by 10)
+girl            Student female gender (1 = yes, 0 = no)
+schgend         type of school (1: mixed gender; 2: boys only; 3: girls only)
 ```
+
+###　將數據導入 R 裏，
+
+
+
+```{r hierex4-02, echo=TRUE, cache=TRUE}
+gcse_selected <- read_dta("backupfiles/gcse_selected.dta")
+
+length(unique(gcse_selected$school)) ## number of school = 65
+
+gcse_selected <- gcse_selected %>%
+  mutate(schgend = factor(schgend, labels  = c("mixed geder", "boys only", "girls only")))
+
+
+## create a subset data with only the first observation of each school
+gcse <- gcse_selected[!duplicated(gcse_selected$school), ]
+
+# 一共有 65 所學校，54% 是混合校，15% 是男校，31% 是女校
+with(gcse, tab1(schgend, graph = FALSE))
+  
+
+# 計算每所學校兩種成績的平均分，計算一個包含每所學校的平均女生人數的變量
+Mean_gcse_lrt <- ddply(gcse_selected,~school,summarise,mean_gcse=mean(gcse),mean_lrt=mean(lrt), mean_girl=mean(girl)) 
+
+# 整體來說，GCSE 分數的分布比起入學前 LRT 分數的分布更加寬泛，標準差更大。
+# 意味着入學時學生閱讀成績的差異，比起畢業時成績的差異要小。
+# 或者反過來說，畢業時成績差異，比起入學時閱讀成績的差異要大。
+summ(Mean_gcse_lrt[,2:4])
+```
+
+
+### 先忽略學校編號爲 48 的學校，擬合一個只有固定效應 (簡單線性回歸模型)，結果變量是 GCSE，解釋變量是 LRT。
+
+```{r hierex4-01, echo=TRUE, cache=TRUE}
+Fix <- lm(gcse ~ lrt + factor(school), data = gcse_selected[gcse_selected$school !=48, ])
+anova(Fix)
+```
+```{r eval=FALSE}
+summary(Fix) # 輸出結果太長，中間被剪掉
+```
+
+```
+Call:
+lm(formula = gcse ~ lrt + factor(school), data = gcse_selected[gcse_selected$school != 
+    48, ])
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-28.32  -4.77   0.22   5.08  24.41 
+
+Coefficients:
+                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        4.08232    0.88060    4.64  3.7e-06 ***
+lrt                0.55948    0.01253   44.63  < 2e-16 ***
+factor(school)2    1.53785    1.34332    1.14  0.25235    
+...
+...
+...
+...
+factor(school)65  -5.85245    1.21850   -4.80  1.6e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 7.52 on 3992 degrees of freedom
+Multiple R-squared:  0.442,	Adjusted R-squared:  0.433 
+F-statistic: 49.4 on 64 and 3992 DF,  p-value: <2e-16
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

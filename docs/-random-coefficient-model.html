@@ -811,7 +811,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="61.5" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#section-61.5"><i class="fa fa-check"></i><b>61.5</b> 隨機效應的方差</a></li>
 <li class="chapter" data-level="61.6" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#section-61.6"><i class="fa fa-check"></i><b>61.6</b> 模型擬合後的預測值</a></li>
 <li class="chapter" data-level="61.7" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#section-61.7"><i class="fa fa-check"></i><b>61.7</b> 模型效果評估</a></li>
-<li class="chapter" data-level="61.8" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#-9"><i class="fa fa-check"></i><b>61.8</b> 練習題</a></li>
+<li class="chapter" data-level="61.8" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#-9"><i class="fa fa-check"></i><b>61.8</b> 練習題</a><ul>
+<li class="chapter" data-level="61.8.1" data-path="-association.html"><a href="-association.html#-r-"><i class="fa fa-check"></i><b>61.8.1</b> 　將數據導入 R 裏，</a></li>
+<li class="chapter" data-level="61.8.2" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#-48---gcse-lrt"><i class="fa fa-check"></i><b>61.8.2</b> 先忽略學校編號爲 48 的學校，擬合一個只有固定效應 (簡單線性回歸模型)，結果變量是 GCSE，解釋變量是 LRT。</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>X 生存分析 survival analysis</b></span></li>
 <li class="part"><span><b>XI 貝葉斯統計學 Bayesian Statistics</b></span></li>
@@ -864,12 +867,90 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="-9" class="section level2">
 <h2><span class="header-section-number">61.8</span> 練習題</h2>
 <ol style="list-style-type: decimal">
-<li>GCSE data: 數據來自65所中學的學生畢業成績 “the Graduate Certificate of Secondary Education (GCSE) score”，和這些學生在剛剛入學時接受閱讀能力水平測試的成績。其變量和各自含義爲：</li>
+<li>GCSE data: 數據來自65所中學的學生畢業成績 “the Graduate Certificate of Secondary Education (GCSE) score”，和這些學生在剛剛入學時接受閱讀能力水平測試 (LRT score) 的成績。其變量和各自含義爲：</li>
 </ol>
 <pre><code>school          school identifier
 student         student identifier
-gcse            GCSE score (multiplied by 10)</code></pre>
+gcse            GCSE score (multiplied by 10)
+lrt             LRT score (multiplied by 10)
+girl            Student female gender (1 = yes, 0 = no)
+schgend         type of school (1: mixed gender; 2: boys only; 3: girls only)</code></pre>
+<div id="-r-" class="section level3">
+<h3><span class="header-section-number">61.8.1</span> 　將數據導入 R 裏，</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">gcse_selected &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/gcse_selected.dta&quot;</span>)
 
+<span class="kw">length</span>(<span class="kw">unique</span>(gcse_selected<span class="op">$</span>school)) ## number of school = 65</code></pre></div>
+<pre><code>## [1] 65</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">gcse_selected &lt;-<span class="st"> </span>gcse_selected <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">schgend =</span> <span class="kw">factor</span>(schgend, <span class="dt">labels  =</span> <span class="kw">c</span>(<span class="st">&quot;mixed geder&quot;</span>, <span class="st">&quot;boys only&quot;</span>, <span class="st">&quot;girls only&quot;</span>)))
+
+
+## create a subset data with only the first observation of each school
+gcse &lt;-<span class="st"> </span>gcse_selected[<span class="op">!</span><span class="kw">duplicated</span>(gcse_selected<span class="op">$</span>school), ]
+
+<span class="co"># 一共有 65 所學校，54% 是混合校，15% 是男校，31% 是女校</span>
+<span class="kw">with</span>(gcse, <span class="kw">tab1</span>(schgend, <span class="dt">graph =</span> <span class="ot">FALSE</span>))</code></pre></div>
+<pre><code>## schgend : 
+##             Frequency Percent Cum. percent
+## mixed geder        35    53.8         53.8
+## boys only          10    15.4         69.2
+## girls only         20    30.8        100.0
+##   Total            65   100.0        100.0</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 計算每所學校兩種成績的平均分，計算一個包含每所學校的平均女生人數的變量</span>
+Mean_gcse_lrt &lt;-<span class="st"> </span><span class="kw">ddply</span>(gcse_selected,<span class="op">~</span>school,summarise,<span class="dt">mean_gcse=</span><span class="kw">mean</span>(gcse),<span class="dt">mean_lrt=</span><span class="kw">mean</span>(lrt), <span class="dt">mean_girl=</span><span class="kw">mean</span>(girl)) 
+
+<span class="co"># 整體來說，GCSE 分數的分布比起入學前 LRT 分數的分布更加寬泛，標準差更大。</span>
+<span class="co"># 意味着入學時學生閱讀成績的差異，比起畢業時成績的差異要小。</span>
+<span class="co"># 或者反過來說，畢業時成績差異，比起入學時閱讀成績的差異要大。</span>
+<span class="kw">summ</span>(Mean_gcse_lrt[,<span class="dv">2</span><span class="op">:</span><span class="dv">4</span>])</code></pre></div>
+<pre><code>## 
+## No. of observations = 65
+## 
+##   Var. name obs. mean   median  s.d.   min.   max.  
+## 1 mean_gcse 65   -0.23  -0.34   4.39   -10.49 10.04 
+## 2 mean_lrt  65   -0.31  -0.41   3.44   -7.56  6.38  
+## 3 mean_girl 65   0.57   0.5     0.36   0      1</code></pre>
+</div>
+<div id="-48---gcse-lrt" class="section level3">
+<h3><span class="header-section-number">61.8.2</span> 先忽略學校編號爲 48 的學校，擬合一個只有固定效應 (簡單線性回歸模型)，結果變量是 GCSE，解釋變量是 LRT。</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Fix &lt;-<span class="st"> </span><span class="kw">lm</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="dv">48</span>, ])
+<span class="kw">anova</span>(Fix)</code></pre></div>
+<pre><code>## Analysis of Variance Table
+## 
+## Response: gcse
+##                  Df   Sum Sq  Mean Sq  F value     Pr(&gt;F)    
+## lrt               1 141723.2 141723.2 2505.000 &lt; 2.22e-16 ***
+## factor(school)   63  37314.7    592.3   10.469 &lt; 2.22e-16 ***
+## Residuals      3992 225851.9     56.6                        
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(Fix) <span class="co"># 輸出結果太長，中間被剪掉</span></code></pre></div>
+<pre><code>Call:
+lm(formula = gcse ~ lrt + factor(school), data = gcse_selected[gcse_selected$school != 
+    48, ])
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-28.32  -4.77   0.22   5.08  24.41 
+
+Coefficients:
+                  Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)        4.08232    0.88060    4.64  3.7e-06 ***
+lrt                0.55948    0.01253   44.63  &lt; 2e-16 ***
+factor(school)2    1.53785    1.34332    1.14  0.25235    
+...
+...
+...
+...
+factor(school)65  -5.85245    1.21850   -4.80  1.6e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 7.52 on 3992 degrees of freedom
+Multiple R-squared:  0.442, Adjusted R-squared:  0.433 
+F-statistic: 49.4 on 64 and 3992 DF,  p-value: &lt;2e-16</code></pre>
+
+</div>
 </div>
 </div>
 
