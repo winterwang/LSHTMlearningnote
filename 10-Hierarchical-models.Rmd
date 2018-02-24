@@ -844,7 +844,7 @@ summ(Mean_gcse_lrt[,2:4])
 ```
 
 
-### 先忽略學校編號爲 48 的學校，擬合一個只有固定效應 (簡單線性回歸模型)，結果變量是 GCSE，解釋變量是 LRT。
+### 先忽略學校編號爲 48 的學校，擬合一個只有固定效應 (簡單線性回歸模型)，結果變量是 GCSE，解釋變量是 LRT 和學校。
 
 ```{r hierex4-01, echo=TRUE, cache=TRUE}
 Fix <- lm(gcse ~ lrt + factor(school), data = gcse_selected[gcse_selected$school !=48, ])
@@ -853,6 +853,8 @@ anova(Fix)
 ```{r eval=FALSE}
 summary(Fix) # 輸出結果太長，中間被剪掉
 ```
+
+LRT 的回歸系數 (直線斜率 = 0.56, se = 0.01)，殘差的標準差 $\hat\sigma_e =$ 7.52。
 
 ```
 Call:
@@ -868,10 +870,10 @@ Coefficients:
 (Intercept)        4.08232    0.88060    4.64  3.7e-06 ***
 lrt                0.55948    0.01253   44.63  < 2e-16 ***
 factor(school)2    1.53785    1.34332    1.14  0.25235    
-...
-...
-...
-...
+                         ...
+                         ...<OMITTED OUTPUT>
+                         ...
+                         ...
 factor(school)65  -5.85245    1.21850   -4.80  1.6e-06 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
@@ -882,22 +884,55 @@ F-statistic: 49.4 on 64 and 3992 DF,  p-value: <2e-16
 ```
 
 
+### 僅有固定效應模型的學校變量變更爲學校類型 (男校女校或混合校)，從這個新模型的結果來看，你是否認爲學校類型，和學校編號本身相比能夠解釋相同的學校層面的方差？ `lrt` 的估計回歸參數發生了怎樣的變化？
+
+```{r  hierex4-03, echo=TRUE, cache=TRUE}
+Fix1 <- lm(gcse ~ lrt + schgend, data = gcse_selected[gcse_selected$school !=48, ])
+anova(Fix1)
+summary(Fix1)
+```
 
 
+新的模型 `Fix1` 參數明顯減少很多，殘差標準差估計 $\hat\sigma_u =$ 7.99。LRT 的回歸系數估計僅發生了不太明顯的變化 0.59 (0.01)
 
 
+### 使用限制性極大似然法擬合一個隨機截距模型。記錄此時的限制性對數似然的大小 (log-likelihood)。用 `lmerTest::rand` 命令對隨機效應部分的方差是否爲零做檢驗，指明該檢驗的零假設是什麼，並解釋其結果的含義。
 
 
+```{r hierex4-04, echo=TRUE, cache=TRUE}
+Fixed_reml <- lmer(gcse ~ lrt +  (1 | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE)
+lmerTest::summary(Fixed_reml)
+lmerTest::rand(Fixed_reml) ## random effect test
+```
+
+隨機截距模型的輸出結果可以看出，這裏的混合模型估計的 LRT 的回歸系數跟僅有固定效應的簡單線性回歸模型估計的值完全一樣 (0.56, se=0.01)。隨機效應部分 $\hat\sigma_e = 7.524, \hat\sigma_u = 3.07$，此時的限制性似然 (restricted log-likelihood) 是 -14022。最晚部分的隨機效應檢驗的零假設是 $\sigma_u = 0$，且值得注意的是，由於方差本身不可能小於零，故本次檢驗只用到自由度爲 1 的卡方分布的右半側(單側)。也就是說，其替代假設有且只有 $\sigma_u > 0$ 的單側假設。
 
 
+### 在前一題的隨機截距模型中加入 `schgend` 變量，作爲解釋隨機截距的一個自變量，觀察輸出結果，解釋其是否有意義。記錄這個模型的限制性似然。
 
+```{r hierex4-05, echo=TRUE, cache=TRUE}
+Fixed_reml1 <- lmer(gcse ~ lrt + schgend +  (1 | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE) 
+#Fixed_reml1 <- lme(fixed = gcse ~ lrt + schgend , random =  ~ 1 | school, data = gcse_selected[gcse_selected$school !=48, ], method = "REML") 
 
+lmerTest::summary(Fixed_reml1)
 
+## 檢驗新增的學校種類 schgend 是否對應該加入模型。
 
+mod2<- update(Fixed_reml1, . ~ . - schgend)
+anova(Fixed_reml1, mod2)
 
+## 求 Fixed_reml1 的似然
 
+logLik(Fixed_reml1)
+```
 
+增加了學校類型在固定效應部分時，隨機效應的標準差從錢一個模型的 3.07 降低到這裏的 2.92。這個變量本身，從最後的模型比較也能看出，對模型的貢獻是有意義的 (p=0.018)。當然從隨機截距模型的輸出結果可以看出，學校類型的這一變量中，可能只有"女校"這一細分部分提供了足夠的效應。這裏的隨機截距模型的REML似然是 (restricted log-likelihood = -14016)
 
+### 擬合隨機截距隨機斜率模型，固定效應部分的 `lrt` 也加入進隨機效應部分。
 
-
+```{r hierex4-06, echo=TRUE, cache=TRUE}
+Fixed_reml2 <- lmer(gcse ~ lrt + schgend +  (lrt | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE)
+summary(Fixed_reml2)
+logLik(Fixed_reml2)
+```
 
