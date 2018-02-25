@@ -820,6 +820,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="61.8.6" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#-lrt-"><i class="fa fa-check"></i><b>61.8.6</b> 擬合隨機截距隨機斜率模型，固定效應部分的 <code>lrt</code> 也加入進隨機效應部分。</a></li>
 <li class="chapter" data-level="61.8.7" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#section-61.8.7"><i class="fa fa-check"></i><b>61.8.7</b> 通過上面幾個模型計算獲得的似然，嘗試檢驗隨機斜率標準差，以及該標準差和隨機截距標準差的協相關是否有意義。</a></li>
 <li class="chapter" data-level="61.8.8" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#-schgend--mean_girl-"><i class="fa fa-check"></i><b>61.8.8</b> 模型中的 <code>schgend</code> 改成 <code>mean_girl</code> 會給出怎樣的結果呢？</a></li>
+<li class="chapter" data-level="61.8.9" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#-48--gcse-lrt"><i class="fa fa-check"></i><b>61.8.9</b> 現在我們把注意力改爲關心學校編號爲 48 的學校的情況。用且禁用它一所學校的數據，擬合一個簡單線性回歸，結果變量是 <code>gcse</code>，解釋變量是 <code>lrt</code>。</a></li>
+<li class="chapter" data-level="61.8.10" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#-48--fixed_reml2-"><i class="fa fa-check"></i><b>61.8.10</b> 這次不排除 48 號學校，擬合所有學校的數據進入 <code>Fixed_reml2</code> 模型中去，結果有發生顯著的變化嗎？</a></li>
+<li class="chapter" data-level="61.8.11" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#level-2-school-level"><i class="fa fa-check"></i><b>61.8.11</b> 計算這個模型的第二階級(level 2, <code>school</code> level)的殘差。</a></li>
+<li class="chapter" data-level="61.8.12" data-path="-random-coefficient-model.html"><a href="-random-coefficient-model.html#level-1-student48"><i class="fa fa-check"></i><b>61.8.12</b> 計算這個模型的第一階級(level 1, student)殘差，分析其分布，查看第48所學校的殘差表現如何。</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>X 生存分析 survival analysis</b></span></li>
@@ -1146,6 +1150,154 @@ likelihood &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<spa
 </div>
 <div id="-schgend--mean_girl-" class="section level3">
 <h3><span class="header-section-number">61.8.8</span> 模型中的 <code>schgend</code> 改成 <code>mean_girl</code> 會給出怎樣的結果呢？</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## 把女生平均值放回整體數據中去
+Mean_girl &lt;-<span class="st"> </span><span class="ot">NULL</span>
+<span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">65</span>) {
+  Mean_girl &lt;-<span class="st"> </span><span class="kw">c</span>(Mean_girl, <span class="kw">rep</span>(Mean_gcse_lrt<span class="op">$</span>mean_girl[i], <span class="kw">with</span>(gcse_selected, <span class="kw">table</span>(school))[i]))
+  }
+gcse_selected<span class="op">$</span>mean_girl &lt;-<span class="st"> </span>Mean_girl
+  <span class="kw">rm</span>(Mean_girl)
+
+
+Fixed_reml3 &lt;-<span class="st"> </span><span class="kw">lmer</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>mean_girl <span class="op">+</span><span class="st">  </span>(lrt <span class="op">|</span><span class="st"> </span>school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="dv">48</span>, ], <span class="dt">REML =</span> <span class="ot">TRUE</span>)
+<span class="kw">summary</span>(Fixed_reml3)</code></pre></div>
+<pre><code>## Linear mixed model fit by REML t-tests use Satterthwaite approximations to degrees of freedom [
+## lmerMod]
+## Formula: gcse ~ lrt + mean_girl + (lrt | school)
+##    Data: gcse_selected[gcse_selected$school != 48, ]
+## 
+## REML criterion at convergence: 27997.1
+## 
+## Scaled residuals: 
+##      Min       1Q   Median       3Q      Max 
+## -3.81959 -0.63170  0.02996  0.68439  3.43505 
+## 
+## Random effects:
+##  Groups   Name        Variance  Std.Dev. Corr 
+##  school   (Intercept)  8.915642 2.98591       
+##           lrt          0.014907 0.12209  0.523
+##  Residual             55.388117 7.44232       
+## Number of obs: 4057, groups:  school, 64
+## 
+## Fixed effects:
+##              Estimate Std. Error        df t value Pr(&gt;|t|)    
+## (Intercept) -1.279921   0.705712 63.060000 -1.8137  0.07449 .  
+## lrt          0.556709   0.020082 56.157000 27.7219  &lt; 2e-16 ***
+## mean_girl    2.066076   1.031947 56.642000  2.0021  0.05007 .  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##           (Intr) lrt   
+## lrt        0.220       
+## mean_girl -0.828 -0.004</code></pre>
+<p>由於 <code>mean_girl</code> 其實是和 <code>schgend</code> 非常相似的表示學校層面的男女生性別比例的變量，所以這個模型的結果其實和前一個給出的隨機效應標準差的估計都很接近。</p>
+</div>
+<div id="-48--gcse-lrt" class="section level3">
+<h3><span class="header-section-number">61.8.9</span> 現在我們把注意力改爲關心學校編號爲 48 的學校的情況。用且禁用它一所學校的數據，擬合一個簡單線性回歸，結果變量是 <code>gcse</code>，解釋變量是 <code>lrt</code>。</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">==</span><span class="dv">48</span>, ]</code></pre></div>
+<pre><code>## # A tibble: 2 x 7
+##   school student  gcse   lrt  girl schgend    mean_girl
+##    &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;fct&gt;          &lt;dbl&gt;
+## 1   48.0    1.00 -7.00 -3.73  1.00 girls only      1.00
+## 2   48.0    2.00 -1.29 -4.55  1.00 girls only      1.00</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">school48lm &lt;-<span class="st"> </span><span class="kw">lm</span>(gcse <span class="op">~</span><span class="st"> </span>lrt, <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">==</span><span class="dv">48</span>, ])
+<span class="kw">summary</span>(school48lm)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = gcse ~ lrt, data = gcse_selected[gcse_selected$school == 
+##     48, ])
+## 
+## Residuals:
+## ALL 2 residuals are 0: no residual degrees of freedom!
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) -32.7221         NA      NA       NA
+## lrt          -6.9018         NA      NA       NA
+## 
+## Residual standard error: NaN on 0 degrees of freedom
+## Multiple R-squared:       1, Adjusted R-squared:     NaN 
+## F-statistic:    NaN on 1 and 0 DF,  p-value: NA</code></pre>
+<p>由於 48 號學校只有兩個數據點，所以強行進行簡單線性回歸的結果，就是擬合了一條通過這兩個點的直線，截距是-32.7，斜率是 -6.9，且沒有任何估計的誤差。</p>
+</div>
+<div id="-48--fixed_reml2-" class="section level3">
+<h3><span class="header-section-number">61.8.10</span> 這次不排除 48 號學校，擬合所有學校的數據進入 <code>Fixed_reml2</code> 模型中去，結果有發生顯著的變化嗎？</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Fixed_reml2 &lt;-<span class="st"> </span><span class="kw">lmer</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>schgend <span class="op">+</span><span class="st">  </span>(lrt <span class="op">|</span><span class="st"> </span>school), <span class="dt">data =</span> gcse_selected, <span class="dt">REML =</span> <span class="ot">TRUE</span>)
+<span class="kw">summary</span>(Fixed_reml2)</code></pre></div>
+<pre><code>## Linear mixed model fit by REML t-tests use Satterthwaite approximations to degrees of freedom [
+## lmerMod]
+## Formula: gcse ~ lrt + schgend + (lrt | school)
+##    Data: gcse_selected
+## 
+## REML criterion at convergence: 28001.4
+## 
+## Scaled residuals: 
+##      Min       1Q   Median       3Q      Max 
+## -3.83116 -0.63097  0.03274  0.68535  3.41847 
+## 
+## Random effects:
+##  Groups   Name        Variance  Std.Dev. Corr 
+##  school   (Intercept)  8.245345 2.87147       
+##           lrt          0.014949 0.12227  0.582
+##  Residual             55.377764 7.44162       
+## Number of obs: 4059, groups:  school, 65
+## 
+## Fixed effects:
+##                    Estimate Std. Error        df t value Pr(&gt;|t|)    
+## (Intercept)       -1.099119   0.496805 63.337000 -2.2124  0.03055 *  
+## lrt                0.558021   0.020074 56.266000 27.7984  &lt; 2e-16 ***
+## schgendboys only   1.041128   0.997441 57.360000  1.0438  0.30096    
+## schgendgirls only  2.672895   0.779542 54.644000  3.4288  0.00116 ** 
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##             (Intr) lrt    schgndbo
+## lrt          0.321                
+## schgndbyson -0.443  0.011         
+## schgndgrlso -0.569  0.010  0.285</code></pre>
+<p>可以看到，即使我們加入這個數據量極少的一個學校的數據，對結果也沒有太大的影響。</p>
+</div>
+<div id="level-2-school-level" class="section level3">
+<h3><span class="header-section-number">61.8.11</span> 計算這個模型的第二階級(level 2, <code>school</code> level)的殘差。</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">School_res &lt;-<span class="st"> </span>HLMdiag<span class="op">::</span><span class="kw">HLMresid</span>(Fixed_reml2, <span class="dt">level =</span> <span class="st">&quot;school&quot;</span>)
+<span class="kw">summ</span>(School_res)</code></pre></div>
+<pre><code>## 
+## No. of observations = 65
+## 
+##   Var. name   obs. mean   median  s.d.   min.   max.  
+## 1 (Intercept) 65   0      0.11    2.65   -6.25  5.83  
+## 2 lrt         65   0      0       0.1    -0.19  0.33</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">School_res[<span class="dv">48</span>, ] </code></pre></div>
+<pre><code>##    (Intercept)          lrt
+## 48 -0.73853833 -0.014707986</code></pre>
+<p>隨機截距的殘差估計範圍在 -6.25 和 5.83 之間，隨機斜率殘差估計範圍在 -0.19 和 0.33 之間。其中 48 號學校的擬合後截距和斜率分別是 -0.74 和 -0.02。48 號學校在這個模型中估計的截距和斜率，與我們單獨對它一所學校擬合模型時的結果大相徑庭。這是因爲在總體的混合效應模型中，該學校的數據被拉近與總體的平均水平。</p>
+<div class="figure" style="text-align: center"><span id="fig:4-level2-residuals"></span>
+<img src="bookdown_files/figure-html/4-level2-residuals-1.png" alt="Q-Q plots of school level intercept and slope residuals" width="80%" />
+<p class="caption">
+圖 61.1: Q-Q plots of school level intercept and slope residuals
+</p>
+</div>
+<p>圖 <a href="-random-coefficient-model.html#fig:4-level2-residuals">61.1</a> 顯示標準化前的隨機效應部分的殘差表現尚可接受。</p>
+</div>
+<div id="level-1-student48" class="section level3">
+<h3><span class="header-section-number">61.8.12</span> 計算這個模型的第一階級(level 1, student)殘差，分析其分布，查看第48所學校的殘差表現如何。</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Fixed_reml2 &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>schgend, <span class="dt">random =</span> <span class="op">~</span><span class="st">  </span>lrt <span class="op">|</span><span class="st"> </span>school, <span class="dt">data =</span> gcse_selected, <span class="dt">method=</span><span class="st">&quot;REML&quot;</span>) <span class="co"># for extracting standardized level 2 error</span>
+
+gcse_selected<span class="op">$</span>ehat &lt;-<span class="st"> </span><span class="kw">residuals</span>(Fixed_reml2, <span class="dt">level =</span> <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;normalized&quot;</span>)
+<span class="kw">with</span>(gcse_selected, <span class="kw">summ</span>(ehat, <span class="dt">graph =</span> <span class="ot">FALSE</span>))</code></pre></div>
+<pre><code>##  obs. mean   median  s.d.   min.   max.  
+##  4059 0      0.033   0.989  -3.831 3.419</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#  48 號學校的標準化殘差並不顯得異常</span>
+gcse_selected<span class="op">$</span>ehat[gcse_selected<span class="op">$</span>school <span class="op">==</span><span class="st"> </span><span class="dv">48</span>]</code></pre></div>
+<pre><code>## [1] -0.780061331  0.046827706</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:4-level1-residuals"></span>
+<img src="bookdown_files/figure-html/4-level1-residuals-1.png" alt="Histogram and Q-Q plots of elementary level (pupil) standardized residuals" width="80%" />
+<p class="caption">
+圖 61.2: Histogram and Q-Q plots of elementary level (pupil) standardized residuals
+</p>
+</div>
 
 </div>
 </div>

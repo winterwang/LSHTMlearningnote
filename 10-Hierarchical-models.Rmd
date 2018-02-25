@@ -954,3 +954,121 @@ likelihood <- as.numeric(-2*(logLik(Fixed_reml1) - logLik(Fixed_reml2)))
 似然比檢驗的統計量是 43.8，不用檢驗也知道肯定是有意義的。手算也是可以達到相同的效果。值得注意的是，R計算給出的基於自由度爲 2 的卡方分布，其實是偏保守的。注意看手算部分，其實用到了自由度爲 1 自由度爲 2 兩個卡方分布換算獲得的 p 值。
 
 ### 模型中的 `schgend` 改成 `mean_girl` 會給出怎樣的結果呢？
+
+
+```{r hierex4-08, echo=TRUE, cache=TRUE}
+## 把女生平均值放回整體數據中去
+Mean_girl <- NULL
+for (i in 1:65) {
+  Mean_girl <- c(Mean_girl, rep(Mean_gcse_lrt$mean_girl[i], with(gcse_selected, table(school))[i]))
+  }
+gcse_selected$mean_girl <- Mean_girl
+  rm(Mean_girl)
+
+
+Fixed_reml3 <- lmer(gcse ~ lrt + mean_girl +  (lrt | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE)
+summary(Fixed_reml3)
+```
+
+由於 `mean_girl` 其實是和 `schgend` 非常相似的表示學校層面的男女生性別比例的變量，所以這個模型的結果其實和前一個給出的隨機效應標準差的估計都很接近。
+
+### 現在我們把注意力改爲關心學校編號爲 48 的學校的情況。用且禁用它一所學校的數據，擬合一個簡單線性回歸，結果變量是 `gcse`，解釋變量是 `lrt`。
+
+```{r hierex4-09, echo=TRUE, cache=TRUE}
+gcse_selected[gcse_selected$school ==48, ]
+school48lm <- lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school ==48, ])
+summary(school48lm)
+```
+
+由於 48 號學校只有兩個數據點，所以強行進行簡單線性回歸的結果，就是擬合了一條通過這兩個點的直線，截距是-32.7，斜率是 -6.9，且沒有任何估計的誤差。
+
+### 這次不排除 48 號學校，擬合所有學校的數據進入 `Fixed_reml2` 模型中去，結果有發生顯著的變化嗎？
+
+```{r hierex4-10, echo=TRUE, cache=TRUE}
+Fixed_reml2 <- lmer(gcse ~ lrt + schgend +  (lrt | school), data = gcse_selected, REML = TRUE)
+summary(Fixed_reml2)
+```
+
+可以看到，即使我們加入這個數據量極少的一個學校的數據，對結果也沒有太大的影響。
+
+### 計算這個模型的第二階級(level 2, `school` level)的殘差。
+
+
+```{r hierex4-11, echo=TRUE, cache=TRUE}
+School_res <- HLMdiag::HLMresid(Fixed_reml2, level = "school")
+summ(School_res)
+School_res[48, ] 
+```
+
+隨機截距的殘差估計範圍在 -6.25 和 5.83 之間，隨機斜率殘差估計範圍在 -0.19 和 0.33 之間。其中 48 號學校的擬合後截距和斜率分別是 -0.74 和 -0.02。48 號學校在這個模型中估計的截距和斜率，與我們單獨對它一所學校擬合模型時的結果大相徑庭。這是因爲在總體的混合效應模型中，該學校的數據被拉近與總體的平均水平。
+
+
+```{r 4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+plot1 <- HLMdiag::ggplot_qqnorm(School_res[,1], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) intercept residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(School_res[,2], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) slope residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(plot1, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+圖 \@ref(fig:4-level2-residuals) 顯示標準化前的隨機效應部分的殘差表現尚可接受。
+
+
+### 計算這個模型的第一階級(level 1, student)殘差，分析其分布，查看第48所學校的殘差表現如何。
+
+```{r hierex4-12, echo=TRUE, cache=TRUE, warning=FALSE}
+Fixed_reml2 <- lme(fixed = gcse ~ lrt + schgend, random = ~  lrt | school, data = gcse_selected, method="REML") # for extracting standardized level 2 error
+
+gcse_selected$ehat <- residuals(Fixed_reml2, level = 1, type = "normalized")
+with(gcse_selected, summ(ehat, graph = FALSE))
+#  48 號學校的標準化殘差並不顯得異常
+gcse_selected$ehat[gcse_selected$school == 48]
+```
+
+```{r 4-level1-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Histogram and Q-Q plots of elementary level (pupil) standardized residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+hist <- ggplot(gcse_selected, aes(x = ehat)) +
+    geom_histogram(colour = "black", aes(y = ..density..), 
+                   fill = "lightblue", size = 0.1, binwidth= 0.3)  + 
+  theme_bw() + stat_function(fun=dnorm,
+                         color="darkgreen", size = 1,
+                         args=list(mean=mean(gcse_selected$ehat), 
+                                  sd=sd(gcse_selected$ehat)))
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(gcse_selected$ehat, line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "EB level 1 (pupil) slope residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
+
