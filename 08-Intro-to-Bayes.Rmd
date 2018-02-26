@@ -1101,17 +1101,114 @@ $$
 
 本章節我們只考慮最最簡單的情形，方差已知的正態分布數據。在這裏，只有一個參數--均值 $\mu$ ，且我們用另一個方式來標記方差: $y \sim N(\mu, \sigma^2 = \tau^{-1})$。如果參數 $\mu$ 的先驗概率分布的均值是 $\nu$，精確度 (precision, 等同於方差的倒數) 是 $\gamma$。
 
-那麼應用貝葉斯定理  
+那麼應用貝葉斯定理推導有:
 
 $$
 \begin{aligned}
 \text{Posterior} & = \text{Prior}\times\text{likelihood} \\
-    \pi(\mu|y)   & = \sqrt{\frac{\gamma}{2\pi}}\text{exp}\{ -\frac{\gamma}{2}(\mu - \nu)^2 \}  \times\sqrt{\frac{\tau}{2\pi}}\text{exp}\{ -\frac{\tau}{2}(y - \mu)^2 \} 
+    \pi(\mu|y)   & = \sqrt{\frac{\gamma}{2\pi}}\text{exp}\{ -\frac{\gamma}{2}(\mu - \nu)^2 \}  \times\sqrt{\frac{\tau}{2\pi}}\text{exp}\{ -\frac{\tau}{2}(y - \mu)^2 \} \\
+                 & \propto \text{exp}\{ -\frac{\tau}{2}(y - \mu)^2 - \frac{\gamma}{2}(\mu - \nu)^2\} \\
+                 & \propto \text{exp}\{ -\frac{1}{2}[(\tau + \gamma)\mu^2 - 2(\tau y + \nu\gamma)\mu] \} \\
+                 & \propto \text{exp}\{ -\frac{(\tau+\gamma)}{2}(\mu - \frac{\tau y + \nu\gamma}{\tau + \gamma})^2 \} \\
+                 & \propto N\{ \frac{\tau y+ \gamma\nu}{\tau + \gamma}, \text{precision} = (\tau + \gamma) \}
 \end{aligned}
 $$
 
 
 
+可以看出，正態分布本身是自己的共軛分布 (先驗概率分布是正態分布的，事後概率分布也服從正態分布)。事後概率分布的精確度 (precision) 就等於先驗概率的精確度和似然方程的精確度之和。其均值則等於數據本身的均值和先驗概率均值乘以權重之和，其各自的權重分別是彼此精確度在兩個精確度之和中所佔的比例。
+
+現在假設手頭我們收集到的數據服從標準正態分布 $N(\mu=0,\sigma^2 = \tau^{-1} = 1)$，圖 \@ref(fig:IntroBayes5-1) 展示了四種似然方程，先驗概率，和事後概率分布的組合圖。
+
+1. 圖 \@ref(fig:IntroBayes5-1) 的左上角中，先驗概率均值，精確度分別是 $\nu = 0, \gamma = 1/16$ (精確度 $1/16$ 等同於標準差等於 $4$)。可以看出這個先驗概率幾乎對數據提供的似然方程毫無影響。事後概率分布計算的 HPD 可信區間，將會和數據提供的似然方程計算獲得的信賴區間十分地接近 (因爲他們二者的圖形幾乎是重疊的，**不過要記得他們各自的含義不同**)。
+2. 圖 \@ref(fig:IntroBayes5-1) 的右上角中，先驗概率均值被設定爲 $\nu = 2$，精確度不變。可以確認就是和左上角圖顯示的類似，此時的先驗概率對事後概率的分布影響十分有限。
+3. 圖 \@ref(fig:IntroBayes5-1) 的左下角中，先驗概率分布的均值和精確度被設定爲 $\nu = 2, \gamma = 1$，精確度變得和似然方程是相同的，所以，事後概率分布的均值，精確度分別是 $1, 2$，所以此時事後概率分布的標準差是 $1/\sqrt{2}$。由於先驗概率分布和數據的似然方程提供的信息旗鼓相當，事後概率分布就落在了二者之間，但是值得注意的是，事後概率分布估計的精確度比似然方程本身好了一些 (數據結合了先驗概率信息，所以用於估計的信息量增加，精確度自然就增加)。
+4. 圖 \@ref(fig:IntroBayes5-1) 的右下角中，先驗概率分布變成了主導，因爲它的均值和精確度分別是 $\nu = 3, \gamma = 8$。可以看到事後概率分布由於先驗概率分布佔據了主導而被先驗概率分布拉向了右邊，此時的數據提供的信息相對先驗概率分布的信息權重較低。
 
 
+
+```{r IntroBayes5-1, echo=FALSE, fig.height=8, fig.width=9, fig.cap='Posterior for the normal distribution, when likelihood is N(0,1) with four different priors', fig.align='center', out.width='90%', cache=TRUE}
+par(mfrow=c(2,2))
+# Top left
+m <- 0; tau <- 1 # data (likelihood function)
+nu <- 0; gamma <- 1/16; sigma <- 1/sqrt(gamma) # prior distribution
+mu_post <- (tau*m + nu*gamma)/(tau + gamma) # posterior mean
+tau_post <- tau + gamma # posterior precision
+sigma_post <- 1/sqrt(tau_post) # posterior standard deviations
+
+## functions 
+likelihood <- Vectorize(function(mu) dnorm(mu, m, 1/sqrt(tau)))
+Prior <- Vectorize(function(mu) dnorm(mu, nu, sigma))
+Post1 <- Vectorize(function(mu) dnorm(mu, mu_post, sigma_post))
+
+## graph 
+curve(Post1, -5, 5, xlab = ~mu, ylab = "Probability Density", main = "Normal prior: m = 0, t = 1/16", lwd = 2, n = 10000, ylim = c(0, 0.5))
+curve(Prior, xlab = ~theta, lwd = 1, lty = 2, add = T, n = 10000)
+curve(likelihood, xlab = ~theta, lwd = 1, lty = 3, add = T, n = 10000)
+legend(1.6, 0.5, c("Posterior", "Prior", "Likelihood"), col = c("black", "black", "black"), 
+       text.col = "black", lty = c(1,2,3), lwd = c(2,1,1), 
+       merge = TRUE, bg = "gray90", cex =1)
+
+# Top right
+m <- 0; tau <- 1 # data (likelihood function)
+nu <- 2; gamma <- 1/16; sigma <- 1/sqrt(gamma) # prior distribution
+mu_post <- (tau*m + nu*gamma)/(tau + gamma) # posterior mean
+tau_post <- tau + gamma # posterior precision
+sigma_post <- 1/sqrt(tau_post) # posterior standard deviations
+
+## functions 
+likelihood <- Vectorize(function(mu) dnorm(mu, m, 1/sqrt(tau)))
+Prior <- Vectorize(function(mu) dnorm(mu, nu, sigma))
+Post1 <- Vectorize(function(mu) dnorm(mu, mu_post, sigma_post))
+
+## graph 
+curve(Post1, -5, 5, xlab = ~mu, ylab = "Probability Density", main = "Normal prior: m = 2, t = 1/16", lwd = 2, n = 10000, ylim = c(0, 0.5))
+curve(Prior, xlab = ~theta, lwd = 1, lty = 2, add = T, n = 10000)
+curve(likelihood, xlab = ~theta, lwd = 1, lty = 3, add = T, n = 10000)
+legend(1.6, 0.5, c("Posterior", "Prior", "Likelihood"), col = c("black", "black", "black"), 
+       text.col = "black", lty = c(1,2,3), lwd = c(2,1,1), 
+       merge = TRUE, bg = "gray90", cex =1)
+
+# bottom left
+m <- 0; tau <- 1 # data (likelihood function)
+nu <- 2; gamma <- 1; sigma <- 1/sqrt(gamma) # prior distribution
+mu_post <- (tau*m + nu*gamma)/(tau + gamma) # posterior mean
+tau_post <- tau + gamma # posterior precision
+sigma_post <- 1/sqrt(tau_post) # posterior standard deviations
+
+## functions 
+likelihood <- Vectorize(function(mu) dnorm(mu, m, 1/sqrt(tau)))
+Prior <- Vectorize(function(mu) dnorm(mu, nu, sigma))
+Post1 <- Vectorize(function(mu) dnorm(mu, mu_post, sigma_post))
+
+## graph 
+curve(Post1, -5, 5, xlab = ~mu, ylab = "Probability Density", main = "Normal prior: m = 0, t = 1", lwd = 2, n = 10000, ylim = c(0, 0.7))
+curve(Prior, xlab = ~theta, lwd = 1, lty = 2, add = T, n = 10000)
+curve(likelihood, xlab = ~theta, lwd = 1, lty = 3, add = T, n = 10000)
+legend(-4.5, 0.7, c("Posterior", "Prior", "Likelihood"), col = c("black", "black", "black"), 
+       text.col = "black", lty = c(1,2,3), lwd = c(2,1,1), 
+       merge = TRUE, bg = "gray90", cex =1)
+
+
+# bottom right
+m <- 0; tau <- 1 # data (likelihood function)
+nu <- 3; gamma <- 8; sigma <- 1/sqrt(gamma) # prior distribution
+mu_post <- (tau*m + nu*gamma)/(tau + gamma) # posterior mean
+tau_post <- tau + gamma # posterior precision
+sigma_post <- 1/sqrt(tau_post) # posterior standard deviations
+
+## functions 
+likelihood <- Vectorize(function(mu) dnorm(mu, m, 1/sqrt(tau)))
+Prior <- Vectorize(function(mu) dnorm(mu, nu, sigma))
+Post1 <- Vectorize(function(mu) dnorm(mu, mu_post, sigma_post))
+
+## graph 
+curve(Post1, -5, 5, xlab = ~mu, ylab = "Probability Density", main = "Normal prior: m = 0, t = 8", lwd = 2, n = 10000, ylim = c(0,1.2))
+curve(Prior, xlab = ~theta, lwd = 1, lty = 2, add = T, n = 10000)
+curve(likelihood, xlab = ~theta, lwd = 1, lty = 3, add = T, n = 10000)
+legend(-4.5, 1.2, c("Posterior", "Prior", "Likelihood"), col = c("black", "black", "black"), 
+       text.col = "black", lty = c(1,2,3), lwd = c(2,1,1), 
+       merge = TRUE, bg = "gray90", cex =1)
+
+```
 
