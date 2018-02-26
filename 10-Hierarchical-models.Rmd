@@ -3,7 +3,86 @@
 
 # 相互依賴數據及簡單的應對方案
 
+
+
+
 ## 相互依賴的數據
+
+線性回歸模型，廣義線性回歸模型，他們背後都有一個十分十分**十分重要的假設--數據的相互獨立性**。這個前提假設常常會被違反，因爲數據與數據之間在背後常常會有有所關聯，也許是已知的，也許是未知的因素讓某些數據顯得更加接近彼此。這個章節，主要的內容就是舉例說明分層數據在日常生活中的常見性，以及處理這個非獨立性質的必要性。
+
+- 圖 \@ref(fig:Hier01-1) 展示的箱式圖顯示的是六個不同醫院對各自 12 名患者收縮其血壓測量的結果。如果把醫院看做一個單位，取院內患者的平均值，那麼六所醫院的血壓均值最大爲 135.7 mmHg，最小是 117.7 mmHg，六所醫院測量的血壓總體均值爲 125.6 mmHg。
+
+```{r Hier01-1, echo=FALSE, fig.height=6, fig.width=7, fig.cap='Box and whiskers plot of measured SBP in patients from six hospitals', fig.align='center', out.width='90%', cache=TRUE}
+ggthemr('fresh')
+Bp <- read_dta("backupfiles/bp.dta")
+
+Bp$hosp <- as.factor(Bp$hosp)
+with(Bp, boxplot(bp ~ hosp, xlab = "Hospital No.", ylab = "Systolic blood pressure (mmHg)"))
+```
+
+
+- 圖 \@ref(fig:Hier01-2) 展示的是對 17 名患者使用兩種不同的測量方法測量的最大呼吸速率 (peak-expiratory-flow rate, PEFR)。兩種方法又測量了兩次，途中展示的是其中一種測量方法前後兩次測量結果的散點圖。
+
+
+
+```{r Hier01-2, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='Two recordings of PEFR taken with the Mini Wright meter', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+pefr <- read_dta("backupfiles/pefr.dta")
+# the data are in wide format
+
+
+# transform data into long format
+pefr_long <- pefr %>%
+  gather(key, value, -id) %>%
+  separate(key, into = c("measurement", "occasion"), sep = 2) %>%
+  arrange(id, occasion) %>%
+  spread(measurement, value)
+## figure shows slightly closer agreement between the repeated measures of standard Wright,
+## than between those of Mini Wright
+
+ggplot(pefr_long, aes(x = id, y = wm, fill = occasion)) +
+  geom_point(size = 4, shape = 21) +
+  geom_hline(yintercept = mean(pefr_long$wm), colour = "red") +
+  theme_bw() +
+  scale_x_continuous(breaks = 1:17)+
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Subject ID", y = "MW Measurements")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19), 
+  legend.title = element_text(size = 19))
+```
+
+- 圖 \@ref(fig:Hier01-3) 展示的來自全英 65 所學校的 4059 名學生入學前閱讀水平測試成績 (LRT) 和畢業是 GCSE 考試成績之間的散點圖關系，無視了學校這個變量。而是把每個學生看成相互獨立的個體。但是當我們隨機選取四所學校，看它們各自的學生的成績表現 圖 \@ref(fig:Hier01-5)。很顯然，之前忽視了學校這一層級的變量是不恰當的，因爲不同學校學生的入學前和畢業時成績之間的相關性很明顯存在不同的模式 (四所學校的回歸線各自的截距和斜率各不相同)。
+
+```{r Hier01-3, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='GCSE by LRT in all 65 schools', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+gcse_selected <- read_dta("backupfiles/gcse_selected.dta")
+
+ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_point(size = 2.5) + 
+  geom_smooth(method = "lm", se = FALSE) +
+  xlim(-40, 40) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "LRT", y = "GCSE score")
+```
+
+```{r Hier01-4, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='GCSE by LRT in four randomly selected schools', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+p <- ggplot(gcse_selected[gcse_selected$school %in% c(2, 7, 40, 53), ], aes(x = lrt, gcse)) + 
+  geom_point(size = 2.5) +
+    geom_smooth(method = "lm", se = FALSE) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "LRT", y = "GCSE score")
+p + facet_wrap( ~ school, ncol=2)
+```
+
+
 
 
 ## 依賴性的來源在哪裏
@@ -86,10 +165,7 @@ ggplot(hsb5, aes(x = ses, y = mathach)) + geom_point() +
   labs(x = "SES", y = "Math achievement")  +
   xlim(-2.05, 2.05)+
   ylim(-10, 30) +
-  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
-        axis.line = element_line(colour = "black"),
-    panel.border = element_blank(),
-    panel.background = element_blank())
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
 ```
 
 
@@ -167,10 +243,8 @@ ggplot(hsb5, aes(x = ses, y = Pred_W, group = schoolid)) +
   labs(x = "SES", y = "Fitted regression lines (Maths achievement)")  +
   xlim(-2.05, 2.05)+
   ylim(5, 20) +
-  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
-        axis.line = element_line(colour = "black"),
-    panel.border = element_blank(),
-    panel.background = element_blank()) + theme(plot.caption = element_text(size = 12,
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + 
+  theme(plot.caption = element_text(size = 12,
   hjust = 0)) + labs(caption = "Black dash line: Within regression model;
 Blue solid line: Total regression model;
 Red solid line: Between regression model;
@@ -209,7 +283,7 @@ pefr_long <- pefr %>%
 pefr_long
 ```
 
-```{r tworecordings, cache=TRUE, echo=TRUE, fig.height=5.5, fig.width=7.5, fig.cap='Two recordings of PEFR taken with the standard Wright meter', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r tworecordings, cache=TRUE, echo=TRUE, fig.height=6, fig.width=9, fig.cap='Two recordings of PEFR taken with the standard Wright meter', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 
 ## figure shows slightly closer agreement between the repeated measures of standard Wright,
 ## than between those of Mini Wright
@@ -223,10 +297,9 @@ ggplot(pefr_long, aes(x = id, y = wp, fill = occasion)) +
   axis.text.x = element_text(size = 15),
   axis.text.y = element_text(size = 15)) +
   labs(x = "Subject ID", y = "W Measurements")  +
-  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
-        axis.line = element_line(colour = "black"),
-    panel.border = element_blank(),
-    panel.background = element_blank())
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))+ 
+  theme(legend.text = element_text(size = 19), 
+  legend.title = element_text(size = 19))
 ```
 
 ### 求每個患者的 `wp` 兩次測量平均值
