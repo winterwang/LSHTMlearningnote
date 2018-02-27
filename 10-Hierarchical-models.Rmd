@@ -13,7 +13,6 @@
 - 圖 \@ref(fig:Hier01-1) 展示的箱式圖顯示的是六個不同醫院對各自 12 名患者收縮其血壓測量的結果。如果把醫院看做一個單位，取院內患者的平均值，那麼六所醫院的血壓均值最大爲 135.7 mmHg，最小是 117.7 mmHg，六所醫院測量的血壓總體均值爲 125.6 mmHg。
 
 ```{r Hier01-1, echo=FALSE, fig.height=6, fig.width=7, fig.cap='Box and whiskers plot of measured SBP in patients from six hospitals', fig.align='center', out.width='90%', cache=TRUE}
-ggthemr('fresh')
 Bp <- read_dta("backupfiles/bp.dta")
 
 Bp$hosp <- as.factor(Bp$hosp)
@@ -56,10 +55,11 @@ ggplot(pefr_long, aes(x = id, y = wm, fill = occasion)) +
   legend.title = element_text(size = 19))
 ```
 
-- 圖 \@ref(fig:Hier01-3) 展示的來自全英 65 所學校的 4059 名學生入學前閱讀水平測試成績 (LRT) 和畢業是 GCSE 考試成績之間的散點圖關系，無視了學校這個變量。而是把每個學生看成相互獨立的個體。但是當我們隨機選取四所學校，看它們各自的學生的成績表現 圖 \@ref(fig:Hier01-5)。很顯然，之前忽視了學校這一層級的變量是不恰當的，因爲不同學校學生的入學前和畢業時成績之間的相關性很明顯存在不同的模式 (四所學校的回歸線各自的截距和斜率各不相同)。
+- 圖 \@ref(fig:Hier01-3) 展示的來自全英 65 所學校的 4059 名學生入學前閱讀水平測試成績 (LRT) 和畢業是 GCSE 考試成績之間的散點圖關系，無視了學校這個變量。而是把每個學生看成相互獨立的個體。但是當我們隨機選取四所學校，看它們各自的學生的成績表現 圖 \@ref(fig:Hier01-4)。很顯然，之前忽視了學校這一層級的變量是不恰當的，因爲不同學校學生的入學前和畢業時成績之間的相關性很明顯存在不同的模式 (四所學校的回歸線各自的截距和斜率各不相同)。
 
 ```{r Hier01-3, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='GCSE by LRT in all 65 schools', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 gcse_selected <- read_dta("backupfiles/gcse_selected.dta")
+ggthemr('fresh')
 
 ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_point(size = 2.5) + 
   geom_smooth(method = "lm", se = FALSE) +
@@ -71,6 +71,7 @@ ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_point(size = 2.5) +
 ```
 
 ```{r Hier01-4, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='GCSE by LRT in four randomly selected schools', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
 
 p <- ggplot(gcse_selected[gcse_selected$school %in% c(2, 7, 40, 53), ], aes(x = lrt, gcse)) + 
   geom_point(size = 2.5) +
@@ -80,6 +81,37 @@ p <- ggplot(gcse_selected[gcse_selected$school %in% c(2, 7, 40, 53), ], aes(x = 
   axis.text.y = element_text(size = 15)) +
   labs(x = "LRT", y = "GCSE score")
 p + facet_wrap( ~ school, ncol=2)
+```
+
+
+- 
+
+
+```{r Hier01-5, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='Birthweight of siblings by maternal identifier', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+siblings <- read_dta("backupfiles/siblings.dta")
+subSiblings <- siblings[(siblings$momid > 80000)&(siblings$momid < 95000)&(siblings$idx %in% c(1,2)), ]
+subSiblings$idx <- factor(subSiblings$idx)
+subSiblings_w <- subset(subSiblings, select = c("momid", "idx", "birwt"))
+
+subSiblings_w <- spread(subSiblings_w, key = idx, value = birwt)
+ggthemr('fresh')
+
+
+ggplot(subSiblings, aes(x = momid, y = birwt, fill = idx)) + 
+ geom_point(size = 4, shape = 21) + 
+#geom_segment(aes(x = momid, y = `1`, xend = momid, yend = `2`, colour = "segment"), data = subSiblings_w) + 
+ geom_line(aes(group = momid), lty = 1) + 
+   theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Mother ID", y = "Birthweight (g)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + 
+  theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19),   legend.title = element_text(size = 19)) + theme(plot.subtitle = element_text(vjust = 1), 
+  plot.caption = element_text(vjust = 1)) +labs(fill = "Child number") + 
+  scale_fill_discrete(labels = c("1st Child", "2nd Child"))
 ```
 
 
