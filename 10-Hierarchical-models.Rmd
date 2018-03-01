@@ -212,6 +212,200 @@ $$
 
 爲什麼這裏的邊際模型對於分層數據來說很重要呢？答案在於，嵌套式數據中，我們常常關心那第二個階層 (重復測量某個指標的患者，學生成績數據中的學校層級，等) 在它所在的那個階層中和結果變量之間的平均關系。(In models for hierarchical data we often use level effects to represent what is common among observations from one "cluster" or "group". We may then want marginal conclusions: we need to average over these effects).
 
+
+```{r hier01tab01, echo=FALSE, cache=TRUE, eval=FALSE}
+dt <- read.csv("backupfiles/hierexample.csv", header = T)
+names(dt) <- c("Cluster (j)", "id (i)", "X", "Y", "X", "Y")
+kable(dt, "html",  align = "c", caption = "Example data") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") #%>%
+  #add_header_above(c(" " = 1,"REML" = 2, "ML" = 2))
+```
+
+### 標記法 notation
+
+- $Y_{ij}$ 標記第 $j$ 層的第 $i$ 個個體;
+- $i = 1, \cdots, n_j$ 表示第 $j$ 層中共有 $n_j$ 個個體 (elements);
+- $j = 1, \cdots, J$ 表示數據共有 $J$ 個第二階層 (clusters);
+- $N = \sum_{j=1}^J n_j$ 表示總體樣本量等於各個階層樣本量之和;
+- 特殊情況: 如果每個階層的個體數相同 $n$，$N=nJ$，這樣的數據被叫做均衡數據 (balanced data)。
+
+### 合並每個階層 
+
+過去常見的總結嵌套式數據的手段只是把每層數據取平均值，這樣的方法簡單粗暴但是偶爾是可以接受的，只要你能夠接受如此處理數據可能帶來的如下後果:
+
+- 各層數據均值，其可靠程度 (方差) 隨着各層的樣本量不同而不同 (depends on the number of elementary units per cluster);
+- 變量的含義發生改變。如果是使用層水平 (cluster level) 的數據，本來測量給個體的那些變量，就變成了**層的變量**，從此作出的任何統計學推斷，只能限制在層水平 (ecological fallacy, as correlations at the macro level cannot be used to make assertions at the micro level);
+- 由於無視了層內個體數據，導致大量信息損失。
+
+此處我們借用 [@Snijders1999] 書中第 28 頁的人造數據，如下表
+
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>Artificial data</caption>
+ <thead>
+  <tr>
+   <th style="text-align:center;"> Cluster $(j)$ </th>
+   <th style="text-align:center;"> id $(i)$ </th>
+   <th style="text-align:center;"> $X$ </th>
+   <th style="text-align:center;"> $Y$ </th>
+   <th style="text-align:center;"> $\bar{X}$ </th>
+   <th style="text-align:center;"> $\bar{Y}$ </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 6 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 7 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 6 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 4 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 4 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 3 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 3 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 2 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 7 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 2 </td>
+  </tr>
+</tbody>
+</table>
+
+這個表中的人造數據，其結構是一目了然的，它的第二層級數量是 5，每層的個體數量是 2。這是一個平衡數據。由於這是個我們人爲模擬的數據，圖 \@ref(fig:artificialdata00) 也顯示它沒有隨機誤差，所有數據都在各自的直線上。
+
+
+```{r artificialdata00, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: scatter of clustered data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+dt <- read.csv("backupfiles/hierexample.csv", header = T)
+names(dt) <- c("Cluster", "id", "X", "Y", "Xbar", "Ybar")
+dt$Cluster <- as.factor(dt$Cluster)
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y, shape = Cluster, colour = Cluster)) + geom_point(size =5) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + 
+theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19), legend.title = element_text(size = 19))
+```
+
+
+
+- 如果我們無視其分層數據的嵌套式結構，把每個數據都看作是獨立的樣本，擬合一個**整體回歸 (total regression) 圖 \@ref(fig:artificialdata01)**:
+
+$$
+\hat Y_{ij} = 5.33 - 0.33 X_{ij}
+$$
+
+
+```{r artificialdata01, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: Total regression', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y)) + geom_point(size = 5, shape = 23) + 
+  geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + 
+theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19), legend.title = element_text(size = 19))
+```
+
+
+- 如果我們只保留層級數據本身，求了變量 $X,Y$ 在每層的均值的話，就得到了**層間回歸 (between regression) 圖 \@ref(fig:artificialdata02)** -- 變量 $X,Y$ 之間的回歸直線的斜率變得更大了:
+
+$$
+\hat{\bar{Y}}_j = 8.0 - 1.0 \bar{X}_j
+$$
+
+
+```{r artificialdata02, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: scatter of clustered data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y)) + geom_point(size =5, shape=23) + 
+    geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+  geom_abline(intercept = 8, slope = -1) + 
+  geom_point(aes(x = Xbar, y=Ybar, size = 5)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + theme(legend.position="none")
+```
+
+
+### 生物學悖論 ecological fallacy
+
+生物學悖論常見於我們認爲某分層數據中層級變量之間的關系，同樣適用與層級中的個體之間: 例如比較 A 國 和 B 國之間心血管疾病的發病率，發現 A 國國民食鹽平均攝入量高於 B 國，很多人可能就會下結論說實驗攝入量高的個體，心血管疾病發病的危險度較高。然而，這樣的推論很多時候是錯誤的。
+
+曾經在 [@10.2307/2087176] 論文中舉過的著名例子: 該研究調查美國每個州的移民比例，和該州相應的識字率之間的關系。研究者發現，移民比例較高的州，其識字率也較高 (相關系數 0.53)。由此就有人下結論說移民越多，那個州的教育水平會比較高。但是實際情況是，把每個個體的受教育水平和該個體本身是不是移民做了相關系數分析之後發現，這個關系其實是負相關 (-0.11)。所以說在州的水平作出的統計學推斷-移民多的州受教育水平高-是不正確的。之所以在州水平發現移民比例和受教育水平之間的正關系，是因爲移民傾向於居住在教育水平本來就比較高的本土出生美國人的州。
+
 ## 簡單線性迴歸複習
 
 ## 練習題
