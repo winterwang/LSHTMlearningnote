@@ -66,10 +66,113 @@
 1. 每個人生存時間的柱狀圖 (histogram); 
 2. 計算生存時間的簡單統計量: 中位數 (median)。
 
+即使是拿穩健統計學方法比較治療組和對照組的中位數是否不同，也無法解決刪失數據的問題。我們需要新的方法來處理生存數據。
 
 ## 初步描述生存數據
 
+描述生存數據的統計學正式方案是:
+
+1. 生存方程 the survival function
+2. 危險度方程和累積危險度 the hazard function and the cumulative hazard
+3. 概率密度方程 the probability density function
+
+### 生存方程
+
+生存方程的定義是，觀測生存時間 $T$，大於某個時間 $t$ 的概率: 
+
+$$
+S(t) = Pr(T > t)
+$$
+
+累計概率方程是 
+
+$$
+F(t) = \text{Pr}(T \leqslant t) = 1 - S(t)
+$$
+
+
+### 危險度方程 
+
+危險度有時候就只叫做危險 (hazard)，時間 $t$ 時的危險度爲 $h(t)$。危險度方程被定義爲: 
+
+$$
+h(t) = \lim_{\delta\rightarrow0}\frac{1}{\delta}\text{Pr}(t\leqslant T < t + \delta | T\geqslant t)
+$$
+
+
+危險度利用的是數學中的極限理論，表示在時間 $t$ 和時間 $t+\delta$ (其中$\delta \rightarrow 0$) 之間，觀察對象沒有發生事件的概率。危險度的概念明白了以後，危險度在時間軸上的積分，就被叫做**累積危險度**: 
+
+$$
+H(t) = \int_0^th(u)\text{d}u
+$$
+
+### 概率密度方程
+
+和其他的方程類似，常用 $f(t)$ 標記生存時間的概率密度方程: 
+
+$$
+f(t) = \frac{\text{d}}{\text{d}t}F(t) = \lim_{\delta\rightarrow0}\frac{1}{\delta}\text{Pr}(t\leqslant T < t + \delta)
+$$
+
+### 各方程之間的關系 
+
+$$
+\begin{aligned}
+f(t) & = \frac{\text{d}}{\text{d}t}F(t)  = \frac{\text{d}}{\text{d}t}\{ 1-S(t) \} = - \frac{\text{d}}{\text{d}t}S(t) \\ 
+S(t) & = 1 - F(t)  = 1 - \int_0^t f(u)\text{d}u = \int_t^\infty f(u)\text{d}u \\
+h(t) & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\text{Pr}(t \leqslant T < t+ \delta | T \geqslant t) \\ 
+     & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\frac{\text{Pr}(t \leqslant T < t+ \delta, T \geqslant t)}{\text{Pr}(T \geqslant t)} (\text{Bayes' Theroem}) \\ 
+     & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\frac{\text{Pr}(t \leqslant T < t+ \delta)}{\text{Pr}(T \geqslant t)} \\ 
+     & = \frac{f(t)}{S(t)} \\
+h(t) & = \frac{f(t)}{S(t)} = \frac{\frac{\text{d}}{\text{d}t}F(t)}{S(t)} = \frac{- \frac{\text{d}}{\text{d}t}S(t)}{S(t)} = - \frac{\text{d}}{\text{d}t}\text{log}[S(t)] \\
+\end{aligned}
+$$
+
+**推導** $S(t), H(t)$ 之間的關系: 
+
+$$
+\begin{aligned}
+\because h(t) & = - \frac{\text{d}}{\text{d}t}\text{log}[S(t)] \\
+\text{intergrate both} & \text{ sides over the range from 0 to }t: \\
+\int_0^th(u)\text{d}u & = - \int_0^t\frac{\text{d}}{\text{d}u}\text{log}[S(t)]\text{d}u \\
+                      & = -[\text{log } S(u)]_{u = 0}^{u = t} \\ 
+                      & = -[\text{log } S(t) - \text{log } S(0)] \\ 
+                      & = -\text{log }S(t) \\ 
+\Rightarrow S(t)      & = \exp\{ - \int_0^th(u)\text{d}u\} = \exp\{ -H(t) \}
+\end{aligned}
+$$
+
+
 ## 生存時間的參數分布
+
+### 指數分布 
+
+適用於生存時間最簡單的分布是指數分布 (exponentiential distribution)。指數分布默認危險率 (hazard rate，$\lambda$) 不隨時間變化。在指數分布中，危險度方程，生存方程和概率密度方程分別是:
+
+$$
+\begin{aligned}
+h(t) & = \lambda, \\ 
+S(t) & = e^{-\lambda t} \\
+f(t) & = h(t)S(t) \\
+     & = \lambda e^{-\lambda t}
+\end{aligned}
+(\#eq:survival01-11)
+$$
+
+### Weibull 分布
+
+指數分布的前提 -- 事件發生率相同的假設過於強硬，許多真實數據，都不能滿足這個前提條件。另一個比指數分布靈活的分布是 Weibull 分布。它包含兩個參數，其危險度方程，生存方程和概率密度方程分別是: 
+
+$$
+\begin{aligned}
+h(t) & = \kappa\lambda t^{\kappa - 1}  \\ 
+S(t) & = \exp(-\lambda t^\kappa) \\
+f(t) & = \kappa \lambda t^{\kappa - 1} \exp(-\lambda t^\kappa)
+\end{aligned}
+(\#eq:survival01-12)
+$$
+
+
 
 ## 極大似然法估計
 
@@ -89,4 +192,4 @@
 
 # 時間依賴變量 
 
-# 時間-事件數據的高級分析法
+# 時間事件數據的高級分析法
