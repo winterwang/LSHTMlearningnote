@@ -120,9 +120,9 @@ $$
 \begin{aligned}
 f(t) & = \frac{\text{d}}{\text{d}t}F(t)  = \frac{\text{d}}{\text{d}t}\{ 1-S(t) \} = - \frac{\text{d}}{\text{d}t}S(t) \\ 
 S(t) & = 1 - F(t)  = 1 - \int_0^t f(u)\text{d}u = \int_t^\infty f(u)\text{d}u \\
-h(t) & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\text{Pr}(t \leqslant T < t+ \delta | T \geqslant t) \\ 
-     & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\frac{\text{Pr}(t \leqslant T < t+ \delta, T \geqslant t)}{\text{Pr}(T \geqslant t)} (\text{Bayes' Theroem}) \\ 
-     & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\frac{\text{Pr}(t \leqslant T < t+ \delta)}{\text{Pr}(T \geqslant t)} \\ 
+h(t) & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\text{Pr}(t \leqslant T < t+ \delta | T > t) \\ 
+     & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\frac{\text{Pr}(t \leqslant T < t+ \delta, T > t)}{\text{Pr}(T > t)} (\text{Bayes' Theroem}) \\ 
+     & = \lim_{\delta\rightarrow0}\frac{1}{\delta}\frac{\text{Pr}(t \leqslant T < t+ \delta)}{\text{Pr}(T > t)} \\ 
      & = \frac{f(t)}{S(t)} \\
 h(t) & = \frac{f(t)}{S(t)} = \frac{\frac{\text{d}}{\text{d}t}F(t)}{S(t)} = \frac{- \frac{\text{d}}{\text{d}t}S(t)}{S(t)} = - \frac{\text{d}}{\text{d}t}\text{log}[S(t)] \\
 \end{aligned}
@@ -201,11 +201,192 @@ knitr::include_graphics("img/Selection_119.png")
 假設 $n$ 名研究對象編號各自爲 $i = 1, \cdots,n$，研究者對他們完成了從起點時間 (time origin) 起的隨訪。有些人發生了相關事件 (Event)，所以，他們的生存時間 $t_{E_i}$。有些人則由於各種原因變成了刪失值，他們的生存時間是 $t_{C_i}$。關於刪失對象我們確切知道在時間 $t_{C_i}$ 之內，他們沒有發生相關事件，且他們退出研究之後是否發生了事件不得而知。我們再根據觀察對象是否發生相關事件，在模型中生成一個啞變量 $\delta_i$，當 $\delta_i = 1$ 時，該對象的觀察生存時間是 $t_{E_i}$，當 $\delta_i = 0$ 時，該對象的觀察生存時間就是 $t_{C_i}$: 
 
 $$
+\delta_{i}=\left\{ \begin{array}{ll}  
+1 \text{ if } t_{E_i} \text{ observed} \\  
+0 \text{ if }  t_{C_i} \text{ observed}\\ \end{array} \right.
 t_{i}=\left\{ \begin{array}{ll}  
 t_{E_i} \text{ if } \delta_i = 1 \\  
 t_{C_i} \text{ if } \delta_i = 0 \\ \end{array} \right.
 $$
 
+```{r Surv01tab00, echo=FALSE, cache=TRUE, eval=FALSE}
+dt <- read.csv("backupfiles/Survtab0101.csv", header = T)
+#names(dt) <- c("Model with", "sigma_u", "sigma_e", "sigma_u", "sigma_e")
+kable(dt, "html",  align = "l", caption = "表 62.1: Data on survival and censoring times for n individuals") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") #%>%
+  #add_header_above(c("Level" = 2))
+```
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>表 62.1: Data on survival and censoring times for n individuals</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Individual </th>
+   <th style="text-align:left;"> Survival or censoring time </th>
+   <th style="text-align:left;"> Indicator of outcome or censoring </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> $1$ </td>
+   <td style="text-align:left;"> $t_1$ </td>
+   <td style="text-align:left;"> $\delta_1$ </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $2$ </td>
+   <td style="text-align:left;"> $t_2$ </td>
+   <td style="text-align:left;"> $\delta_2$ </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $3$ </td>
+   <td style="text-align:left;"> $t_3$ </td>
+   <td style="text-align:left;"> $\delta_3$ </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> . </td>
+   <td style="text-align:left;"> . </td>
+   <td style="text-align:left;"> . </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> . </td>
+   <td style="text-align:left;"> . </td>
+   <td style="text-align:left;"> . </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> . </td>
+   <td style="text-align:left;"> . </td>
+   <td style="text-align:left;"> . </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $n$ </td>
+   <td style="text-align:left;"> $t_n$ </td>
+   <td style="text-align:left;"> $\delta_n$ </td>
+  </tr>
+</tbody>
+</table>
+
+
+對於那些觀察到事件的人，他們各自對似然的貢獻是 $f(t_{E_i})$; 對於那些成爲刪失值的人，他們各自對似然的貢獻是 $S(t_{C_i})$，所以該數據的似然就是: 
+
+$$
+\begin{aligned}
+L & = \prod_{\text{Events}}f(t_{E_i})\prod_{\text{Censorings}}S(t_{C_i}) \\
+  & = \prod_i f(t_i)^{\delta_i} S(t_i)^{1-\delta_i} \\
+  & = \prod_i \{ h(t_i)S(t_i) \}^{\delta_i}S(t_i)^{1-\delta_i} \text{ because } h(t) = \frac{f(t)}{S(t)} \\
+  & = \prod_i h(t_i)^{\delta_i} S(t_i)
+\end{aligned} 
+$$
+
+極大似然法對各個參數的估計就可以用我們在統計推斷中使用的求對數極大似然的方法:
+
+$$
+\begin{aligned}
+\ell & = \sum_i[\delta_i\text{log}f(t_i) + (1-\delta_i)\text{log}S(t_i)] \\
+     & = \sum_i\{\delta_i\text{log}(\lambda e^{-\lambda t_i}) + (1-\delta_i)\text{log}(e^{-\lambda t_i}) \} \\ 
+     & = \sum_i\{ \delta_i\text{log}\lambda - \delta_i\lambda t_i -\lambda t_i + \delta_i\lambda t_i \} \\
+     & = \sum_i[\delta_i \text{log}\lambda - \lambda t_i] \\
+     & = \sum_i\delta_i\text{log}\lambda - \lambda\sum_it_i \\
+\Rightarrow \ell^\prime & = \frac{\sum_i\delta_i}{\lambda} - \sum_i t_i \\
+\text{let } \ell^\prime & =0 \Rightarrow \hat\lambda = \frac{\sum_i\delta_i}{\sum_i t_i}\\ 
+\text{Because }\ell^{\prime\prime} & = -\frac{\sum_i\delta_i}{\lambda^2} < 0 \\ 
+\text{Therefore } \hat\lambda & = \frac{\sum_i\delta_i}{\sum_it_i} \\
+\text{ is the MLE for} & \text{  survival time follows exponential distribution.}
+\end{aligned}
+$$
+
+## Practical Survival 01
+
+### 生存分析的時間尺度
+
+#### 把 PBC 數據讀入 R 中，`d, time, datein, dateout` 是什麼含義？
+
+```{r SurvPrac01-01, cache=TRUE}
+pbcbase <- read_dta("backupfiles/pbcbase.dta")
+# d 是表示是否發神事件的變量
+# d = 0 表示該觀察對象是刪失值
+# d = 1 表示該觀察對象在研究隨訪中死亡
+
+# datein 是該觀察對象進入臨牀試驗的日期
+# dateout 是該觀察對象發生死亡事件/變成刪失值的日期
+
+# time 是從進入臨牀試驗到發生死亡時間或者變成刪失值這段時間的長度，以年爲單位
+
+head(pbcbase[,1:5])
+```
+
+#### 你認爲該研究應該使用哪種時間尺度？
+
+這是一個比較兩種治療方案哪個更能延長患者生命時間的臨牀實驗，正確的時間尺度應該是從進入試驗開始，直至發生事件 (死亡) 或者離開試驗的這段時間 (隨訪時間 follow-up time)。
+
+#### 試驗中，多少患者發生了死亡事件，又有多少患者是刪失值？
+
+```{r SurvPrac01-02, cache=TRUE}
+# 患者中 96 人 (50.3%) 發生了死亡事件; 95 人是刪失值。
+with(pbcbase, tab1(d, graph = FALSE))
+
+# 第一例死亡發生在隨訪開始的 0.025 年，最後一例死亡發生在隨訪開始的 9.26 年;
+# 所有對象中隨訪時間最長達到 11.64 年。
+# 死亡事件發生的病例中，隨訪時間的中位數是 2.85 年
+# 刪失對象的病例中，隨訪時間的中位數是 4.62 年。
+with(pbcbase, summ(time[d==1], graph = FALSE))
+with(pbcbase, summ(time[d==0], graph = FALSE))
+```
+
+
+#### 讀入另一個數據 `whitehall.csv`，使用是否發生冠心病 `chd` 變量作爲事件變量。仔細觀察其時間的格式，`timein, timeout, timebth`，各自是什麼含義？1987 年 1 月 30 日發生了什麼事件？
+
+```{r SurvPrac01-03, cache=TRUE, message=FALSE}
+whitehall <-  read_dta("backupfiles/whitehall.dta")
+# timebth 是每個患者的出生日期
+# timein  是每個患者進入試驗的日期，且注意到許多患者的進入試驗日期是相同的
+# timeout 是隨訪結束的日期，對於 chd = 1 的人，這個日期是其死於冠心病的日期，
+# 其餘的人則是刪失日期，且注意到許多刪失日期都是1987年1月30日，推測這是行政刪失日期。
+whitehall[,c(1,3,12:14)]
+```
+
+
+#### 應該使用哪種時間尺度作爲此研究的時間呢？
+
+很顯然，本實驗可以使用隨訪時間，作爲時間尺度。當然，考慮到不同的人進入實驗時的年齡不同，也可以用隨訪年齡作爲時間尺度。需要注意的是，如果使用年齡作爲時間尺度，不能使用 `timeout - timebth` 也就是隨訪結束減去出生日期作爲時間變量。因爲這樣的做法默認了所有人從出生時，就進入了實驗，這是無論如何也無法做到的。所以我們要用下面的第二個計算時間的代碼 `M1`，來考慮進入實驗時的年齡。因爲，進入實驗時，該觀察對象沒有發生事件，這已經是一個生存偏倚，需要告訴軟件加以考慮。注意比較三種方法計算的時間的最小值最大值的差別。
+
+```{r SurvPrac01-04, cache=TRUE}
+# 用隨訪時間做時間尺度
+M0 <- survfit(Surv(time = (timeout - timein)/365.25, event = chd)~1, data = whitehall)
+summ(M0$time, graph = FALSE)
+# 考慮了左側截尾的時間尺度
+M1 <- survfit(Surv(agein, agein + (timeout - timein)/365.25, event = chd) ~ 1, data = whitehall)
+summ(M1$time, graph = FALSE)
+# 錯誤地認爲所有人都從出生日期開始進入試驗的時間尺度
+M2 <- survfit(Surv((timeout - timebth)/365.25, event = chd) ~ 1, data = whitehall)
+summ(M2$time, graph = FALSE)
+```
+
+### 擬合最簡單的指數分布生存數據
+
+```{r SurvPrac01-05, cache=TRUE, message=FALSE}
+mydata <- read_csv("backupfiles/surv_data_practical1.csv")
+mydata
+exp.model <- survreg(Surv(surv.times) ~ 1, dist = "exponential", data = mydata)
+# 值得注意的是，在 R 裏擬合指數分布的生存數據時，計算獲得的是 -log(lambda)
+summary(exp.model)
+# 危險度比 HR
+exp(-exp.model$coefficients)
+# HR 的 95% 信賴區間
+exp(-exp.model$coefficients - 1.96*summary(exp.model)$table[2])
+exp(-exp.model$coefficients + 1.96*summary(exp.model)$table[2])
+```
+
+### 探索服從 Weibull 分布時危險度方程的曲線
+
+```{r SurvPrac01-06, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='Illustrations of the hazard function under a Weibull distribution with lambda = 0.2, and different shape (kappa)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+wei.haz <- function(x, lambda, kappa) {
+  kappa*lambda*x^(kappa - 1)
+}
+curve(wei.haz(x, 0.2, 0.5), ylim = c(0,0.8), xlab = "Time", ylab = "Hazard function")
+curve(wei.haz(x, 0.2, 1.5), add = TRUE, col = "blue")
+curve(wei.haz(x, 0.2, 2), add = TRUE, col = "red")
+curve(wei.haz(x, 0.2, 5), add = TRUE, col = "green")
+```
 
 
 
