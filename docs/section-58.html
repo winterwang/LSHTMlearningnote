@@ -753,6 +753,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="58.4.2" data-path="section-58.html"><a href="section-58.html#section-58.4.2"><i class="fa fa-check"></i><b>58.4.2</b> 合並每個階層</a></li>
 <li class="chapter" data-level="58.4.3" data-path="section-58.html"><a href="section-58.html#-ecological-fallacy"><i class="fa fa-check"></i><b>58.4.3</b> 生物學悖論 ecological fallacy</a></li>
 <li class="chapter" data-level="58.4.4" data-path="section-58.html"><a href="section-58.html#section-58.4.4"><i class="fa fa-check"></i><b>58.4.4</b> 分解層級數據</a></li>
+<li class="chapter" data-level="58.4.5" data-path="section-58.html"><a href="section-58.html#-fixed-effect-model"><i class="fa fa-check"></i><b>58.4.5</b> 固定效應模型 fixed effect model</a></li>
 </ul></li>
 <li class="chapter" data-level="58.5" data-path="section-58.html"><a href="section-58.html#section-58.5"><i class="fa fa-check"></i><b>58.5</b> 簡單線性迴歸複習</a></li>
 <li class="chapter" data-level="58.6" data-path="section-58.html"><a href="section-58.html#-7"><i class="fa fa-check"></i><b>58.6</b> 練習題</a><ul>
@@ -1392,10 +1393,10 @@ dt<span class="op">$</span>Cluster &lt;-<span class="st"> </span><span class="kw
 <li>當心數據被多次利用</li>
 </ul>
 <p>如果我們關心的變量其實是在第二層級的 (level 2/cluster level)，但是你卻把它當作是第一層級的數據，就會引起<strong>數據很多</strong>的錯覺，因爲同一層的個體他們的層屬變量都是一樣的，你擁有的數據其實並沒有你想的那麼多。</p>
-<p>前文中用過的 GCSE 數據其實是一個很好的例子，</p>
+<p>前文中用過的 GCSE 數據其實是一個很好的例子，下表中歸納了調查的學校類型 (男校，女校或者混合校)，以及按照每個學生個人所屬學校類型的總結，可以看出，當你嘗試使用個人 (elementary level) 水平的數據分析實際上是第二層級數據的特性時，你會被誤導。因爲個人數據告訴你， 34% 的學生在女校學習，然而正確的分析法應該是，學校中有 31% 的學校是女校。</p>
 <table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-<span id="tab:hier01tab02">表 58.2: </span>Aggregated and disaggregated
+Aggregated and disaggregated
 </caption>
 <thead>
 <tr>
@@ -1417,19 +1418,18 @@ Elementary Level
 </tr>
 <tr>
 <th style="text-align:center;">
-X
 </th>
 <th style="text-align:center;">
 N
 </th>
 <th style="text-align:center;">
-X.
+%
 </th>
 <th style="text-align:center;">
-N.1
+N
 </th>
 <th style="text-align:center;">
-X..1
+%
 </th>
 </tr>
 </thead>
@@ -1504,10 +1504,56 @@ Total
 </tr>
 </tbody>
 </table>
+<ul>
+<li>分層數據分析法</li>
+</ul>
+<p>有人會說，既然如此，那麼我們就把數據放在每層當中分析就好了 (stratified analyses)。還是用前文中用過的人造 5 層數據來說明這樣做的弊端。前面用了兩種方法 (total regression, between regression) 來總結這個 5 層的人造數據 <a href="section-58.html#fig:artificialdata02">58.9</a>。最後一種分析此數據的方法是，把 5 層數據分開分別做回歸線如圖 <a href="section-58.html#fig:artificialdata03">58.10</a>。等同於我們的對數據擬合五次下面的回歸方程:</p>
+<p><span class="math display">\[
+\hat Y_{ij} - \bar{Y}_j = \beta(X_{ij} - \bar{X}_j)
+\]</span></p>
+<p>這種模型被叫做<strong>層內回歸 (within regression)</strong>。這 5 個線性回歸的斜率都是 1，是五條不同截距的平行直線。因爲我們自己編造的數據的緣故，現實數據不太可能恰好所有層內回歸的斜率都是完全相同的。這其實也是曾內回歸法的一個默認前提 – 每層數據中解釋變量和結果變量之間的關系是相同的。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ggthemr</span>(<span class="st">&#39;fresh&#39;</span>)
+
+<span class="kw">ggplot</span>(dt, <span class="kw">aes</span>(<span class="dt">x =</span> X, <span class="dt">y =</span> Y)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>(<span class="dt">size =</span><span class="dv">5</span>, <span class="dt">shape=</span><span class="dv">20</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> Cluster), <span class="dt">lty =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="co">#  geom_smooth(method = &quot;lm&quot;, se = FALSE, linetype = 2) +</span>
+<span class="st"> </span><span class="co">#  geom_abline(intercept = 8, slope = -1) + </span>
+<span class="st"> </span><span class="co"># geom_point(aes(x = Xbar, y=Ybar, size = 5)) +</span>
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
+  <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
+  <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;X&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Y&quot;</span>)  <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">17</span>), <span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">8</span>)) <span class="op">+</span><span class="st"> </span><span class="kw">theme</span>(<span class="dt">legend.position=</span><span class="st">&quot;none&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:artificialdata03"></span>
+<img src="bookdown_files/figure-html/artificialdata03-1.png" alt="Artificial data: within cluster regressions" width="80%" />
+<p class="caption">
+圖 58.10: Artificial data: within cluster regressions
+</p>
+</div>
+</div>
+<div id="-fixed-effect-model" class="section level3">
+<h3><span class="header-section-number">58.4.5</span> 固定效應模型 fixed effect model</h3>
+<p>無論數據中的分層結構是否有現實意義 (如果說是五種不同的民族，那就有顯著的現實意義)，在回歸模型中都<strong>有必要考慮這個分層結構對數據的變異的貢獻</strong> (the contribution of the clusters to the data variation)。</p>
+<p>線性回歸章節中我們使用的是五個啞變量來代表不同組別加以分析:</p>
+<p><span class="math display">\[
+Y_{ij} = \alpha_1 I_{i, j = 1} + \alpha_2 I_{i, j=2} + \cdots + \alpha_5 I_{i, j=5} + \beta_1X_{ij} + \varepsilon_{ij}
+\]</span></p>
+<p>其中 <span class="math inline">\(j\)</span> 是所屬層級編號。該模型中的 <span class="math inline">\(\varepsilon_{ij}\)</span> 被認爲服從均值爲零，方差爲 <span class="math inline">\(\sigma_{\varepsilon}^2\)</span> 的正態分布。該模型也可以簡寫爲:</p>
+<p><span class="math display">\[
+Y_{ij} = \alpha_j + \beta_1X_{ij} + \epsilon_{ij}
+\]</span> 一樣一預案 這樣的模型在等級線性回歸模型中被認爲是<strong>固定效應模型 fixed effect model</strong>。它其實是默認給五個層級五個不同的截距，每層內部 <span class="math inline">\(X,Y\)</span> 之間的關系 (斜率) 則被認爲是完全相同的 (namely the within cluster models are the same)。</p>
+<p>本課剛開始的例子中有個數據是來自 6 所不同醫院 72 名患者的收縮期血壓的數據。我們現在來分析這些人中血壓和年齡之間的關系。下面的散點圖重現了六所醫院的72名患者的血壓和年齡。</p>
+<div class="figure" style="text-align: center"><span id="fig:Hier01-7"></span>
+<img src="bookdown_files/figure-html/Hier01-7-1.png" alt="SBP versus age: different symbols identify the six hospitals" width="90%" />
+<p class="caption">
+圖 58.11: SBP versus age: different symbols identify the six hospitals
+</p>
+</div>
 </div>
 </div>
 <div id="section-58.5" class="section level2">
 <h2><span class="header-section-number">58.5</span> 簡單線性迴歸複習</h2>
+<p>滾回線性回歸章節 <a href="lm.html#lm">26</a>。</p>
 </div>
 <div id="-7" class="section level2">
 <h2><span class="header-section-number">58.6</span> 練習題</h2>
@@ -1595,7 +1641,7 @@ Mean_ses_math</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:mathses"></span>
 <img src="bookdown_files/figure-html/mathses-1.png" alt="Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent" width="80%" />
 <p class="caption">
-圖 58.10: Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent
+圖 58.12: Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent
 </p>
 </div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Total_reg &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <span class="op">~</span><span class="st"> </span>ses, <span class="dt">data =</span> hsb5)
@@ -1711,7 +1757,7 @@ Within_schl5 &lt;-<span class="st"> </span><span class="kw">lm</span>(mathach <s
 <div class="figure" style="text-align: center"><span id="fig:mathses-3models"></span>
 <img src="bookdown_files/figure-html/mathses-3models-1.png" alt="High-school-and-beyond data: Predicted values by Total, Between, and Within regression models" width="80%" />
 <p class="caption">
-圖 58.11: High-school-and-beyond data: Predicted values by Total, Between, and Within regression models
+圖 58.13: High-school-and-beyond data: Predicted values by Total, Between, and Within regression models
 </p>
 </div>
 </div>
@@ -1835,7 +1881,7 @@ pefr_long</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:tworecordings"></span>
 <img src="bookdown_files/figure-html/tworecordings-1.png" alt="Two recordings of PEFR taken with the standard Wright meter" width="80%" />
 <p class="caption">
-圖 58.12: Two recordings of PEFR taken with the standard Wright meter
+圖 58.14: Two recordings of PEFR taken with the standard Wright meter
 </p>
 </div>
 </div>

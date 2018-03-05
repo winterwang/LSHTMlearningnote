@@ -414,7 +414,7 @@ ggplot(dt, aes(x = X, y = Y)) + geom_point(size =5, shape=23) +
 
 如果我們關心的變量其實是在第二層級的 (level 2/cluster level)，但是你卻把它當作是第一層級的數據，就會引起**數據很多**的錯覺，因爲同一層的個體他們的層屬變量都是一樣的，你擁有的數據其實並沒有你想的那麼多。
 
-前文中用過的 GCSE 數據其實是一個很好的例子，
+前文中用過的 GCSE 數據其實是一個很好的例子，下表中歸納了調查的學校類型 (男校，女校或者混合校)，以及按照每個學生個人所屬學校類型的總結，可以看出，當你嘗試使用個人 (elementary level) 水平的數據分析實際上是第二層級數據的特性時，你會被誤導。因爲個人數據告訴你， 34% 的學生在女校學習，然而正確的分析法應該是，學校中有 31% 的學校是女校。
 
 
 ```{r hier01tab02, echo=FALSE, cache=TRUE, eval=FALSE}
@@ -475,8 +475,86 @@ kable(dt, "html",  align = "c", caption = "Aggregated and disaggregated") %>%
 
 
 
+- 分層數據分析法
+
+有人會說，既然如此，那麼我們就把數據放在每層當中分析就好了 (stratified analyses)。還是用前文中用過的人造 5 層數據來說明這樣做的弊端。前面用了兩種方法 (total regression, between regression) 來總結這個 5 層的人造數據 \@ref(fig:artificialdata02)。最後一種分析此數據的方法是，把 5 層數據分開分別做回歸線如圖 \@ref(fig:artificialdata03)。等同於我們的對數據擬合五次下面的回歸方程: 
+
+$$
+\hat Y_{ij} - \bar{Y}_j = \beta(X_{ij} - \bar{X}_j)
+$$
+
+這種模型被叫做**層內回歸 (within regression)**。這 5 個線性回歸的斜率都是 1，是五條不同截距的平行直線。因爲我們自己編造的數據的緣故，現實數據不太可能恰好所有層內回歸的斜率都是完全相同的。這其實也是曾內回歸法的一個默認前提 -- 每層數據中解釋變量和結果變量之間的關系是相同的。
+
+
+
+
+```{r artificialdata03, cache=TRUE, echo=FALSE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: within cluster regressions', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y)) + geom_point(size =5, shape=20) +
+  geom_line(aes(group = Cluster), lty = 2) + 
+  #  geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+ #  geom_abline(intercept = 8, slope = -1) + 
+ # geom_point(aes(x = Xbar, y=Ybar, size = 5)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + theme(legend.position="none")
+```
+
+
+
+### 固定效應模型 fixed effect model
+
+無論數據中的分層結構是否有現實意義 (如果說是五種不同的民族，那就有顯著的現實意義)，在回歸模型中都**有必要考慮這個分層結構對數據的變異的貢獻** (the contribution of the clusters to the data variation)。
+
+線性回歸章節中我們使用的是五個啞變量來代表不同組別加以分析: 
+
+$$
+Y_{ij} = \alpha_1 I_{i, j = 1} + \alpha_2 I_{i, j=2} + \cdots + \alpha_5 I_{i, j=5} + \beta_1X_{ij} + \varepsilon_{ij}
+$$
+
+其中 $j$ 是所屬層級編號。該模型中的 $\varepsilon_{ij}$ 被認爲服從均值爲零，方差爲 $\sigma_{\varepsilon}^2$ 的正態分布。該模型也可以簡寫爲:
+
+$$
+Y_{ij} = \alpha_j + \beta_1X_{ij} + \epsilon_{ij}
+$$
+一樣一預案
+這樣的模型在等級線性回歸模型中被認爲是**固定效應模型 fixed effect model**。它其實是默認給五個層級五個不同的截距，每層內部 $X,Y$ 之間的關系 (斜率) 則被認爲是完全相同的 (namely the within cluster models are the same)。
+
+本課剛開始的例子中有個數據是來自 6 所不同醫院 72 名患者的收縮期血壓的數據。我們現在來分析這些人中血壓和年齡之間的關系。下面的散點圖重現了六所醫院的72名患者的血壓和年齡。
+
+
+
+```{r Hier01-7, echo=FALSE, fig.height=6, fig.width=7, fig.cap='SBP versus age: different symbols identify the six hospitals', fig.align='center', out.width='90%', cache=TRUE}
+Bp <- read_dta("backupfiles/bp.dta")
+
+Bp$hosp <- as.factor(Bp$hosp)
+
+ggthemr('fresh')
+
+ggplot(Bp, aes(x = age, y = bp, shape = hosp)) + geom_point(size =5) + 
+    #geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+  #geom_abline(intercept = 8, slope = -1) + 
+  #geom_point(aes(x = Xbar, y=Ybar, size = 5)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age", y = "Systolic blood pressure (mmHg)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + theme(legend.position="bottom")
+```
+
+下面在 R 裏擬合這個固定效應模型:
+
+```{r Hier01-8, }
+
+```
+
 
 ## 簡單線性迴歸複習
+
+滾回線性回歸章節 \@ref(lm)。
 
 ## 練習題
 
