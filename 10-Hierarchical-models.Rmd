@@ -947,7 +947,7 @@ $$
 對於平衡數據 (balanced data)，這個矩估計量又被叫做**限制性極大似然 (Restricted Maximum Likelihood, REML)**。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先"去除掉"固定效應部分，所以每次用於估計參數的數據其實對數據的線性轉換 $Y_{ij} - \mu = u_j + \varepsilon_{ij}$，它使用的數據是這個等式右半部分的轉換後數據。在 REML 過程中，先估計層內方差 $\sigma_u^2$ 再對固定效應部分的總體均值估計，所以是個兩步走的過程。另外除了這裏討論的 ML, REML這兩種對層內方差進行參數估計的方法之外，在計量經濟學 (econometrics) 中常用的是 (本課不深入探討) **廣義最小二乘法 (Generalized Least Squares, GLS)**。GLS 使用的是一種加權的最小二乘法 (OLS)，該加權法根據層與隨機誤差的方差成分 (variance components) 不同而給不同的層以不同的截距權重。當數據本身是平衡數據時，GLS給出的估計結果等同於 REML法。當數據不是平衡數據的時候，ML/REML 其實背後使用的原理也是 GLS。
 
 
-## 如何在 R 或 STATA 中進行隨機截距模型的擬合
+## 如何在 R 中進行隨機截距模型的擬合
 
 在 R 或 STATA 中擬合隨機截距模型，需要數據爲“長 (long)” 數據，下面的代碼可以在 R 裏面把 “寬 (wide)” 的數據調整成爲 **長** 數據:
 
@@ -980,11 +980,75 @@ summary(M1)
 不知道爲什麼在 R 裏有這兩種完全不同的方式來擬合混合效應模型。還好他們的結果基本完全一致。在這個極爲簡單的例子裏，我們可以利用模型擬合的結果中 `Random effects` 的部分來計算**層內相關系數 (intra-class correlation)**: 
 
 $$
-\hat\lambda = \frac{\hat\sigma_u^2}{(\hat\sigma_u^2 + \hat\sigma_\varepsilon^2)} = 
+\hat\lambda = \frac{\hat\sigma_u^2}{(\hat\sigma_u^2 + \hat\sigma_\varepsilon^2)} = \frac{110.40^2}{110.40^2 + 19.91^2} = 0.97
 $$
 
+這是對 Mini Wright meter 測量方法可靠性的一個評價指標。其中 $\sigma_u^2$ 是患者最大呼吸速率 (PEFR) 測量值的方差，$\sigma_\varepsilon^2$ 是測量的隨機誤差，所以這裏的測量方法的可靠度是 97%，是可信度十分高的測量準確度。
 
 ## 隨機截距模型中的統計推斷
+
+### 固定效應部分的推斷
+
+當數據是平衡數據時，固定效應的 $\mu$ 的 $\text{MLE}$ 是總體的均值 (overall mean)。它的估計標準誤是: 
+
+$$
+\hat{\text{SE}}(\hat\mu) = \sqrt{\frac{n\hat\sigma_u^2 + \hat\sigma_\varepsilon^2}{Jn}}
+$$
+
+記得線性回歸中(固定效應模型中)，$\mu$ 的 $\text{MLE}$ 也還是總體的均值 (overall mean)。它的估計標準誤卻是: 
+
+$$
+\hat{\text{SE}}(\hat\mu^F) = \sqrt{\frac{\hat\sigma_\varepsilon^2}{Jn}}
+$$
+
+所以，僅有固定效應模型時的總體均值的標準誤總是要比混合效應模型下估計的總體均值標準誤要小
+
+$$
+\hat{\text{SE}}(\hat\mu^F) < \hat{\text{SE}}(\hat\mu)
+$$
+
+如果數據不是平衡數據，那麼隨機截距模型中 $\mu$ 的 $\text{MLE}$ 是每層均值的加權均值 (a weighted mean of the cluster specific means):
+
+$$
+\begin{aligned}
+\hat\mu & = \frac{\sum_jw_j\bar{Y}_{\cdot j}}{\sum_j w_j} \\
+\text{Where } w_j & = \frac{1}{\sigma_u^2 + \sigma_\varepsilon^2/n_j}
+\end{aligned}
+$$
+
+從加權的方式來看，如果樣本量少的層級數據本身的誤差方差 $\sigma_\varepsilon^2$ 也較小，那麼層樣本量較小的層也會和層樣本量較大的層獲得相似的均值權重。
+
+零假設是 $\mu = 0$ 的檢驗，就計算 $z$ 檢驗統計量就可以 (或者 $z^2$ 的 Wald 檢驗): 
+
+$$
+z = \frac{\hat\mu}{\hat{\text{SE}}(\hat\mu)}
+$$
+總體均值的 95% 信賴區間的計算式就是: 
+
+$$
+\hat\mu \pm z_{0.975}\hat{\text{SE}}(\hat\mu)
+$$
+
+### 隨機效應部分的推斷
+
+總體均值的假設檢驗搞定了之後，我們肯定還想對隨機截距模型擬合的隨機效應方差作出是否有意義的假設檢驗。也就是我們希望能檢驗零假設 $\sigma_u^2 = 0$，和替代假設 $\sigma_u^2 > 0$。一般情況下大家肯定會想到對含有隨機效應的模型和只有固定效應的模型使用 LRT (似然比檢驗)，然後把檢驗統計量拿去和自由度爲 1 的卡方分布做比較。但是其實方差本身永遠都是大於等於零的，所以傳統的 LRT 在這個零假設時並不適用。
+
+在零假設條件下 $\sigma_u^2 = 0$，也就是說層內相關在一半的數據中是正相關，另一半數據中是正好相反的負相關，以此相互抵消，方差爲零。所以其實這裏的 LRT 檢驗統計量應該服從的不是自由度爲 1 的卡方分布那麼簡單，而是一種混合卡方分布 (自由度 1 和 自由度爲 0 的混合卡方分布 $\chi_{0,1}^2$)。所以應該把模型比較之後計算獲得的 $p$ 值除以2，以獲得準確的對 $\sigma_u^2 = 0$ 檢驗的 $p$ 值。
+
+```{r Hier02-3, cache=TRUE, echo=TRUE,  message=FALSE, warning=FALSE}
+M0 <- lme(fixed = wm ~ 1, random  = ~ 1 | id, data = pefr_long, method = "REML")
+M0_fixed<- lm(wm ~ 1, data = pefr_long)
+anova(M0, M0_fixed)
+```
+
+回到本例中的混合效應模型和固定效應模型的比較來看，LRT本身的 P 值已經 $<0.0001$，所以除不除以二對推斷結果都沒有太大影響。也就是本例中的隨即截距模型是比固定效應的簡單線性回歸模型更加適合該數據的模型。
+
+其他注意點: 
+
+- 在坑爹的 STATA 裏面混合效應模型居然還會輸出隨機效應方差的 "標準誤"，該數字請你無視之。
+- 當樣本擁有足夠多的樣本量 (其實是第二階層的層數)，極大似然法 (ML) 和限制性極大似然法 (REML) 給出的結果會相當接近。
+- 當你比較兩個不是互爲嵌套 (nested) 的模型時，可以使用 AIC/BIC 指標。
+
 
 ## 練習題
 
