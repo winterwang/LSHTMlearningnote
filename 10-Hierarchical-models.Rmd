@@ -944,13 +944,45 @@ $$
 \end{aligned}
 $$
 
-對於平衡數據 (balanced data)，這個矩估計量又被叫做**限制性極大似然 (Restricted Maximum Likelihood, REML)**。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先"去除掉"固定效應部分，所以每次用於估計參數的數據其實對數據的線性轉換 $Y_{ij} - \mu = u_j + \varepsilon_{ij}$，它使用的數據是這個等式右半部分的轉換後數據。
-
-
-是**限制性極大似然法 (Restricted Maximum Likelihood, REML)**。
+對於平衡數據 (balanced data)，這個矩估計量又被叫做**限制性極大似然 (Restricted Maximum Likelihood, REML)**。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先"去除掉"固定效應部分，所以每次用於估計參數的數據其實對數據的線性轉換 $Y_{ij} - \mu = u_j + \varepsilon_{ij}$，它使用的數據是這個等式右半部分的轉換後數據。在 REML 過程中，先估計層內方差 $\sigma_u^2$ 再對固定效應部分的總體均值估計，所以是個兩步走的過程。另外除了這裏討論的 ML, REML這兩種對層內方差進行參數估計的方法之外，在計量經濟學 (econometrics) 中常用的是 (本課不深入探討) **廣義最小二乘法 (Generalized Least Squares, GLS)**。GLS 使用的是一種加權的最小二乘法 (OLS)，該加權法根據層與隨機誤差的方差成分 (variance components) 不同而給不同的層以不同的截距權重。當數據本身是平衡數據時，GLS給出的估計結果等同於 REML法。當數據不是平衡數據的時候，ML/REML 其實背後使用的原理也是 GLS。
 
 
 ## 如何在 R 或 STATA 中進行隨機截距模型的擬合
+
+在 R 或 STATA 中擬合隨機截距模型，需要數據爲“長 (long)” 數據，下面的代碼可以在 R 裏面把 “寬 (wide)” 的數據調整成爲 **長** 數據:
+
+```{r Hier02-1, cache=TRUE, echo=TRUE,  message=FALSE, warning=FALSE}
+
+pefr <- read_dta("backupfiles/pefr.dta")
+# the data are in wide format
+head(pefr)
+
+
+# transform data into long format
+pefr_long <- pefr %>%
+  gather(key, value, -id) %>%
+  separate(key, into = c("measurement", "occasion"), sep = 2) %>%
+  arrange(id, occasion) %>%
+  spread(measurement, value)
+pefr_long
+```
+
+在 R 裏面，有兩個包 (`lme4::lmer` 或 `nlme::lme`)  的各自兩種代碼以供選用:
+
+```{r Hier02-2, cache=TRUE, echo=TRUE,  message=FALSE, warning=FALSE}
+M0 <- lme(fixed = wm ~ 1, random  = ~ 1 | id, data = pefr_long, method = "REML")
+summary(M0)
+
+M1 <- lmer(wm ~ (1|id), data = pefr_long, REML = TRUE)
+summary(M1)
+```
+
+不知道爲什麼在 R 裏有這兩種完全不同的方式來擬合混合效應模型。還好他們的結果基本完全一致。在這個極爲簡單的例子裏，我們可以利用模型擬合的結果中 `Random effects` 的部分來計算**層內相關系數 (intra-class correlation)**: 
+
+$$
+\hat\lambda = \frac{\hat\sigma_u^2}{(\hat\sigma_u^2 + \hat\sigma_\varepsilon^2)} = 
+$$
+
 
 ## 隨機截距模型中的統計推斷
 

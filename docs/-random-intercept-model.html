@@ -977,11 +977,89 @@ Y_{ij} = \mu + \gamma_j + \varepsilon_{ij}
                        &amp; = \frac{\text{MMS} - \text{MSE}}{n}
 \end{aligned}
 \]</span></p>
-<p>對於平衡數據 (balanced data)，這個矩估計量又被叫做<strong>限制性極大似然 (Restricted Maximum Likelihood, REML)</strong>。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先“去除掉”固定效應部分，所以每次用於估計參數的數據其實對數據的線性轉換 <span class="math inline">\(Y_{ij} - \mu = u_j + \varepsilon_{ij}\)</span>，它使用的數據是這個等式右半部分的轉換後數據。</p>
-<p>是<strong>限制性極大似然法 (Restricted Maximum Likelihood, REML)</strong>。</p>
+<p>對於平衡數據 (balanced data)，這個矩估計量又被叫做<strong>限制性極大似然 (Restricted Maximum Likelihood, REML)</strong>。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先“去除掉”固定效應部分，所以每次用於估計參數的數據其實對數據的線性轉換 <span class="math inline">\(Y_{ij} - \mu = u_j + \varepsilon_{ij}\)</span>，它使用的數據是這個等式右半部分的轉換後數據。在 REML 過程中，先估計層內方差 <span class="math inline">\(\sigma_u^2\)</span> 再對固定效應部分的總體均值估計，所以是個兩步走的過程。另外除了這裏討論的 ML, REML這兩種對層內方差進行參數估計的方法之外，在計量經濟學 (econometrics) 中常用的是 (本課不深入探討) <strong>廣義最小二乘法 (Generalized Least Squares, GLS)</strong>。GLS 使用的是一種加權的最小二乘法 (OLS)，該加權法根據層與隨機誤差的方差成分 (variance components) 不同而給不同的層以不同的截距權重。當數據本身是平衡數據時，GLS給出的估計結果等同於 REML法。當數據不是平衡數據的時候，ML/REML 其實背後使用的原理也是 GLS。</p>
 </div>
 <div id="-r--stata-" class="section level2">
 <h2><span class="header-section-number">59.3</span> 如何在 R 或 STATA 中進行隨機截距模型的擬合</h2>
+<p>在 R 或 STATA 中擬合隨機截距模型，需要數據爲“長 (long)” 數據，下面的代碼可以在 R 裏面把 “寬 (wide)” 的數據調整成爲 <strong>長</strong> 數據:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pefr &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/pefr.dta&quot;</span>)
+<span class="co"># the data are in wide format</span>
+<span class="kw">head</span>(pefr)</code></pre></div>
+<pre><code>## # A tibble: 6 x 5
+##      id   wp1   wp2   wm1   wm2
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1    1.  494.  490.  512.  525.
+## 2    2.  395.  397.  430.  415.
+## 3    3.  516.  512.  520.  508.
+## 4    4.  434.  401.  428.  444.
+## 5    5.  476.  470.  500.  500.
+## 6    6.  557.  611.  600.  625.</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># transform data into long format</span>
+pefr_long &lt;-<span class="st"> </span>pefr <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>id) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">separate</span>(key, <span class="dt">into =</span> <span class="kw">c</span>(<span class="st">&quot;measurement&quot;</span>, <span class="st">&quot;occasion&quot;</span>), <span class="dt">sep =</span> <span class="dv">2</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">arrange</span>(id, occasion) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">spread</span>(measurement, value)
+pefr_long</code></pre></div>
+<pre><code>## # A tibble: 34 x 4
+##       id occasion    wm    wp
+##    &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt; &lt;dbl&gt;
+##  1    1. 1         512.  494.
+##  2    1. 2         525.  490.
+##  3    2. 1         430.  395.
+##  4    2. 2         415.  397.
+##  5    3. 1         520.  516.
+##  6    3. 2         508.  512.
+##  7    4. 1         428.  434.
+##  8    4. 2         444.  401.
+##  9    5. 1         500.  476.
+## 10    5. 2         500.  470.
+## # ... with 24 more rows</code></pre>
+<p>在 R 裏面，有兩個包 (<code>lme4::lmer</code> 或 <code>nlme::lme</code>) 的各自兩種代碼以供選用:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">M0 &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> wm <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">random  =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> pefr_long, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>)
+<span class="kw">summary</span>(M0)</code></pre></div>
+<pre><code>## Linear mixed-effects model fit by REML
+##  Data: pefr_long 
+##         AIC       BIC     logLik
+##   366.75843 371.24795 -180.37921
+## 
+## Random effects:
+##  Formula: ~1 | id
+##         (Intercept)  Residual
+## StdDev:   110.39701 19.910835
+## 
+## Fixed effects: wm ~ 1 
+##                 Value Std.Error DF   t-value p-value
+## (Intercept) 453.91176 26.992068 17 16.816487       0
+## 
+## Standardized Within-Group Residuals:
+##          Min           Q1          Med           Q3          Max 
+## -2.444435579 -0.335076940  0.037044891  0.350983659  2.377059741 
+## 
+## Number of Observations: 34
+## Number of Groups: 17</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">M1 &lt;-<span class="st"> </span><span class="kw">lmer</span>(wm <span class="op">~</span><span class="st"> </span>(<span class="dv">1</span><span class="op">|</span>id), <span class="dt">data =</span> pefr_long, <span class="dt">REML =</span> <span class="ot">TRUE</span>)
+<span class="kw">summary</span>(M1)</code></pre></div>
+<pre><code>## Linear mixed model fit by REML [&#39;lmerMod&#39;]
+## Formula: wm ~ (1 | id)
+##    Data: pefr_long
+## 
+## REML criterion at convergence: 360.8
+## 
+## Scaled residuals: 
+##       Min        1Q    Median        3Q       Max 
+## -2.444436 -0.335077  0.037045  0.350984  2.377060 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  id       (Intercept) 12187.51 110.397 
+##  Residual               396.44  19.911 
+## Number of obs: 34, groups:  id, 17
+## 
+## Fixed effects:
+##             Estimate Std. Error t value
+## (Intercept)  453.912     26.992  16.817</code></pre>
+<p>不知道爲什麼在 R 裏有這兩種完全不同的方式來擬合混合效應模型。還好他們的結果基本完全一致。</p>
 </div>
 <div id="section-59.4" class="section level2">
 <h2><span class="header-section-number">59.4</span> 隨機截距模型中的統計推斷</h2>
