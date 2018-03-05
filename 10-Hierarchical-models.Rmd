@@ -402,7 +402,7 @@ ggplot(dt, aes(x = X, y = Y)) + geom_point(size =5, shape=23) +
 
 ### 生物學悖論 ecological fallacy
 
-生物學悖論常見於我們認爲某分層數據中層級變量之間的關系，同樣適用與層級中的個體之間: 例如比較 A 國 和 B 國之間心血管疾病的發病率，發現 A 國國民食鹽平均攝入量高於 B 國，很多人可能就會下結論說實驗攝入量高的個體，心血管疾病發病的危險度較高。然而，這樣的推論很多時候是錯誤的。
+生物學悖論常見於我們認爲某分層數據中層級變量之間的關系，同樣適用與層級中的個體之間: 例如比較 A 國 和 B 國之間心血管疾病的發病率，發現 A 國國民食鹽平均攝入量高於 B 國，很多人可能就會下結論說食鹽攝入量高的個體，心血管疾病發病的危險度較高。然而，這樣的推論很多時候是錯誤的。
 
 曾經在 [@10.2307/2087176] 論文中舉過的著名例子: 該研究調查美國每個州的移民比例，和該州相應的識字率之間的關系。研究者發現，移民比例較高的州，其識字率也較高 (相關系數 0.53)。由此就有人下結論說移民越多，那個州的教育水平會比較高。但是實際情況是，把每個個體的受教育水平和該個體本身是不是移民做了相關系數分析之後發現，這個關系其實是負相關 (-0.11)。所以說在州的水平作出的統計學推斷-移民多的州受教育水平高-是不正確的。之所以在州水平發現移民比例和受教育水平之間的正關系，是因爲移民傾向於居住在教育水平本來就比較高的本土出生美國人的州。
 
@@ -868,17 +868,87 @@ summ(Reg1$coefficients, graph = FALSE)
 有時，我們對每個分層各自的截距大小並不那麼感興趣，且如果只有固定效應的話，其實我們從某種程度上忽略掉了數據層與層之間變異的方差 (between cluster variation)。於是，在模型中考慮這些問題的解決方案就是 -- 我們讓各層的截距呈現隨機效應 (treat the variation in cluster intercepts not as fixed)，**把這些截距視爲來自與某種分布的隨機呈現 (randomly draws from some distribution)**。於是原先的只有固定效應部分的模型，就增加了隨機截距部分: 
 
 $$
-Y_{ij} = \mu + u_j + \varepsilon_{ij} \\
-\text{where } u_j \stackrel{N.I,D}{\sim} N(0, \sigma_u^2) \\
-              \varepsilon_{ij} \stackrel{N.I,D}{\sim} N(0, \sigma_\varepsilon^2) \\
-        u_j \text{ are independent from } \varepsilon_{ij}
+\begin{aligned}
+Y_{ij} & = \mu + u_j + \varepsilon_{ij} \\
+\text{where } u_j  & \stackrel{N.I.D}{\sim} N(0, \sigma_u^2) \\
+              \varepsilon_{ij} & \stackrel{N.I.D}{\sim} N(0, \sigma_\varepsilon^2) \\
+        u_j  & \text{ are independent from } \varepsilon_{ij} \\
+\end{aligned}
+(\#eq:hier2-1)
 $$
 
-這個混合效應模型中， $u_j$ 是一個服從均值 0, 方差 (the population between cluster variance) 爲 $\sigma_u^2$ 的正態分布的隨機變量; $\varepsilon_{ij}$ 是隨機誤差，它也被認爲服從均值爲 0, 方差爲 $\sigma_\varepsilon^2$ 的正太分布，且這兩個隨機效應部分之間也是**相互獨立的**。
+這個混合效應模型中，
 
+- $\mu$ 是總體均值; 
+- $u_j$ 是一個服從均值 0, 方差 (the population between cluster variance) 爲 $\sigma_u^2$ 的正態分布的隨機變量; 
+- $\varepsilon_{ij}$ 是隨機誤差，它也被認爲服從均值爲 0, 方差爲 $\sigma_\varepsilon^2$ 的正太分布，且這兩個隨機效應部分之間也是**相互獨立的**。
+- 從該模型估算的結果變量 $Y_{ij}$ 的方差是 $\sigma_u^2 + \sigma_\varepsilon^2$。
+- 隨機截距模型又被叫做是 **方差成分模型 (variance-component model)**，或者是**單向隨機效應方差模型 (one-way random effects ANOVA model)**。
 
+這個模型和僅有固定效應的模型，有顯著的不同: 
+
+$$
+Y_{ij} = \mu + \gamma_j + \varepsilon_{ij}
+$$
+
+固定效應模型裏，
+
+- $\mu$ 也是總體均值; 
+- $\sum_{j=1}^J \gamma_j = 0$ 是**將各組不同截距之和強制爲零**的過程;
+
+所以隨機截距模型打破了這個限制，使得隨機的截距 $\mu_j$ 成爲一個服從均值爲 0，方差爲 $\sigma_u^2$ 的 **隨機變量**。
+
+隨機效應部分 $u_j$ 和隨機誤差 $\varepsilon_{ij}$ 之間相互獨立的前提，意味着兩個裏屬於不同層級的觀察之間是相互獨立的，但是反過來，同屬於一個層級的個體之間就變成了有相關性的了 (within cluster correlation): 
+
+$$
+\begin{aligned}
+\because Y_{1j} & = \mu + u_j + \varepsilon_{1j} \\
+         Y_{2j} & = \mu + u_j + \varepsilon_{2j}  \\
+\therefore \text{Cov}(Y_{1j}, Y_{2j}) & =  \text{Cov}(u_j, u_j) + \text{Cov}(u_j, \varepsilon_{2j}) + \text{Cov}(\varepsilon_{1j}, u_j) + \text{Cov}(\varepsilon_{1j}, \varepsilon_{2j}) \\
+                                      & = \text{Cov}(u_j, u_j) = V(u_j, u_j)\\
+                                      & = \sigma_u^2
+\end{aligned}
+$$
+
+由於 $\text{Var}(Y_{1j}) = \text{Var}(Y_{2j}) = \sigma_u^2 + \sigma_\varepsilon^2$，所以，同屬一層的兩個個體之間的**層內相關系數 (intra-class correlation)**: 
+
+$$
+\lambda = \frac{\text{Cov}(Y_{1j}, Y_{2j})}{\text{SD}(Y_{1j})\text{SD}(Y_{2j})} = \frac{\sigma_u^2}{\sigma_\varepsilon^2 + \sigma_u^2}
+$$
+
+從層內相關系數的公式也可看出，該相關系數可以同時被理解爲結果變量 $Y_{ij}$ 的方差中歸咎與層(cluster)結構的部分的百分比。
+
+This is the within-cluster or intra-class correlation, that we will denote $\lambda$. Note that it is also the proportion of total variance that is accounted for by the cluster.
 
 ## 隨機截距模型的參數估計
+
+如此，我們就知道在隨機截距模型裏，有三個需要被估計的參數 $\mu, \sigma_u^2, \sigma^2_\varepsilon$。我們可以利用熟悉的極大似然估計法估計這些參數 (Maximum Likelihood, ML)。當且進當嵌套式結構數據是**平衡數據 (balanced)**時 (即，每層中的個體數量相同)，這三個參數的 $\text{MLE}$ 分別是: 
+
+$$
+\begin{aligned}
+\hat\mu & = \bar{Y} \\
+\hat\sigma_\varepsilon^2 & = \text{Mean square error, MSE} \\ 
+\hat\sigma_u^2 & = \frac{\text{Model Sum of Squares, MSS}}{Jn} - \frac{\hat\sigma^2_\varepsilon}{n}
+\end{aligned}
+(\#eq:hier02-2)
+$$
+
+只要模型指定正確無誤，前兩個極大似然估計是他們各自的無偏估計。但第三個，也就是層內方差的估計量確實際上是低估了的 (downward biased)。這裏常用的另一種對層內方差參數的估計法被叫做**矩估計量 (moment estimator, or ANOVA estimator)**: 
+
+$$
+\begin{aligned}
+\widetilde{\sigma}_u^2 & = \frac{\text{MSS}}{(J-1)n}- \frac{\hat\sigma_\varepsilon^2}{n} \\ 
+                       & = \frac{\text{MSS} - \text{MSE}(J-1)}{(J-1)n} \\
+                       & = \frac{\text{MMS}(J-1) - \text{MSE}(J-1)}{(J-1)n} \\
+                       & = \frac{\text{MMS} - \text{MSE}}{n}
+\end{aligned}
+$$
+
+對於平衡數據 (balanced data)，這個矩估計量又被叫做**限制性極大似然 (Restricted Maximum Likelihood, REML)**。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先"去除掉"固定效應部分，所以每次用於估計參數的數據其實對數據的線性轉換 $Y_{ij} - \mu = u_j + \varepsilon_{ij}$，它使用的數據是這個等式右半部分的轉換後數據。
+
+
+是**限制性極大似然法 (Restricted Maximum Likelihood, REML)**。
+
 
 ## 如何在 R 或 STATA 中進行隨機截距模型的擬合
 
