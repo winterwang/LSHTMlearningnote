@@ -406,6 +406,76 @@ ggplot(dt, aes(x = X, y = Y)) + geom_point(size =5, shape=23) +
 
 曾經在 [@10.2307/2087176] 論文中舉過的著名例子: 該研究調查美國每個州的移民比例，和該州相應的識字率之間的關系。研究者發現，移民比例較高的州，其識字率也較高 (相關系數 0.53)。由此就有人下結論說移民越多，那個州的教育水平會比較高。但是實際情況是，把每個個體的受教育水平和該個體本身是不是移民做了相關系數分析之後發現，這個關系其實是負相關 (-0.11)。所以說在州的水平作出的統計學推斷-移民多的州受教育水平高-是不正確的。之所以在州水平發現移民比例和受教育水平之間的正關系，是因爲移民傾向於居住在教育水平本來就比較高的本土出生美國人的州。
 
+### 分解層級數據
+
+如果是分析最初層級數據 (level 1) 的話，我們還需要考慮下列一些問題: 
+
+- 當心數據被多次利用 
+
+如果我們關心的變量其實是在第二層級的 (level 2/cluster level)，但是你卻把它當作是第一層級的數據，就會引起**數據很多**的錯覺，因爲同一層的個體他們的層屬變量都是一樣的，你擁有的數據其實並沒有你想的那麼多。
+
+前文中用過的 GCSE 數據其實是一個很好的例子，
+
+
+```{r hier01tab02, echo=FALSE, cache=TRUE, eval=FALSE}
+dt <- read.csv("backupfiles/hier01tab01.csv", header = T)
+#names(dt) <- c("Model with", "sigma_u", "sigma_e", "sigma_u", "sigma_e")
+kable(dt, "html",  align = "c", caption = "Aggregated and disaggregated") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") %>%
+  add_header_above(c("School type" = 1,"Cluster Level" = 2, "Elementary Level" = 2))
+```
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>Aggregated and disaggregated</caption>
+ <thead>
+<tr>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="1"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">School type</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Cluster Level</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Elementary Level</div></th>
+</tr>
+  <tr>
+   <th style="text-align:center;">  </th>
+   <th style="text-align:center;"> N </th>
+   <th style="text-align:center;"> % </th>
+   <th style="text-align:center;"> N </th>
+   <th style="text-align:center;"> % </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> mixed </td>
+   <td style="text-align:center;"> 35 </td>
+   <td style="text-align:center;"> 54 </td>
+   <td style="text-align:center;"> 2169 </td>
+   <td style="text-align:center;"> 53 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> boys only </td>
+   <td style="text-align:center;"> 10 </td>
+   <td style="text-align:center;"> 15 </td>
+   <td style="text-align:center;"> 513 </td>
+   <td style="text-align:center;"> 13 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> girls only </td>
+   <td style="text-align:center;"> 20 </td>
+   <td style="text-align:center;"> 31 </td>
+   <td style="text-align:center;"> 1377 </td>
+   <td style="text-align:center;"> 34 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> 65 </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 4059 </td>
+   <td style="text-align:center;"> 100 </td>
+  </tr>
+</tbody>
+</table>
+
+
+
+
 ## 簡單線性迴歸複習
 
 ## 練習題
@@ -467,7 +537,7 @@ Mean_ses_math <- ddply(hsb5,~schoolid,summarise,mean_ses=mean(ses),mean_math=mea
 Mean_ses_math
 ```
 
-### 先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 (Total regression model)。把該總體模型的預測值提取並存儲在數據庫中。
+### 先無視掉學校這一分層變量，把所有學生看作是相互獨立的，擬合總體的 SES 和數學成績的線性迴歸 **(Total regression model)**。把該總體模型的預測值提取並存儲在數據庫中。
 
 ```{r mathses, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=8, fig.cap='Scatter plot of SES and math achievements among all pupils from first 5 schools, assuming that they are all independent', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 ## plot the scatter of mathach and ses among these 5 schools
@@ -492,7 +562,7 @@ summary(Total_reg)
 hsb5$Pred_T <- Total_reg$fitted.values # save the fitted values to the dataset
 ```
 
-### 用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 (between regression model)。
+### 用各個學校 SES 和數學成績的均值擬合一個學校間的線性迴歸模型 **(between regression model)**。
 
 ```{r hierex1-4, cache=TRUE}
 Btw_reg <- lm(mean_math ~ mean_ses, data = Mean_ses_math)
