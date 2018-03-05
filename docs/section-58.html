@@ -1512,18 +1512,6 @@ Total
 \hat Y_{ij} - \bar{Y}_j = \beta(X_{ij} - \bar{X}_j)
 \]</span></p>
 <p>這種模型被叫做<strong>層內回歸 (within regression)</strong>。這 5 個線性回歸的斜率都是 1，是五條不同截距的平行直線。因爲我們自己編造的數據的緣故，現實數據不太可能恰好所有層內回歸的斜率都是完全相同的。這其實也是曾內回歸法的一個默認前提 – 每層數據中解釋變量和結果變量之間的關系是相同的。</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ggthemr</span>(<span class="st">&#39;fresh&#39;</span>)
-
-<span class="kw">ggplot</span>(dt, <span class="kw">aes</span>(<span class="dt">x =</span> X, <span class="dt">y =</span> Y)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>(<span class="dt">size =</span><span class="dv">5</span>, <span class="dt">shape=</span><span class="dv">20</span>) <span class="op">+</span>
-<span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> Cluster), <span class="dt">lty =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span>
-<span class="st">  </span><span class="co">#  geom_smooth(method = &quot;lm&quot;, se = FALSE, linetype = 2) +</span>
-<span class="st"> </span><span class="co">#  geom_abline(intercept = 8, slope = -1) + </span>
-<span class="st"> </span><span class="co"># geom_point(aes(x = Xbar, y=Ybar, size = 5)) +</span>
-<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
-  <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),
-  <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;X&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Y&quot;</span>)  <span class="op">+</span>
-<span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">17</span>), <span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">8</span>)) <span class="op">+</span><span class="st"> </span><span class="kw">theme</span>(<span class="dt">legend.position=</span><span class="st">&quot;none&quot;</span>)</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:artificialdata03"></span>
 <img src="bookdown_files/figure-html/artificialdata03-1.png" alt="Artificial data: within cluster regressions" width="80%" />
 <p class="caption">
@@ -1549,6 +1537,54 @@ Y_{ij} = \alpha_j + \beta_1X_{ij} + \epsilon_{ij}
 圖 58.11: SBP versus age: different symbols identify the six hospitals
 </p>
 </div>
+<p>下面在 R 裏擬合這個固定效應模型:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Bp &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/bp.dta&quot;</span>)
+
+Bp<span class="op">$</span>hosp &lt;-<span class="st"> </span><span class="kw">as.factor</span>(Bp<span class="op">$</span>hosp)
+Bp &lt;-<span class="st"> </span>Bp <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">c_age =</span> age <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(age))
+<span class="co"># 通過指定截距爲零，獲取每個醫院的回歸線的截距</span>
+Model0 &lt;-<span class="st"> </span><span class="kw">lm</span>(bp <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st">  </span>c_age <span class="op">+</span><span class="st"> </span>hosp, <span class="dt">data =</span> Bp) 
+
+<span class="kw">summary</span>(Model0)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = bp ~ 0 + c_age + hosp, data = Bp)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -34.7803  -9.8106  -0.5285   7.4000  55.5287 
+## 
+## Coefficients:
+##        Estimate Std. Error t value Pr(&gt;|t|)    
+## c_age   1.00223    0.43766   2.290  0.02528 *  
+## hosp1 139.15421    5.73015  24.285  &lt; 2e-16 ***
+## hosp2 130.21017    5.86957  22.184  &lt; 2e-16 ***
+## hosp3 129.58146    5.66881  22.859  &lt; 2e-16 ***
+## hosp4 124.00188    5.70326  21.742  &lt; 2e-16 ***
+## hosp5 114.58859    5.70289  20.093  &lt; 2e-16 ***
+## hosp6 115.79702    5.85632  19.773  &lt; 2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 19.136 on 65 degrees of freedom
+## Multiple R-squared:  0.97954,    Adjusted R-squared:  0.97733 
+## F-statistic: 444.46 on 7 and 65 DF,  p-value: &lt; 2.22e-16</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 先生成一個新的醫院變量 hops1 = 1。然後使用偏 F 檢驗法</span>
+<span class="co"># 檢驗控制了患者的年齡以後，這六所醫院的截距是否各自不相同。</span>
+Bp<span class="op">$</span>hosp1 &lt;-<span class="st"> </span>Bp<span class="op">$</span>hosp[<span class="dv">1</span>]
+mod2 &lt;-<span class="st"> </span><span class="kw">lm</span>(bp <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st">  </span>c_age <span class="op">+</span><span class="st"> </span><span class="kw">as.numeric</span>(hosp1), <span class="dt">data =</span> Bp)
+<span class="kw">anova</span>(Model0, mod2)</code></pre></div>
+<pre><code>## Analysis of Variance Table
+## 
+## Model 1: bp ~ 0 + c_age + hosp
+## Model 2: bp ~ 0 + c_age + as.numeric(hosp1)
+##   Res.Df     RSS Df Sum of Sq       F   Pr(&gt;F)  
+## 1     65 23801.9                                
+## 2     70 27751.6 -5  -3949.73 2.15725 0.069638 .
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>偏 F 檢驗法給出的結果 <span class="math inline">\(F(5, 65) = 2.16, P = 0.07\)</span>，所以說，數據其實告訴我們，調整了年齡之後，這六所醫院患者中年齡和血壓之間關系的回歸線有不同的截距。</p>
 </div>
 </div>
 <div id="section-58.5" class="section level2">

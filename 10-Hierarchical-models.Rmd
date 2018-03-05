@@ -547,10 +547,25 @@ ggplot(Bp, aes(x = age, y = bp, shape = hosp)) + geom_point(size =5) +
 
 下面在 R 裏擬合這個固定效應模型:
 
-```{r Hier01-8, }
+```{r Hier01-8, echo=TRUE, cache=TRUE}
+Bp <- read_dta("backupfiles/bp.dta")
 
+Bp$hosp <- as.factor(Bp$hosp)
+Bp <- Bp %>%
+  mutate(c_age = age - mean(age))
+# 通過指定截距爲零，獲取每個醫院的回歸線的截距
+Model0 <- lm(bp ~ 0 +  c_age + hosp, data = Bp) 
+
+summary(Model0)
+
+# 先生成一個新的醫院變量 hops1 = 1。然後使用偏 F 檢驗法
+# 檢驗控制了患者的年齡以後，這六所醫院的截距是否各自不相同。
+Bp$hosp1 <- Bp$hosp[1]
+mod2 <- lm(bp ~ 0 +  c_age + as.numeric(hosp1), data = Bp)
+anova(Model0, mod2)
 ```
 
+偏 F 檢驗法給出的結果 $F(5, 65) = 2.16, P = 0.07$，所以說，數據其實告訴我們，調整了年齡之後，這六所醫院患者中年齡和血壓之間關系的回歸線有不同的截距。
 
 ## 簡單線性迴歸複習
 
@@ -846,7 +861,22 @@ summ(Reg1$coefficients, graph = FALSE)
 
 # 隨機截距模型 random intercept model
 
+最簡單的隨機效應模型 -- 隨機截距模型 random intercept model。
+
 ## 隨機截距模型的定義
+
+有時，我們對每個分層各自的截距大小並不那麼感興趣，且如果只有固定效應的話，其實我們從某種程度上忽略掉了數據層與層之間變異的方差 (between cluster variation)。於是，在模型中考慮這些問題的解決方案就是 -- 我們讓各層的截距呈現隨機效應 (treat the variation in cluster intercepts not as fixed)，**把這些截距視爲來自與某種分布的隨機呈現 (randomly draws from some distribution)**。於是原先的只有固定效應部分的模型，就增加了隨機截距部分: 
+
+$$
+Y_{ij} = \mu + u_j + \varepsilon_{ij} \\
+\text{where } u_j \stackrel{N.I,D}{\sim} N(0, \sigma_u^2) \\
+              \varepsilon_{ij} \stackrel{N.I,D}{\sim} N(0, \sigma_\varepsilon^2) \\
+        u_j \text{ are independent from } \varepsilon_{ij}
+$$
+
+這個混合效應模型中， $u_j$ 是一個服從均值 0, 方差 (the population between cluster variance) 爲 $\sigma_u^2$ 的正態分布的隨機變量; $\varepsilon_{ij}$ 是隨機誤差，它也被認爲服從均值爲 0, 方差爲 $\sigma_\varepsilon^2$ 的正太分布，且這兩個隨機效應部分之間也是**相互獨立的**。
+
+
 
 ## 隨機截距模型的參數估計
 
