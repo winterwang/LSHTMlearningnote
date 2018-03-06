@@ -944,7 +944,7 @@ $$
 \end{aligned}
 $$
 
-對於平衡數據 (balanced data)，這個矩估計量又被叫做**限制性極大似然 (Restricted Maximum Likelihood, REML)**。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先"去除掉"固定效應部分，所以每次用於估計參數的數據其實對數據的線性轉換 $Y_{ij} - \mu = u_j + \varepsilon_{ij}$，它使用的數據是這個等式右半部分的轉換後數據。在 REML 過程中，先估計層內方差 $\sigma_u^2$ 再對固定效應部分的總體均值估計，所以是個兩步走的過程。另外除了這裏討論的 ML, REML這兩種對層內方差進行參數估計的方法之外，在計量經濟學 (econometrics) 中常用的是 (本課不深入探討) **廣義最小二乘法 (Generalized Least Squares, GLS)**。GLS 使用的是一種加權的最小二乘法 (OLS)，該加權法根據層與隨機誤差的方差成分 (variance components) 不同而給不同的層以不同的截距權重。當數據本身是平衡數據時，GLS給出的估計結果等同於 REML法。當數據不是平衡數據的時候，ML/REML 其實背後使用的原理也是 GLS。
+對於平衡數據 (balanced data)，這個矩估計量又被叫做**限制性極大似然 (Restricted Maximum Likelihood, REML)**。限制性極大似然法，是一個真極大似然過程 (genuine maximum likelihood procedure)，但是它每次進行估計的時候，會先"去除掉"固定效應部分，所以每次用於估計參數的數據其實是對數據的線性轉換後 $Y_{ij} - \mu = u_j + \varepsilon_{ij}$，它使用的數據是這個等式右半部分的轉換後數據。在 REML 過程中，先估計層內方差 $\sigma_u^2$ 再對固定效應部分的總體均值估計，所以是個兩步走的過程。另外除了這裏討論的 ML, REML這兩種對層內方差進行參數估計的方法之外，在計量經濟學 (econometrics) 中常用的是 (本課不深入探討) **廣義最小二乘法 (Generalized Least Squares, GLS)**。GLS 使用的是一種加權的最小二乘法 (OLS)，該加權法根據層與隨機誤差的方差成分 (variance components) 不同而給不同的層以不同的截距權重。當數據本身是平衡數據時，GLS給出的估計結果等同於 REML法。當數據不是平衡數據的時候，ML/REML 其實背後使用的原理也是 GLS。
 
 
 ## 如何在 R 中進行隨機截距模型的擬合
@@ -1302,6 +1302,38 @@ $$
 - $u_j$ 這個層別隨機截距 (cluster-specific random intercept) 此時會囊括已知/未知的層水平的特徵 (class-level characteristics, i.e. unmeasured heterogeneity between clusters)。它會隨着你在模型中加入層水平的解釋變量而逐漸變小 (Its size will decrease as more explanatory variables for the **cluster difference** are included in the model)。
 
 ## `siblings` 數據中新生兒體重的實例
+
+在數據 `silblings` 中，研究者收集了來自 3978 名母親，8604 名新生兒出生體重 (g) 的數據。此外，該數據中還收集了這些新生兒的胎齡 (week)，新生兒的性別，母親孕期的吸煙狀況，以及懷孕時母親的年齡。在這個數據裏，每個母親是一個數據的第二階層 (level 2)，每個母親的相關信息，就是屬於第二階層的層水平數據。每個新生兒的體重和相關數據，就是第一階層 (level 1) 數據，一個母親可能生 1-3 個嬰兒，這些來自同一個母親的新生兒之間很顯然不能視之爲相互獨立。研究者可能關心一個固定效應部分不包含其他共變量的隨機截距模型 (the Null Model)，和固定效應部分增加了其他共變量的隨機截距模型 (the Full Model) 那個更能解釋這個數據或者更好的擬合這個數據 (better fitting the data)。
+
+下面就先把數據讀入 R，然後建立一個零模型 (the Null Model):
+
+```{r Hier03-01, cache=TRUE}
+siblings <- read_dta("backupfiles/siblings.dta")
+M0 <- lme(fixed = birwt ~ 1, random  = ~ 1 | momid, data = siblings, method = "REML")
+summary(M0)
+M0_fixed <- lm(birwt ~ 1, data = siblings)
+anova(M0, M0_fixed)
+```
+
+下一步，我們來對該數據擬合一個全模型 (the Full Model)，我們可以先對兩個連續型變量 (胎齡，gestational age 和母親懷孕時年齡，maternal age) 進行適當的轉換，比方說把胎齡標準化成 38 周，懷孕時年齡標準化成 30 歲: 
+
+```{r Hier03-02, cache=TRUE, message=FALSE}
+siblings <- siblings %>%
+  mutate(c_gestat = gestat - 38, # centering gestational age to 38 weeks
+         c_mage = mage - 30,  # centering maternal age to 30 years old
+         male = factor(male, labels = c("female", "male")), 
+         smoke = factor(smoke, labels = c("Nonsmoker", "Smoker")))
+#M_full <- lme(fixed = birwt ~ c_gestat + male + smoke + c_mage, random  = ~ 1 | momid, data = siblings, method = "REML")
+M_full <- lmer(birwt ~ c_gestat + male + smoke + c_mage + (1 | momid), data = siblings, REML = TRUE)
+library(lmerTest)
+summary(M_full)
+```
+
+
+從全模型的結果報告中可以看出，固定效應部分加入的所有解釋變量都是有意義的。他們的含義如下: 
+
+- `c_gestat 85.42`: 當模型中的其他變量保持不變時 (當模型中其他的變量被調整時)，胎齡每增加一周，**無論是同一個媽媽還是不同媽媽 (either from the same or another mother, i.e. in any cluster)**生下的新生兒的出生體重增加的期待值是 85.42 g。
+
 
 ## 賦值予隨機效應成分
 
