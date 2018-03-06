@@ -1241,12 +1241,65 @@ Fixed_reml <- lme(fixed = birwt ~ 1, random = ~ 1 | momid, data = siblings, meth
 summary(Fixed_reml)
 ```
 
-由於該數據樣本量足夠大 (混合效應模型中等同於說數據的層數足夠多)
+由於該數據樣本量足夠大 (混合效應模型中等同於說數據的層數足夠多)，你可以看到其實 ML 法和 REML 法估計的參數結果十分地接近。
 
 
 #  隨機截距模型中加入共變量 random intercept model with covariates
 
-## 多重線性迴歸的延伸
+這一章我們來把隨機截距模型加以擴展，在固定效應部分增加想要調整的共變量。
+
+## 多元線性回歸模型的延伸
+
+如果有一個含有兩個預測變量的多元線性回歸模型: 
+
+$$
+\begin{equation}
+Y_{ij} = \beta_0 + \beta_1 X_{1ij} + \beta_2 X_{2ij} + \epsilon_{ij}
+\end{equation}
+(\#eq:hier03-1)
+$$
+
+如果觀測數據內部具有嵌套式結構，也就是有些對象之間有相關性，有些對象之間沒有，那麼上面這個多元線性回歸模型的誤差項 $\epsilon_{ij}$ 其實是不能被認爲相互獨立的，因爲數據中處以同一層的個體之間互相有關聯性 (屬於同一所學校的學生之間，同一所醫院的病人之間)。但是於此同時，我們不妨把最後的誤差項分成兩個部分 
+
+$$
+\epsilon_{ij} = u_j + e_{ij}
+$$
+
+其中， 
+
+- $u_j$，是在隨機截距模型中用到的隨機截距部分，$u_j \sim N(0, \sigma_u^2)$，它允許不同層的數據有自己的截距;
+- $e_{ij}$，是剝離掉層內相關 (等同於層間相異，intra-class correlation = between-class heterogeneity) 之後，剩餘的隨機殘差; 
+
+之後把式子 \@ref(eq:hier03-1) 重新整理，就遇到了我們似曾相識的隨機截距模型: 
+
+$$
+\begin{equation}
+Y_{ij} = (\beta_0 + u_j) + \beta_1 X_{1ij} + \beta_2 X_{2ij} + e_{ij}
+\end{equation}
+(\#eq:Hier03-01)
+$$
+
+這就是一個混合效應線性回歸模型 (linear mixed model)。其中，
+
+- 固定效應部分的參數有 fixed effect parameters: $\beta_0, \beta_1, \beta_2$; 
+- 隨機效應部分的參數有 random effect parameters: $u_j, e_{ij}$。
+
+但是和之前的隨機截距模型不同的是，這裏我們在固定效應部分增加了兩個共變量 $X_1, X_2$，所以從該模型作出的所有統計推斷，都是建立在以這兩個共變量爲條件的基礎之上的 (conditionally on $\mathbf{X} = \{ X_1, X_2\}$)。所以對於 $u_j, e_{ij}$，他們的前提條件就變成了: 
+
+- $\text{E}(u_j|\mathbf{X} = \{ X_1, X_2\}) = 0$; 
+- $\text{E}(e_{ij}|\mathbf{X} = \{ X_1, X_2, u_j\}) = 0$。
+
+根據這兩個條件，我們可以繼續得到: 
+
+- $\text{E}(e_{ij} | \mathbf{X} = \{ X_1, X_2\}) = 0$;
+- $\text{E}(Y_{ij} | \mathbf{X} = \{ X_1, X_2\}) = \beta_0 + \beta_1X_{1ij} + \beta_2X_{2ij}$
+
+也就是說，這個包含了 $u_j, e_{ij}$ 的多元線性回歸模型，其邊際模型 (marginal regression over $u_j, e_{ij}$) 還是一個線性回歸。
+
+**注意**
+
+- 模型的固定效應部分加入了多個共變量 $\mathbf{X} = \{ X_1, X_2\}$ 之後，模型所估計的層內相關系數 (intra-class correlation, $\lambda$) 也成了以這些共變量爲條件的層內相關系數。
+- $u_j$ 這個層別隨機截距 (cluster-specific random intercept) 此時會囊括已知/未知的層水平的特徵 (class-level characteristics, i.e. unmeasured heterogeneity between clusters)。它會隨着你在模型中加入層水平的解釋變量而逐漸變小 (Its size will decrease as more explanatory variables for the **cluster difference** are included in the model)。
 
 ## `siblings` 數據中新生兒體重的實例
 
