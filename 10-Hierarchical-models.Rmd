@@ -2101,7 +2101,7 @@ summary(MIX_inter)
 接下來，我們進一步擬合本章的重點模型 -- 隨機參數模型:
 
 ```{r hie04-5, cache=TRUE, warning=FALSE, message=FALSE}
-MIX_coef <- lmer(gcse ~ lrt + (lrt | school), data = gcse_selected[gcse_selected$school != 48, ])
+MIX_coef <- lmer(gcse ~ lrt + (lrt | school), data = gcse_selected[gcse_selected$school != 48, ], REML = TRUE)
 summary(MIX_coef)
 ```
 
@@ -2169,7 +2169,7 @@ kable(dt, "html",  align = "l", caption = "表 61.1: Comparison of fixed, random
    <td style="text-align:left;"> 0.563 </td>
    <td style="text-align:left;"> 0.013 </td>
    <td style="text-align:left;"> 0.557 </td>
-   <td style="text-align:left;"> 0.200 </td>
+   <td style="text-align:left;"> 0.020 </td>
   </tr>
   <tr>
    <td style="text-align:left;"> $Random\; part$ </td>
@@ -2221,6 +2221,30 @@ kable(dt, "html",  align = "l", caption = "表 61.1: Comparison of fixed, random
 
 
 ## 使用模型結果推斷
+
+接下來，我們討論如何比較隨機系數模型，隨機截距模型，也就是如何選擇一個更優的模型。如果只是比較相同數據下，隨機系數模型和隨機截距模型的優劣，那麼只需要同時檢驗 $u_{1j} = 0; \text{Cov}(u_{0j}, u_{1j}) = 0$。
+
+就用剛剛擬合好的 `MIX_inter` 和 `MIX_coef` 來比較: 
+
+```{r hie04-6, cache=TRUE, message=FALSE}
+MIX_coef <- lme(fixed = gcse ~ lrt, random =  ~ lrt | school, data = gcse_selected[gcse_selected$school != 48, ], method = "REML")
+MIX_inter <- lme(fixed = gcse ~ lrt, random = ~ 1 | school, data = gcse_selected[gcse_selected$school != 48, ], method = "REML")
+
+anova(MIX_inter, MIX_coef)
+```
+
+值得注意的是，這裏計算的 似然比的檢驗統計量服從的是一個 自由度爲 2 的卡方分布和一個 自由度爲 1 的卡方分布的混合分布。所以報告中給出的 p 值是一個保守估計，正確的 p 值可以這樣計算: 
+
+```{r hie04-7, cache=TRUE}
+likelihood <- as.numeric(-2*(logLik(MIX_inter) - logLik(MIX_coef)))
+0.5*(1-pchisq(as.numeric(likelihood), df = 1)) + 0.5*(1-pchisq(as.numeric(likelihood), df = 2))
+```
+
+另一個重要的問題是該如何去真正理解這裏隨機系數模型給出的結果呢？
+
+該模型的結果說，"人羣"中的總體均值是 -0.11，總體斜率是 0.56 (se = 0.02, 95%CI: 0.52, 0.60)。這裏的"人羣"指的是全英國/或者全世界這樣的學校。學校水平的截距和斜率服從以這兩個數字爲均值，標準差分別是 3.04 和 0.12 的正態分布。且截距和斜率之間的相關系數接近 0.50。第一層級 (學生的) 個體隨機誤差的標準差爲 7.44。這些結果可以拿來估計"學校人羣"的 95% 截距/斜率: $-0.11 \pm 1.96 \times3.04$ 和 $0.56 \pm 1.96\times0.12$，所以人羣的截距的 95% 信賴區間是: $-6.07, 5.85$，斜率的 95% 信賴區間是: $0.33, 0.80$。與此形成對比的是，我們開頭給 64 所學校建立的 64 個模型的 截距和斜率拿來估計的 95% 截距信賴區間是 $-0.18 \pm 1.96\times3.29: -6.63, 6.27$，95% 斜率信賴區間是 $0.54 \pm 1.96 \times 0.18: 0.19, 0.89$。所以，隨機系數模型對截距和斜率的人羣估計及推斷更加精準。
+
+
 
 ## 隨機效應的方差
 

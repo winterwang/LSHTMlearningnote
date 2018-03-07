@@ -1057,7 +1057,7 @@ Residual standard error: 7.52 on 3992 degrees of freedom
 Multiple R-squared:  0.442, Adjusted R-squared:  0.433 
 F-statistic: 48.7 on 65 and 3992 DF,  p-value: &lt;2e-16</code></pre>
 <p>該固定效應模型 (簡單線性回歸模型) 估計的共同斜率是 0.56 (se = 0.01)，和 64 個不同的固定斜率。這些固定斜率的範圍是 -9,63 到 7.91，均值是 0.03，標準差是 3.38。估計的殘差標準差是 <code>Residual standard error: 7.52</code>。</p>
-<p>如果用相同的數據，我們允許斜率發生隨機變動的話 (隨機截距模型):</p>
+<p>如果用相同的數據，我們允許截距發生隨機變動的話 (隨機截距模型):</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MIX_inter &lt;-<span class="st"> </span><span class="kw">lmer</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span> <span class="op">|</span><span class="st"> </span>school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ], <span class="dt">REML =</span> <span class="ot">TRUE</span>)
 <span class="kw">summary</span>(MIX_inter)</code></pre></div>
 <pre><code>## Linear mixed model fit by REML t-tests use Satterthwaite approximations to degrees of freedom [
@@ -1089,7 +1089,7 @@ F-statistic: 48.7 on 65 and 3992 DF,  p-value: &lt;2e-16</code></pre>
 ## lrt 0.007</code></pre>
 <p>隨機截距模型估計的共同斜率還是不變 (0.56, se = 0.01)，總體平均截距是 0.03 (無統計學意義)。截距的 (正態) 分布的標準差是 3.07。殘差標準差，和剛才簡單現行回歸計算的殘差標準差是一樣的 (=7.52)。幾乎所有我們關心的參數估計，都接近簡單線性回歸的結果，但是隨機截距模型使用的參數個數只有 4 個，固定效應模型則用到了 66 個 (很顯然隨機截距模型更加高效)。</p>
 <p>接下來，我們進一步擬合本章的重點模型 – 隨機參數模型:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MIX_coef &lt;-<span class="st"> </span><span class="kw">lmer</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>(lrt <span class="op">|</span><span class="st"> </span>school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ])
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MIX_coef &lt;-<span class="st"> </span><span class="kw">lmer</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>(lrt <span class="op">|</span><span class="st"> </span>school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ], <span class="dt">REML =</span> <span class="ot">TRUE</span>)
 <span class="kw">summary</span>(MIX_coef)</code></pre></div>
 <pre><code>## Linear mixed model fit by REML t-tests use Satterthwaite approximations to degrees of freedom [
 ## lmerMod]
@@ -1238,7 +1238,7 @@ se
 0.557
 </td>
 <td style="text-align:left;">
-0.200
+0.020
 </td>
 </tr>
 <tr>
@@ -1366,6 +1366,21 @@ se
 </div>
 <div id="section-61.4" class="section level2">
 <h2><span class="header-section-number">61.4</span> 使用模型結果推斷</h2>
+<p>接下來，我們討論如何比較隨機系數模型，隨機截距模型，也就是如何選擇一個更優的模型。如果只是比較相同數據下，隨機系數模型和隨機截距模型的優劣，那麼只需要同時檢驗 <span class="math inline">\(u_{1j} = 0; \text{Cov}(u_{0j}, u_{1j}) = 0\)</span>。</p>
+<p>就用剛剛擬合好的 <code>MIX_inter</code> 和 <code>MIX_coef</code> 來比較:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MIX_coef &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> gcse <span class="op">~</span><span class="st"> </span>lrt, <span class="dt">random =</span>  <span class="op">~</span><span class="st"> </span>lrt <span class="op">|</span><span class="st"> </span>school, <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ], <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>)
+MIX_inter &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> gcse <span class="op">~</span><span class="st"> </span>lrt, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>school, <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ], <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>)
+
+<span class="kw">anova</span>(MIX_inter, MIX_coef)</code></pre></div>
+<pre><code>##           Model df       AIC       BIC     logLik   Test   L.Ratio p-value
+## MIX_inter     1  4 28052.050 28077.281 -14022.025                         
+## MIX_coef      2  6 28014.963 28052.809 -14001.482 1 vs 2 41.087068  &lt;.0001</code></pre>
+<p>值得注意的是，這裏計算的 似然比的檢驗統計量服從的是一個 自由度爲 2 的卡方分布和一個 自由度爲 1 的卡方分布的混合分布。所以報告中給出的 p 值是一個保守估計，正確的 p 值可以這樣計算:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">likelihood &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="op">-</span><span class="dv">2</span><span class="op">*</span>(<span class="kw">logLik</span>(MIX_inter) <span class="op">-</span><span class="st"> </span><span class="kw">logLik</span>(MIX_coef)))
+<span class="fl">0.5</span><span class="op">*</span>(<span class="dv">1</span><span class="op">-</span><span class="kw">pchisq</span>(<span class="kw">as.numeric</span>(likelihood), <span class="dt">df =</span> <span class="dv">1</span>)) <span class="op">+</span><span class="st"> </span><span class="fl">0.5</span><span class="op">*</span>(<span class="dv">1</span><span class="op">-</span><span class="kw">pchisq</span>(<span class="kw">as.numeric</span>(likelihood), <span class="dt">df =</span> <span class="dv">2</span>))</code></pre></div>
+<pre><code>## [1] 6.7124634e-10</code></pre>
+<p>另一個重要的問題是該如何去真正理解這裏隨機系數模型給出的結果呢？</p>
+<p>該模型的結果說，“人羣”中的總體均值是 -0.11，總體斜率是 0.56 (se = 0.02, 95%CI: 0.52, 0.60)。這裏的“人羣”指的是全英國/或者全世界這樣的學校。學校水平的截距和斜率服從以這兩個數字爲均值，標準差分別是 3.04 和 0.12 的正態分布。且截距和斜率之間的相關系數接近 0.50。第一層級 (學生的) 個體隨機誤差的標準差爲 7.44。這些結果可以拿來估計“學校人羣”的 95% 截距/斜率: <span class="math inline">\(-0.11 \pm 1.96 \times3.04\)</span> 和 <span class="math inline">\(0.56 \pm 1.96\times0.12\)</span>，所以人羣的截距的 95% 信賴區間是: <span class="math inline">\(-6.07, 5.85\)</span>，斜率的 95% 信賴區間是: <span class="math inline">\(0.33, 0.80\)</span>。與此形成對比的是，我們開頭給 64 所學校建立的 64 個模型的 截距和斜率拿來估計的 95% 截距信賴區間是 <span class="math inline">\(-0.18 \pm 1.96\times3.29: -6.63, 6.27\)</span>，95% 斜率信賴區間是 <span class="math inline">\(0.54 \pm 1.96 \times 0.18: 0.19, 0.89\)</span>。所以，隨機系數模型對截距和斜率的人羣估計及推斷更加精準。</p>
 </div>
 <div id="section-61.5" class="section level2">
 <h2><span class="header-section-number">61.5</span> 隨機效應的方差</h2>
