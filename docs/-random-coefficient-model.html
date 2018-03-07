@@ -988,9 +988,381 @@ M_sch1 &lt;-<span class="st"> </span><span class="kw">lm</span>(gcse <span class
 </div>
 <div id="section-61.2" class="section level2">
 <h2><span class="header-section-number">61.2</span> 隨機回歸系數的實質</h2>
+<p>在隨機截距模型中，截距可以隨機分布在某個均值周圍，但是每條回歸直線我們默認其解釋變量和結果變量之間的關系是一樣的 (相同斜率的一簇直線)。現在，我們來把這個模型擴展，放寬它對斜率的限制，允許不同的層與層之間不僅僅可以有不同的截距，還可以有不同的斜率:</p>
+<p><span class="math display" id="eq:hier04-1">\[
+\begin{equation}
+Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})X_{1ij} + e_{ij}
+\end{equation}
+\tag{61.1}
+\]</span></p>
+<p>其中:</p>
+<ul>
+<li><span class="math inline">\(u_{0j}:\)</span> 是隨機截距成分 (第 <span class="math inline">\(j\)</span> 層數據和總體均值 <span class="math inline">\(\beta_0\)</span> 之間的差異)</li>
+<li><span class="math inline">\(u_{1j}:\)</span> 是隨機斜率成分 (第 <span class="math inline">\(j\)</span> 層數據和總體寫率 <span class="math inline">\(\beta_1\)</span> 之間的差異)</li>
+<li><span class="math inline">\(\text{E}(u_{0j}|X_{ij}) = 0\)</span></li>
+<li><span class="math inline">\(\text{E}(u_{1j}|X_{ij}) = 0\)</span></li>
+<li><span class="math inline">\(\text{E}(e_{ij}|X_{ij},u_{0j}, u_{1j}) = 0\)</span></li>
+<li><span class="math inline">\(u_0, u_1 \perp X_{ij}\)</span> (兩個隨機部分和解釋變量之間獨立不相關)</li>
+<li><span class="math inline">\(u_0, u_1 \perp e_{ij}\)</span> (兩個隨機部分和總體的隨機誤差獨立不相關)</li>
+</ul>
+<p>另外，<span class="math inline">\(\mathbf{u}_j = \{u_0, u_1\}\)</span> 服從分布:</p>
+<p><span class="math display">\[
+\mathbf{u}_j | X_{1ij} \sim N(\mathbf{0}, \mathbf{\sum}_{\mathbf{u}})
+\]</span></p>
+<p>其中的 <span class="math inline">\(\mathbf{\sum}_{\mathbf{u}}\)</span> 是一個 <span class="math inline">\(2\times2\)</span> 的方差協方差矩陣:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{Where } \mathbf{u}_j &amp; = (u_{0j}, u_{1j})^T \\ 
+              \mathbf{0}   &amp; = (0, 0)^T \\ 
+              \mathbf{\sum}_{\mathbf{u}} &amp; =\left( \begin{array}{cc}
+              \sigma^2_{u_{00}} &amp; \sigma_{u_{01}} \\
+              \sigma_{u_{01}}   &amp; \sigma^2_{u_{11}} \\
+              \end{array} \right)
+\end{aligned}
+\]</span></p>
+<p><span class="math inline">\(e_{ij}\)</span> 則服從下列分布:</p>
+<p><span class="math display">\[
+e_{ij} | X_{1ij}, u_{0j}, u_{1j} \sim N(0, \sigma^2_e)
+\]</span></p>
 </div>
 <div id="-gcse-scores-" class="section level2">
 <h2><span class="header-section-number">61.3</span> 繼續 GCSE scores 實例</h2>
+<p>繼續用 GCSE 數據，去除掉 48 號學校以後，擬合一個固定效應模型 (相同斜率，但是不同的固定截距):</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">FIX_inter &lt;-<span class="st"> </span><span class="kw">lm</span>(gcse <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ])</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(FIX_inter)</code></pre></div>
+<pre><code>Call:
+lm(formula = gcse ~ 0 + lrt + factor(school), data = gcse_selected[gcse_selected$school != 
+    48, ])
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-28.32  -4.77   0.22   5.08  24.41 
+
+Coefficients:
+                 Estimate Std. Error t value Pr(&gt;|t|)    
+lrt                0.5595     0.0125   44.63  &lt; 2e-16 ***
+factor(school)1    4.0823     0.8806    4.64  3.7e-06 ***
+factor(school)2    5.6202     1.0154    5.53  3.3e-08 ***
+   ...................                  ............
+   ................... &lt;Output ommited&gt; ............
+   ...................                  ............
+factor(school)62  -0.5566     0.8929   -0.62  0.53306    
+factor(school)63   6.4827     1.3734    4.72  2.4e-06 ***
+factor(school)64   1.0089     0.9808    1.03  0.30368    
+factor(school)65  -1.7701     0.8415   -2.10  0.03547 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 7.52 on 3992 degrees of freedom
+Multiple R-squared:  0.442, Adjusted R-squared:  0.433 
+F-statistic: 48.7 on 65 and 3992 DF,  p-value: &lt;2e-16</code></pre>
+<p>該固定效應模型 (簡單線性回歸模型) 估計的共同斜率是 0.56 (se = 0.01)，和 64 個不同的固定斜率。這些固定斜率的範圍是 -9,63 到 7.91，均值是 0.03，標準差是 3.38。估計的殘差標準差是 <code>Residual standard error: 7.52</code>。</p>
+<p>如果用相同的數據，我們允許斜率發生隨機變動的話 (隨機截距模型):</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MIX_inter &lt;-<span class="st"> </span><span class="kw">lmer</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span> <span class="op">|</span><span class="st"> </span>school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ], <span class="dt">REML =</span> <span class="ot">TRUE</span>)
+<span class="kw">summary</span>(MIX_inter)</code></pre></div>
+<pre><code>## Linear mixed model fit by REML t-tests use Satterthwaite approximations to degrees of freedom [
+## lmerMod]
+## Formula: gcse ~ lrt + (1 | school)
+##    Data: gcse_selected[gcse_selected$school != 48, ]
+## 
+## REML criterion at convergence: 28044.1
+## 
+## Scaled residuals: 
+##      Min       1Q   Median       3Q      Max 
+## -3.71619 -0.63094  0.02920  0.68478  3.26661 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  school   (Intercept)  9.4273  3.0704  
+##  Residual             56.6047  7.5236  
+## Number of obs: 4057, groups:  school, 64
+## 
+## Fixed effects:
+##                Estimate  Std. Error          df t value Pr(&gt;|t|)    
+## (Intercept)    0.031006    0.405263   59.900000  0.0765   0.9393    
+## lrt            0.563268    0.012471 4048.000000 45.1676   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##     (Intr)
+## lrt 0.007</code></pre>
+<p>隨機截距模型估計的共同斜率還是不變 (0.56, se = 0.01)，總體平均截距是 0.03 (無統計學意義)。截距的 (正態) 分布的標準差是 3.07。殘差標準差，和剛才簡單現行回歸計算的殘差標準差是一樣的 (=7.52)。幾乎所有我們關心的參數估計，都接近簡單線性回歸的結果，但是隨機截距模型使用的參數個數只有 4 個，固定效應模型則用到了 66 個 (很顯然隨機截距模型更加高效)。</p>
+<p>接下來，我們進一步擬合本章的重點模型 – 隨機參數模型:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MIX_coef &lt;-<span class="st"> </span><span class="kw">lmer</span>(gcse <span class="op">~</span><span class="st"> </span>lrt <span class="op">+</span><span class="st"> </span>(lrt <span class="op">|</span><span class="st"> </span>school), <span class="dt">data =</span> gcse_selected[gcse_selected<span class="op">$</span>school <span class="op">!=</span><span class="st"> </span><span class="dv">48</span>, ])
+<span class="kw">summary</span>(MIX_coef)</code></pre></div>
+<pre><code>## Linear mixed model fit by REML t-tests use Satterthwaite approximations to degrees of freedom [
+## lmerMod]
+## Formula: gcse ~ lrt + (lrt | school)
+##    Data: gcse_selected[gcse_selected$school != 48, ]
+## 
+## REML criterion at convergence: 28003
+## 
+## Scaled residuals: 
+##      Min       1Q   Median       3Q      Max 
+## -3.83180 -0.63196  0.03374  0.68332  3.45517 
+## 
+## Random effects:
+##  Groups   Name        Variance  Std.Dev. Corr 
+##  school   (Intercept)  9.250260 3.04142       
+##           lrt          0.014962 0.12232  0.494
+##  Residual             55.382480 7.44194       
+## Number of obs: 4057, groups:  school, 64
+## 
+## Fixed effects:
+##              Estimate Std. Error        df t value Pr(&gt;|t|)    
+## (Intercept) -0.109206   0.402644 59.910000 -0.2712   0.7872    
+## lrt          0.556600   0.020115 56.323000 27.6715   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##     (Intr)
+## lrt 0.365</code></pre>
+<p>這個模型，不僅允許了隨機的截距，還允許每個直線的斜率成爲隨機的斜率。此時的總體平均截距被估計爲 -0.11 (依然沒有統計學意義)，標準差略微變小 (3.07 變成了 3.04)。總體平均斜率是 0.56，現在也被允許有變動，其標準差是 0.12。此時這些許許多多的估計回歸方程中，斜率和截距的相關系數是 0.49，這十分接近我們在一開始的簡單回歸64次計算獲得的斜率和截距的相關系數 (0.36)。此隨機系數模型的殘差標準差變成了 7.44，略微小於之前的 7.52。這三個模型的結果總結如下表:</p>
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+表 61.1: Comparison of fixed, random intercept, and random coefficient models: school data
+</caption>
+<thead>
+<tr>
+<th style="border-bottom:hidden" colspan="1">
+</th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="6">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+Model
+</div>
+</th>
+</tr>
+<tr>
+<th style="border-bottom:hidden" colspan="1">
+</th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+Fixed effect
+</div>
+</th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+Random intercept
+</div>
+</th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+Random coeff.
+</div>
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+Parameter
+</th>
+<th style="text-align:left;">
+est
+</th>
+<th style="text-align:left;">
+se
+</th>
+<th style="text-align:left;">
+est
+</th>
+<th style="text-align:left;">
+se
+</th>
+<th style="text-align:left;">
+est
+</th>
+<th style="text-align:left;">
+se
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(Fixed\; part\)</span>
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(\beta_0\)</span>
+</td>
+<td style="text-align:left;">
+-0.03
+</td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+0.031
+</td>
+<td style="text-align:left;">
+0.405
+</td>
+<td style="text-align:left;">
+-0.109
+</td>
+<td style="text-align:left;">
+0.403
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(\beta_1\)</span>
+</td>
+<td style="text-align:left;">
+0.56
+</td>
+<td style="text-align:left;">
+0.013
+</td>
+<td style="text-align:left;">
+0.563
+</td>
+<td style="text-align:left;">
+0.013
+</td>
+<td style="text-align:left;">
+0.557
+</td>
+<td style="text-align:left;">
+0.200
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(Random\; part\)</span>
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(\sigma_{u_{00}}\)</span>
+</td>
+<td style="text-align:left;">
+3.38
+</td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+3.07
+</td>
+<td style="text-align:left;">
+0.312
+</td>
+<td style="text-align:left;">
+3.041
+</td>
+<td style="text-align:left;">
+0.311
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(\sigma_{u_{11}}\)</span>
+</td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+0.122
+</td>
+<td style="text-align:left;">
+0.019
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(\text{Corr}(0,1)\)</span>
+</td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+0.494
+</td>
+<td style="text-align:left;">
+0.149
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+<span class="math inline">\(\sigma_e\)</span>
+</td>
+<td style="text-align:left;">
+7.522
+</td>
+<td style="text-align:left;">
+<ul>
+<li></td>
+<td style="text-align:left;">
+7.524
+</td>
+<td style="text-align:left;">
+0.084
+</td>
+<td style="text-align:left;">
+7.442
+</td>
+<td style="text-align:left;">
+0.084
+</td>
+</tr>
+</tbody>
+</table></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul>
 </div>
 <div id="section-61.4" class="section level2">
 <h2><span class="header-section-number">61.4</span> 使用模型結果推斷</h2>
