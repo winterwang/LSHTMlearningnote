@@ -1944,7 +1944,7 @@ ggthemr("fresh")
 # extract the school numbers as a numeric vector
 School_n <- as.numeric(with(gcse_selected, table(school)))
 # fit 65 linear regressions save them into a list
-my_lms <- lapply(1:64, function(School_n) lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school == School_n, ]))
+my_lms <- lapply(1:65, function(School_n) lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school == School_n, ]))
 
 # extract just coefficients
 Coefs <- sapply(my_lms, coef) # this is a matrix
@@ -1967,8 +1967,37 @@ ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_blank() +
 ```
 
 
+實際上這麼多學校學生的成績前後回歸線，其截距和斜率各不相同 (圖\@ref(fig:hier04-fig2))。這些斜率和截距的總結歸納如下: 
+
+```{r hie04-2, cache=TRUE, warning=FALSE, message=FALSE}
+summ(Coefs[-48,])
+```
+
+```{r hier04-fig3, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='School specific slopes and intercepts', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+ggplot(Coefs[-48, ], aes(x = `(Intercept)`, y = lrt)) + geom_point() + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  geom_vline(xintercept = -0.33) + 
+  geom_hline(yintercept = 0.54) + 
+  xlim(-10, 10) + 
+  ylim(0, 1) +
+  #scale_x_continuous(breaks = seq(-45, 45, by = 10))+
+ # scale_y_continuous(breaks = -20:20) +
+  labs(y = "Slopes",x = "Intercept")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+```
 
 
+圖 \@ref(fig:hier04-fig3) 展示的是這些回歸直線各自的截距 (x 軸) 和斜率 (y 軸) 的散點圖。縱橫添加的兩條直線分別是截距和斜率的均值的位置。很明顯，截距和斜率之間本身是呈現正相關的 (相關系數 0.36): **如果一個學校學生入學時成績一般，但是畢業時 GCSE 成績較高，說明那所學校本身對學生成績的提升作用明顯**。
+
+經過擬合64個線性回歸模型，獲得 $64\times3$ 個不同的回歸線的參數 (截距，斜率，和殘差方差)。所以我們可以提出的關於 "學校" 這個個體，它們各自的入學前後成績作出的回歸線獲得的三個參數，在它的 **"人羣 (可以是英國國內的中學，全歐洲的中學，或者是全世界的中學)"** 中是隨機分布在一些 "均值" 附近的。
 
 ## 隨機回歸系數的實質
 
