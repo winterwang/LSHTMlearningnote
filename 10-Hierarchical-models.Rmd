@@ -1504,7 +1504,7 @@ ggarrange(hist, plot2,
 ```
 
 
-```{r level2-residuals-st, cache=TRUE, echo=FALSE, fig.height=5.5, fig.width=11, fig.cap='Histogram and Q-Q plot of cluster (mother) level unstandardized residuals for the intercept', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r level2-residuals-st, cache=TRUE, echo=FALSE, fig.height=5.5, fig.width=11, fig.cap='Histogram and Q-Q plot of cluster (mother) level standardized residuals for the intercept', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 hist <- ggplot(Mean_siblings, aes(x = uhat_st)) +
     geom_histogram(colour = "black", aes(y = ..density..), 
                    fill = "lightblue", size = 0.1, binwidth= 0.2)  + 
@@ -1531,7 +1531,7 @@ ggarrange(hist, plot2,
 ```
 
 
-```{r level1-residuals-baby, cache=TRUE, echo=TRUE, fig.height=5.5, fig.width=11, fig.cap='Histogram and Q-Q plot of individual (pupil) level standardized residuals for the intercept', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r level1-residuals-baby, cache=TRUE, echo=FALSE, fig.height=5.5, fig.width=11, fig.cap='Histogram and Q-Q plot of individual (pupil) level standardized residuals for the intercept', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 hist <- ggplot(siblings, aes(x = ehat)) +
     geom_histogram(colour = "black", aes(y = ..density..), 
                    fill = "lightblue", size = 0.1, binwidth= 0.15)  + 
@@ -1558,11 +1558,86 @@ ggarrange(hist, plot2,
 ```
 
 
-## 分層階段的協方差
+這些正態圖，主要用於輔助尋找看哪裏有異常值 (outliers)。
+
+
+## 第二層級 (cluster level/level 2) 的協方差
+
+還是這個 `siblings` 數據中，關於母親的數據在該母親生的孩子中是保持不變的，比如有人種 (`black`)，母親受教育情況 (`hsgrad`)，和母親的婚姻狀況 (`married`)。因爲這些變量屬於解釋第二層級 (level 2) 的變量，加入這些變量在固定效應部分只能解釋層間的方差 (between clusters variance): 
+
+```{r Hier03-06, cache=TRUE, message=FALSE}
+siblings <- siblings %>%
+  mutate(black = factor(black, labels = c("No", "Yes")), 
+         hsgrad = factor(hsgrad, labels = c("No", "Yes")),
+         married = factor(married, labels = c("No", "yes")))
+
+M_full1 <- lmer(birwt ~ c_gestat + male + smoke + c_mage + black + married + hsgrad + (1 | momid), 
+                data = siblings, REML = TRUE)
+summary(M_full1)
+```
+
+
+加入了第二層級協變量之後， $\sigma^2_u = 96845.79$，相比沒加之前的小了一些 $(\sigma^2_{u} = 99784)$。但是 $\sigma^2_e$ 幾乎保持不變。 
 
 ## 層內層間效應估計
 
+如有某個想加入模型的變量是屬於第一層級的，例如 `siblings` 數據中的胎齡，即使是同一個媽媽生的嬰兒，其出生時的胎齡也是各不相同。但是這樣在模型輸出的報告中，胎齡這一變量的估計量其實是其他變量保持不變時，**每增加一周胎兒對不論是同一個母親還是不同母親生的嬰兒的出生體重的影響**，怎樣才能把同一母親不同胎齡的影響 (within effect) 和不同母親不同胎齡的影響 (between effect) 給區分出來呢？
+
+其實很簡單，我們來把胎齡這個變量做個分解: 
+
+$$
+Y_{ij} = \beta_0 + \beta_{1B} \bar{X}_{\cdot j} + \beta_{1W} (X_{ij} - \bar{X}_{\cdot j}) + u_j + e_{ij}
+$$
+
+把胎齡這個變量分解成 $\bar{X}_{\cdot j}$ (每個母親生的嬰兒的平均胎齡)，和 $X_{ij} - \bar{X}_{\cdot j}$ (每個母親內，每個胎兒的胎齡和平均胎齡之差) 兩個部分，就解決了區分層間效應 $(\beta_{1B})$ 和層內效應 $(\beta_{1W})$。 的方法。下面的模型在固定效應部分只使用了胎齡一個變量 (爲了這裏輸出報告簡潔明了): 
+
+```{r Hier03-07, cache=TRUE, message=FALSE}
+M_gestat <- lmer(birwt ~ c_gestat + (1 | momid), data = siblings, REML = TRUE)
+summary(M_gestat)
+```
+
+當把胎齡作爲一個變量放進模型的固定效應部分時，不論是不是同一個母親生下的胎兒，只要胎齡每增加一周，出生體重就增加 83.7 g。下一個模型中，我們來把胎齡這個變量分解成層間變量和層內變量: 
+
+```{r Hier03-08, cache=TRUE, message=FALSE}
+Mean_gestat <- ddply(siblings, ~ momid, summarise, mean_gestat = mean(gestat))
+# 把每個母親的胎兒胎齡均值 (level 2 mean) 賦予原有的數據中
+avegest <- NULL
+for (i in 1:3978){
+  avegest <- c(avegest, rep(Mean_gestat$mean_gestat[i], with(siblings, table(momid))[i]))
+}
+siblings$avegest <- avegest
+rm(avegest)
+# 計算層內胎兒胎齡與其層均值的差異
+siblings <- siblings %>%
+  mutate(c_avegest = avegest - 38, 
+         difgest = gestat - avegest)
+
+siblings[siblings$momid == 14,c(1,2,5,6,18:20)]
+
+# 下面用 c_avegest 和 difgest 代替 gestat 放入同樣模型的固定效應部分
+
+M_gestat_sep <- lmer(birwt ~ c_avegest + difgest + (1 | momid), data = siblings, REML = TRUE)
+summary(M_gestat_sep)
+```
+
+把胎齡分解了以後，從模型的輸出結果可以看出，層間效應 113 g (不同的母親)，要大於層內效應 70.9 g (同一母親不同胎兒)。
+
+比較分解胎齡以後的模型 `M_gestat_sep` 和把胎齡作爲一個變量的模型 `M_gestat` 哪個更優，可以有兩種檢驗法: 
+
+```{r Hier03-09, cache=TRUE, message=FALSE}
+# 1. 用 ML 法重新擬合兩個模型後進行 LRT 檢驗比較 R 可以自動幫你
+anova(M_gestat_sep, M_gestat)
+
+# 2. 用 Wald 檢驗比較 Beta_1W 和 Beta_1B 是不是不同
+linearHypothesis(M_gestat_sep, "c_avegest = difgest")
+```
+
+無論是哪種檢驗，都告訴我們把胎齡分解了的模型更好。了解更多層內層間回歸模型，參照 [@Mann2004]。
+
+
 ## 到底選擇固定還是混合模型？
+
+
 
 
 ## 練習題目
