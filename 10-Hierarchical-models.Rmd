@@ -2248,9 +2248,143 @@ likelihood <- as.numeric(-2*(logLik(MIX_inter) - logLik(MIX_coef)))
 
 ## 隨機效應的方差
 
-## 模型擬合後的預測值
+
+在解釋混合效應模型的隨機效應部分的時候，有幾點需要注意。首先，隨機截距的方差，和隨機斜率的方差，是具有不同單位的。**隨機截距的方差的單位是結果變量 $Y$ 的單位的平方**。**隨機斜率的方差，是結果變量和解釋變量的單位的商的平方**。
+
+另一個要注意的點是，$Y_{ij}$ 在 $X_{1ij}$ 的條件下的殘差的標準差，不是恆定不變的 (隨着 $X_1$ 的變化而變化): 
+
+$$
+\begin{aligned}
+Y_{ij} & = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j}) X_{1ij} + e_{ij}  \\ 
+       & = (\beta_0 + \beta_1X_{1ij}) + (u_{0j} + u_{1j}X_{1ij} + e_{ij}) \\ 
+       & = (\beta_0 + \beta_1X_{1ij}) + \epsilon_{ij}
+\end{aligned}
+$$
+
+所以從上面的式子可看出，隨機參數模型的**總體殘差 (total residuals)**，$\epsilon_{ij} = u_{0j} + u_{1j}X_{1ij} + e_{ij}$，是隨着你想給斜率隨機性的那個解釋變量的變化而變化的。也正因爲如此，總體殘差的方差，也是隨着解釋變量變化而變化的 (和解釋變量成二次方程關系，如果繪制總體慘差的方差和解釋變量之間的關系會是一個拋物線): 
+
+$$
+\begin{aligned}
+\text{Var}(Y_{ij} | X_{1ij}) & = \text{Var}( u_{0j} + u_{1j}X_{1ij} + e_{ij}) \\ 
+                             & = \sigma^2_{u_{00}} + X_{1ij}^2\sigma^2_{u_{11}} + 2X_{1ij}\sigma_{u_{01}} + \sigma^2_e
+\end{aligned}
+(\#eq:hier04-3)
+$$
+
 
 ## 模型效果評估 
+
+擬合模型的評估中，另一個重要的事是分析第一階層殘差和第二階層殘差是不是符合其前提條件 (正態分布)。記得第二階層殘差獲取之後需要被標準化。
+
+```{r hie04-8, cache=TRUE} 
+MIX_coef <- lmer(gcse ~ lrt + (lrt | school), data = gcse_selected[gcse_selected$school != 48, ], REML = TRUE)
+School_res0 <- HLMdiag::HLMresid(MIX_coef, level = "school", type = "EB", standardize = FALSE)
+summ(School_res0)
+
+School_res1 <- HLMdiag::HLMresid(MIX_coef, level = "school", type = "EB", standardize = TRUE)
+
+summ(School_res1)
+```
+
+
+```{r hier4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope residuals (unstandardized)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+plot1 <- HLMdiag::ggplot_qqnorm(School_res0[,1], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) intercept residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(School_res0[,2], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) slope residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(plot1, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+
+```{r 4-level2sta-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope residuals (standardized)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+plot1 <- HLMdiag::ggplot_qqnorm(School_res1[,1], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) intercept residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(School_res1[,2], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) slope residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(plot1, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+
+```{r 4-level1sta-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Histogram and Q-Qf plots of elementary level (pupil) standardized residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+gcse <- gcse_selected[gcse_selected$school != 48, ]
+MIX_coef <- lme(fixed = gcse ~ lrt, random = ~ lrt | school, data = gcse, method = "REML")
+
+gcse$ehat <-  residuals(MIX_coef, level = 1, type = "normalized")
+summ(gcse$ehat, graph = FALSE)
+
+hist <- ggplot(gcse, aes(x = ehat)) +
+    geom_histogram(colour = "black", 
+                   fill = "lightblue", size = 0.1, binwidth= 0.3)  + 
+  theme_bw() + stat_function(fun = function(x) dnorm(x, mean = mean(gcse$ehat), sd = sd(gcse$ehat)) * 4057 * 0.3, color="darkgreen", size = 1) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) 
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(gcse$ehat, line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "EB level 1 (pupil) standardized residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+
 
 ## 練習題
 
@@ -2452,7 +2586,7 @@ School_res[48, ]
 隨機截距的殘差估計範圍在 -6.25 和 5.83 之間，隨機斜率殘差估計範圍在 -0.19 和 0.33 之間。其中 48 號學校的擬合後截距和斜率分別是 -0.74 和 -0.02。48 號學校在這個模型中估計的截距和斜率，與我們單獨對它一所學校擬合模型時的結果大相徑庭。這是因爲在總體的混合效應模型中，該學校的數據被拉近與總體的平均水平。
 
 
-```{r 4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r 4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope (standardized) residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 plot1 <- HLMdiag::ggplot_qqnorm(School_res[,1], line = "quantile") +
   theme_bw() +
   theme(axis.text = element_text(size = 15),
@@ -2511,7 +2645,7 @@ plot2 <- HLMdiag::ggplot_qqnorm(gcse_selected$ehat, line = "quantile") +
   theme(axis.text = element_text(size = 15),
   axis.text.x = element_text(size = 15),
   axis.text.y = element_text(size = 15)) +
-  labs(y = "EB level 1 (pupil) slope residuals")  +
+  labs(y = "EB level 1 (pupil) standardized residuals")  +
   theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
         axis.line = element_line(colour = "black"),
     panel.border = element_blank(),
