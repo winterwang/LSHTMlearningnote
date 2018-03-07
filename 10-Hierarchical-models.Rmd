@@ -1637,6 +1637,14 @@ linearHypothesis(M_gestat_sep, "c_avegest = difgest")
 
 ## 到底選擇固定還是混合模型？
 
+目前爲止我們討論了嵌套式數據可以使用固定效應模型分析，也可以使用混合效應模型來擬合，那麼到底你該選擇哪個來解釋你的數據呢？ 選擇模型永遠是一個很難回答的問題。哪種模型更加恰當 (appropriate) 其實要取決於你的數據結構，分層的數據的話層的數量是不是足夠多？以及最重要的，你的**分析目的*。
+
+1. 如果模型中想分析的層/羣組，可以被視爲唯一的實體 (uniqe entity，例如不同的種族)，而且我們希望從模型來獲得對不同種羣或者不同個體中每一個個體的估計，那麼固定效應模型是合適的。
+2. 如果層/羣組其實是人羣中的樣本 (samples from a real population，如例題中的母親層級，人羣衆可以有許許多多的母親)，我們打算從這個模型的結果去推論整個人羣，那麼隨機效應模型才是最合適的。
+3. 如果說層級本身的樣本量 (n of clusters) 太小，那麼強行使用混合效應模型的話會導致隨機效應的估計結果十分地低效，甚至沒有意義; 當然如果你的混合效應模型關心的是固定效應部分，那麼增加一些層級隨機效應應該也能達到提升統計估計效率的目的。
+4. 如果我們關心的是層級協變量的效應，那麼隨機效應模型是唯一的選擇。
+
+
 
 
 
@@ -1900,7 +1908,67 @@ anova(Extend_reml, mod2)
 
 # 隨機回歸系數模型  random coefficient model 
 
+這一章節我們把隨機截距模型進一步擴展，在隨機效應部分增加隨機斜率成分 (random slope)。這樣的模型又稱隨機系數模型 (random coefficient model) 或 隨機斜率模型 (random slope model)。
+
 ## GCSE scores 實例
+
+第一章介紹過的 65 所中學學生在入學前的閱讀水平成績和畢業時的考試成績的 GCSE 數據，用來作爲本章介紹概念的實例。我們先對其中學校編號爲 1 的學生做兩個成績的線性回歸: 
+
+```{r hie04-1, cache=TRUE, warning=FALSE, message=FALSE}
+gcse_selected <- read_dta("backupfiles/gcse_selected.dta")
+M_sch1 <- lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school == 1, ])
+
+summary(M_sch1)
+```
+
+```{r hier04-fig1, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='GCSE versus LRT in school 1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+ggplot(gcse_selected[gcse_selected$school == 1, ], aes(x = lrt, y = gcse)) + geom_point() + 
+  geom_abline(intercept = M_sch1$coefficients[1], slope = M_sch1$coefficients[2]) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "GCSE score",x = "London Reading Test")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+當我們重復同樣的實驗，給 65 所學校 (48號學校除外，它只有兩個學生) 一一繪制回歸直線的時候，你得到的一簇直線是這樣紙的: 
+
+```{r hier04-fig2, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='Predicted regression lines of GCSE versus LRT scores: separate estimates from each school', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+# extract the school numbers as a numeric vector
+School_n <- as.numeric(with(gcse_selected, table(school)))
+# fit 65 linear regressions save them into a list
+my_lms <- lapply(1:64, function(School_n) lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school == School_n, ]))
+
+# extract just coefficients
+Coefs <- sapply(my_lms, coef) # this is a matrix
+Coefs <- as.data.frame(t(Coefs)) # convert it into a dataframe vertically 
+
+ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_blank() + 
+  geom_abline(data = Coefs[-48,],   aes(intercept = `(Intercept)`, slope = lrt))  +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  xlim(-40, 40) + 
+  ylim(-20, 30) +
+  #scale_x_continuous(breaks = seq(-45, 45, by = 10))+
+ # scale_y_continuous(breaks = -20:20) +
+  labs(y = "Fitted regression lines",x = "London Reading Test")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+
+
+
 
 ## 隨機回歸系數的實質
 
