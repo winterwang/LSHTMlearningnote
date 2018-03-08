@@ -975,8 +975,8 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 \]</span></p>
 <p>其中，</p>
 <ul>
-<li><span class="math inline">\(I_{i = h,j}\)</span> 是用於表示第 <span class="math inline">\(j\)</span> 名患者第 <span class="math inline">\(i\)</span> 次觀測值，在第 <span class="math inline">\(h\)</span> 次測量時是否被測量到的啞變量。</li>
-<li>該模型暗示同一個患者收集到的不同時刻的觀察數據是可以互換的，有相同的寫方差 <span class="math display">\[
+<li><span class="math inline">\(I_{i = h,j}\)</span> 是用於表示第 <span class="math inline">\(j\)</span> 名患者的 <span class="math inline">\(i\)</span> 次觀測值，在第 <span class="math inline">\(h\)</span> 次測量時是否被測量到的啞變量。</li>
+<li>該模型暗示同一個患者收集到的不同時刻的觀察數據是可以互換的，有相同的協方差 <span class="math display">\[
 \begin{aligned}
 \text{Cov}(Y_{1j} , Y_{2j}) &amp; = \text{Cov}(u_{0j} + e_{1j}, u_{0j} + e_{2j}) \\ 
                         &amp; = \sigma^2_{u_{00}}
@@ -984,12 +984,12 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 \]</span></li>
 <li>該模型還有另一個暗示是，不同患者之間任意時間點的兩個觀察數據之間是相互獨立的 <span class="math display">\[
 \begin{aligned}
-\text{Cov}(Y_{1j}, y_{2j*}) &amp; = \text{Cov}(u_{0j} + e_{1j}, u_{0j*} + e_{2j*}) \\ 
+\text{Cov}(Y_{1j}, Y_{2j*}) &amp; = \text{Cov}(u_{0j} + e_{1j}, u_{0j*} + e_{2j*}) \\ 
                         &amp; = 0
 \end{aligned}
 \]</span></li>
 </ul>
-<p>所以當沒有缺失值時，數據是固定測量時刻的數據也是是平衡數據，那麼每一個患者 (第二層級數據) 的觀察值可以寫作是一個向量 <span class="math inline">\(\{ \mathbf{Y}_{ij} \}\)</span>，每名患者的觀察值向量的長度都是相同的 <span class="math inline">\(n\)</span>。所以，它們的 <span class="math inline">\(n\times n\)</span> 協方差矩陣就是:</p>
+<p>所以當沒有缺失值時，數據是固定測量時刻 (fixed occation) 的數據也是是平衡數據，那麼每一個患者 (第二層級數據) 的觀察值可以寫作是一個向量 <span class="math inline">\(\{ \mathbf{Y}_{ij} \}\)</span>，每名患者的觀察值向量的長度都是相同的 <span class="math inline">\(n\)</span>。所以，它們的 <span class="math inline">\(n\times n\)</span> 協方差矩陣就是:</p>
 <p><span class="math display">\[
 \Omega_y = \left( \begin{array}{cccc} 
  \sigma^2_{u_{00}} + \sigma^2_e &amp; \sigma^2_{u_{00}}  &amp; \cdots &amp; \sigma^2_{u_{00}} \\
@@ -999,6 +999,131 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 \end{array} \right)
 \]</span></p>
 <p>也正是由於觀測值的協方差矩陣是如此地對稱，該模型被命名爲混合對稱模型 compound symmetric model。</p>
+<p><strong>Adult height measures 數據</strong></p>
+<p>有(閒人)花了數十年時間追蹤隨訪了近2000名女性在 26 歲，36歲，43歲，53歲時的身高。忽略掉可能存在的測量誤差，研究者想知道是否隨着年齡增加，女性的身高會縮水。這些女性在這些年齡時的身高數據總結如下:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">height &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/height.dta&quot;</span>)
+<span class="kw">summ</span>(height[, <span class="dv">2</span><span class="op">:</span><span class="dv">5</span>])</code></pre></div>
+<pre><code>## 
+## No. of observations = 2187
+## 
+##   Var. name obs. mean   median  s.d.   min.   max.  
+## 1 ht26      1758 162.33 162.6   6.36   142.2  180.3 
+## 2 ht36      1610 162.26 162.2   6.05   135.2  180   
+## 3 ht43      1567 162.28 162.1   5.96   140    180   
+## 4 ht53      1462 161.56 161.5   5.96   134.3  179.6</code></pre>
+<p>原則上每個女性在所有的時間應該都有身高測量值才對，我們暫且認爲擁有缺失測量值的時間點是完全隨機的。先計算樣本中數據完整部分的女性身高在四個時間點時的方差協方差矩陣:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">var</span>(height[, <span class="dv">2</span><span class="op">:</span><span class="dv">5</span>], <span class="dt">use =</span> <span class="st">&quot;complete.obs&quot;</span>)</code></pre></div>
+<pre><code>##           ht26      ht36      ht43      ht53
+## ht26 39.813400 34.758457 34.478981 34.128167
+## ht36 34.758457 34.455060 33.360413 33.086680
+## ht43 34.478981 33.360413 34.331501 32.948850
+## ht53 34.128167 33.086680 32.948850 34.215187</code></pre>
+<p>要給這個數據擬合混合對稱模型 (compound symmetry model)，需要先把數據從寬變長，之後爲每個測量身高的時間點生成一個啞變量，然後擬合無截距式的隨機截距模型:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 把數據格式從寬變長</span>
+hei_long &lt;-<span class="st"> </span>height <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>id, <span class="op">-</span>bw, <span class="op">-</span>mht) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">separate</span>(key, <span class="dt">into =</span> <span class="kw">c</span>(<span class="st">&quot;Height&quot;</span>, <span class="st">&quot;H_Age&quot;</span>), <span class="dt">sep =</span> <span class="dv">2</span>) <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">arrange</span>(id, H_Age, bw, mht) <span class="op">%&gt;%</span>
+<span class="st">        </span><span class="kw">spread</span>(Height, value)
+
+<span class="co"># 生成四個年齡時間點數據的啞變量</span>
+hei_long &lt;-<span class="st"> </span>hei_long <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Age_1 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">26</span>, <span class="dv">1</span>, <span class="dv">0</span>), 
+         <span class="dt">Age_2 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">36</span>, <span class="dv">1</span>, <span class="dv">0</span>),
+         <span class="dt">Age_3 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">43</span>, <span class="dv">1</span>, <span class="dv">0</span>),
+         <span class="dt">Age_4 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">53</span>, <span class="dv">1</span>, <span class="dv">0</span>))
+M_hei &lt;-<span class="st"> </span><span class="kw">lmer</span>(ht <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">1</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">3</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">4</span> <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id), <span class="dt">data =</span> hei_long, <span class="dt">REML =</span> <span class="ot">TRUE</span>)
+<span class="kw">summary</span>(M_hei)</code></pre></div>
+<pre><code>## Linear mixed model fit by REML t-tests use Satterthwaite approximations to degrees of freedom [
+## lmerMod]
+## Formula: ht ~ 0 + Age_1 + Age_2 + Age_3 + Age_4 + (1 | id)
+##    Data: hei_long
+## 
+## REML criterion at convergence: 30475.2
+## 
+## Scaled residuals: 
+##      Min       1Q   Median       3Q      Max 
+## -4.69990 -0.46089 -0.00475  0.45917  8.26748 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  id       (Intercept) 35.9056  5.9921  
+##  Residual              1.9862  1.4093  
+## Number of obs: 6397, groups:  id, 1980
+## 
+## Fixed effects:
+##         Estimate Std. Error         df t value  Pr(&gt;|t|)    
+## Age_1  162.34141    0.13903 2151.44000  1167.7 &lt; 2.2e-16 ***
+## Age_2  162.31738    0.13977 2195.36000  1161.3 &lt; 2.2e-16 ***
+## Age_3  162.19431    0.13997 2207.69000  1158.8 &lt; 2.2e-16 ***
+## Age_4  161.45320    0.14041 2234.49000  1149.9 &lt; 2.2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##       Age_1 Age_2 Age_3
+## Age_2 0.933            
+## Age_3 0.931 0.933      
+## Age_4 0.928 0.930 0.931</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 檢驗三個年齡點的身高均值是否相同用下面的方法: </span>
+<span class="kw">linearHypothesis</span>(M_hei, <span class="kw">c</span>(<span class="st">&quot;Age_1 - Age_2 = 0&quot;</span>, 
+                          <span class="st">&quot;Age_1 - Age_3 = 0&quot;</span>, 
+                          <span class="st">&quot;Age_1 - Age_4 = 0&quot;</span>))</code></pre></div>
+<pre><code>## Linear hypothesis test
+## 
+## Hypothesis:
+## Age_1 - Age_2 = 0
+## Age_1 - Age_3 = 0
+## Age_1 - Age_4 = 0
+## 
+## Model 1: restricted model
+## Model 2: ht ~ 0 + Age_1 + Age_2 + Age_3 + Age_4 + (1 | id)
+## 
+##   Df   Chisq Pr(&gt;Chisq)    
+## 1                          
+## 2  3 374.564 &lt; 2.22e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<p>所以，用這個模型 (符合對稱模型 compound symmetry model)，其實我是在告訴 R 軟件說，我認爲，這個數據中的女性四次測量的身高之間的方差協方差矩陣是這樣紙的 (因爲 <span class="math inline">\(5.992^2 = 35.91; 1.409^2 = 1.99\)</span>:</p>
+<p><span class="math display">\[
+\Omega_y = \left( \begin{array}{cccc} 
+ 37.90 &amp; 35.91  &amp; 35.91 &amp; 37.90 \\
+ 35.91 &amp; 37.90  &amp; 35.91 &amp; 35.91 \\
+ 35.91 &amp; 35.91  &amp; 37.90 &amp; 35.91 \\
+ 35.91 &amp; 35.91  &amp; 35.91 &amp; 37.90\\
+\end{array} \right)
+\]</span></p>
+<p>分析這個模型第二層階級殘差，和第一層階級殘差可以計算並做圖 <a href="-longitudinal-data-1.html#fig:5-level2-res">62.1</a> <a href="-longitudinal-data-1.html#fig:5-level1-res">62.2</a> 如下:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># refit the model with lme</span>
+M_hei &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> ht <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">1</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">3</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">4</span>, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, 
+             <span class="dt">data =</span> hei_long, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action=</span>na.omit)
+<span class="co"># individual level standardized residuals</span>
+ehat_st &lt;-<span class="st"> </span><span class="kw">residuals</span>(M_hei, <span class="dt">type =</span> <span class="st">&quot;normalized&quot;</span>, <span class="dt">level =</span> <span class="dv">1</span>)
+
+<span class="co"># extract the EB uhat (level 2 EB residual)</span>
+uhat_eb &lt;-<span class="st"> </span><span class="kw">ranef</span>(M_hei)<span class="op">$</span><span class="st">`</span><span class="dt">(Intercept)</span><span class="st">`</span>
+
+<span class="co"># standardized level 2 residuals</span>
+### count number of measures for each women
+Nmeas &lt;-<span class="st"> </span><span class="dv">4</span>
+### shrinkage factor 
+R =<span class="st"> </span><span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span><span class="op">/</span>(<span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="fl">1.409</span><span class="op">^</span><span class="dv">2</span><span class="op">/</span>Nmeas)
+### use shrinkage factor calculate variance of uhat_eb
+var_eb &lt;-<span class="st"> </span>R <span class="op">*</span><span class="st"> </span><span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span>
+### standardize uhat
+uhat_st &lt;-<span class="st"> </span>uhat_eb<span class="op">/</span><span class="kw">sqrt</span>(var_eb)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:5-level2-res"></span>
+<img src="bookdown_files/figure-html/5-level2-res-1.png" alt="Standardized cluster level residuals (intercept) from the compound symmetry model" width="80%" />
+<p class="caption">
+圖 62.1: Standardized cluster level residuals (intercept) from the compound symmetry model
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:5-level1-res"></span>
+<img src="bookdown_files/figure-html/5-level1-res-1.png" alt="Standardized elementary level residuals from the compound symmetry model" width="80%" />
+<p class="caption">
+圖 62.2: Standardized elementary level residuals from the compound symmetry model
+</p>
+</div>
 </div>
 </div>
 </div>

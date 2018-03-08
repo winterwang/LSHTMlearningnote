@@ -2717,8 +2717,8 @@ $$
 
 其中，
 
-- $I_{i = h,j}$ 是用於表示第 $j$ 名患者第 $i$ 次觀測值，在第 $h$ 次測量時是否被測量到的啞變量。
-- 該模型暗示同一個患者收集到的不同時刻的觀察數據是可以互換的，有相同的寫方差 
+- $I_{i = h,j}$ 是用於表示第 $j$ 名患者的 $i$ 次觀測值，在第 $h$ 次測量時是否被測量到的啞變量。
+- 該模型暗示同一個患者收集到的不同時刻的觀察數據是可以互換的，有相同的協方差 
 $$
 \begin{aligned}
 \text{Cov}(Y_{1j} , Y_{2j}) & = \text{Cov}(u_{0j} + e_{1j}, u_{0j} + e_{2j}) \\ 
@@ -2728,12 +2728,12 @@ $$
 - 該模型還有另一個暗示是，不同患者之間任意時間點的兩個觀察數據之間是相互獨立的 
 $$
 \begin{aligned}
-\text{Cov}(Y_{1j}, y_{2j*}) & = \text{Cov}(u_{0j} + e_{1j}, u_{0j*} + e_{2j*}) \\ 
+\text{Cov}(Y_{1j}, Y_{2j*}) & = \text{Cov}(u_{0j} + e_{1j}, u_{0j*} + e_{2j*}) \\ 
                             & = 0
 \end{aligned}
 $$
 
-所以當沒有缺失值時，數據是固定測量時刻的數據也是是平衡數據，那麼每一個患者 (第二層級數據) 的觀察值可以寫作是一個向量 $\{ \mathbf{Y}_{ij} \}$，每名患者的觀察值向量的長度都是相同的 $n$。所以，它們的 $n\times n$ 協方差矩陣就是:  
+所以當沒有缺失值時，數據是固定測量時刻 (fixed occation) 的數據也是是平衡數據，那麼每一個患者 (第二層級數據) 的觀察值可以寫作是一個向量 $\{ \mathbf{Y}_{ij} \}$，每名患者的觀察值向量的長度都是相同的 $n$。所以，它們的 $n\times n$ 協方差矩陣就是:  
 
 $$
 \Omega_y = \left( \begin{array}{cccc} 
@@ -2745,6 +2745,150 @@ $$
 $$
 
 也正是由於觀測值的協方差矩陣是如此地對稱，該模型被命名爲混合對稱模型 compound symmetric model。
+
+**Adult height measures 數據**
+
+有(閒人)花了數十年時間追蹤隨訪了近2000名女性在 26 歲，36歲，43歲，53歲時的身高。忽略掉可能存在的測量誤差，研究者想知道是否隨着年齡增加，女性的身高會縮水。這些女性在這些年齡時的身高數據總結如下: 
+
+```{r hier05-01, cache=TRUE}
+height <- read_dta("backupfiles/height.dta")
+summ(height[, 2:5])
+```
+
+
+原則上每個女性在所有的時間應該都有身高測量值才對，我們暫且認爲擁有缺失測量值的時間點是完全隨機的。先計算樣本中數據完整部分的女性身高在四個時間點時的方差協方差矩陣: 
+
+```{r hier05-02, cache=TRUE}
+var(height[, 2:5], use = "complete.obs")
+```
+
+要給這個數據擬合混合對稱模型 (compound symmetry model)，需要先把數據從寬變長，之後爲每個測量身高的時間點生成一個啞變量，然後擬合無截距式的隨機截距模型: 
+
+
+```{r hier05-03, cache=TRUE}
+# 把數據格式從寬變長
+hei_long <- height %>%
+  gather(key, value, -id, -bw, -mht) %>%
+    separate(key, into = c("Height", "H_Age"), sep = 2) %>%
+      arrange(id, H_Age, bw, mht) %>%
+        spread(Height, value)
+
+# 生成四個年齡時間點數據的啞變量
+hei_long <- hei_long %>%
+  mutate(Age_1 = ifelse(H_Age == 26, 1, 0), 
+         Age_2 = ifelse(H_Age == 36, 1, 0),
+         Age_3 = ifelse(H_Age == 43, 1, 0),
+         Age_4 = ifelse(H_Age == 53, 1, 0))
+M_hei <- lmer(ht ~ 0 + Age_1 + Age_2 + Age_3 + Age_4 + (1 | id), data = hei_long, REML = TRUE)
+summary(M_hei)
+
+# 檢驗三個年齡點的身高均值是否相同用下面的方法: 
+linearHypothesis(M_hei, c("Age_1 - Age_2 = 0", 
+                          "Age_1 - Age_3 = 0", 
+                          "Age_1 - Age_4 = 0"))
+```
+
+所以，用這個模型 (符合對稱模型 compound symmetry model)，其實我是在告訴 R 軟件說，我認爲，這個數據中的女性四次測量的身高之間的方差協方差矩陣是這樣紙的 (因爲 $5.992^2 = 35.91; 1.409^2 = 1.99$: 
+
+$$
+\Omega_y = \left( \begin{array}{cccc} 
+ 37.90 & 35.91  & 35.91 & 37.90 \\
+ 35.91 & 37.90  & 35.91 & 35.91 \\
+ 35.91 & 35.91  & 37.90 & 35.91 \\
+ 35.91 & 35.91  & 35.91 & 37.90\\
+\end{array} \right)
+$$
+
+
+分析這個模型第二層階級殘差，和第一層階級殘差可以計算並做圖 \@ref(fig:5-level2-res) \@ref(fig:5-level1-res) 如下: 
+
+```{r hier05-04, cache=TRUE}
+# refit the model with lme
+M_hei <- lme(fixed = ht ~ 0 + Age_1 + Age_2 + Age_3 + Age_4, random = ~ 1 | id, 
+             data = hei_long, method = "REML", na.action=na.omit)
+# individual level standardized residuals
+ehat_st <- residuals(M_hei, type = "normalized", level = 1)
+
+# extract the EB uhat (level 2 EB residual)
+uhat_eb <- ranef(M_hei)$`(Intercept)`
+
+# standardized level 2 residuals
+### count number of measures for each women
+Nmeas <- 4
+### shrinkage factor 
+R = 5.992^2/(5.992^2 + 1.409^2/Nmeas)
+### use shrinkage factor calculate variance of uhat_eb
+var_eb <- R * 5.992^2
+### standardize uhat
+uhat_st <- uhat_eb/sqrt(var_eb)
+```
+
+
+
+```{r 5-level2-res, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Standardized cluster level residuals (intercept) from the compound symmetry model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+uhat_st <- as.data.frame(uhat_st)
+
+hist <- ggplot(uhat_st, aes(uhat_st)) + 
+    geom_histogram(colour = "black", aes(y = ..density..), 
+                   size = 0.1, binwidth= 0.2)  + 
+             stat_function(fun=dnorm, size = 1,
+                         args=list(mean=mean(uhat_st$uhat_st), 
+                                  sd=sd(uhat_st$uhat_st))) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Level 2 cluster standardized residuals (EB)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(uhat_st$uhat_st, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 2 cluster standardized residuals (EB)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+```{r 5-level1-res, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Standardized elementary level residuals from the compound symmetry model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+ehat_st <- as.data.frame(ehat_st)
+
+hist <- ggplot(ehat_st, aes(ehat_st)) + 
+    geom_histogram(colour = "black", aes(y = ..density..), 
+                   size = 0.1, binwidth= 0.2)  + 
+             stat_function(fun=dnorm, size = 1,
+                         args=list(mean=mean(ehat_st$ehat_st), 
+                                  sd=sd(ehat_st$ehat_st))) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Level 1 standardized residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(ehat_st$ehat_st, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 1 standardized residuals (EB)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+
+
+
 
 ## 不固定測量時刻 variable occasions
 
