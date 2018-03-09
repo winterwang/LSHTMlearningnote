@@ -1084,7 +1084,7 @@ M_hei &lt;-<span class="st"> </span><span class="kw">lmer</span>(ht <span class=
 ## 2  3 374.564 &lt; 2.22e-16 ***
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
-<p>所以，用這個模型 (符合對稱模型 compound symmetry model)，其實我是在告訴 R 軟件說，我認爲，這個數據中的女性四次測量的身高之間的方差協方差矩陣是這樣紙的 (因爲 <span class="math inline">\(5.992^2 = 35.91; 1.409^2 = 1.99\)</span>:</p>
+<p>所以，用這個模型 (符合對稱模型 compound symmetry model)，其實我是在告訴 R 軟件說，我認爲，這個數據中的女性四次測量的身高之間的方差協方差矩陣是這樣紙的 (因爲 <span class="math inline">\(5.992^2 = 35.91; 1.409^2 = 1.99\)</span>):</p>
 <p><span class="math display">\[
 \Omega_y = \left( \begin{array}{cccc} 
  37.90 &amp; 35.91  &amp; 35.91 &amp; 37.90 \\
@@ -1133,7 +1133,7 @@ uhat_st &lt;-<span class="st"> </span>uhat_eb<span class="op">/</span><span clas
 <p><span class="math display">\[
 Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 \]</span></p>
-<p>前一章討論過 (滾會 <a href="-random-coefficient-model.html#random-var">61.5</a>)，這裏隨機參數模型的解釋變量是時間 <span class="math inline">\(t_i\)</span>，導致的結果之一是觀測值的方差其實是隨着時間變化而變化的 (拋物線關系):</p>
+<p>前一章討論過 (滾回 <a href="-random-coefficient-model.html#random-var">61.5</a>)，這裏隨機參數模型的解釋變量是時間 <span class="math inline">\(t_i\)</span>，導致的結果之一是觀測值的方差其實是隨着時間變化而變化的 (拋物線關系):</p>
 <p><span class="math display">\[
 \begin{aligned}
 \text{Var}(Y_{ij}) &amp; = \text{Cov}(u_{0j} + u_{ij}t_i + e_{ij}, u_{0j} + u_{ij}t_i + e_{ij})  \\ 
@@ -1153,6 +1153,61 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 \text{Cov}(Y_{1j}, Y_{2j*}) &amp; = \text{Cov}(u_{0j} + u_{1j}t_1 + e_{1j}, u_{0j*} + u_{2j*}t_2 + e_{2j*}) \\ 
 &amp; = 0
 \end{aligned}
+\]</span></p>
+<p><strong>Adult height measures 數據</strong></p>
+<p>利用上面的理論，來對身高數據擬合另一個混合效應模型:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 對年齡中心化到以 26 歲爲起點</span>
+hei_long &lt;-<span class="st"> </span>hei_long <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">age =</span> <span class="kw">as.numeric</span>(H_Age) <span class="op">-</span><span class="st"> </span><span class="dv">26</span>)
+M_hei_ran &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> ht <span class="op">~</span><span class="st"> </span>age, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> hei_long, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)
+<span class="co">#M_hei_ran &lt;- lmer(ht ~ age + (age | id), data = hei_long, REML = TRUE)</span>
+<span class="kw">summary</span>(M_hei_ran)</code></pre></div>
+<pre><code>## Linear mixed-effects model fit by REML
+##  Data: hei_long 
+##         AIC       BIC     logLik
+##   30382.427 30423.006 -15185.213
+## 
+## Random effects:
+##  Formula: ~age | id
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##             StdDev      Corr  
+## (Intercept) 6.158844448 (Intr)
+## age         0.059929578 -0.281
+## Residual    1.259210714       
+## 
+## Fixed effects: ht ~ age 
+##                 Value   Std.Error   DF    t-value p-value
+## (Intercept) 162.49616 0.141129788 4416 1151.39521       0
+## age          -0.03158 0.002273653 4416  -13.88951       0
+##  Correlation: 
+##     (Intr)
+## age -0.279
+## 
+## Standardized Within-Group Residuals:
+##           Min            Q1           Med            Q3           Max 
+## -3.9386996996 -0.4542383385 -0.0066047392  0.4297466638  5.5051618893 
+## 
+## Number of Observations: 6397
+## Number of Groups: 1980</code></pre>
+<p>這個混合效應模型同時包含了隨機截距和隨機斜率兩個部分。你可以用 LRT 比較它和一個只有隨機截距的模型哪個更好，但是我們沒有辦法比較它和混合對稱模型哪個更優於擬合這個數據 (因爲他們的固定效應部分不同，在 REML 方法下實際二者擬合的數據是不同的)。這個隨機系數模型和前一個混合對稱模型都給出了身高隨着年齡增加而減少的相同結論。不同的是，隨機系數模型把同一對象內不同時間觀測值之間的等協方差的約束條件給放開了，因爲用腳趾頭想也知道<strong>同一個人不同時間測量的數據之間的協方差會隨着時間跨度不同而發生改變</strong>。</p>
+<p>根據隨機系數模型給出的報告，計算模型估計的觀測值 (身高的4個時間點) 的方差協方差矩陣:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\hat{\text{Cov}}(Y_{1j}, Y_{2j}) &amp; = \sigma^2_{u_{00}} + \sigma^2_{u_{11}}t_1t_2 +\sigma_{u_{01}} (t_1 + t_2) \\
+ &amp; = 6.1588^2 + 0.0599^2t_1t_2 + (-0.28)\times6.1588\times0.0599 (t_1 + t_2)\\ 
+ &amp; = 37.93 + 0.004\times t_2 \times t_2 - 0.104 \times(t_1 + t_2) \\
+\hat{\text{Var}} (Y_1j) &amp; = \sigma^2_{u_{00}} + \sigma^2_{u_{11}}t_1^2 - 2\sigma_{u_{01}}t_1 + \sigma_e^2 \\ 
+&amp; = 37.93 + 0.004 \times t_1^2 - 0.104\times2\times t_1 + 1.59
+\end{aligned}
+\]</span></p>
+<p>所以，當 <span class="math inline">\(t_1 = 0, t_2 = 10, t_3 = 17, t_4 = 27\)</span> 時，</p>
+<p><span class="math display">\[
+\mathbf{\hat{\Sigma_u}} =  \left( \begin{array}{cccc} 
+ 39.52 &amp; 36.90  &amp; 36.17 &amp; 35.14 \\
+ 36.90 &amp; 37.81  &amp; 35.75 &amp; 35.07 \\
+ 36.17 &amp; 35.75  &amp; 37.03 &amp; 35.03 \\
+ 35.14 &amp; 35.07  &amp; 35.03 &amp; 36.54 \\
+\end{array} \right)
 \]</span></p>
 </div>
 </div>
