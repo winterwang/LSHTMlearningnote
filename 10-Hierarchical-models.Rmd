@@ -1950,8 +1950,9 @@ my_lms <- lapply(1:65, function(School_n) lm(gcse ~ lrt, data = gcse_selected[gc
 Coefs <- sapply(my_lms, coef) # this is a matrix
 Coefs <- as.data.frame(t(Coefs)) # convert it into a dataframe vertically 
 
-ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_blank() + 
-  geom_abline(data = Coefs[-48,],   aes(intercept = `(Intercept)`, slope = lrt))  +
+ggplot( gcse_selected[gcse_selected$school != 48, ], aes(x = lrt, y = gcse, group = factor(school))) + geom_blank() + 
+  geom_smooth(se = FALSE, method = "lm") + 
+  #geom_abline(data = Coefs[-48,],   aes(intercept = `(Intercept)`, slope = lrt))  +
   theme(axis.text = element_text(size = 15),
   axis.text.x = element_text(size = 15),
   axis.text.y = element_text(size = 15)) +
@@ -2586,7 +2587,7 @@ School_res[48, ]
 隨機截距的殘差估計範圍在 -6.25 和 5.83 之間，隨機斜率殘差估計範圍在 -0.19 和 0.33 之間。其中 48 號學校的擬合後截距和斜率分別是 -0.74 和 -0.02。48 號學校在這個模型中估計的截距和斜率，與我們單獨對它一所學校擬合模型時的結果大相徑庭。這是因爲在總體的混合效應模型中，該學校的數據被拉近與總體的平均水平。
 
 
-```{r 4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope (standardized) residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r 4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope (unstandardized) residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 plot1 <- HLMdiag::ggplot_qqnorm(School_res[,1], line = "quantile") +
   theme_bw() +
   theme(axis.text = element_text(size = 15),
@@ -2792,7 +2793,7 @@ linearHypothesis(M_hei, c("Age_1 - Age_2 = 0",
 
 $$
 \Omega_y = \left( \begin{array}{cccc} 
- 37.90 & 35.91  & 35.91 & 37.90 \\
+ 37.90 & 35.91  & 35.91 & 35.91 \\
  35.91 & 37.90  & 35.91 & 35.91 \\
  35.91 & 35.91  & 37.90 & 35.91 \\
  35.91 & 35.91  & 35.91 & 37.90\\
@@ -3048,10 +3049,162 @@ ggarrange(hist, plot2,
 
 ## 不固定測量時刻 variable occasions
 
+當重復收集的數據不是平衡數據時，意味着不同的人數據的收集時間點不一樣，我們就無法像前面那樣用協方差矩陣的方式來描述不同人不同時間點之間測量值可能存在的相關性，也沒有辦法給每個時間點所有人的數據做平均值作爲全部人的平均特質。
 
-## Asian growth data 實例
+但是我們可以把不固定測量時刻的不平衡數據看作是受缺失值數據影響的平衡數據 (unbalanced data can be thought of as balanced data affected by missingness)。所以需要特別小心謹慎，因爲用線性混合效應模型擬合這樣的數據，其實是在含蓄地假設那些應該出現但是沒有出現的測量值的缺失是隨機的。
+
+
+**Asian growth data 實例**
+
+在本部分開頭的章節介紹過，這是一個收集了亞洲兒童在 6 周，8 個月，12 個月，和 27 個月大時的體重數據。
+
+
+
+```{r  Hier05-07, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='Growth profiles of boys and girls in the Asian growth data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+growth <- read_dta("backupfiles/asian.dta")
+growth <- growth %>%
+  mutate(gender = factor(gender, labels= c("Boys", "Girls")))
+
+ggthemr('fresh')
+
+G <- ggplot(growth, aes(x = age, y = weight)) + 
+ geom_line(aes(group = id), lty = 1) + 
+   theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age (years)", y = "Weight (Kg)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + 
+  theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19),   legend.title = element_text(size = 19)) + theme(plot.subtitle = element_text(vjust = 1), 
+  plot.caption = element_text(vjust = 1)) +labs(fill = "Child number") + 
+  scale_fill_discrete(labels = c("1st Child", "2nd Child"))
+G + facet_grid(. ~ gender) + 
+  theme(strip.text = element_text(face = "bold", size = rel(1.5)))
+```
+
+如圖 \@ref(fig:Hier05-07) 所示，觀察男孩女孩的體重隨着時間的變化，似乎暗示男孩子體重增加的速度較高，且男孩中體重增加的差異 (方差) 似乎也較女孩子的體重增加曲線來得大。另外，體重和年齡的關系並不是線性的，而且，這些數據中有缺失值。
+
+**隨機截距模型**
+
+第一個想到的合適模型應該包括一個隨機截距，一個固定效應的線性和拋物線性的年齡項，還有最後一個啞變量用以區分男孩和女孩: 
+
+$$
+Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{girl}_j + e_{ij}
+$$
+
+在 R 裏擬合這個模型: 
+
+```{r Hier05-08, cache=TRUE}
+growth <- growth %>%
+  mutate(age2 = age^2)
+
+M_growth <- lme(fixed = weight ~ age + age2 + gender, random = ~ 1 | id, data = growth, method = "REML", na.action = na.omit)
+summary(M_growth)
+
+## 由於樣本量較小，這裏如果使用極大似然法估計 ML，結果就和 REML 估計的隨機效應的方差部分不太相同
+M_growthml <- lme(fixed = weight ~ age + age2 + gender, random = ~ 1 | id, data = growth, method = "ML", na.action = na.omit)
+summary(M_growthml)
+```
+
+**隨機截距和斜率模型**
+
+此時我們再來用相同的數據擬合混合效應模型，現在允許線性年齡的斜率有隨機變化: 
+
+```{r Hier05-09, cache=TRUE}
+M_growth_mix <- lme(fixed = weight ~ age + age2 + gender, random = ~ age | id, data = growth, method = "REML", na.action = na.omit)
+summary(M_growth_mix)
+```
+
+這裏可以看到隨機殘差 (residuals) 的標準差 (`StdDev`) 部分在後者(混合系數模型)中明顯變小了 $(0.74\rightarrow 0.54)$。另外，第二層級殘差和第一層級殘差 (未標準化) 如圖 \@ref(fig:hier05-10) 和 \@ref(fig:hier05-11):
+
+
+
+```{r hier05-10, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='UN-Standardized cluster level residuals (intercept and slope) from the random intercept and slope model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, eval=TRUE}
+
+uhat_eb <- ranef(M_growth_mix)
+
+
+ggthemr("fresh")
+
+plot_u0hat <- HLMdiag::ggplot_qqnorm(uhat_eb$`(Intercept)`, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 2 cluster  residuals (EB) of intercept")  +
+  theme(axis.title = element_text(size = 14), axis.text = element_text(size = 8))
+
+plot_u1hat <- HLMdiag::ggplot_qqnorm(uhat_eb$age, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 2 cluster  residuals (EB) of slope")  +
+  theme(axis.title = element_text(size = 14), axis.text = element_text(size = 8))
+
+
+ggarrange(plot_u0hat, plot_u1hat,  
+          ncol = 2, nrow = 1)
+```
+
+
+
+```{r hier05-11, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Standardized elementary level residuals from the random intercept and slope model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+ehat_st <- residuals(M_growth_mix, type = "normalized", level = 1)
+
+ehat_st <- as.data.frame(ehat_st)
+
+hist <- ggplot(ehat_st, aes(ehat_st)) + 
+    geom_histogram(colour = "black", aes(y = ..density..), 
+                   size = 0.1, binwidth= 0.2)  + 
+             stat_function(fun=dnorm, size = 1,
+                         args=list(mean=mean(ehat_st$ehat_st), 
+                                  sd=sd(ehat_st$ehat_st))) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Level 1 standardized residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(ehat_st$ehat_st, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 1 standardized residuals (EB)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
 
 ## 預測軌跡 predicting trajectories
+
+比較只有隨機截距模型，和隨機系數模型給出的擬合曲線是否有差異 如圖\@ref(fig:hier05-12)，其實差異十分微小。可以用下面的 R 代碼: 
+
+```{r hier05-12,  cache=TRUE, echo=TRUE, fig.height=5, fig.width=8, fig.cap='Standardized elementary level residuals from the random intercept and slope model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+growth$traj2 <- fitted(M_growth_mix) 
+growth$traj1 <- fitted(M_growth) 
+
+G <- ggplot(growth[growth$id %in% c(258,1141,3148,287),], aes(x = age, y = weight)) + geom_point(shape = 19, size = 4) + 
+ # geom_line(aes(y = traj1)) + 
+#  geom_line(aes(y = traj2), linetype = 2) +
+  stat_smooth(method = "lm", aes(y = traj1), formula = y ~ x + I(x^2), se = F, linetype = 2) + 
+  stat_smooth(method = "lm", aes(y = traj2), formula = y ~ x + I(x^2), se = F)  +
+   theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+
+G +  facet_wrap( ~ id, ncol = 2) + 
+  theme(strip.text = element_text(face = "bold", size = rel(1.5)))
+```
+
 
 
 # 縱向研究數據 longitudinal data 2
