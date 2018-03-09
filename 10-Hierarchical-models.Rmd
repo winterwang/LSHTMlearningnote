@@ -2959,7 +2959,7 @@ $$
 所以，當 $t_1 = 0, t_2 = 10, t_3 = 17, t_4 = 27$ 時，
 
 $$
-\mathbf{\hat{\Sigma_u}} =  \left( \begin{array}{cccc} 
+\mathbf{\hat{\Sigma}_u} =  \left( \begin{array}{cccc} 
  39.52 & 36.90  & 36.17 & 35.14 \\
  36.90 & 37.81  & 35.75 & 35.07 \\
  36.17 & 35.75  & 37.03 & 35.03 \\
@@ -2968,7 +2968,87 @@ $$
 $$
 
 
+```{r 5-level2-ress, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Standardized cluster level residuals (intercept) from the compound symmetry model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, eval=FALSE}
+# refit the model with lme
+M_hei_ran <- lme(fixed = ht ~ age, random = ~ age | id, data = hei_long, method = "REML", na.action = na.omit)
+# individual level standardized residuals
+ehat_st <- residuals(M_hei_ran, type = "normalized", level = 1)
 
+# extract the EB uhat (level 2 EB residual) intercept and slope
+uhat_eb <- ranef(M_hei_ran)
+uhat_eb <- ranef(M_hei_ran, standard=TRUE)[,2] 
+
+# standardized level 2 residuals
+### count number of measures for each women
+Nmeas <- 4
+### shrinkage factor 
+R1 = 6.15884 ^2/(6.15884 ^2 + 1.25921^2/Nmeas)
+R2 = 0.05993^2/(0.05993^2 + 1.25921^2/Nmeas)
+### use shrinkage factor calculate variance of uhat_eb
+var_eb_inter <- R1 * 6.15884 ^2
+var_eb_slope <- R2 * 0.05993
+### standardize uhat
+uhat_eb$inte_st <- uhat_eb$`(Intercept)`/sqrt(var_eb_inter)
+uhat_eb$slop_st <- uhat_eb$age/sqrt(var_eb_slope)
+
+
+
+M_hei_ran <- lmer(ht ~ age + (age | id), data = hei_long, REML =TRUE)
+uhat_eb <- HLMdiag::HLMresid(M_hei_ran, level = "id", type = "EB", standardize = TRUE)
+
+
+ggthemr("fresh")
+
+plot_u0hat <- HLMdiag::ggplot_qqnorm(uhat_eb$inte_st, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 2 cluster standardized residuals (EB) of intercept")  +
+  theme(axis.title = element_text(size = 14), axis.text = element_text(size = 8))
+
+plot_u1hat <- HLMdiag::ggplot_qqnorm(uhat_eb$slop_st, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 2 cluster standardized residuals (EB) of slope")  +
+  theme(axis.title = element_text(size = 14), axis.text = element_text(size = 8))
+
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+```{r 5-level1-res0, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Standardized elementary level residuals from the random intercept and slope model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+ehat_st <- residuals(M_hei_ran, type = "normalized", level = 1)
+
+ehat_st <- as.data.frame(ehat_st)
+
+hist <- ggplot(ehat_st, aes(ehat_st)) + 
+    geom_histogram(colour = "black", aes(y = ..density..), 
+                   size = 0.1, binwidth= 0.2)  + 
+             stat_function(fun=dnorm, size = 1,
+                         args=list(mean=mean(ehat_st$ehat_st), 
+                                  sd=sd(ehat_st$ehat_st))) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Level 1 standardized residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(ehat_st$ehat_st, line = "quantile") +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "Level 1 standardized residuals (EB)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8))
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
 
 
 ## 不固定測量時刻 variable occasions
