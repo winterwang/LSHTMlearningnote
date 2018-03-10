@@ -2693,7 +2693,7 @@ ggarrange(hist, plot2,
 
 #### 隨機截距模型 random intercept model
 
-**混合對稱模型 compound symmetry model**， 是常見的一種用於重復測量數據的模型，它是基於隨機截距模型的一種擴展模型。
+**復合對稱模型 compound symmetry model**， 是常見的一種用於重復測量數據的模型，它是基於隨機截距模型的一種擴展模型。
 
 當模型中沒有解釋變量時，
 
@@ -2745,7 +2745,7 @@ $$
 \end{array} \right)
 $$
 
-也正是由於觀測值的協方差矩陣是如此地對稱，該模型被命名爲混合對稱模型 compound symmetric model。
+也正是由於觀測值的協方差矩陣是如此地對稱，該模型被命名爲復合對稱模型 compound symmetric model。
 
 **Adult height measures 數據**
 
@@ -3211,6 +3211,8 @@ G +  facet_wrap( ~ id, ncol = 2) +
 
 # 縱向研究數據 longitudinal data 2
 
+本章沒有代碼，學會如何用矩陣標記法寫下你的多元混合效應模型。
+
 ## 邊際結構 marginal structures
 
 至此，我們接觸過的各種混合效應模型其實代表的是數據不同的邊際結構關系 (marginal relations)。
@@ -3370,7 +3372,86 @@ $$
 這就是一個多元線性混合效應回歸模型，大多數情況下，$\mathbf{\Sigma}_e = \sigma^2_e\mathbf{I}$。
 
 
+## 其他可選擇的方差協方差矩陣特徵 
+
+學會了上面的矩陣標記以後，就應該了解在這樣的多元混合效應模型中，對於層內方差，協方差矩陣的 $\mathbf{\Sigma_u}$ 結構初步假設是相當重要的。目前爲止我們接觸過的模型的方差協方差矩陣結構列舉如下 (爲了簡便標記都用$3\times3$ 的矩陣來表示): 
+
+- 復合對稱結構 (compound symmetry structure - compound symmetry model) 又名爲可交換結構 (exchangeable structure)
+
+$$
+\mathbf{\sum}_{\mathbf{u}}  =\left( \begin{array}{cc}
+              \sigma^2_{u} + \sigma^2_e & \sigma^2_{u}             &  \sigma^2_{u} \\
+              \sigma^2_{u}              & \sigma^2_{u} + \sigma^2_e& \sigma^2_{u}  \\
+              \sigma^2_{u}              & \sigma^2_{u} & \sigma^2_{u} + \sigma^2_e \\
+              \end{array} \right)
+$$
+
+- 隨機系數結構 random coefficient (RC) structure
+
+$$
+\mathbf{\sum}_{\mathbf{u}}  =\left( \begin{array}{cc}
+              \sigma^2_{u_{00}} + \sigma^2_e       & \sigma^2_{u_{00}} + \sigma_{u_{01}} &  \sigma^2_{u_{00}} + 2\sigma_{u_{01}} \\
+              \sigma^2_{u_{00}} + \sigma_{u_{01}}  & \sigma^2_{u_{00}} + 2\sigma_{u_{01}} + \sigma^2_{u_{11}} + \sigma^2_e& \sigma^2_{u_{00}} + 3\sigma_{u_{01}} + 2\sigma^2_{u_{11}}  \\
+              \sigma^2_{u_{00}} + 2\sigma_{u_{01}} & \sigma^2_{u_{00}} + 3\sigma_{u_{01}} + 2\sigma^2_{u_{11}} & \sigma^2_{u_{00}} + 4\sigma_{u_{01}} + 4\sigma^2_{u_{11}}+\sigma^2_e \\
+              \end{array} \right)
+
+$$
+
+除了這兩個結構以外其他常見方差寫方差結構還有: 
+
+- 自回歸結構 (autoregressive structure): 
+
+$$
+\frac{\phi}{1-\alpha^2} \left(\begin{array}{ccc}
+1 & \alpha & \alpha^2 \\
+\alpha & 1  & \alpha \\
+\alpha^2 & \alpha  & 1
+\end{array}
+\right)
+$$
+
+- 無固定結構 (unstructure): 
+
+
+$$
+\left(\begin{array}{ccc}
+\sigma_{11} & \sigma_{12}  &\sigma_{13} \\
+\sigma_{21} & \sigma_{22}  &\sigma_{23} \\
+\sigma_{31} & \sigma_{32}  &\sigma_{33}
+\end{array}
+\right)
+$$
+
+最後不要忘記了還有完全獨立結構 (不需要任何復雜模型或校正其數據間的依賴性): 
+
+$$
+\sigma^2\left(\begin{array}{ccc}
+1 & 0  & 0 \\
+0 & 1  & 0 \\
+0 & 0  & 1
+\end{array}
+\right)
+$$
+
+## 其他要點評論
+
+- 各種結構模型之間的相互比較 
+
+    - 似然比檢驗法 the likelihood ratio test (LRT) <br> 前提是模型的固定結構不發生改變，兩個嵌套式模型之間的比較是可以使用死然比檢驗的。缺點是統計學效能可能不太理想 (low power) 
+    - 模型的比較指標 information criteria <br> 就算是同一個數據，如果不同的協方差結構矩陣模型的固定效應部分也不同，似然比檢驗也不使用，這時候應該求助於赤池信息量 (Akaike's Information Criterion, AIC)，或者貝葉斯信息量 (Bayesian Criterion, BIC) 的比較。這兩個信息量都是使用的模型的似然減去相應模型的參數數量作爲評判標準。差別是 BIC 對參數的調整更加大些。但是，沒人可以保證這些信息會永遠相互認證，他們可能出現互相矛盾，也沒人可以保證使用這些信息的比較可以證明你的模型是"最佳"模型。
+    
+## 不平衡數據
+
+- 有缺失值的數據，我們無法使用已知的協方差結構矩陣; 
+- 隨機效應模型，隨機系數模型可以用於不平衡數據，所以即使有缺失值，我們可以從混合效應模型的結果來推測數據暗示我們數據中存在着怎樣的協方差結構;
+
+
+## Practical 06-Hier
+
+
 # 縱向研究數據 longitudinal data 3
+
+
 
 # Generalized Estimating Equation
  
