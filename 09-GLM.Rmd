@@ -201,6 +201,127 @@ $$
 
 線性迴歸時殘差方差的檢驗統計量服從 $F$ 分佈 (Section \@ref(lm-Ftest))。
 
+## GLM-Practical 01
+
+### 建立似然方程
+
+對下列不同的情形，寫下其
+
+1. 統計學模型
+2. 指明模型中的參數
+3. 推導該參數的對數似然方程
+
+#### 在 $n$ 名對象中觀察到 $k$ 個事件。
+
+1. 統計學模型: $K$ 是隨機變量，指代事件的數量，$K \sim \text{Bin}(n, \pi)$。每個觀察個體中發生事件的概率相互獨立且相同。
+2. 模型參數: $\pi$ 是模型參數，指代事件發生的概率。
+3. 對數似然的推導
+  - 概率方程 (probability function): 
+
+$$
+\text{Pr}(K = k) = \binom{n}{k}\pi^k(1-\pi)^{n-k}, k = 0,1,\cdots,n
+$$
+
+  - 似然方程 (likelihood function):
+  
+$$
+L(\pi|k) = \binom{n}{k}\pi^k(1-\pi)^{n-k}, 0<\pi<1
+$$  
+
+  - 對數似然方程 (log-likelihood function):
+  
+$$
+\ell(\pi|k) = k\log\pi + (n-k)\log(1-\pi) + \text{terms not involving } \pi, 0<\pi<1
+$$  
+
+#### 測量 $n$ 名研究對象的總膽固醇濃度 (mmol/l)，已知人羣中總膽固醇的測量值呈正態分布且方差爲 $4$ (mmol/l)^2^。
+
+1. 統計學模型: 用 $Y_i$ 表示每個個體測量獲得的總膽固醇濃度值。它們是獨立同分布的隨機變量 (independent and indentically distributed, i.i.d. random variables): $Y_i \sim N(\mu, 2^2 = 4)$。
+2. 模型參數: 總體均值 $\mu$。
+3. 對數似然的推導: 
+
+  - 概率密度方程 (probability density function):
+  
+$$
+\begin{aligned}
+f(y_1, \cdots, y_n) & = f(\mathbf{y}|\mu) = \prod_{i = 1}^n f(y_i | \mu) \\
+                    & = \prod_{i=1}^n \frac{1}{\sqrt{2\pi2^2}}e^{-0.5(\frac{y_i-\mu}{2})^2} \\ 
+                    & = [\frac{1}{\sqrt{2\pi2^2}}]^ne^{-0.5\sum_{i=1}^n(\frac{y_i-\mu}{2})^2} \\
+                    & -\infty < y_i < + \infty
+\end{aligned}
+$$  
+
+  - 對數似然方程 (log-likelihood function): 
+  
+$$
+\ell(\mu|\mathbf{y}) = -\frac{1}{2\times2^2}\sum_{i=1}^n(y_i - \mu)^2 + \text{terms not involving } \mu, -\infty < \mu < + \infty
+$$  
+
+### 建立對數似然方程 
+
+
+對下列不同的情形，寫下其
+
+1. 參數的對數似然方程
+2. 推導極大似然估計
+3. 計算極大似然估計量
+4. 繪制對數似然方程的示意圖
+
+#### 在 10 名研究對象中觀察到 3 個事件
+
+1. 對數似然方程是 
+
+$$
+\ell(\pi) = k\log\pi + (n-k)\log(1-\pi)
+$$
+
+2. 極大似然估計的推導
+
+$$
+\ell^\prime(\pi) = 0 \Rightarrow \frac{k}{\pi} - \frac{n-k}{1-\pi} = 0 \\
+\Rightarrow \hat\pi = \frac{k}{n}
+$$
+
+3. 極大似然估計量 $\hat\pi = 3/10 = 0.3$
+
+4. 繪制對數似然方程的示意圖
+
+```{r llr-GLM-exe01,fig.height=5, fig.width=7, warning=FALSE, message=FALSE, fig.cap='Log-likelihood for binomial model.', fig.align='center', out.width='90%', cache=TRUE}
+pi <- seq(0,1, by = 0.0001)
+likelihood <- 3*log(pi) + 7*log(1-pi)
+plot(pi, likelihood, type = "l", ylim = c(-40, 0), frame.plot = TRUE,
+     ylab = "log-likelihood(\U03C0)", xlab = "\U03C0" )
+```
+
+#### 10名研究對象測量的總膽固醇濃度分別是 6.0, 6.2, 6.8, 5.3, 5.9, 6.1, 6.0, 7.0, 5.9, 6.3。已知人羣中總膽固醇值服從方差爲 4 (mmol/l)^2^ 的正態分布。
+
+1. 對數似然方程是: 
+
+$$
+\begin{aligned}
+\ell(\mu) & = -\frac{1}{2\times2^2}\sum_{i=1}^{10} (Y_i - \mu)^2 \\
+          & = -\frac{1}{8}\sum_{i=1}^{10} (Y_i - \bar{y} + \bar{y} - \mu)^2 \\
+          & = -\frac{1}{8}\sum_{i=1}^{10} (\bar{y} - \mu)^2 \\
+          & = -\frac{10}{8}(\bar{y} - \mu)^2
+\end{aligned}
+$$
+
+2. 極大似然估計，和極大似然估計量是: 
+
+$$
+\ell^\prime(\mu) = 0 \Rightarrow \hat\mu = \bar{y} = 6.15
+$$
+
+3. 繪制對數似然方程的示意圖
+
+```{r llr-GLM-exe02,fig.height=5, fig.width=7, warning=FALSE, message=FALSE, fig.cap='Log-likelihood for normal model', fig.align='center', out.width='90%', cache=TRUE}
+mu <- seq(5,7, by = 0.0001)
+likelihood <- -(5/4)*(6.16-mu)^2
+plot(mu, likelihood, type = "l", ylim = c(-1.8, 0), frame.plot = TRUE,
+     ylab = "log-likelihood(\U03BC)", xlab = "\U03BC" )
+```
+
+
 # 廣義線性迴歸入門
 
 線性迴歸方法是十分強大的建模工具，可惜的是它只能適用與因變量爲連續型變量的情況。廣義線性迴歸模型 (或者叫一般化線性迴歸模型 generalised linear models, GLM) 是一大類將線性迴歸模型拓展到因變量可以使用二分類，計數，分組型變量的建模工具。
