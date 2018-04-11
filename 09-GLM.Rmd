@@ -163,7 +163,7 @@ $$
 
 增加了交互作用項最大的變化是，$x_i$ 的迴歸係數 $\beta$ 的含義發生了改變：當且僅當 $z = 0$ 且保持不變時，$x$ 每增加一個單位，$y$ 的變化量。如果 $z = k \neq 0$ 且保持不變，那麼 $x$ 每增加一個單位，$y$ 的變化量則是 $\beta + k\delta$。
 
-### 簡單線性迴歸的統計推斷
+### 簡單線性迴歸的統計推斷 {#score-equations}
 
 一個給定的樣本 $(y_i, x_i), i = 1, \cdots, n$ ，其對數似然方程是
 
@@ -189,7 +189,7 @@ $$
 $$
 \begin{aligned}
 U(\sigma^2) & = \ell^\prime(\sigma^2) = -\frac{n}{2\sigma^2} + \frac{1}{2\sigma^4}\sum_{i=1}^n(y_i - \alpha - \beta x_i)^2 \\
-U(\hat\sigma^2) & \Rightarrow \hat\sigma^2 = \frac{\sum_{i=1}^n(y_i - \hat\alpha - \hat\beta x_i)^2}{n}
+U(\hat\sigma^2) = 0 & \Rightarrow \hat\sigma^2 = \frac{\sum_{i=1}^n(y_i - \hat\alpha - \hat\beta x_i)^2}{n}
 \end{aligned}
 $$
 
@@ -321,6 +321,72 @@ plot(mu, likelihood, type = "l", ylim = c(-1.8, 0), frame.plot = TRUE,
      ylab = "log-likelihood(\U03BC)", xlab = "\U03BC" )
 ```
 
+### 線性回歸模型
+
+某項RCT臨牀實驗的目的是比較注射嗎啡和安慰劑哪個對患者的精神醫學指徵的改變更加有效。每個實驗組隨機分配到24名患者，精神醫學指徵使用某種心理調查問卷，問卷有七道題，患者七道題的總得分被用於評價其精神醫學指徵，的分越高，指徵越明顯。下表是這兩組患者在注射相應藥物兩小時之後答題的的分: 
+
+```{r GLMexer1-3, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Mental activity scores recorded 2 hours after injection of the drug.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics("img/Selection_122.png")
+```
+
+下面是 STATA 的計算結果，
+
+```{r GLMexer1-4, echo=FALSE, fig.asp=.7, fig.width=7, fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics("img/Selection_123.png")
+```
+ 
+1. 寫下該模型的數學表達式，陳述該模型中用到的所有假設和前提條件。用手頭的計算器手動計算該簡單線性回歸模型的截距和斜率，確定你的結果和STATA的結果是一樣的。
+
+$Y_i$ 用來表示第 $i$ 名對象的精神醫學指徵問卷的得分。該模型可以寫作: 
+
+$Y_1, Y_2, \cdots, Y_{48}$ 是 48 個獨立同分布的隨機變量，且 $Y_i \sim N(\mu, \sigma^2)$ 
+$$
+y_i = \alpha + \beta x_i \text{ for } x_i = \left\{ \begin{array}{ll}  0 \text{ placebo}\\  1 \text{ morphine}\\ \end{array} \right.
+$$
+
+從表格數據中可得 $\bar{x} = 0.5, \sum x_i^2 = 24, \bar{y}=4.604, \sum x_iy_i=88$，利用之前 \@ref(score-equations) 復習的簡單線性回歸公式: 
+
+$$
+\hat\alpha = 5.542 \\
+\hat\beta = -1.875
+$$
+
+2. 解釋截距和斜率的實際意義: 
+
+- $\hat\alpha$ 是安慰劑組的平均精神醫學指徵得分;
+- $\hat\beta$ 是注射嗎啡組和安慰劑組兩組之間得分均值之差。
+
+3. 實驗研究同時還測量了兩組在注射藥物之前的精神醫學指徵得分，下面是在 STATA 裏對該數據進行擬合的另一個模型。其中 `prement` 是藥物注射前得分的變量:
+
+```{r GLMexer1-5, echo=FALSE, fig.asp=.7, fig.width=7, fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics("img/Selection_124.png")
+```
+
+4. 寫下這個模型的數學表達式，並且解釋你會用怎樣的方法求各個參數的 MLE。
+
+$$
+y_i = \beta_0 + \beta_1 x_i + \beta_2 z_i + \beta_{12}x_iz_i \\
+ \text{ for } x_i = \left\{ \begin{array}{ll}  0 \text{ placebo}\\  1 \text{ morphine}\\ \end{array} \right.
+$$
+
+該模型的對數似然方程是 
+
+$$
+\ell(\beta_0, \beta_1, \beta_2, \beta_{12} | \mathbf{y, z, x}) = -\frac{1}{2\sigma^2}\sum_{i=1}^{48}(y_i - \beta_0 - \beta_1x_i - \beta_2z_i - \beta_{12}x_iz_i)^2
+$$
+
+把上面的對數似然方程等於零以後依次對 $\beta_0, \beta_1, \beta_2, \beta_{12}$ 求偏微分即可求得各自的 MLE。
+
+5. 解釋各參數估計的實際意義
+
+- $\hat\beta_0 =$ `_cons` $=1.978$ 是**當且僅當治療前得分爲零時**，模型對安慰劑組得分均值的估計;
+- $\hat\beta_1 =$ `2.treat` $=-1.212$ 是**當且僅當治療前得分爲零時**，嗎啡組和安慰劑組之間得分均值之差;
+- $\hat\beta_2 =$ `prement` $=0.594$ 是**對照組中，治療前得分每增加一個單位**，治療後得分的變化;
+- $\hat\beta_{12} =$ `2.treat#c.prement` $=-0.0895$ 是嗎啡組和安慰劑組兩組之間回歸斜率只差，也就是說 
+$$\hat\beta_2 + \hat\beta_{12} = 0.505$$
+是**嗎啡組中，治療錢得分沒增加一個單位**，治療後得分的變化。
+
+### 似然比檢驗，Wald 檢驗，Score 檢驗
 
 # 廣義線性迴歸入門
 
