@@ -788,6 +788,127 @@ Scatter <- ggplot(Mental, aes(x = prement, y = mentact)) + geom_point()+ theme_b
 grid.arrange(hist1, hist2, Scatter, ncol=2)
 ```
 
+可以看到柱狀圖暗示我們實驗前後的得分本身都不服從正態分布。但是這並不妨礙我們使用回歸模型來做推斷。畢竟，**線性回歸模型只要求殘差服從正態分布**。另外，散點圖提示實驗前後的得分之間可能呈正相關。
+
+```{r loess1, echo=TRUE, fig.width=5, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.8, for the mental data", fig.align='center', out.width='100%', cache=TRUE}
+ggplot(Mental, aes(prement, mentact)) + geom_point() +
+  geom_smooth(method = "loess",  span = 0.8, se = FALSE) +
+  facet_grid(treatment ~ .) + theme_bw()
+```
+
+對於每組實驗組來說，觀測值數量都很少，姑且可以認爲線性模型是合理的。
+
+```{r GLM-exer-tab1, echo=FALSE, cache=TRUE}
+my_tbl <- tibble::tribble(
+                      ~Terms.fitted,     ~RSS, ~Residual.df,
+                     "1. Overall mean", 1117.875,           71,
+                            "2. Drugs",  980.625,           69,
+                          "3. Pre-inj", 884.3277,           70,
+                  "4. Drugs + Pre-inj",  752.055,           68,
+  "5. Drugs + Pre-inj + Drugs×Pre-inj",  733.127,           66
+  )
+names(my_tbl) <- c("Terms fitted", "RSS", "Residuals df")
+require(knitr)
+require(kableExtra)
+
+
+kable(my_tbl, digits = 3, row.names = FALSE, align = "l",
+              format = "html", caption = "Residual sums of squares and degress of freedom from five different models for post-injection mental activity scores (pre-inj = preinjection score)") %>%
+ kable_styling(
+        bootstrap_options = c("striped", "hover", "condensed"),
+        position = "center", full_width = FALSE) 
+
+
+# kable(dt, "html",  align = "c", caption = "Death rates due to CHD in smokers and non-smokers, collapsed over age group") %>%
+#   kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+#### 寫下表格 \@ref(tab:Table1practical2) 中五個線性回歸模型的數學表達式，在 R 裏面擬合這5個模型，在第二列第三列分別填寫各模型的統計信息 (殘差平方和 residuals sum of squares，和 殘差自由度 reiduals degrees of freedom)。利用該表格填寫完整以後的內容，用筆和紙正式地比較模型 4 和 5 的擬合優度。然後和 R 的輸出結果比較確認。你會作出怎樣的結論？另外，爲什麼相似的比較模型的方法不適用於比較模型 2 和 3？
+
+**解**
+
+用 $z_i, y_i$ 分別標記第 $i$ 名患者在藥物注射前，後兩次測量的精神醫學指徵評分。使用線性回歸模型的前提假設是 $y_i \sim N(\mu_i, \sigma^2)$ 且互相獨立。另外，預測變量的標記爲: 
+
+$$
+x_{1i} = \left\{ \begin{array}{ll}  0 \text{ placebo or heroin }\\  1 \text{ morphine}\\ \end{array} \right.  
+x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ heroin}\\ \end{array} \right. \\
+$$
+
+1. Overall mean model
+
+鏈接方程部分: $\eta_i = \beta_0$
+
+```{r GL-exer-2-c1, echo=TRUE, cache=TRUE}
+#1.  Overall mean model 
+Overall <- lm(mentact ~ 1, data = Mental)
+summary(Overall)
+anova(Overall)
+```
+
+2. Drugs model
+
+鏈接方程部分: $\eta_i = \beta_0 + \beta_1$
+
+```{r GL-exer-2-c2, echo=TRUE, cache=TRUE}
+#2.  Drugs model 
+Drugs <- lm(mentact ~ treatment, data = Mental)
+summary(Drugs)
+anova(Drugs)
+```
+
+3. Pre-inj model 
+
+鏈接方程部分 $\eta_i = \beta_0 + \beta_3 z_i$
+
+
+```{r GL-exer-2-c3, echo=TRUE, cache=TRUE}
+#3.  Pre-inj model 
+Pre_inj <- lm(mentact ~ prement, data = Mental)
+summary(Pre_inj)
+anova(Pre_inj)
+```
+
+4. Drugs + pre-inj model
+
+鏈接方程部分: $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3z_i$
+
+```{r GL-exer-2-c4, echo=TRUE, cache=TRUE}
+#4.  Drugs + Pre-inj model 
+Drug_Pre_inj <- lm(mentact ~ treatment + prement, data = Mental)
+summary(Drug_Pre_inj)
+anova(Drug_Pre_inj)
+```
+
+5. Drug + Pre-inj + Drug×Pre-inj
+
+鏈接方程部分: $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3 z_i + \beta_{13}x_{1i}z_i + \beta_{23}x_{2i}z_i$
+
+```{r GL-exer-2-c5, echo=TRUE, cache=TRUE}
+#5.  Drugs + Pre-inj + Drug×Pre-inj model 
+Model5 <- lm(mentact ~ treatment*prement, data = Mental)
+summary(Model5)
+anova(Model5)
+```
+
+
+比較模型 3 和 4 可以使用相關的 F 統計量 (Partial F tests)
+
+$$
+F=\frac{(844.328 - 752.055)/(70-68)}{752.055/68} = 5.98
+$$
+
+自由度爲 (2,68) 時 F 統計量爲 5.98 的概率是:
+
+```{r GL-exer-2-c6, echo=TRUE, cache=TRUE}
+1-pf(5.98, 2, 68)
+```
+ 
+所以我們有極強的證據證明這兩個模型顯著不同，且模型 4 擬合數據更好，且該證據也證明了注射藥物後三組之間的精神醫學指徵的分顯著不同。用 R 進行偏 F 檢驗如下，可見我們的計算是完全正確的: 
+
+```{r GL-exer-2-c7, echo=TRUE, cache=TRUE}
+anova(Pre_inj, Drug_Pre_inj)
+```
+
 
 
 # 二項分佈數據的廣義線性迴歸模型 logistic regression model
