@@ -823,7 +823,7 @@ kable(my_tbl, digits = 3, row.names = FALSE, align = "l",
 #   kable_styling(bootstrap_options = c("striped", "bordered"))
 ```
 
-#### 寫下表格 \@ref(tab:Table1practical2) 中五個線性回歸模型的數學表達式，在 R 裏面擬合這5個模型，在第二列第三列分別填寫各模型的統計信息 (殘差平方和 residuals sum of squares，和 殘差自由度 reiduals degrees of freedom)。利用該表格填寫完整以後的內容，用筆和紙正式地比較模型 4 和 5 的擬合優度。然後和 R 的輸出結果比較確認。你會作出怎樣的結論？另外，爲什麼相似的比較模型的方法不適用於比較模型 2 和 3？
+#### 寫下表格 \@ref(tab:GLM-exer-tab1) 中五個線性回歸模型的數學表達式，在 R 裏面擬合這5個模型，在第二列第三列分別填寫各模型的統計信息 (殘差平方和 residuals sum of squares，和 殘差自由度 reiduals degrees of freedom)。利用該表格填寫完整以後的內容，用筆和紙正式地比較模型 3 和 4; 4 和 5 的擬合優度。然後和 R 的輸出結果比較確認。你會作出怎樣的結論？另外，爲什麼相似的比較模型的方法不適用於比較模型 2 和 3？
 
 **解**
 
@@ -847,7 +847,7 @@ anova(Overall)
 
 2. Drugs model
 
-鏈接方程部分: $\eta_i = \beta_0 + \beta_1$
+鏈接方程部分: $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i}$
 
 ```{r GL-exer-2-c2, echo=TRUE, cache=TRUE}
 #2.  Drugs model 
@@ -909,6 +909,52 @@ $$
 anova(Pre_inj, Drug_Pre_inj)
 ```
 
+
+比較模型 4 和 5: 
+
+```{r GL-exer-2-c8, echo=TRUE, cache=TRUE}
+anova(Drug_Pre_inj, Model5)
+```
+
+所以，模型 4 和 5 比較的結果告訴我們沒有證據證明實驗前的精神醫學指徵得分和不同治療組之間有交互作用。但是由於模型 2 和 3 本身不是互爲嵌套式結構的，所以他們無法通過相似的偏 F 檢驗來比較模型。
+
+#### 用 `glm` 命令擬合模型 4，試比較其輸出結果和 `lm` 之間的異同: 
+
+```{r  GL-exer-2-c9, echo=TRUE, cache=TRUE}
+Model4 <- glm(mentact ~ treatment + prement, family = gaussian(link = "identity"), data = Mental)
+summary(Model4)
+```
+
+可以看出各個參數估計和標準誤估計都是完全相同的。但是當你使用 STATA 的 `glm` 命令時，它默認的高斯鏈接方程使用的不是 t 檢驗結果而是 z 檢驗結果，所以會給出略微不同的 95% 信賴區間。
+
+#### 使用相關模型的結果填寫下列表格
+
+```{r GLM-exer-tab2, echo=FALSE, cache=TRUE}
+my_tbl <- tibble::tribble(
+         ~X1, ~Mean, ~Mean.diff.with.Placebo,   ~SE1, ~Adj.mean.diff.with.Placebo,   ~SE2,
+   "Placebo", 5.542,                       0,   "--",                           0,   "--",
+  "Morphine", 3.667,                  -1.875, "1.08",                      -1.761, "0.96",
+    "Heroin", 2.167,                  -3.375, "1.08",                       -3.31, "0.96"
+  )
+names(my_tbl) <- c(" ","Mean", "Mean diff with Placebo", "SE", "Adj. mean diff with Placebo", "SE")
+
+kable(my_tbl, digits = 3, row.names = FALSE, align = "c",
+              format = "html", caption = "Comparison of mean post-injection mental activity scores.") %>%
+ kable_styling(
+        bootstrap_options = c("striped", "hover", "condensed"),
+        position = "center", full_width = FALSE) 
+
+```
+
+#### 對分析的結果做簡短的總結
+
+在模型 2 (drug model) 中，F 檢驗給出的 p = 0.0109，提供了較爲有力的證據證明每個治療組治療後的精神醫學指徵得分是不同的。但是，觀察每個回歸系數的檢驗結果，發現嗎啡組和安慰劑組之差其實沒有達到 5% 統計學意義 (p = 0.089)，海洛因組和安慰劑組之間的得分差則達到了 5% 的統計學意義 (p = 0.003)。
+
+模型加入對實驗前精神醫學指徵得分的調整之後，組與組之間的估計差發生了些許(但是並不大)的變化。這其實也是我們事先估計的結果，因爲對於RCT來說，沒有混雜因素，之所以調整基線值，主要爲的是提升參數估計的精確度 (減小 SE，從而使95% 信賴區間更小)。
+
+對交互作用實施了偏 F 檢驗得到的結果 (p = 0.43) 提示，沒有證據反對零假設 -- 藥物作用效果不因爲實驗前患者的精神醫學指徵得分不同而不同。
+
+最後，`glm` 和 `lm` 的模型結果輸出在 R 裏是幾乎完全相同的，在 STATA 裏面則有計算方法的不同導致不同的95%CI。
 
 
 # 二項分佈數據的廣義線性迴歸模型 logistic regression model
