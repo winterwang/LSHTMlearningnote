@@ -648,6 +648,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="45.5.2" data-path="-logistic-regression-model.html"><a href="-logistic-regression-model.html#-1--"><i class="fa fa-check"></i><b>45.5.2</b> 模型 1 飼料 + 羣</a></li>
 <li class="chapter" data-level="45.5.3" data-path="-logistic-regression-model.html"><a href="-logistic-regression-model.html#-2---times-"><i class="fa fa-check"></i><b>45.5.3</b> 模型 2 增加交互作用項 飼料 <span class="math inline">\(\times\)</span> 羣</a></li>
 </ul></li>
+<li class="chapter" data-level="45.6" data-path="-logistic-regression-model.html"><a href="-logistic-regression-model.html#glm-practical-03"><i class="fa fa-check"></i><b>45.6</b> GLM-Practical 03</a><ul>
+<li class="chapter" data-level="45.6.1" data-path="section-44.html"><a href="section-44.html#-r"><i class="fa fa-check"></i><b>45.6.1</b> 數據讀入 R</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="46" data-path="section-46.html"><a href="section-46.html"><i class="fa fa-check"></i><b>46</b> 模型比較和擬合優度</a><ul>
 <li class="chapter" data-level="46.1" data-path="section-46.html"><a href="section-46.html#-nested-models"><i class="fa fa-check"></i><b>46.1</b> 嵌套式模型的比較 nested models</a></li>
@@ -1227,6 +1230,129 @@ x_{jp} &amp; = x_{ip} + 1\\
 \text{exp}(-0.7051 - 0.2058) = 0.40
 \]</span></p>
 <p>通過對 <span class="math inline">\(\hat\beta_3 = 0\)</span> 的假設檢驗，就可以推斷飼料濃度和感染瘋牛病之間的關係是否因爲不同牲畜 “羣” 而不同。所以上面的報告中也已經有了交互作用項的檢驗結果 <span class="math inline">\(p = 0.584\)</span>，所以，此處可以下的結論是：沒有足夠的證據證明交互作用存在。</p>
+</div>
+</div>
+<div id="glm-practical-03" class="section level2">
+<h2><span class="header-section-number">45.6</span> GLM-Practical 03</h2>
+<p>數據來自一個毒理學實驗，該實驗中 8 組昆蟲在不同濃度的二硫化碳下暴露四個小時，實驗的目的是研究二硫化碳劑量和昆蟲死亡率之間的關系。</p>
+<div id="-r" class="section level3">
+<h3><span class="header-section-number">45.6.1</span> 數據讀入 R</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Insect &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;backupfiles/INSECT.RAW&quot;</span>, <span class="dt">header =</span>  <span class="ot">FALSE</span>, <span class="dt">sep =</span><span class="st">&quot;&quot;</span>, <span class="dt">col.names =</span> <span class="kw">c</span>(<span class="st">&quot;dose&quot;</span>, <span class="st">&quot;n_deaths&quot;</span>, <span class="st">&quot;n_subjects&quot;</span>))
+<span class="kw">print</span>(Insect)</code></pre></div>
+<pre><code>##    dose n_deaths n_subjects
+## 1 49.06        6         59
+## 2 52.99       13         60
+## 3 56.91       18         62
+## 4 60.84       28         56
+## 5 64.76       52         63
+## 6 68.69       53         59
+## 7 72.61       60         62
+## 8 76.54       59         60</code></pre>
+<ol style="list-style-type: decimal">
+<li>計算每組實驗濃度下死亡昆蟲的比例</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Insect &lt;-<span class="st"> </span>Insect <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">p =</span> n_deaths<span class="op">/</span>n_subjects)
+<span class="kw">print</span>(Insect)</code></pre></div>
+<pre><code>##    dose n_deaths n_subjects          p
+## 1 49.06        6         59 0.10169492
+## 2 52.99       13         60 0.21666667
+## 3 56.91       18         62 0.29032258
+## 4 60.84       28         56 0.50000000
+## 5 64.76       52         63 0.82539683
+## 6 68.69       53         59 0.89830508
+## 7 72.61       60         62 0.96774194
+## 8 76.54       59         60 0.98333333</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>將濃度和死亡比例做散點圖</li>
+</ol>
+<div class="figure" style="text-align: center"><span id="fig:GLM-exe-3-3"></span>
+<img src="bookdown_files/figure-html/GLM-exe-3-3-1.png" alt="Scatter plot of CS2 dose and proportion killed." width="80%" />
+<p class="caption">
+圖 45.1: Scatter plot of CS2 dose and proportion killed.
+</p>
+</div>
+<p>這裏如果使用<strong>線性回歸模型是不合適的</strong>，這是因爲:</p>
+<ul>
+<li>散點圖提示濃度和死亡比例之間不是線性關系;</li>
+<li>“比例”這一數據被局限在 (0,1) 範圍之內，線性回歸的結果變量不會滿足這個條件;</li>
+<li>觀察數據本身的方差不齊，也就是每個觀察點(死亡比例)的變化程度無法保證是相同的。</li>
+</ul>
+<ol start="3" style="list-style-type: decimal">
+<li>計算死亡比例的對數比值比 (log-odds)，再作相同的散點圖，你會得出什麼樣的結論？</li>
+</ol>
+<div class="figure" style="text-align: center"><span id="fig:GLM-exe-3-4"></span>
+<img src="bookdown_files/figure-html/GLM-exe-3-4-1.png" alt="Scatter plot of CS2 dose and log-odds of proportion killed." width="80%" />
+<p class="caption">
+圖 45.2: Scatter plot of CS2 dose and log-odds of proportion killed.
+</p>
+</div>
+<p>死亡比例的對數比值比和二硫化碳濃度之間更加接近線性關系。</p>
+<ol start="4" style="list-style-type: decimal">
+<li>寫下此模型的數學表達式，你的表達式必須指明數據的分布，線性預測方程，和鏈接方程三個部分。用 R 擬合你寫下的模型。</li>
+</ol>
+<p><strong>解</strong></p>
+<p>本數據中，隨機變量是每組昆蟲中死亡的個數。用 <span class="math inline">\(Y_i\)</span> 標記第 <span class="math inline">\(i\)</span> 組昆蟲中死亡昆蟲數量，<span class="math inline">\(d_i\)</span> 表示第 <span class="math inline">\(i\)</span> 組昆蟲被暴露的二硫化碳濃度。對於所有的廣義線性回歸模型來說，它都由三個部分組成: 1) 反應量分布 the response distribution; 2) 鏈接方程 link function; 3) 線性預測方程 linear predictor.</p>
+<p>反應量分布:</p>
+<p><span class="math display">\[
+Y_i \sim \text{Bin}(n_i, \pi_i),i = 1, \cdots, 8
+\]</span></p>
+<p><span class="math inline">\(Y_i\)</span> 的期望值是 <span class="math inline">\(\mu_i\)</span> 的話，鏈接方程是</p>
+<p><span class="math display">\[
+\eta_i = \log(\frac{\mu_i}{n_i - \mu_i}) = \log(\frac{\pi_i}{1- \pi_i}) = \text{logit}(\pi_i)
+\]</span></p>
+<p>線性預測方程是</p>
+<p><span class="math display">\[
+\eta_i = \beta_0 + \beta_1 d_i
+\]</span></p>
+<p>用 R 來擬合這個模型:</p>
+<pre><code>## 
+## Call:
+## glm(formula = cbind(n_deaths, n_subjects - n_deaths) ~ dose, 
+##     family = binomial(link = logit), data = Insect)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.14983  -0.22403   0.25301   0.70846   0.99107  
+## 
+## Coefficients:
+##               Estimate Std. Error z value  Pr(&gt;|z|)    
+## (Intercept) -14.086403   1.228393 -11.467 &lt; 2.2e-16 ***
+## dose          0.236593   0.020303  11.653 &lt; 2.2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 268.26829  on 7  degrees of freedom
+## Residual deviance:   4.61548  on 6  degrees of freedom
+## AIC: 37.394
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<pre><code>## 
+## Logistic regression predicting cbind(n_deaths, n_subjects - n_deaths) 
+##  
+##                   OR(95%CI)         P(Wald&#39;s test) P(LR-test)
+## dose (cont. var.) 1.27 (1.22,1.32)  &lt; 0.001        &lt; 0.001   
+##                                                              
+## Log-likelihood = -16.697
+## No. of observations = 8
+## AIC value = 37.394</code></pre>
+<ol style="list-style-type: decimal">
+<li>計算 CS<sub>2</sub> 在 55mg/l 時該模型預測的昆蟲死亡概率是多少。</li>
+</ol>
+<p><span class="math display">\[
+\text{logit}(\hat\pi_i) = -14.09 + 0.2366\times55 \\
+\Rightarrow \hat\pi_i = \frac{\exp(-14.09 + 0.2366\times55)}{1+\exp(-14.09 + 0.2366\times55)} = 0.254
+\]</span></p>
+<ol start="2" style="list-style-type: decimal">
+<li>計算昆蟲死亡比例達到50%的CS<sub>2</sub>濃度(LD50)。</li>
+</ol>
+<p>當死亡比例達到一半時， <span class="math inline">\(\hat\pi = 0.5 \Rightarrow \text{logit}(\hat\pi) = 0\)</span></p>
+<p><span class="math display">\[
+0 = -14.09 + 0.2366 \times \text{LD50} \\
+\Rightarrow \text{LD50} = 59.5 \text{mg/l}
+\]</span></p>
 </div>
 </div>
 </div>
