@@ -1,0 +1,93 @@
+# (PART) 因果推斷 Causal Inference {-}
+
+# Causal Languages 因果推斷的語法
+
+## 當我們在談論因果推斷的時候，我們在談論什麼？
+
+衆多的醫學研究，科研工作者們苦苦收集數據，都是爲了能夠給觀察到的現象作出**因果關系的結論**。研究者帶着的研究問題通常是: 
+
+- 這個治療方案有沒有效果？
+- 暴露在某種可能有害的因素中到底有沒有危險？
+- 提出的新的衛生政策到底能不能解決實際的醫療問題？
+
+這些都是內在爲因果關系的設問。隨機對照實驗，之所以要隨機設計，且對其**隨機性**要求精準且苛刻，就是爲了一個能夠清晰可靠地作出因果關系的結論。在很多流行病學研究中，隨機設計可能因爲倫理因素不能使用。但每一個精心設計的實驗或者觀察性研究，其終極目的都是爲了解答暴露和結果之間到底有沒有因果關系這一目的。
+
+這裏我們用 “因果推斷” 來命名一類 “專門以探尋因果關系爲目的的” 統計學方法。其與傳統的統計學方法最大的不同點在於因果推斷用一套**正式的科學語言**，來解釋現象中到底有沒有因果關系。
+
+之所以發明這一套因果推斷專用的科學語言，有這樣幾個目的: 
+
+1. 更清晰地描述，我們到底要估計的 (estimate) 是什麼。
+2. 更徹底地強調，因果推斷結論背後的統計學前提和假設。
+3. 建立在前兩條前提的基礎上，我們可以使用專門爲統計推斷設計的新的統計學技巧，達到爲因果推斷提供證據的目的。
+
+
+因果推斷包括三個部分: 
+
+1. 清晰描述因果關系概念的正式科學語言 (causal language)。
+2. 因果關系示意圖 (causal diagram) -- 清晰地展示研究者對變量之間存在的所有可能因果關系的假設，在實驗設計，和數據分析兩個階段都需要用到。
+3. 因果關系統計學方法 (causal inference methods) -- 從獲得的數據中，用和傳統方法不同的假設，作出因果關系的推斷。
+
+
+## 傳統的統計學方法
+
+用一個簡單實例來理解傳統統計學方法實際上做的是什麼: 
+
+
+```{example}
+臨牀上認爲，給有貧血的患者靜脈內補充鐵劑是進行髖關節置換手術 (hip replacement operation) 之前建議的手段。研究者收集了某個醫院 2009 年至 2014 年間接受髖關節置換手術且有貧血的患者數據。在這個研究中，暴露變量 (exposure) 是患者是否在術前接受了靜脈內鐵劑補充，結果變量是髖關節置換手術之後，患者是否存活時間達到 90 天及以上。其他同時收集的數據有: 年齡，性別，伴隨疾病 (心血管疾病，糖尿病，腎病)，手術過程中是否接受了外來血源的輸血，以及住院時間。
+```
+
+
+
+### 初步分析 
+
+很多人第一步想到的，一定是先制作 2×2 的暴露 (FeIV) 和結果 (Death90) 的表格: 
+
+```{r CI-tab1-1, echo=FALSE, eval = TRUE, cache=TRUE}
+dt <- read.csv("backupfiles/ci-tab1-1.csv", header = T)
+names(dt) <- c(" ", " ", "0", "1")
+kable(dt, digits = 3, row.names = FALSE, align = "c",
+              caption = NULL, format = "html") %>%
+kable_styling(bootstrap_options = c("striped", "condensed"),
+        position = "center", full_width = FALSE) %>%
+add_header_above(c(" " = 2, "Death90" = 2)) %>%
+  column_spec(c(1,2), bold = T) %>%
+  collapse_rows(columns = 1:2)
+```
+
+
+從這個四格表我們計算的初步對數比值比是: 0.04 (95% CI: -0.12, 0.19)。
+
+請問在這個對數比值比的計算過程中，我們估計的到底是什麼？ 這裏的被估計量 (estimand) 是: 
+
+$$
+\log \text{OR}_{Y|X} = \log\{\frac{\text{Pr}(Y=1 | X = 1)}{1- \text{Pr}(Y = 1|X = 1)}\} - \log\{\frac{\text{Pr}(Y=1 | X = 0)}{1- \text{Pr}(Y = 1|X = 0)}\}
+$$
+
+```{definition, label="estimand"}
+<br>
+1. Estimand (被估計量): 我們想要知道的到底是什麼，例如，英國人口中收縮期血壓的平均值，這是一個無法知道，但是肯定存在確定量的量 (unknown fixed quantity)。<br>
+2. Estimator (估計量): 數據用來計算被估計量的某種**方程**，例如，隨機從街上找來100個人，測量他們的血壓，求出來的平均值，這是一個隨機變量 (random variable)，會隨着隨機挑選的樣本而變化。<br>
+3. Estimate (估計): 給定數據下，計算獲得的具體的量，例如，我做了隨機抽取100名英國人血壓測量的實驗，獲得 130.4 mmHg 這個平均收縮期血壓的測量值，這是一個可以計算成爲已知的確定量 (known fixed quantity)。
+```
+
+
+### 混雜
+
+我們知道，單純這樣簡單初步計算獲得的對數比值比，我們是無法對其作出因果關系的解釋的，因爲通常這樣的分析都忽略掉了潛在的混雜。在目前爲止我們學習過的傳統統計學方法中，混雜被我們粗略地定義成: "和暴露，結果兩個變量同時且獨立地相關，但是確定不存在在暴露和結果的因果通路上的變量 (associated with the exposure and independently associated with the outcome, without being on the causal pathway from exposure to outcome)"，下一章我們會看到，這其實是一個不能令人滿意的定義。
+
+
+
+# Graphical Models 因果推斷的圖形模型
+
+# Regression Methods with continuous outcomes 結果變量爲連續型變量
+
+# Regression Methods with binary outcomes 結果變量爲二分類變量 
+
+# Prospensity Score 傾向性評分  
+
+# Inverse probability weighted estimation and doubly robust methods 
+
+# Causal mediation analysis 
+
+
