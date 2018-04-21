@@ -1794,6 +1794,49 @@ Y(1)
 <strong>對機器學習的一點點暗示:</strong> 在因果推斷中新興的一個重要話題 – 機器學習 (machine learning，或者叫做 data-adaptive estimation techniques 數據適應性估計技巧) 在當今大數據時代顯得特別突出。常有人認爲，數據適應性估計技巧可以用於預測，但是不能用於因果推斷。這其實只能是說對了一部分。機器學習本身，其實是在給定了 (一大堆) 變量之後，尋找某個變量的最佳預測量。但是從我們目前爲止在因果推斷中的推導來看，相信你也能看出來，因果推斷本身也包括了預測的過程。因果推斷的第一個部分 – 鑑定過程是處理的是因果之間的前提假設，以及判斷因果推斷中用到的參數怎樣和已觀察到的數據在這裏因果條件下連接起來 – 這個部分是不能放到機器中去的。但是因果推斷的第二部分 – 估計 – 就是純粹的預測過程啦。這裏想強調的是機器學習的方法，可以被用在因果推斷的第二部分，而不是第一部分。第一部分還是要由人來完成。<span class="citation">(Laan and Rose <a href="#ref-Laan2017">2017</a>)</span>
 </div>
 
+
+<div class="example">
+<p><span id="exm:unnamed-chunk-96" class="example"><strong>Example 90.3  </strong></span>用前面的靜脈內鐵劑補充的24名患者數據來看，由於我們不切實際地假定了我們可以知道每個對象的所有潛在結果。所以，我們可以直接先用這個結果計算因果危險度差 (causal risk difference):</p>
+<p><span class="math display">\[\text{Pr}\{Y(1) = 1\} - \text{Pr}\{ Y(0) =1 \} = \frac{9}{24} - \frac{15}{24} = -\frac{1}{4}\]</span></p>
+<p>如果我們忽略掉患者貧血嚴重程度 C 的混雜效果，從觀察數據 X, Y, 計算獲得的粗危險度差 (crude risk difference) 就是</p>
+<p><span class="math display">\[\text{Pr}(Y=1 | X=1) - \text{Pr}(Y=1|X=0) = \frac{5}{12} - \frac{7}{12} = -\frac{1}{6}\]</span></p>
+<p>可見在這個例子中，忽略了貧血嚴重程度時，粗危險度差是往無效的方向偏倚的。但是其實那些被給予了靜脈內鐵劑補充支持的患者本身體質就弱，貧血就嚴重，粗危險度差的結果掩蓋掉了補充鐵劑對患者實際存在的保護作用。</p>
+<p>當考慮了貧血嚴重程度時，我們知道，在前提條件條件可置換性和一致性成立時，我們可以用<a href="causal-languages-.html#eq:Causal-infe-1-1">(90.1)</a> 來進行因果危險度差的計算:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{Pr}\{ Y(1) = 1 \} &amp; - \text{Pr}\{ Y(0) = 1 \} \\
+&amp; = \sum_{c=0}^1\text{Pr}(Y=1|X=1,C=c)\text{Pr}(C=c) \\ 
+&amp; \;\;\; - \sum_{c=0}^1\text{Pr}(Y=1|X=0,C=c)\text{Pr}(C=c) \\
+&amp; = \text{Pr}(Y=1|X=1,C=0)\text{Pr}(C=0) \\
+&amp; \;\;\; + \text{Pr}(Y=1|X=1,C=1)\text{Pr}(C=1) \\ 
+&amp; \;\;\; -  \text{Pr}(Y=1|X=0,C=0)\text{Pr}(C=0) \\
+&amp; \;\;\; - \text{Pr}(Y=1|X=0,C=1)\text{Pr}(C=1) \\
+&amp; = \frac{1}{4}\times\frac{1}{2} + \frac{1}{2}\times\frac{1}{2} - \frac{1}{2}\times\frac{1}{2} - \frac{3}{4}\times\frac{1}{2} \\
+&amp; = -\frac{1}{4} \\
+\end{aligned}
+\]</span></p>
+和前面計算的相吻合。
+</div>
+
+<p>當 C 是連續型變量時，<span class="math inline">\(\text{Pr}(C=c)\)</span> 變成關於 <span class="math inline">\(c\)</span> 的概率密度方程，加號就變成了積分符號:</p>
+<p><span class="math display">\[
+\text{Pr}\{ Y(x) = 1 \} = \int_c \text{Pr}\{ Y(x) = 1 | \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+\]</span></p>
+<p>Where <span class="math inline">\(p_\mathbf{C}(\cdot)\)</span> is the joint probability density/mass function for <span class="math inline">\(\mathbf{C}\)</span>, <span class="math inline">\(\mu_\mathbf{C}(\mathbf{c})\)</span> is a dominating measure (Lebesque for continuous components of <span class="math inline">\(\mathbf{C}\)</span> and counting measure otherwise).</p>
+<p>By conditional exchangeability, this can be rewritten as:</p>
+<p><span class="math display">\[
+\int_c \text{Pr}\{ Y(x) = 1 | X=x, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+\]</span></p>
+<p>By consistency, this is</p>
+<p><span class="math display">\[
+\int_c \text{Pr}\{ Y = 1 | X=x, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+\]</span></p>
+<p>Thus we have</p>
+<p><span class="math display">\[
+\text{Pr}\{ Y(x) = 1 \} - \text{Pr}\{ Y(0) = 1 \} \\
+= \int_c \text{Pr}\{ Y = 1 | X=1, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) - \\
+ \int_c \text{Pr}\{ Y = 1 | X=0, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+\]</span></p>
 </div>
 </div>
 </div>
