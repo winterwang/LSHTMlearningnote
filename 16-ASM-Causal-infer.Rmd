@@ -215,6 +215,120 @@ $\perp\perp$ 表示條件獨立 (conditional independence)，所以 $A\perp\perp
 在條件向量 $\mathbf{C}$ 的條件下，觀測對象的實際暴露狀況 $X$ 和他/她/它的所有潛在結果之間相互獨立。
 
 
+我們可以把第三個前提條件設想爲: 潛在結果 $Y(x)$ 已經能夠把對象身上所有的和結果 $Y$ 相關的特點都包含進來，唯一不包含的是他/她/它在現實世界中的觀測暴露變量。也就是，如果我們知道潛在結果 $Y(0), Y(1)$，且我們知道 $X$，那麼我們就可以知道 Y，因爲 $Y = XY(1) + (1-X) Y(0)$。
+
+
+```{example}
+還是靜脈鐵劑補充的例子，如果我們手裏拿到的數據如下表。一共只有24名患者，假定只有一個條件變量 C (貧血嚴重與否)，表格中羅列的是觀察變量 $X,Y,C$，同時還羅列了兩個平行世界的潛在結果變量 $Y(1), Y(0)$。這裏我們爲了解釋條件可置換性，我們先假裝真的可以獲得所有的潛在結果，實際情況下是不可能的。
+```
+
+
+```{r CI-tab1-2, echo=FALSE, eval = TRUE, cache=TRUE}
+dt <- read.csv("backupfiles/ci-tab1-2.csv", header = T)
+names(dt) <- c("Patient ID", "X", "Y", "C", "Y(0)", "Y(1)")
+kable(dt, digits = 3, row.names = FALSE, align = "c",
+              caption = NULL, format = "html") %>%
+kable_styling(bootstrap_options = c("striped", "condensed"),
+        position = "center", full_width = FALSE)  %>%
+    scroll_box(width = "400px", height = "500px", extra_css="margin-left: auto; margin-right: auto;")
+```
+
+在這個表格的數據中，我們注意到一致性的前提得到滿足，因爲對於每個 $X=1$ 的研究對象 $Y = Y(1)$，對於每個 $X=0$ 的研究對象 $Y=Y(0)$。
+
+- 邊際概率 marginal probability: 
+
+接下來，第一步，假設我們的數據中沒有條件變量 C，我們來看看數據是否能滿足可置換性 ($Y(0), Y(1)$ 和 $X$ 互相獨立)。
+
+$$
+\begin{aligned}
+\text{Pr}\{ Y(0)=1|X=1 \} &= \frac{2}{3}, \;\; \text{Pr}\{ Y(0)=1|X=0 \} = \frac{7}{12} \\
+\text{Pr}\{ Y(1)=1|X=1 \} &= \frac{5}{12}, \;\; \text{Pr}\{ Y(1)=1|X=0 \} = \frac{1}{3}
+\end{aligned}
+$$
+
+這裏條件概率計算的結果告訴我們，邊際概率此時不具有可置換性，因爲潛在結果變量 $Y(0) = 1$ 的概率取決與 觀測暴露變量 $X$。
+
+- 條件概率 conditional probability: 
+
+$$
+\begin{aligned}
+\text{Pr}\{ Y(0) = 1 | X=1, C=0\} & = \frac{1}{2} \;\; \text{Pr}\{Y(0) = 1 | X=0, C=0 \} = \frac{1}{2}\\ 
+\text{Pr}\{ Y(1) = 1 | X=1, C=0\} & = \frac{1}{4} \;\; \text{Pr}\{ Y(1) = 1 | X=0, C=0\}  = \frac{1}{4} \\
+\text{Pr}\{ Y(0) = 1 | X=1, C=1\} & = \frac{3}{4} \;\; \text{Pr}\{ Y(0) = 1 | X=0, C=1\}  = \frac{3}{4} \\
+\text{Pr}\{ Y(1) = 1 | X=1, C=1\} & = \frac{1}{2} \;\; \text{Pr}\{ Y(1) = 1 | X=0, C=1\}  = \frac{1}{2} 
+\end{aligned}
+$$
+
+在 C 條件下，我們發現這個時候 $Y(0) = 1$ 和 $X$ 之間相互獨立，$Y(1) = 1$ 也和 $X$ 之間相互獨立了。這就是條件可置換性的最直觀展示。
+
+### 鑑定 identification
+
+假設 $X,Y$ 兩個變量都是二分類變量。我們關心他們二者之間的邊際因果危險度差: 
+
+$$
+\text{Pr}\{ Y(1) = 1 \} - \text{Pr}\{ Y(0) = 1 \}
+$$
+
+假定，**互相無幹擾前提成立**，用 $\mathbf{C}$ 標記要被控制的混雜變量向量。用概率論的全概率法則，
+
+$$
+\text{Pr}\{ Y(x) = 1 \} = \sum_c \text{Pr}\{ Y(x) = 1|C=c \} \text{Pr}(C=c)
+$$
+
+
+假定，**條件可置換的前提成立**，那麼上面的式子可以變成
+
+$$
+\sum_c\text{Pr}\{ Y(x) =1 | X=x, C=c \}\text{Pr}(C = c)
+$$
+
+這是因爲條件可置換性告訴我們，在 C 的條件下，潛在結果 $Y(x)$ 和實際觀測的暴露變量值之間相互獨立，所以可以在上面條件概率公式的右半邊可以加入 $X=x$。
+
+假定，**一致性的前提成立**，那麼上面的式子有可以繼續變成
+
+$$
+\sum_c \text{Pr}\{ Y = 1 | X = x, C=c \}\text{Pr}(C=c)
+$$
+
+這是因爲一致性告訴我們，現實條件下 $X=x$ 時導致的結果變量 $Y$， 和平行世界中的潛在暴露變量 $(x)$ 導致導致的潛在結果 $Y(x)$ 相同。那麼，接下來就可以把編輯因果危險度差的式子推導成爲: 
+
+$$
+\begin{aligned}
+\text{Pr}\{ & Y(1) = 1 \}  - \text{Pr}\{ Y(0) = 1 \} \\ 
+                         & = \sum_c\text{Pr}(Y=1 | X=1,C = c)\text{Pr}(C=c)  \\
+                         & \;\;\;\; -\sum_c\text{Pr}(Y=0 | X=1,C = c)\text{Pr}(C=c)
+\end{aligned}
+(\#eq:Causal-infe-1-1)
+$$
+
+```{definition}
+**標準化和 g computation 公式**: 
+$$\text{Pr}\{ Y(x) = 1 \} = \sum_c\text{Pr}(Y=1|X=x,C=c)\text{Pr}(C=c)$$
+是我們在因果推斷中說的 g computation 公式的簡單例子。這個過程在流行病學中，被命名爲標準化 standardisation。所以，條件因果效應 (conditional causal effect): 
+  
+$$\text{Pr}(Y=1 | X=1, C=c) - \text{Pr}(Y=1 | X=1, C=c)$$ 
+  
+在這個 g computation 的過程中，被根據條件變量 C 在人羣衆的分布給標準化了。就是在這個根據條件變量的分布標準化 (或者叫邊際化 marginalisation) 的過程中，條件效應的含義華麗轉身變成了邊際因果效應 (marginal causal risk difference)。
+```
+
+```{definition}
+**鑑定和估計 identification vs. estimation:** 在因果推斷的語境中，鑑定過程和估計過程被嚴格區分。
+
+鑑定 identification 指的是，因果被估計量利用因果推斷的假設把無法觀察的概率分布用可以觀察的數據的分布推導計算的過程。
+
+估計 estimation 指的是，當我們對因果關系鑑定完畢之後，接下來進行的用實際觀察數據來估計被估計量的過程。這個過程通常不需要再進行公式推導，會使用統計模型，這些統計模型自己又自帶另外的一些前提假設。
+
+所以，鑑定過程的前提假設是因果推斷的命根，最最底層的前提。接下來的數據計算或者模型擬合帶來的別的假設和鑑定過程的假設有本質的區別。區分這兩個過程的另一目的還包括鑑定過程的前提假設基本上是無法找到統計學方法進行檢驗的 (untestable structual assumptions) 結構性假設。
+
+**對機器學習的一點點暗示:**
+在因果推斷中新興的一個重要話題 -- 機器學習 (machine learning，或者叫做 data-adaptive estimation techniques 數據適應性估計技巧) 在當今大數據時代顯得特別突出。常有人認爲，數據適應性估計技巧可以用於預測，但是不能用於因果推斷。這其實只能是說對了一部分。機器學習本身，其實是在給定了 (一大堆) 變量之後，尋找某個變量的最佳預測量。但是從我們目前爲止在因果推斷中的推導來看，相信你也能看出來，因果推斷本身也包括了預測的過程。因果推斷的第一個部分 -- 鑑定過程是處理的是因果之間的前提假設，以及判斷因果推斷中用到的參數怎樣和已觀察到的數據在這裏因果條件下連接起來 -- 這個部分是不能放到機器中去的。但是因果推斷的第二部分 -- 估計 -- 就是純粹的預測過程啦。這裏想強調的是機器學習的方法，可以被用在因果推斷的第二部分，而不是第一部分。第一部分還是要由人來完成。[@Laan2017]
+```
+
+```{example}
+用前面的靜脈內鐵劑補充的24名患者數據來看，由於我們不切實際地假定了
+```
+
+
 # Graphical Models 因果推斷的圖形模型
 
 # Regression Methods with continuous outcomes 結果變量爲連續型變量
