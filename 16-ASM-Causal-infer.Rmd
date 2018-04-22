@@ -389,7 +389,7 @@ $$
 條件可置換性 (conditional exchangeability) 是因果推斷中最重要的前提假設。
 
 $$
-Y(x) \perp\perp X|\mathbf{C}, \forall x
+Y(x) \perp\perp X|\mathbf{C}, \forall x 
 $$
 
 
@@ -399,7 +399,7 @@ $$
 ## 統計學中的有向無環圖
 
 ```{definition}
-**DAG**, 是一種包括了多個節點 (nodes)，並且用箭頭直線連接這些節點的一種示意圖，值得注意的是，我們用的 DAG 示意圖中，沒有閉環 (也就是沒有那個節點會隨着箭頭回到該節點本身成爲一個閉環，所以叫做有向無環圖)。且，DAG示意圖中也沒有雙向箭頭鏈接任何兩個節點。
+**DAG**, 是一種包括了多個節點 (nodes)，並且用箭頭直線連接這些節點的一種示意圖，值得注意的是，我們用的 DAG 示意圖中，沒有閉環 (也就是沒有哪個節點會隨着箭頭回到該節點本身成爲一個閉環，所以叫做有向無環圖)。且，DAG示意圖中也沒有雙向箭頭鏈接任何兩個節點。
 ```
 
 
@@ -414,7 +414,7 @@ $$
 
 那麼這些變量之間關系對應的 DAG 圖就是這樣子: 
 
-```{r DAG01, fig.asp=.7, fig.width=4, fig.cap="Example of a DAG", fig.align='center', out.width='90%', cache=TRUE}
+```{r DAG01, fig.asp=.7, fig.width=3.5, fig.cap="Example of a DAG", fig.align='center', out.width='90%', cache=TRUE}
 g <- dagitty('dag {
     V6 [pos="2,0"]
     V4 [pos="1,-1"]
@@ -435,8 +435,100 @@ plot(g)
 上面長長的因子化 (factorisation) 公式可以簡略爲: 
 
 $$
-p_{V_1}(v_1)
+p_{\mathbf{V}}(\mathbf{v}) = \prod_jp_{V_j|S_j}(v_j|s_j)
 $$
+
+其中 $S_j$ 是 $V_j$ 的子集，在DAG圖中，我們可以添加從 $V_k$ 到 $V_j$ 箭頭的充分且必要條件是 $V_k \in \mathbf{S}_j$。
+
+### DAG 和條件獨立性 conditional independence
+
+DAG 圖包含了變量之間的條件獨立性關系。如果 $V_k$ 到 $V_j$ 沒有箭頭，意味着這兩個變量在所有其他有指向 $V_j$ 箭頭的變量的條件下，互相獨立: 
+
+
+$$
+V_4 \perp\perp V_2 | V_1, V_3
+$$
+
+
+### DAG 圖的術語 
+
+```{definition}
+**父與子 parent and child**: $V_i\rightarrow V_j$，那麼 $V_i$ 是 $V_j$ 的父，$V_j$ 是 $V_i$ 的子。圖\@ref(fig:DAG01)中 $V_2$ 是 $V_5$ 的父，$V_5$ 是 $V_2$ 的子。
+```
+
+```{definition}
+**通路 path**: 從節點 $V_i$ 到另一個節點 $V_j$ 如果可以用 DAG 箭頭 (方向可左可右) 從頭到尾連接起來，成爲一個通路。$V_i, V_{k_1}, \cdots ,V_{k_n}, V_j$ 之間如果有通路，那麼這個通路上的每兩個變量之間都有一個箭頭連接 (無論哪個方向)。圖 \@ref(fig:DAG01) 中 $V_1\rightarrow V_3 \leftarrow V_2 \rightarrow V_5$ 是一條從 $V_1$ 到 $V_5$ 的通路。
+```
+
+```{definition}
+**有向通路 directed path**: 從節點 $V_i$ 到節點 $V_j$ 之間如果有通路，且箭頭的方向只有從左往右，那麼這個通路被叫做有向通路。圖 \@ref(fig:DAG01) 中 $V_1\rightarrow V_5 \rightarrow V_6$ 是一條從 $V_1$ 到 $V_6$ 的有向通路。
+```
+
+
+```{definition}
+**祖先與後代 ancestor and descendant**: 如果 $V_i$ 和 $V_j$ 之間有一條有向通路，那麼我們說 $V_i$ 是 $V_j$ 的祖先，$V_j$ 是 $V_i$ 的後代。圖 \@ref(fig:DAG01) 中 $V_2$ 是 $V_6/V_5$ 的祖先，$V_6/V_5$ 是 $V_2$ 的後代。
+```
+
+
+```{definition}
+**對撞因子 collider**: 如果一條通路上的某個變量 $V_{K_i}$ 有左右兩個箭頭同時指向它本身，那麼$V_{K_i}$ 被叫做對撞因子。圖 \@ref(fig:DAG01) 中 $V_1\rightarrow V_3 \leftarrow V_2$，的通路上 $V_3$ 是一個對撞因子。
+```
+
+### 阻塞通路 blocking paths
+
+```{definition}
+當 $\mathbf{Z}\in\mathbf{V}$ 時，如果一條通路 $p$ 上存在一個節點 $W$ 滿足這兩個條件中的一個: (1) $W$ 是通路 $p$ 上的一個對撞因子，且 $W$ 和它的任何後代都 $\notin \mathbf{Z}$。(2) $W$ 不是通路 $p$ 上的對撞因子，且 $W\in\mathbf{Z}$。我們說 $\mathbf{Z}$ 阻塞了通路 $p$。
+```
+
+### 以對撞因子爲條件 conditioning on a collider
+
+如下圖 \@ref(fig:DAG02) 所示，$V_3$ 取決於 $V_1, V_2$，且 $V_1, V_2$ 互相獨立。那麼給定了 $V_3$ 之後 $V_1, V_2$ 其實就變成了條件依賴的關系 (conditionally dependent)。盡管 $V_1, V_2$ 這兩個變量之間是邊際獨立 (marginally independent) 的關系。
+
+```{r DAG02, fig.asp=.7, fig.width=3.5, fig.cap="Conditioning on a collider", fig.align='center', out.width='90%', cache=TRUE}
+g <- dagitty('dag {
+    V1 -> V3 ;
+    V2 -> V3 ; 
+}')
+plot(graphLayout(g))
+```
+
+
+## 以非對撞銀子爲條件 conditioning on a non-collider
+
+如果 $V_1,V_2$ 同時取決於 $V_3$: 
+
+```{r DAG03, fig.asp=.7, fig.width=3.5, fig.cap="Conditioning on a non-collider (1)", fig.align='center', out.width='90%', cache=TRUE}
+g <- dagitty('dag {
+    V1 <- V3 -> V2
+}')
+plot(graphLayout(g))
+```
+
+
+那麼此時 $V_1,V_2$ 的關系是邊際依賴 (marginally dependent)，但是以 $V_3$ 爲條件獨立 (conditionally independent)。
+
+假設三個變量之間的關系又變成: $V_3$ 取決於 $V_1$，$V_2$ 取決於 $V_3$: 
+
+
+```{r DAG04, fig.asp=.7, fig.width=3.5, fig.cap="Conditioning on a non-collider (2)", fig.align='center', out.width='90%', cache=TRUE}
+g <- dagitty('dag {
+    V1 -> V3 -> V2
+}')
+plot(graphLayout(g))
+```
+
+類似地，此種情形底下， $V_1,V_2$ 的關系也是邊際依賴 (conditionally dependent)，但是以 $V_3$ 爲條件獨立 (conditionally independent)。
+
+### 條件的總結
+
+- 以 $V_3$ 爲條件會殺死 圖 \@ref(fig:DAG03) 和 \@ref(fig:DAG04) 中 $V_1, V_2$ 之間的關系;
+- 以 $V_3$ 爲條件會創建 圖 \@ref(fig:DAG02) 中 $V_1, V_2$ 之間的關系; 
+- 以 $V_3$ 爲條件會阻塞 圖 \@ref(fig:DAG03) 和 \@ref(fig:DAG04) 中 $V_1, V_2$ 之間的關系;
+- 以 $V_3$ 爲條件會解鎖 圖 \@ref(fig:DAG02) 中 $V_1, V_2$ 之間的關系。
+
+### d-separation
+
+
 
 
 # Regression Methods with continuous outcomes 結果變量爲連續型變量
