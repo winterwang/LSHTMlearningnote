@@ -939,6 +939,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="72.5" data-path="section-72.html"><a href="section-72.html#section-72.5"><i class="fa fa-check"></i><b>72.5</b> 兩組之間生存概率的比較</a><ul>
 <li class="chapter" data-level="72.5.1" data-path="section-72.html"><a href="section-72.html#the-log-rank-test"><i class="fa fa-check"></i><b>72.5.1</b> The log rank test</a></li>
 </ul></li>
+<li class="chapter" data-level="72.6" data-path="section-72.html"><a href="section-72.html#-cumulative-hazard"><i class="fa fa-check"></i><b>72.6</b> 計算累積危險度 cumulative hazard</a></li>
+<li class="chapter" data-level="72.7" data-path="section-72.html"><a href="section-72.html#practical-02---survival-analysis"><i class="fa fa-check"></i><b>72.7</b> Practical 02 - survival analysis</a></li>
 </ul></li>
 <li class="chapter" data-level="73" data-path="section-73.html"><a href="section-73.html"><i class="fa fa-check"></i><b>73</b> 生存數據中的回歸模型</a></li>
 <li class="chapter" data-level="74" data-path="cox-.html"><a href="cox-.html"><i class="fa fa-check"></i><b>74</b> Cox 比例風險模型</a></li>
@@ -1824,7 +1826,96 @@ Total
 </tr>
 </tbody>
 </table>
+<p>在零假設 – 不同的組之間，在該時間點時事件發生次數沒有差別 – 的條件下，第一組患者中事件發生次數服從超幾何分布 (hypergeometric distribution) (章節: <a href="binomial.html#hyperdist">5.2</a>)。在超幾何分布下，組樣本量 <span class="math inline">\(n_{1j}\)</span> 中發生事件次數 <span class="math inline">\(d_{1j}\)</span> 在全體 (總樣本量 <span class="math inline">\(n_j\)</span>，事件次數 <span class="math inline">\(d_j\)</span>) 中的概率是:</p>
+<p><span class="math display">\[
+\begin{equation}
+\frac{\binom{d_{j}}{d_{1j}}\binom{n_j - d_j}{n_{1j} - d_{1j}}}{\binom{n_j}{n_1j}}
+\end{equation}
+\]</span></p>
+<p>對於第二組的患者，發生 <span class="math inline">\(d_{2j}\)</span> 次事件的概率也可以用相同的公式。那麼在給定的時間點 <span class="math inline">\(t_j\)</span>，在零假設 – 不同的組之間，在該時間點時事件發生次數沒有差別 – 的條件下， 第一組患者中發生事件次數的期望值 (expectation):</p>
+<p><span class="math display" id="eq:surv2-22">\[
+\begin{aligned}
+e_{1j} = \frac{n_{1j}d_j}{n_j}
+\end{aligned}
+\tag{72.6}
+\]</span></p>
+<p>套用這個公式 <a href="section-72.html#eq:surv2-22">(72.6)</a>，我們可以計算每個時間點上事件發生次數的期望值和實際觀測值之間的差: <span class="math inline">\(d_{1j}-e_{1j}\)</span> 然後把每個時間點上事件次數的觀測值和期望值之間的差求和:</p>
+<p><span class="math display" id="eq:surv2-23">\[
+\begin{equation}
+\sum_j (d_{1j} - e_{1j})
+\end{equation}
+\tag{72.7}
+\]</span></p>
+<p>如果零假設成立，統計量 <a href="section-72.html#eq:surv2-23">(72.7)</a> 應該等於零或者接近等於零。根據超幾何分布的方差，</p>
+<p><span class="math display">\[
+v_{1j}^2 = \text{var}(d_{1j}) = \frac{n_{1j}n_{2j}d_{j}(n_j - d_j)}{n_j^2 (n_j - 1)}
+\]</span></p>
+<p>所以，log-rank test 的檢驗統計量是</p>
+<p><span class="math display">\[
+\frac{\{ \sum_j(d_{1j} - e_{1j}) \}^2}{\sum_jv^2_{1j}} \sim \chi_1^2
+\]</span></p>
+<p>因此，在零假設條件下，這裏是兩組對象生存曲線的比較，所以它服從的是自由度爲 1 的卡方分布，如果比較的是兩組以上 (n) 的生存概率曲線，那麼這個統計量將會服從自由度爲 (n-1) 的卡方分布 <span class="math inline">\(\chi^2_{n-1}\)</span>。</p>
 </div>
+</div>
+<div id="-cumulative-hazard" class="section level2">
+<h2><span class="header-section-number">72.6</span> 計算累積危險度 cumulative hazard</h2>
+<p>累積危險度的定義爲:</p>
+<p><span class="math display">\[
+H(t) = \int_0^t h(t)\text{d}t
+\]</span></p>
+<p>它和生存概率方程之間的關系爲:</p>
+<p><span class="math display">\[
+H(t) = -\log S(t)
+\]</span></p>
+<p>所以，非參數類型的累積危險度可以利用這個公式，套入 Kaplan-Meier 法估計的生存概率:</p>
+<p><span class="math display">\[
+\hat H(t) = - \log \hat S(t)
+\]</span></p>
+<p>另一個科學家 Nelson-Aalen 發現另一個更簡單的公式:</p>
+<p><span class="math display" id="eq:surv2-29">\[
+\begin{equation}
+\tilde{H}(t) = \sum_{j|t_j \leqslant t}\hat h_j =  \sum_{j|t_j \leqslant t} \frac{d_j}{n_j}
+\end{equation}
+\tag{72.8}
+\]</span></p>
+<p>這個公式 <a href="section-72.html#eq:surv2-29">(72.8)</a> 的估算結果和 Kaplan-Meier 估計的累積生存曲線會非常接近，且可以被認爲漸進相同 (symptotically equivalent)。</p>
+</div>
+<div id="practical-02---survival-analysis" class="section level2">
+<h2><span class="header-section-number">72.7</span> Practical 02 - survival analysis</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># summarize and explore the data</span>
+<span class="kw">library</span>(haven)
+pbcbase &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/pbcbase.dta&quot;</span>)
+<span class="kw">with</span>(pbcbase, <span class="kw">tabpct</span>(treat, d, <span class="dt">graph =</span> <span class="ot">FALSE</span>))</code></pre></div>
+<pre><code>## 
+## Original table 
+##        d
+## treat      0    1  Total
+##   1       45   49     94
+##   2       50   47     97
+##   Total   95   96    191
+## 
+## Row percent 
+##      d
+## treat       0       1  Total
+##     1      45      49     94
+##        (47.9)  (52.1)  (100)
+##     2      50      47     97
+##        (51.5)  (48.5)  (100)
+## 
+## Column percent 
+##        d
+## treat     0       %   1      %
+##   1      45  (47.4)  49   (51)
+##   2      50  (52.6)  47   (49)
+##   Total  95   (100)  96  (100)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### median time 
+Median_t &lt;-<span class="st"> </span><span class="kw">ddply</span>(pbcbase,<span class="kw">c</span>(<span class="st">&quot;treat&quot;</span>,<span class="st">&quot;d&quot;</span>),summarise,<span class="dt">Median=</span><span class="kw">median</span>(time))
+Median_t</code></pre></div>
+<pre><code>##   treat d    Median
+## 1     1 0 3.7426419
+## 2     1 1 3.0006845
+## 3     2 0 5.4483230
+## 4     2 1 2.2012320</code></pre>
 </div>
 </div>
 <h3>References</h3>

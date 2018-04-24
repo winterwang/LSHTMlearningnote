@@ -954,6 +954,100 @@ kable(dt, "html",  align = "c", caption = "表 72.2: Summary of numbers at risk 
 </table>
 
 
+在零假設 -- 不同的組之間，在該時間點時事件發生次數沒有差別 -- 的條件下，第一組患者中事件發生次數服從超幾何分布 (hypergeometric distribution) (章節: \@ref(hyperdist))。在超幾何分布下，組樣本量 $n_{1j}$ 中發生事件次數 $d_{1j}$ 在全體 (總樣本量 $n_j$，事件次數 $d_j$) 中的概率是: 
+
+$$
+\begin{equation}
+\frac{\binom{d_{j}}{d_{1j}}\binom{n_j - d_j}{n_{1j} - d_{1j}}}{\binom{n_j}{n_1j}}
+\end{equation}
+$$
+
+對於第二組的患者，發生 $d_{2j}$ 次事件的概率也可以用相同的公式。那麼在給定的時間點 $t_j$，在零假設 -- 不同的組之間，在該時間點時事件發生次數沒有差別 -- 的條件下， 第一組患者中發生事件次數的期望值 (expectation):
+
+$$
+\begin{aligned}
+e_{1j} = \frac{n_{1j}d_j}{n_j}
+\end{aligned}
+(\#eq:surv2-22)
+$$
+
+
+套用這個公式 \@ref(eq:surv2-22)，我們可以計算每個時間點上事件發生次數的期望值和實際觀測值之間的差: $d_{1j}-e_{1j}$ 然後把每個時間點上事件次數的觀測值和期望值之間的差求和: 
+
+$$
+\begin{equation}
+\sum_j (d_{1j} - e_{1j})
+\end{equation}
+(\#eq:surv2-23)
+$$
+
+
+如果零假設成立，統計量 \@ref(eq:surv2-23) 應該等於零或者接近等於零。根據超幾何分布的方差，
+
+$$
+v_{1j}^2 = \text{var}(d_{1j}) = \frac{n_{1j}n_{2j}d_{j}(n_j - d_j)}{n_j^2 (n_j - 1)}
+$$
+
+所以，log-rank test 的檢驗統計量是 
+
+$$
+\frac{\{ \sum_j(d_{1j} - e_{1j}) \}^2}{\sum_jv^2_{1j}} \sim \chi_1^2
+$$
+
+因此，在零假設條件下，這裏是兩組對象生存曲線的比較，所以它服從的是自由度爲 1 的卡方分布，如果比較的是兩組以上 (n) 的生存概率曲線，那麼這個統計量將會服從自由度爲 (n-1) 的卡方分布 $\chi^2_{n-1}$。
+
+## 計算累積危險度 cumulative hazard
+
+累積危險度的定義爲: 
+
+$$
+H(t) = \int_0^t h(t)\text{d}t
+$$
+
+
+它和生存概率方程之間的關系爲: 
+
+
+$$
+H(t) = -\log S(t)
+$$
+
+
+所以，非參數類型的累積危險度可以利用這個公式，套入 Kaplan-Meier 法估計的生存概率: 
+
+$$
+\hat H(t) = - \log \hat S(t)
+$$
+
+另一個科學家 Nelson-Aalen 發現另一個更簡單的公式: 
+
+$$
+\begin{equation}
+\tilde{H}(t) = \sum_{j|t_j \leqslant t}\hat h_j =  \sum_{j|t_j \leqslant t} \frac{d_j}{n_j}
+\end{equation}
+(\#eq:surv2-29)
+$$
+
+這個公式 \@ref(eq:surv2-29) 的估算結果和 Kaplan-Meier 估計的累積生存曲線會非常接近，且可以被認爲漸進相同 (symptotically equivalent)。
+
+
+## Practical 02 - survival analysis
+
+
+
+```{r Surv-prac-02-01, cache=TRUE}
+# summarize and explore the data
+library(haven)
+pbcbase <- read_dta("backupfiles/pbcbase.dta")
+with(pbcbase, tabpct(treat, d, graph = FALSE))
+
+#### median time 
+Median_t <- ddply(pbcbase,c("treat","d"),summarise,Median=median(time))
+Median_t
+```
+
+
+
 
 
 # 生存數據中的回歸模型
