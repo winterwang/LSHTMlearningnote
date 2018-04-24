@@ -759,7 +759,7 @@ kable(dt, "html",  align = "c", caption = "表 72.2: Men with angina: Numbers of
    <th style="text-align:center;"> $d_j$ </th>
    <th style="text-align:center;"> $m_j$ </th>
    <th style="text-align:center;"> $p_j$ </th>
-   <th style="text-align:center;"> $1-p$ </th>
+   <th style="text-align:center;"> $1-p_j$ </th>
    <th style="text-align:center;"> $\hat S(t)$ </th>
   </tr>
  </thead>
@@ -1047,6 +1047,86 @@ Median_t
 ```
 
 
+```
+sts list if treat==2 & cir0==1
+
+         failure _d:  d
+   analysis time _t:  (dateout-origin)/365.25
+             origin:  time datein
+
+           Beg.          Net            Survivor      Std.
+  Time    Total   Fail   Lost           Function     Error     [95% Conf. Int.]
+-------------------------------------------------------------------------------
+  .104       26      1      0             0.9615    0.0377     0.7569    0.9945
+ .2628       25      1      0             0.9231    0.0523     0.7260    0.9802
+ .4572       24      1      0             0.8846    0.0627     0.6836    0.9613
+ .4846       23      1      0             0.8462    0.0708     0.6404    0.9393
+ .9172       22      0      1             0.8462    0.0708     0.6404    0.9393
+ 1.164       21      1      0             0.8059    0.0780     0.5946    0.9143
+ 1.369       20      1      0             0.7656    0.0839     0.5505    0.8873
+ 1.572       19      0      1             0.7656    0.0839     0.5505    0.8873
+ 1.687       18      1      0             0.7230    0.0894     0.5044    0.8576
+ 1.725       17      1      0             0.6805    0.0937     0.4603    0.8262
+ 2.182       16      1      0             0.6380    0.0970     0.4180    0.7933
+ 2.201       15      1      0             0.5954    0.0994     0.3773    0.7590
+ 2.634       14      0      1             0.5954    0.0994     0.3773    0.7590
+ 2.667       13      1      0             0.5496    0.1018     0.3337    0.7215
+ 3.047       12      0      1             0.5496    0.1018     0.3337    0.7215
+  3.45       11      1      0             0.4997    0.1041     0.2866    0.6803
+ 3.472       10      1      0             0.4497    0.1050     0.2425    0.6371
+ 3.855        9      1      0             0.3997    0.1045     0.2012    0.5920
+ 4.249        8      1      0             0.3498    0.1027     0.1625    0.5448
+  5.47        7      0      1             0.3498    0.1027     0.1625    0.5448
+ 5.541        6      0      1             0.3498    0.1027     0.1625    0.5448
+ 6.762        5      1      0             0.2798    0.1033     0.1056    0.4859
+ 6.905        4      1      0             0.2099    0.0983     0.0601    0.4202
+ 8.019        3      1      0             0.1399    0.0869     0.0259    0.3469
+  8.89        2      0      1             0.1399    0.0869     0.0259    0.3469
+ 11.25        1      0      1             0.1399    0.0869     0.0259    0.3469
+-------------------------------------------------------------------------------
+```
+
+
+```{r Surv-prac-02-02, cache=TRUE}
+pbc.km <- survfit(Surv(time, d) ~ treat, data = pbcbase)
+summary(pbc.km)
+```
+
+
+```{r Surv-prac-02-03, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier survivor functions', fig.align='center', out.width='90%'}
+plot(pbc.km, conf.int = F, col = c("red", "black"), mark.time = F, xlab = "Time", ylab = "Survivor function")
+```
+
+
+```{r Surv-prac-02-04, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier survivor functions with confidence intervals', fig.align='center', out.width='90%'}
+plot(pbc.km, conf.int = T, col = c("red", "black"), mark.time = T, xlab = "Time", ylab = "Survivor function")
+```
+
+在追蹤前兩年，兩組患者的生存方程沒有太大區別，兩年之後，到大約第五年之間，藥物治療組的生存概率曲線似乎要低於對照組，暗示藥物治療在這段時間內可能導致患者較高的死亡率。患者隨訪達到第五年之後，可以看到藥物治療組患者的生存概率曲線一直都處在對照組的上方，提示我們患者被隨訪達到五年之後，藥物治療組的患者死亡率開始低於對照組死亡率。但是，這兩條生存概率曲線的 95% 信賴區間彼此重疊部分很大，且在臨近隨訪達到12年的時候，信賴區間太寬，因爲此時已經沒有多少死亡病例。這兩組患者都有大約 50% 左右的患者的生存率超過五年。
+
+```{r Surv-prac-02-05, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Nelson-Aalen estimates of the cumulative hazard', fig.align='center', out.width='90%'}
+pbc.km1 <- survfit(Surv(time, d) ~ 1, data=subset(pbcbase, pbcbase$treat == 1))
+pbc.km2 <- survfit(Surv(time, d) ~ 1, data=subset(pbcbase, pbcbase$treat == 2))
+cumhaz.1 <- cumsum(pbc.km1$n.event/pbc.km1$n.risk)
+cumhaz.2 <- cumsum(pbc.km2$n.event/pbc.km2$n.risk)
+plot(pbc.km1$time, cumhaz.1, type = "s", col = "red", xlab = "Time", ylab = "Cumulative hazard")
+lines(pbc.km2$time, cumhaz.2, type = "s", col = "black")
+```
+
+
+```{r Surv-prac-02-06, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier estimates of the cumulative hazard', fig.align='center', out.width='90%'}
+
+plot(pbc.km, conf.int= F, col=c("red", "black"), mark.time =F,xlab = "Time", ylab = "Survivor function", fun = "cumhaz")
+```
+
+
+從兩個生存累積概率曲線來看，治療組的生存累計概率似乎隨着時間更加呈線性變化。在對照組，危險在5年以後的累計速率陡然升高了。
+
+```{r Surv-prac-02-07, cache=TRUE}
+# the log rank test
+
+survdiff(Surv(time, d) ~ treat, data = pbcbase)
+```
 
 
 
