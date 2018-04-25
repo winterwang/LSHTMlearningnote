@@ -1153,6 +1153,155 @@ survdiff(Surv(time = (timeout - timein)/365.25, event = chd) ~ sbpgrp, data = wh
 # 生存數據中的回歸模型
 
 
+## 生存數據的似然方程 
+
+$$
+L = \prod_i f(t_i)^{\delta_i}S(t_i)^{1-\delta_i}
+$$
+
+- $i = 1, \cdots, n$ 是患者的編號
+- $t_i$ 是 $i$ 號患者的生存/刪失時間
+- $\delta_i$ 是表示 $i$ 號患者的生存/刪失狀態的啞變量 (indicator/dummy variable)
+- $f(t_i)$ 是生存數據(死亡/事件發生患者的)的概率密度方程 probablity density function
+- $S(t_i)$ 是生存數據(生存/刪失患者的)生存概率方程 survivor function
+
+## 如何加入解釋變量
+
+先考慮一個二分類變量 (binary explanatory variable $X = 0 \text{ or } 1$)，可以是治療組對照組等簡單的二分類變量。可以認爲其中一組 $(X=1)$ 患者在時間點 $t$ 時的危險度 (hazard) $h_1(t)$ 和另一個被看作是對照的基準組 (baseline group $X=0$) 的危險度 $h_0(t)$ 之間的關系是相乘的話: 
+
+$$
+h_1(t) = \psi h_0 (t)
+$$
+
+
+那麼這裏的 $\psi$ 就是我們關心的參數。注意這裏兩組患者的危險度，等式左右兩邊都必須是大於零的，因此 $psi$ 的取值要被限制在 $>0$ 範圍。所以，我們常常直接寫成: 
+
+$$
+h_1(t) = e^\beta h_0(t)
+$$
+
+那麼參數 $\beta$ 就沒有了取值的限制。這就是大名鼎鼎的**比例危險度模型 (proportional hazard model)**。$e^\beta$ 就是危險度比 (Hazard ratio): 
+
+$$
+\frac{h_1(t)}{h_0(t)} = e^\beta
+$$
+
+$\beta$ 是對數危險度比 (log-hazard ratio)，這個危險度比，不隨着時間推進而變化。所以在生存分析的參數模型中，前提條件--比例危險度 (proportional hazard assumption)，是必須被滿足的假設。當你認爲治療組對照組之間的療效差 (treatment effect) 會隨着時間發生變化的話，這個前提條件就被違反了。用於生存分析的這些參數模型，都需要比例危險度這一重要的前提條件被滿足。
+
+## 指數模型 exponential model 
+
+指數模型是最簡單的生存時間分析參數模型。
+
+**危險度方程 hazard function:**
+
+$$
+h(t) = \lim_{\delta\rightarrow0}\frac{1}{\delta}\text{Pr}(t\leqslant T <t + \delta | T>t) = \lambda
+$$
+
+**生存概率方程 survivor function:**
+
+$$
+S(t) = \text{Pr}(T>t) = \exp\{-\lambda t\}
+$$
+
+**概率密度方程 probability density function:**
+
+$$
+f(t) = \lambda \exp\{ - \lambda t\}
+$$
+
+在指數分布時，危險度本身 (而不是比例) 保持不變。這也意味着事件發生的率 (rate of the event) 不隨時間發生變化 (constant over time)。
+
+在指數分布模型下加入解釋變量: 
+
+$$
+\left\{
+  \begin{array}{ll}
+  h(t;0) = \lambda & X=0  \\
+  h(t;1) = \lambda e^\beta & X=1
+  \end{array}
+\right.  
+$$
+
+這個聯立方程等價於: 
+
+$$
+h(t;x) = \lambda e^{\beta x}
+$$
+
+
+類似地，危險度方程已知了的話，概率密度方程和生存方程可以寫作: 
+
+$$
+f(t;x) = \lambda e^{\beta x} \exp({-\lambda t^{\beta x}}); \\
+S(t;x) = \exp(-\lambda t^{\beta x})
+$$
+
+此時的似然方程就是 
+
+$$
+L = \prod_{i = 1}^n\{\lambda e^{\beta x} \exp({-\lambda t^{\beta x}}) \}^{\delta_i}\{ \exp(-\lambda t^{\beta x})\}^{1-\delta_i}
+$$
+
+
+此時，似然方程中兩個參數 $\lambda, \beta$ 可以利用自己似然函數的方法分別對其中一個求導數獲得 MLE，然後用 Fisher information matrix 計算各自的標準誤，從而計算 95% 信賴區間。這裏的 $\beta$ 回歸系數，可以做是否爲零 (等價於比較 $e^\beta = 1$) 的 Wald 檢驗: 
+
+$$
+\frac{\hat\beta}{SE(\hat\beta)} \sim N(0,1)
+$$
+
+
+```{example}
+**推導$\lambda,\beta$的MLE:**
+```
+
+$$
+\begin{aligned}
+L & = \prod_{i = 1}^n\{\lambda e^{\beta x} \exp({-\lambda t^{\beta x}}) \}^{\delta_i}\{ \exp(-\lambda t^{\beta x})\}^{1-\delta_i} \\
+  & = \prod_{i = 1}^n\{\lambda e^{\beta x}\}^{\delta_i}\exp(-\lambda t^{\beta x}) \\
+\Rightarrow \ell & = \log(\lambda)\sum_{i=1}^n \delta_i + \beta \sum_{i = 1}^n(x_i\delta_i) - \lambda\sum_{i = 1}^n t_ie^{\beta x_i} \\
+\text{Let} & \sum_{i = 1}^n = n_1 \text{(numer of events)}; \\
+&\sum_{i=1}^n(x_i\delta_i) = n_{11} \text{(number of events in } x=1); \\
+&\sum_{x_i=1}^n t_i = T_1 \text{(sum of survival/censors T in } x=1);\\
+&\sum_{x_i=0}^n t_i = T_0 \text{(sum of survival/censors T in } x=0);\\
+\Rightarrow \ell & =n_1 \log(\lambda) + n_{11}\beta - \lambda(T_0 + T_1e^\beta)
+\end{aligned}
+$$
+
+接下來求 MLE 就等同於解下面的聯立方程組: 
+
+$$
+\left\{\begin{array}{l}
+\frac{\text{d}\ell}{\text{d}\lambda} = \frac{n_1}{\lambda} - (T_0 +T_1e^\beta) =0 \\
+\frac{\text{d}\ell}{\text{d}\beta} = n_{11} = T_1\lambda e^\beta = 0
+\end{array}
+\right. \\
+\hat\lambda = \frac{n_1 - n_{11}}{T_0} \\
+\hat\beta = \log\frac{T_0n_{11}}{T_1(n_1 - n_{11})}
+$$
+
+## Weibull 分布
+
+指數分布的模型只能用於擬合數據滿足事件發生率恆定不變這一十分強的假設的前提下。Weibull 分布放鬆了這個假設前提，不再要求時間發生率恆定不變，但是它的前提條件是時間發生率隨着時間的變化是單調的 (遞增或者遞減，二者只能選一)。且 Weibull 分布是指數分布的一般化形式，或者說指數分布是 Weibull 分布的特殊形式。
+
+**Weibull 分布的危險度方程:** 
+
+$$
+h(t) = \kappa \lambda t^{\kappa - 1}
+$$
+
+**生存概率方程**
+
+$$
+S(t;x) = \exp\{ -\lambda t^\kappa \}
+$$
+
+**概率密度方程**
+
+$$
+f(t) = \kappa \lambda t^{\kappa - 1}  \exp\{ -\lambda t^\kappa \}
+$$
+
 # Cox 比例風險模型 
 
 # 模型檢查
