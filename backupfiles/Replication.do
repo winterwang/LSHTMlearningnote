@@ -54,7 +54,9 @@ sts test sbpgrp, logrank
 * Practical in Survival Analysis Chapter 3***************************
 *********************************************************************
 
-use 
+use whitehall, clear
+
+stset timeout, failure(chd) origin(timein) scale(365.25)
 
 
 
