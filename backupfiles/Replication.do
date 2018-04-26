@@ -95,7 +95,7 @@ streg i.grade i.agecat, d(exp)
 
 tab agecat grade , col chi
 
-streg i.grade i.agecat, d(weib)
+streg i.grade i.agecat, d(weib) nohr
 
 sts graph if agecat == 1, by(grade) cumhaz yscale(log) xscale(log) ci title(Age: 40-50)
 sts graph if agecat == 2, by(grade) cumhaz yscale(log) xscale(log) ci title(Age: 50-55)
@@ -121,8 +121,105 @@ list id _t0 _t _d if id == 5001
 list id _t0 _t _d if id == 5350
 
 
-streg i.grade i.agecat i.fuband, d(exp)
+streg i.grade i.agecat i.fuband, d(exp) nohr
 
+// Extra exercise 
+
+poisson chd i.grade, exp(_t)
+
+poisson chd i.grade, exp(_t) irr
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+log close
 
 
 

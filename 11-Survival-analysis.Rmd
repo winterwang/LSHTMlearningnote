@@ -1387,7 +1387,7 @@ Median_t
 ```
 
 
-```{r Surv-prac-03-02, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier survivor functions', fig.align='center', out.width='70%'}
+```{r Surv-prac-03-02, cache=TRUE, fig.asp=.8, fig.width=6, fig.cap='Rplots of the Kaplan-Meier survivor functions', fig.align='center', out.width='70%'}
 whl.km <- survfit(Surv(time = time, event = chd) ~ as.factor(grade), data = whitehall)
 plot(whl.km, conf.int = T, col = c("blue", "red"), mark.time = F, xlab = "Time", ylab = "Survivor function", ylim = c(0.8, 1))
 legend(1, 0.85, c("Grade 1", "Grade 2"), col = c("blue", "red"), lty = 1)
@@ -1399,9 +1399,9 @@ legend(1, 0.85, c("Grade 1", "Grade 2"), col = c("blue", "red"), lty = 1)
 # How many individuals survived 5, 10, 15 years of follow-up in each job grade?
 summary(whl.km, times = c(5, 10, 15))
 # Log rank test to compare the estimated survivor functions in the two job grades
-survdiff(Surv(time=time, event = chd) ~ grade, data = whitehall)
+survdiff(Surv(time=time, event = chd) ~ as.factor(grade), data = whitehall)
 # Fit an exponential model 
-whl.exp <- survreg(Surv(time, chd) ~ grade, dist = "exponential", data = whitehall)
+whl.exp <- survreg(Surv(time, chd) ~ as.factor(grade), dist = "exponential", data = whitehall)
 summary(whl.exp)
 ```
 
@@ -1535,6 +1535,56 @@ Log likelihood  =   -579.93477                  Prob > chi2      =      0.0000
 whl.km.agecat1 <- survfit(Surv(time=time,event=chd)~grade,data=subset(whitehall,agecat==1))
 plot(whl.km.agecat1,conf.int=T,col=c("red","black"),mark.time=F,xlab="log time", ylab="log(-log S(t))",fun="cloglog")
 ```
+
+
+用 Weibull 分布模型的結果，繪制兩個 job grade 在 5 個不同年齡層次的估計生存概率曲線:
+
+```{r Surv-prac-03-07, cache=TRUE, fig.asp=.8, fig.width=6, fig.cap='The estimated survivor curves from the Weibull model in each job and age-at-entry category', fig.align='center', out.width='70%'}
+whl.weibull <- survreg(Surv(time, chd) ~ as.factor(grade) + as.factor(agecat), dist = "weibull", data = whitehall)
+plot(predict(whl.weibull, newdata = list(grade = 1, agecat = 1),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, col = "red", 
+     xlab = "Time", ylab = "Survivor function: S(t)", xlim = c(0,20), ylim = c(0.5, 1))
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 1),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "red")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 2),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "green")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 2),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "green")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 3),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "black")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 3),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "black")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 4),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "orange")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 4),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "orange")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 5),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "blue")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 5),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "blue")
+```
+
+下面把隨訪時間按照 5 到 20 年每間隔五年的方法把所有患者的追蹤時間截斷成4個部分。然後用指數分布回歸模型擬合數據，這也是一種放鬆**恆定事件發生率**這一前提條件的方法:
+
+```{r Surv-prac-03-08, cache=TRUE, warning=FALSE}
+whl.split <- survSplit(Surv(time, chd) ~ ., whitehall, cut = c(0, 5, 10, 15, 20), start = "time0", episode = "fuband")
+
+with(whitehall, whitehall[id == 5038,])
+
+with(whl.split, whl.split[id == 5038,])
+
+whl.split.exp <- flexsurvreg(Surv(time0, time, chd) ~ as.factor(grade) + as.factor(agecat) + 
+                               as.factor(fuband), dist = "exponential", data = whl.split)
+
+whl.split.exp
+```
+
+
+我們用指數分布回歸擬合的生存時間模型，其實還可以用泊鬆回歸模型來做，結果也是一樣的: 
+
+```{r Surv-prac-03-09, cache=TRUE, warning=FALSE}
+whl.poi <- glm(chd ~ as.factor(grade), family = poisson(link = log), offset = log(time), data = whitehall)
+summary(whl.poi)
+```
+
+你可以回頭去和指數分布回歸的模型結果做個比較，他們的回歸系數估計和標準誤完全是一樣的。
+
+
+
 
 # Cox 比例風險模型 
 

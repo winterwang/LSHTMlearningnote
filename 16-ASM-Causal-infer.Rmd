@@ -585,7 +585,145 @@ plot(g)
 
 
 
+
 # Regression Methods with continuous outcomes 結果變量爲連續型變量
+
+## 用於對連續型結果變量做因果推斷的被估計量 
+
+邊際潛在結果的差 marginal potential outcomes:
+
+$$
+E\{ Y(1) - Y(0) \}
+$$
+
+或者是條件下潛在結果的差 conditional potential outcomes:
+
+$$
+E\{ Y(1) - Y(2) | \mathbf{V = v} \}
+$$
+
+邊際潛在結果的差，有專門的名字: the *Average Causal Effect (ACE) 平均因果效應* 或者叫 *Average Treatment Effect 平均治療效應*。這裏的 "treatment" 其實不是特指治療，而是泛指所有我們想要比較的暴露。
+
+## 鑑定 identification - revision
+
+### 條件因果均差 conditional causal mean difference
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0) | \mathbf{C = c} \} & =  E\{ Y(1) | \mathbf{C=c} \} - E\{ Y(0) | \mathbf{C=c} \} \\
+ \text{(By} & \text{ conditional exchangeability given } \mathbf{C}:) \\
+&= E\{  Y(1) | X = 1, \mathbf{C=c} \} - E\{  Y(0) | X = 0, \mathbf{C=c} \}  \\
+ \text{(By} & \text{ consistency:)} \\ 
+& =   E\{  Y | X = 1, \mathbf{C=c} \} - E\{  Y | X = 0, \mathbf{C=c} \}  \\
+\end{aligned}
+$$
+
+
+### 簡單分類型條件變量 $C$ 的 ACE
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0)\}  & = \sum_cE\{ Y(1) | C=c \}\text{Pr}(C = c) - \sum_c E\{ Y(0) | C=c \}\text{Pr}(C=c) \\
+ \text{(By} & \text{ the law of total probability }\uparrow) \\ 
+& =  \sum_cE\{  Y(1) | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) - \sum_cE\{  Y(0) | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
+ \text{(By} & \text{ conditional exchangeability }\uparrow) \\
+& = \sum_cE\{  Y | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) - \sum_cE\{  Y | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
+ \text{(By} & \text{ consistency }\uparrow) \\ 
+& = \sum_c\{ E(Y|X = 1, C=c) -E(Y|X=0, C=c) \}\text{Pr}(C=c)
+\end{aligned}
+(\#eq:causalinfer3-2)
+$$
+
+### 簡單連續型條件變量 $C$ 的ACE
+
+
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0)\}  & = \int_cE\{ Y(1) | C=c \}f_C(c)\text{d}c - \int_c E\{ Y(0) | C=c \}f_C(c)\text{d}c \\
+& =  \int_cE\{  Y(1) | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c - \int_cE\{  Y(0) | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
+& = \int_cE\{  Y | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c - \int_cE\{  Y | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
+& = \int_c\{ E(Y|X = 1, C=c) -E(Y|X=0, C=c) \}f_C(c)\text{d}c
+\end{aligned}
+(\#eq:causalinfer3-3)
+$$
+
+
+
+## 通過線性回歸模型來估計 ACE
+
+### 條件因果均值差
+
+假設$Y,X$分別表示結果變量和暴露變量，有三個變量需要調整 (做爲條件變量): $C_1$ 連續型，$C_2$ 二分類型(0/1)，$C_3$ 分類型(0/1/2/3)，然後我們擬合的線性回歸模型如下: 
+
+$$
+\begin{aligned}
+E(Y|X = x, C_1 = c_1, C_2 = c_2, C_3 = c_3) & = \alpha + \beta_Xx + \gamma_{C_1}c_1 + \gamma_{C_2}c_2 \\
+& \;\;\; +\gamma_{C_{31}}I(c_3 =1)+\gamma_{C_{32}}I(c_3 =2)+\gamma_{C_{33}}I(c_3 =3)
+\end{aligned}
+(\#eq:causalinfer3-4)
+$$
+
+
+如果，**無相互幹擾 no interference，一致性 consistency，條件可置換性 conditional exchangeability**三個最主要的前提條件得到滿足，加上，公式 \@ref(eq:causalinfer3-4) 中三個條件變量得到了正確的模型敘述 (specification of the model is correct)。那麼，這個模型估計的回歸系數 $\beta_Xx$ 就可以被賦予因果關系的解讀: 
+
+$$
+E\{ Y(1) -Y(0) |\mathbf{C=c}\}
+$$
+
+
+```{example}
+**孕期吸煙和嬰兒出生體重的關系**: 數據來自[@Cattaneo2010d]
+  結果變量是出生體重 `bweight`，暴露變量是孕期母親是否吸煙 `mbsmoke`。這裏先只考慮3個條件變量: 懷孕時的年齡 `mage`，嬰兒是否是該母親的第一個孩子 `fbaby`，三個懷孕階段中，該母親第一次訪問婦產科醫生的時間段 `prenatal`，那麼我們可以擬合的最簡單模型其實是這樣的: 
+```
+
+```{r CI-3-1, echo=TRUE, eval = TRUE, cache=TRUE}
+cattaneo2 <- read_dta("backupfiles/cattaneo2.dta")
+Cat_mod <- lm(bweight ~ as.factor(mbsmoke) + mage + as.factor(fbaby) + as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod)
+```
+
+在**無相互幹擾 no interference，一致性 consistency，條件可置換性 conditional exchangeability，和該模型是正確模型**的前提下，線性回歸的結果 `-252.26` 可以被賦予因果推斷的解釋: **在懷孕年齡，嬰兒是否是第一胎，第一次訪問婦產科醫生的孕期時期都相同的條件下，如果比較一個懷孕母親全部都在吸煙，和另一個懷孕母親全部都沒有在吸煙的兩個潛在世界，孕期吸煙的世界的母親生的嬰兒平均出生體重比另一個全部都不吸煙的母親生的嬰兒的出生體重輕 252.3 克。且在我們擬合的模型中，認爲這個新生兒體重的差在其他條件變量取任何值時都保持不變。**
+
+**模型是正確的**這個前提其實是可以放寬的，因爲你可能會擬合這樣一個線性回歸模型: 
+
+
+```{r CI-3-2, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod2 <- lm(bweight ~ as.factor(mbsmoke) + mage + I(mage^2) + as.factor(fbaby)*as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod2)
+```
+
+
+這個模型裏，我們給懷孕時年齡擬合了二次項，又允許 `fbaby` 和 `prenatal` 之間有交互作用，但是，這並不妨礙我們對我們最關心的因果關系 `mbsmke` 的回歸系數的解讀，因爲這兩個模型的結果基本沒有差別。
+
+還有別人可能給出的模型是這樣的: 
+
+```{r CI-3-3, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod3 <- lm(bweight ~ as.factor(mbsmoke)*as.factor(fbaby) + mage + I(mage^2) + as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod3)
+```
+
+
+模型 `Cat_mod3` 中，`mbsmoke` 和新生兒體重之間的因果關系的解釋發生了變化，因爲我們對 `mbsmoke` 和 `fbaby` 之間的交互作用進行了檢驗，是有意義的 `p = 0.0024*`。這時候，在**無相互幹擾 no interference，一致性 consistency，條件可置換性 conditional exchangeability，和該模型是正確模型**的前提下，且模型 `Cat_mod3` 是正確的話，數據中的因果關系解釋及就不止一個了: `-304.71` 的條件因果關系均差 (conditional causal mean difference) 是針對那些已經有過孩子媽媽來說的; `-304.71 + 132.784 = -171.9` 這一條件因果關系均差 (conditional causal mean difference) 是對那些第一次懷孕當媽媽的人來說的。吸煙這個本來應該十分有害的行爲，對新生兒體重的影響因果關系似乎在第一次當媽媽的人當中影響較小 (這個因果關系陳述以相同懷孕年齡，和有相同的第一次訪問產科醫生時期爲前提)。
+
+
+### 效應修正 effect modification 和 交互作用 interaction
+
+
+在上文中模型 `Cat_mod3` 中，如果模型是正確的，且無互相幹擾，一致性，條件可置換性前提都得到滿足時，嬰兒是否是第一胎 `fbaby` 這一變量，對於我們研究的暴露變量 `mbsmoke` (孕期吸煙) 和結果變量 `bweight` (新生兒體重) 之間的關系起到了效應修正作用 (effect modification)。因爲我們看到該模型的結果是孕期吸煙對新生兒體重的影響因爲嬰兒是否是第一胎而發生了很大的變化。流行病學中把這個稱爲交互作用 (interaction)。但是，在因果推斷的研究領域中，傾向於把效應修正和交互作用加以區分。效應修正指對我們關心的關系造成效應修正的變量本身，並沒有因果關系的解釋 (effect modification is not causal with respect to the second variable)，**對因果關系造成了效應修正的變量本身，沒有"無互相幹擾，一致性，條件可置換性"前提的要求**。它只是衆多的條件變量之一。
+
+**相反，因果推斷的研究中，把交互作用的專有名詞保留給兩個暴露變量之間，也就是發生了交互作用的兩個變量，都是要研究的暴露變量，都有和結果變量之間因果關系的討論，所以兩個發生了交互作用的暴露變量，都需要滿足"無互相幹擾，一致性，條件可置換性"前提。**
+
+
+假如不光研究孕期吸煙，研究者還想一起研究孕期飲酒習慣 $(X_2)$，和吸煙習慣 $(X_1)$ 共同對新生兒體重的因果關系影響:
+
+$$
+\{ X_1, X_2 \} \perp\perp Y(x_1, x_2) | \mathbf{C}, \forall x_1,x_2
+$$
+
+
+所以，只有當暴露變量有兩個時，才會用到交互作用 (interaction)。
+
 
 # Regression Methods with binary outcomes 結果變量爲二分類變量 
 
