@@ -625,9 +625,11 @@ $$
 \begin{aligned}
 E\{ Y(1) - Y(0)\}  & = \sum_cE\{ Y(1) | C=c \}\text{Pr}(C = c) - \sum_c E\{ Y(0) | C=c \}\text{Pr}(C=c) \\
  \text{(By} & \text{ the law of total probability }\uparrow) \\ 
-& =  \sum_cE\{  Y(1) | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) - \sum_cE\{  Y(0) | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
+& =  \sum_cE\{  Y(1) | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) \\
+& \;\;\;\;\;\;\;\;\;- \sum_cE\{  Y(0) | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
  \text{(By} & \text{ conditional exchangeability }\uparrow) \\
-& = \sum_cE\{  Y | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) - \sum_cE\{  Y | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
+& = \sum_cE\{  Y | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) \\ 
+& \;\;\;\;\;\;\;\;\;- \sum_cE\{  Y | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
  \text{(By} & \text{ consistency }\uparrow) \\ 
 & = \sum_c\{ E(Y|X = 1, C=c) -E(Y|X=0, C=c) \}\text{Pr}(C=c)
 \end{aligned}
@@ -641,8 +643,10 @@ $$
 $$
 \begin{aligned}
 E\{ Y(1) - Y(0)\}  & = \int_cE\{ Y(1) | C=c \}f_C(c)\text{d}c - \int_c E\{ Y(0) | C=c \}f_C(c)\text{d}c \\
-& =  \int_cE\{  Y(1) | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c - \int_cE\{  Y(0) | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
-& = \int_cE\{  Y | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c - \int_cE\{  Y | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
+& =  \int_cE\{  Y(1) | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c \\ 
+ & \;\;\;\;\;\;\;\;\;- \int_cE\{  Y(0) | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
+& = \int_cE\{  Y | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c \\
+& \;\;\;\;\;\;\;\;\;- \int_cE\{  Y | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
 & = \int_c\{ E(Y|X = 1, C=c) -E(Y|X=0, C=c) \}f_C(c)\text{d}c
 \end{aligned}
 (\#eq:causalinfer3-3)
@@ -659,7 +663,7 @@ $$
 $$
 \begin{aligned}
 E(Y|X = x, C_1 = c_1, C_2 = c_2, C_3 = c_3) & = \alpha + \beta_Xx + \gamma_{C_1}c_1 + \gamma_{C_2}c_2 \\
-& \;\;\; +\gamma_{C_{31}}I(c_3 =1)+\gamma_{C_{32}}I(c_3 =2)+\gamma_{C_{33}}I(c_3 =3)
+ \;\;\; +\gamma_{C_{31}}I(c_3 =1)+&\gamma_{C_{32}}I(c_3 =2)+\gamma_{C_{33}}I(c_3 =3)
 \end{aligned}
 (\#eq:causalinfer3-4)
 $$
@@ -722,7 +726,176 @@ $$
 $$
 
 
-所以，只有當暴露變量有兩個時，才會用到交互作用 (interaction)。
+所以，只有當暴露變量有兩個時 (因爲要同時對飲酒習慣和吸煙習慣兩個暴露變量做潛在結果分析 potential outcome)，才會用到交互作用 (interaction)。
+
+### 分類型條件變量 $(C)$ 時的平均因果效應 (ACE) 
+
+Average Causal Effect (ACE) 平均因果效應: 
+
+$$
+E\{ Y(1) - Y(0) \}
+$$
+
+在只有一個分類型條件變量的情況下，我們推導過其 ACE (See equations: \@ref(eq:causalinfer3-2)):
+
+$$
+\sum_c\{ E(Y|X=1, C=c) - E(Y|X=0, C=c) \}\text{Pr}(C=c)
+$$
+
+假設分類條件變量 $C$ 有四個水平 $0/1/2/3$，那麼我們可以針對 $C$ 的每一層水平擬合線性回歸模型:
+
+$$
+\begin{aligned}
+E(Y|X=x, C=c) & = \alpha + \beta_0 x + \gamma_1 I(c=1) + \gamma_2 I(c=2) + \gamma_3 I(c=3) \\
+& \;\;\; + \beta_1 xI(c = 1) + \beta_2 x I(c=2)  + \beta_3 x I (c=3)
+\end{aligned}
+(\#eq:CI-3-5)
+$$
+
+
+模型 \@ref(eq:CI-3-5) 是一個飽和模型，因爲 X 和 C 之間一共只有八種分組組合，我們又擬合了一個含有 8 跟參數的模型。也就是說，這個模型允許這 8 種 X 和 C 之間的分組，每組都有不同的結果。
+
+$$
+\begin{aligned}
+          \beta_0 & = E(Y|X=1,C=0) - E(Y|X=0, C=0) \\
+\beta_0 + \beta_1 & = E(Y|X=1,C=1) - E(Y|X=0, C=1) \\
+\beta_0 + \beta_2 & = E(Y|X=1,C=2) - E(Y|X=0, C=2) \\
+\beta_0 + \beta_3 & = E(Y|X=1,C=3) - E(Y|X=0, C=3) \\
+\end{aligned}
+$$
+
+
+爲了簡便起見，給他們分別命名: 
+
+$$
+\begin{aligned}
+\beta_0 & = \eta_0 \\
+\beta_0 + \beta_1 & = \eta_1 \\
+\beta_0 + \beta_2 & = \eta_2 \\
+\beta_0 + \beta_3 & = \eta_3
+\end{aligned}
+$$
+
+
+在只有一個分類型條件變量時，當無相互幹擾，一致性，和條件可置換性的前提被滿足，我們可以把公式 \@ref(eq:causalinfer3-2) 中的 $E(Y|X=1, C=c) - E(Y|X=0, c=c)$ 全部替換成爲 $\eta_c$: 
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0) \} & = \sum_c\{ E(Y|X=1, C=c) - E(Y|X=0, c=c)\}\text{Pr}(C = c) \\
+& = \sum_c \eta_c \text{Pr}(C=c)
+\end{aligned}
+$$
+
+
+
+```{r CI-3-4, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod4 <- lm(bweight ~ as.factor(mbsmoke)*as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod4)
+```
+
+$$
+\begin{aligned}
+\widehat{\eta_0} & = -317.2 \\
+\widehat{\eta_1} & = -317.2 + 35.9 = -281.2 \\
+\widehat{\eta_2} & = -317.2 + 163.5 = -153.7\\
+\widehat{\eta_3} & = -317.2 + 87.2 = -230.0 \\
+\end{aligned}
+$$
+
+
+爲了估計平均因果效應，我們還需要 `prenatal` 的分布概率: 
+
+```{r CI-3-5, echo=TRUE, eval = TRUE, cache=TRUE} 
+with(cattaneo2, tab1(prenatal, graph = F))
+```
+
+所以: 
+
+$$
+\begin{aligned}
+\widehat{ACE} & = \sum_c \widehat{\eta_c}\widehat{\text{Pr}}(C=c) \\
+& = -317.2 \times \frac{70}{4642} -281.2\times\frac{3720}{4642} -153.7\times\frac{697}{4642}-230.0\times\frac{155}{4642} \\
+& = -260.9
+\end{aligned}
+$$
+
+
+### Positivity 非零性
+ 
+當我們用下面的飽和模型的時候，八個可能的分組中，每個格子裏都不能是零，這一前提條件被成爲非零性 (positivity)。
+
+```{r CI-3-6, echo=TRUE, eval = FALSE, cache=TRUE}
+Cat_mod4 <- lm(bweight ~ as.factor(mbsmoke)*as.factor(prenatal), data = cattaneo2)
+```
+
+用概率來表達，就是，在所有可能的 $c$ 層中的對象，其中暴露變量爲 1 的概率必須在 0, 1 之間: 
+
+$$
+\textbf{Positivity: } \text{if Pr}(C=c) > 0 \text{ then: } 0<\text{Pr}(X=1|C=c) <1  
+$$
+
+### 連續型變量 $C$ 的平均因果效應
+
+
+
+```{r CI-3-7, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod5 <- lm(bweight ~ factor(mbsmoke) + mage*factor(mbsmoke) + I(mage^2)*factor(mbsmoke), data = cattaneo2)
+
+summary(Cat_mod5)
+
+with(cattaneo2, summ(mage, graph = F))
+with(cattaneo2, summ(mage^2, graph = F))
+
+
+Y <- cattaneo2$bweight
+# X <- with(cattaneo2, cbind(fbaby, mmarried, alcohol, fedu, mage))
+X <- with(cattaneo2, cbind(mage, mage^2))
+treat <- cattaneo2$mbsmoke
+fit1<-ATE(Y,treat,X)
+
+summary(fit1)
+
+```
+
+$$
+\begin{aligned}
+\widehat{\beta_0} & = 1121.035 \\
+\widehat{\beta_1} & = -92.690 \\ 
+\widehat{\beta_2} & = 1.444 \\
+\Rightarrow \widehat{ACE} & = 1121.035 - 92.690\times26.505 + 1.444\times734.056 \\ 
+& = -275.7
+\end{aligned}
+$$
+
+
+和 STATA 的 `teffects ra` 結果做個對比: 
+
+```
+. teffects ra (bweight mage mage2) (mbsmoke)
+
+Iteration 0:   EE criterion =  9.667e-23  
+Iteration 1:   EE criterion =  7.554e-27  
+
+Treatment-effects estimation                    Number of obs     =      4,642
+Estimator      : regression adjustment
+Outcome model  : linear
+Treatment model: none
+----------------------------------------------------------------------------------------
+                       |               Robust
+               bweight |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-----------------------+----------------------------------------------------------------
+ATE                    |
+               mbsmoke |
+(smoker vs nonsmoker)  |  -275.9901   22.74918   -12.13   0.000    -320.5777   -231.4025
+-----------------------+----------------------------------------------------------------
+POmean                 |
+               mbsmoke |
+            nonsmoker  |   3409.482   9.284654   367.22   0.000     3391.284    3427.679
+----------------------------------------------------------------------------------------
+```
+
+小數點以後的略差異應該是四舍五入的差異。別的估計包括 Robust Std. Err. 都是十分接近的。
+
 
 
 # Regression Methods with binary outcomes 結果變量爲二分類變量 

@@ -36,3 +36,6 @@ gen mage2=mage^2
 regress bweight i.mbsmoke mage mage2 i.fbaby##i.prenatal
 
 regress bweight i.mbsmoke##i.fbaby i.prenatal mage mage2
+
+
+teffects ra (bweight mage mage2) (mbsmoke)
