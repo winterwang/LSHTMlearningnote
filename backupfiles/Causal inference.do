@@ -52,9 +52,11 @@ tab fbaby mbsmoke, row
 
 tabstat bweight, by(fbaby)
 
-tabstat bweight, by(
+tabstat bweight, by(mbsmoke)
 
-
+// Remark that comparing the coefficients of these regressions to `detect` 
+// confounding only works for collapsible models (and not for logitstic models
+// or others).
  
 *6*
 
@@ -66,7 +68,7 @@ teffects ra (bweight fbaby) (mbsmoke)
 regress bweight i.mbsmoke##i.fbaby
 est store a
 
-*to get the C speficic effects: 
+*to get the specific effects: 
 
 lincom 1.mbsmoke 
 

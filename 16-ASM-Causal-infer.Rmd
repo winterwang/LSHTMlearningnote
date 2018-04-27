@@ -753,7 +753,7 @@ E(Y|X=x, C=c) & = \alpha + \beta_0 x + \gamma_1 I(c=1) + \gamma_2 I(c=2) + \gamm
 $$
 
 
-模型 \@ref(eq:CI-3-5) 是一個飽和模型，因爲 X 和 C 之間一共只有八種分組組合，我們又擬合了一個含有 8 跟參數的模型。也就是說，這個模型允許這 8 種 X 和 C 之間的分組，每組都有不同的結果。
+模型 \@ref(eq:CI-3-5) 是一個飽和模型，因爲 X 和 C 之間一共只有四種分組組合，我們又擬合了一個含有 8 個參數的模型。也就是說，這個模型允許這 8 種 X 和 C 之間的分組，每組都有不同的結果。
 
 $$
 \begin{aligned}
@@ -942,6 +942,10 @@ tabstat bweight, by(fbaby)
 
 tabstat bweight, by(mbsmoke)
 
+// 這裏需要重新強調的是，通過比較調整新變量前後的回歸系數的變化，
+// 能且僅僅只能在線性回歸模型 (可壓縮模型) 時使用，邏輯回歸中不適用。
+
+
 *3 在怎樣的假設條件下，這裏的線性回歸模型的回歸系數 `mbsmoke` 
 // 可以被賦予因果關系？
 
@@ -952,7 +956,113 @@ tabstat bweight, by(mbsmoke)
 //    是相同的。同樣地，在另一種潛在條件下 (懷孕母親被禁止吸煙時) 的
 //    嬰兒出生體重 (潛在結果)，和實際觀察到的不吸煙的母親生下的嬰兒體重
 //    是相同的。
-// 3. 條件可置換性 conditional exchangeability: 
+// 3. 條件可置換性 conditional exchangeability: 在 `fbaby` 的各個組別中，
+//    兩種潛在暴露造成的潛在結果，調整了其它共變量之後，和她們真實的暴露情況
+//    (母親是否吸煙)之間是相互獨立的。在這個模型裏，我們只調整了 `fbaby` 
+//    一個共變量，所以如果要給它的回歸系數加上因果關系結論，還必須假設 (雖然
+//    很可能不合理) 控制 `fbaby` 這個單一的變量，就完全調整了了母親孕期吸煙和
+//    新生兒體重之間關系的全部混雜因素。
+// 4. 模型被正確擬合 correct specification of the regression model: 這是指，
+//    模型中加入的變量與變量之間的關系，被正確地擬合了，因爲目前只有兩個
+//    分類型變量在模型中，且該模型沒有加入交互作用項，那麼這條前提假設的含義
+//    就是，我們認爲 `fbaby` 對孕期吸煙和新生兒體重之間的關系沒有交互作用。
+
+*4 在前面解釋過的因果關系的前提條件下，要給 `mbsmoke` 一個因果關系的解釋
+// 的話，(b) 模型的回歸系數該怎麼解釋呢？用潛在結果的概念解釋。
+
+//    在 3. 的前提條件下， `mbsmoke` 的回歸系數的因果關系解讀可以是: 
+//    當條件變量 `fbaby` 嬰兒是否是第一胎的變量保持不變時，281.0638 是暴露
+//    (孕期吸煙) 導致的新生兒體重下降的量，其95%信賴區間是 (238.9961, 323.1314)。
+//    這是一個潛在結果的差，所以假如所有的媽媽孕期都吸煙，和所有的媽媽孕期都
+//    不吸煙相比(潛在暴露)，嬰兒的出生平均體重要輕 281.0638 克: 
+//     E{Y(1) | C = c} - E{Y(0) | C = c} = 281.0638
+
+*5 用 STATA 的 `teffects ra` 命令擬合相同的模型: 
+  
+teffects ra (bweight fbaby) (mbsmoke)
+
+// 因果均差 (ACE) 的估計在 STATA 被叫做 `ATE`，但是估計的結果略低於
+// 模型 (b) 的結果: -273.1552 vs. -281.0638。
+
+*6 在線性回歸模型中加入 `i.mbsmoke##i.fbaby` 的交互作用項，試着計算
+// `fbaby` 爲 0/1 時各自的 `mbsmoke` 回歸系數: 
+  
+regress bweight i.mbsmoke##i.fbaby
+est store a
+
+*to get the stratum specific effects: 
+
+lincom 1.mbsmoke  // when baby is not first born 
+
+lincom 1.mbsmoke + 1.mbsmoke#1.fbaby // when baby is first born
+
+*7 計算 `fbaby` 各組所佔的百分比: (爲了計算孕期吸煙導致的新生兒體重下降
+// 的邊際效應 marginal effect)
+
+tab fbaby
+
+*8 用 6, 7 的結果，手動計算一下 ACE 的估計量: 
+  
+
+*now restore model estimates
+est restore a 
+
+lincom 0.562*1.mbsmoke  + 0.438*(1.mbsmoke + 1.mbsmoke#1.fbaby)
+
+margins, dydx(mbsmoke) // 你也可以用這個 margins 的命令，很方便，但是它估計的標準誤不使用穩健統計學方法，所以略有不同。
+
+*9 爲什麼沒有加交互作用項的模型 (b) 給出的回歸系數估計和 `teffects ra`
+// 的結果相差很大？
+
+//   這是因爲如果給模型 (b) 的回歸系數賦予因果關系的解釋的話，第四個前提假設
+//   -- 模型選擇正確且變量在模型中的形式也是正確 -- 太過樂觀了。這個前提假設
+//   認爲沒有交互作用，但是，如果你看加交互作用項的第三個模型中，交互作用項
+//   的回顧系數其實是有意義的 (有證據顯示交互作用存在): 
+  
+// mbsmoke#|
+//       fbaby |
+// smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5142  
+
+*10 現在給模型中加入更多的共變量，用兩種命令分別擬合，比較其結果:
+  
+regress bweight mbsmoke fbaby mmarried alcohol fedu mage
+
+
+teffects ra (bweight fbaby mmarried alcohol fedu mage) (mbsmoke)
+
+
+//   此時我們發現，簡單現行回歸估計的因果均值差(ATE)總是和考慮了更復雜關系的模型相比
+//   相差較多。
+
+*11 你可以用下面的非 teffects 代碼還原上面的計算: 
+  
+ qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==0
+ predict Y0
+ 
+ qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==1
+ predict Y1
+ 
+ sum Y0
+ gen E0=r(mean) 
+ 
+ sum Y1
+ gen E1=r(mean)
+ 
+ gen ACE = E1-E0 
+ sum ACE 
+ 
+ // 或者使用方便的 margins
+ 
+qui regress bweight i.mbsmoke fbaby mmarried alcohol fedu mage ///
+		i.mbsmoke#i.fbaby i.mbsmoke#i.mmarried i.mbsmoke#i.alcohol i.mbsmoke#c.fedu ///
+		i.mbsmoke#c.mage
+		
+margins, dydx(mbsmoke)
+
+// 值得注意的是，即使是使用 `teffects ra` 我們可能對模型形式的指定還是過於簡單，
+// 例如上面的模型中加入了許多變量，但是 STATA 其實並沒有考慮有三個或者三個以上
+// 變量之間發生交互作用的情況，而且， `fedu, mage` 被認爲和結果變量 `bweight`
+// 呈簡單一次的線性關系。
 ```
 
 
