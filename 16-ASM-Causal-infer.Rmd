@@ -728,7 +728,7 @@ $$
 
 所以，只有當暴露變量有兩個時 (因爲要同時對飲酒習慣和吸煙習慣兩個暴露變量做潛在結果分析 potential outcome)，才會用到交互作用 (interaction)。
 
-### 分類型條件變量 $(C)$ 時的平均因果效應 (ACE) 
+### 分類型條件變量的平均因果效應 (ACE) 
 
 Average Causal Effect (ACE) 平均因果效應: 
 
@@ -834,7 +834,7 @@ $$
 \textbf{Positivity: } \text{if Pr}(C=c) > 0 \text{ then: } 0<\text{Pr}(X=1|C=c) <1  
 $$
 
-### 連續型變量 $C$ 的平均因果效應
+### 連續型變量的平均因果效應
 
 
 
@@ -896,9 +896,75 @@ POmean                 |
 
 小數點以後的略差異應該是四舍五入的差異。別的估計包括 Robust Std. Err. 都是十分接近的。
 
+## Practical03 - causal inference
+
+
+
+注意: 這裏的練習使用的是STATA 因爲，我在 R 裏找不到像 STATA 的 `teffects` 這樣靈活且方便的命令，如果你知道，歡迎告訴我: abelardccwang@gmail.com。
+
+
+```{r switch_engine, echo=TRUE, message=FALSE}
+require(knitr)
+statapath <- "/usr/local/stata/stata" # <- 設定你的 STATA 路徑
+opts_chunk$set(engine="stata", engine.path=statapath, comment="")
+```
+
+數據還是吸煙和新生兒體重的關系的數據: 
+
+```{r description, cache=TRUE, echo=FALSE}
+use "backupfiles/cattaneo2.dta"
+describe
+tab mbsmoke
+
+summ bweight, detail
+
+*1. 用簡單線性回顧分析一下 `mbsmoke` 和 `bweight` 之間的關系: 
+*a) 
+regress bweight i.mbsmoke
+
+
+*b) 
+
+regress bweight i.mbsmoke i.fbaby
+
+*2. 調整了 `fbaby` 之後，暴露和結果之間的關系發生了怎樣的變化？
+//說明 `fbaby` 是什麼類型的混雜因子？
+
+*看兩個結果的報告，吸煙的線性回歸系數從調整 `fbaby` 前的 `-275.25`，
+// 進一步變小爲 `-281.06`，這是一種負方向混雜 (negative confounding)。
+// 這種混雜可以分析 `fbaby` 和 `mbsmoke` 以及 `bweight`
+// 各自的關系看出，懷第一胎的母親比較少吸煙，且第一胎嬰兒的出生體重
+// 均值比不是第一胎嬰兒的出生體重要低: 
+
+tab fbaby mbsmoke, row
+
+tabstat bweight, by(fbaby)
+
+tabstat bweight, by(mbsmoke)
+
+*3 在怎樣的假設條件下，這裏的線性回歸模型的回歸系數 `mbsmoke` 
+// 可以被賦予因果關系？
+
+// 1. 無相互幹擾 no interference: 一個懷孕母親吸煙與否，和另一個母親
+//    生下的嬰兒的出生體重之間沒有關系。
+// 2. 一致性 consistency: 實際觀察到的孕期吸煙母親的嬰兒出生體重，和
+//    潛在條件下 (當一個懷孕母親被強制吸煙時) 的嬰兒出生體重 (潛在結果)
+//    是相同的。同樣地，在另一種潛在條件下 (懷孕母親被禁止吸煙時) 的
+//    嬰兒出生體重 (潛在結果)，和實際觀察到的不吸煙的母親生下的嬰兒體重
+//    是相同的。
+// 3. 條件可置換性 conditional exchangeability: 
+```
+
+
+
+
 
 
 # Regression Methods with binary outcomes 結果變量爲二分類變量 
+
+
+
+
 
 # Prospensity Score 傾向性評分  
 
