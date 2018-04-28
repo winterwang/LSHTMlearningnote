@@ -1026,6 +1026,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li class="chapter" data-level="93.4" data-path="regression-methods-with-binary-outcomes-.html"><a href="regression-methods-with-binary-outcomes-.html#section-93.4"><i class="fa fa-check"></i><b>93.4</b> 通過邏輯回歸估計這些被估計量</a></li>
 <li class="chapter" data-level="93.5" data-path="regression-methods-with-binary-outcomes-.html"><a href="regression-methods-with-binary-outcomes-.html#average-causaltreatment-effect-in-the-exposedtreated-atet"><i class="fa fa-check"></i><b>93.5</b> Average causal/treatment effect in the exposed/treated (ATET)</a></li>
+<li class="chapter" data-level="93.6" data-path="regression-methods-with-binary-outcomes-.html"><a href="regression-methods-with-binary-outcomes-.html#practical04---causal-inference"><i class="fa fa-check"></i><b>93.6</b> Practical04 - causal inference</a></li>
 </ul></li>
 <li class="chapter" data-level="94" data-path="prospensity-score-.html"><a href="prospensity-score-.html"><i class="fa fa-check"></i><b>94</b> Prospensity Score 傾向性評分</a></li>
 <li class="chapter" data-level="95" data-path="inverse-probability-weighted-estimation-and-doubly-robust-methods.html"><a href="inverse-probability-weighted-estimation-and-doubly-robust-methods.html"><i class="fa fa-check"></i><b>95</b> Inverse probability weighted estimation and doubly robust methods</a></li>
@@ -1270,6 +1271,123 @@ E\{ Y(1)  -Y(0) |X =1  \}  = &amp; \sum_cE\{ Y(1) |X=1, C=c \}\text{Pr}(C=c|X=1)
 ##      mbsmoke |
 ##   nonsmoker  |   .0562368   .0045959    12.24   0.000      .047229    .0652447
 ## ------------------------------------------------------------------------------</code></pre>
+<p>這裏你看到的是 ATET 和 ACE 很接近的數字，還有別的情況下，你會發現，某種治療方案對於接受治療的人來說是有好處的，但是對其他人是有害/沒有用的。</p>
+</div>
+<div id="practical04---causal-inference" class="section level2">
+<h2><span class="header-section-number">93.6</span> Practical04 - causal inference</h2>
+<p>注意: 這裏的練習使用的是 STATA 因爲，我在 R 裏找不到像 STATA 的 <code>teffects</code> 這樣靈活且方便的命令，如果你知道，歡迎告訴我: <a href="mailto:abelardccwang@gmail.com">abelardccwang@gmail.com</a>。</p>
+<p>數據來自一個觀察性研究，樣本量是 3551 的一個肺癌患者數據庫，四家醫院的肺癌患者正準備選用 1) 常規手術 或者 2) 射頻消蝕 (radiofrequency ablation, RFA) 兩種方法取出肺部的轉移腫塊。該數據的變量如下:</p>
+<pre><code>## 
+## . use &quot;backupfiles/RFA.dta&quot; 
+## 
+## . describe
+## 
+## Contains data from backupfiles/RFA.dta
+##   obs:         3,551                          
+##  vars:            14                          5 Nov 2013 15:05
+##  size:       198,856                          
+## -------------------------------------------------------------------------------
+##               storage   display    value
+## variable name   type    format     label      variable label
+## -------------------------------------------------------------------------------
+## id              float   %9.0g                 Patient ID
+## age             float   %9.0g                 
+## gender          float   %9.0g      gender     
+## smoke           float   %9.0g      smoke      Smoking status
+## hospital        float   %9.0g                 Hospital ID
+## nodules         float   %9.0g                 Number of nodules
+## mets            float   %9.0g                 Number of other metastatic sites
+## duration        float   %9.0g                 Duration of disease (in months)
+## maxdia          float   %9.0g                 Diameter of largest nodule (in
+##                                                 cm)
+## primary         float   %22.0g     primary    Location of primary cancer
+## position        float   %9.0g      position   Ease with which nodules can be
+##                                                 reached
+## coag            float   %9.0g      coag       Coagulopathy
+## rfa             float   %23.0g     rfa        Treatment variable: RFA or
+##                                                 standard surgery
+## dodp            float   %9.0g      dodp       Outcome variable: death or
+##                                                 disease progression within 36
+##                                                 months
+## -------------------------------------------------------------------------------
+## Sorted by: id</code></pre>
+<p>其中，主要的混雜因子是:</p>
+<ol style="list-style-type: decimal">
+<li><code>hospital</code>: 有些醫院可能本身更傾向於/不傾向於使用 RFA，或者有些醫院的患者整體症狀較輕/較重;</li>
+<li><code>maxdia</code>: 如果腫塊太大，那就不適合使用 RFA，而且腫塊較大的患者，生存的概率一般來說比較低;</li>
+<li><code>position</code>: 腫塊位置，相比較傳統常規手術摘除的方法，RFA 能夠治療那些手術難以摘除的腫塊的部位。</li>
+</ol>
+<p>這三個主要的變量被認爲非常重要，需要在分析中被調整。</p>
+<p>其他的變量被認爲不太會是混雜因子，但是醫生認爲對患者的預後有很強的預測效果: <code>age, gender, smoke, nodules, mets, duration, primary</code>。</p>
+<p>最後一點，對於有凝血障礙的患者 <code>coag</code> 來說，RFA 是不安全的。</p>
+<pre><code>## 
+## . use &quot;backupfiles/RFA.dta&quot; 
+## 
+## . 
+## . summarize age
+## 
+##     Variable |        Obs        Mean    Std. Dev.       Min        Max
+## -------------+---------------------------------------------------------
+##          age |      3,551    51.99944    4.379916         33         84
+## 
+## . 
+## . tab gender
+## 
+##      gender |      Freq.     Percent        Cum.
+## ------------+-----------------------------------
+##        male |      2,124       59.81       59.81
+##      female |      1,427       40.19      100.00
+## ------------+-----------------------------------
+##       Total |      3,551      100.00
+## 
+## . 
+## . tab hospital
+## 
+## Hospital ID |      Freq.     Percent        Cum.
+## ------------+-----------------------------------
+##           1 |        570       16.05       16.05
+##           2 |        631       17.77       33.82
+##           3 |      1,395       39.28       73.11
+##           4 |        955       26.89      100.00
+## ------------+-----------------------------------
+##       Total |      3,551      100.00
+## 
+## . 
+## . summarize maxdia
+## 
+##     Variable |        Obs        Mean    Std. Dev.       Min        Max
+## -------------+---------------------------------------------------------
+##       maxdia |      3,551    1.816981    .5713256         .7          4
+## 
+## . 
+## . tab position
+## 
+##   Ease with |
+##       which |
+## nodules can |
+##  be reached |      Freq.     Percent        Cum.
+## ------------+-----------------------------------
+##        easy |        857       24.13       24.13
+##    moderate |      1,820       51.25       75.39
+##   difficult |        874       24.61      100.00
+## ------------+-----------------------------------
+##       Total |      3,551      100.00
+## 
+## . 
+## . tab dodp
+## 
+##     Outcome |
+##   variable: |
+##    death or |
+##     disease |
+## progression |
+##   within 36 |
+##      months |      Freq.     Percent        Cum.
+## ------------+-----------------------------------
+##          no |      2,604       73.33       73.33
+##         yes |        947       26.67      100.00
+## ------------+-----------------------------------
+##       Total |      3,551      100.00</code></pre>
 </div>
 </div>
             </section>

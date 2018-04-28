@@ -132,4 +132,45 @@ teffects ra (lbweight mage i.fbaby i.prenatal, logit) (mbsmoke), atet
 
 
 
+use RFA, clear
+
+describe
+
+summarize age
+
+tab gender
+
+tab hospital
+
+summarize maxdia
+
+tab position
+
+* 4.1
+
+logit dodp rfa
+
+glm dodp 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 use syndW, clear
