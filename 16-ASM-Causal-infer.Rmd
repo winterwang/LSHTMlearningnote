@@ -1,5 +1,9 @@
 # (PART) 因果推斷 Causal Inference {-}
 
+> All models are wrong, but some are useful. 
+> 
+> --- George E. P. Box
+
 # Causal Languages 因果推斷的語法
 
 ## 當我們在談論因果推斷的時候，我們在談論什麼？
@@ -1349,8 +1353,95 @@ $$
 其中，$\mathbf{C}=$ {`hospital, maxdia, position`}
 
 
+### 用 STATA 的 `teffects ra` 擬合上面兩個模型
+
+```{r  CI-exe-03,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/RFA.dta" 
+
+*(a)
+teffects ra (dodp, logit) (rfa)
+
+*(b)
+teffects ra (dodp i.hospital maxdia i.position, logit) (rfa)
+```
 
 
+### 在怎樣的假設前提條件下，前一步擬合的模型 (b) 結果中的 ATE 可以被賦予因果關係的解釋？
+
+
+這些假設包括：
+
+1. 無相互幹擾 no interference，解釋同前。
+2. 一致性 consistency，解釋同前。
+3. 條件可置換性 conditional exchangeability，解釋同前。
+4. 正確的模型結構 correct specification of the mode：調整了醫院，腫塊大小，和腫塊位置以後，患者的死亡或者疾病加重的對數比值 (log odds of death or diseae progression) 和腫塊大小，醫院，腫塊位置不再有任何依賴性(independent)，但是接受 RFA 療法和常規手術療法之間的**療效差**，被允許在不同的醫院，腫塊大小，以及腫塊位置的不同而有所不同。
+
+### 前一問和你擬合完簡單的邏輯回歸之後做的模型假設的回答，有什麼不同？
+
+用 STATA 的 `teffects ra` 命令的時候，我們允許了療效差在不同的醫院，不同腫塊的大小，和不同腫塊的位置之間有所不同。The effect of treatment is allowed to differ nby hospital, position of the nodule and its diameter. 這種不同在擬合簡單邏輯回歸模型時是被忽略掉的。
+
+### 用因果關係語言解釋 `teffects ra` 擬合的模型 (b) 的結果
+
+模型 (b) 擬合的結果是邊際因果危險度差 (marginal causal risk difference)。情形 A. 所有患者都被實施 RFA 療法，和情形 B. 所有患者都被實施常規手術療法相比，患者中三年內死亡或者病情加重的比例 (proportion) 被估計要高出 0.026 (95%CI: -0.01, 0.06):
+
+$$
+E\{ Y(1) \} - E\{ Y(0) \}
+$$
+
+### 如果模型中加入 `age, gender, smoke, nodules, mets, duration, primary` 等和預後相關但是和決定療法並不太有關係的變量，結果會有什麼不同呢？
+
+```{r  CI-exe-04,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/RFA.dta" 
+
+teffects ra (dodp age gender i.smoke i.hospital nodules mets duration ///
+    maxdia i.primary i.position, logit) (rfa)
+
+```
+
+ACE 的估計結果沒有發生非常劇烈的變化，但是，它的標準誤被大大降低了，有效地提高了療效估計的精確度。而且此時的結果已經提示平均因果危險度差是有統計學意義的 (p = 0.006)。這時候，對於整體患者來說，如果全部實施了 RFA，那麼和全部實施標準手術療法相比較會有略差的結果，這個相差是有統計學意義的。
+
+### 如果再向模型中加入和暴露變量相關，和預後沒什麼關係的變量 `coag`，結果該怎麼解讀？
+
+```{r  CI-exe-05,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/RFA.dta" 
+teffects ra (dodp age gender i.smoke i.hospital nodules mets duration ///
+    maxdia i.primary i.position coag, logit) (rfa)
+```
+
+ACE 的估計量的標準誤因為調整了只和暴露變量相關的變量 `coag` 變得比之前大了一些。但是此時的結果依然提示全部實施 RFA 療法的話結果會比全部實施常規手術治療要差。這裡應該考慮的是，因為 `coag` 本身不是暴露和結果變量之間的混雜因子，我們本不該調整這個變量，一旦調整了只和暴露變量相關的變量，我們**反而會降低療效估計的精確度**，所以不是說模型中想加多少變量就加多少變量的。(Violation of positivity)
+
+**另外，已經有證據證明模型中調整了和暴露相關，但是並不是混雜因子的變量會嚴重增加估計量的偏倚** [@Pearl2011]。
+
+
+### 使用 `atet` 的選項重新擬合上面的因果效應模型，解釋結果發生的變化，並作出相應的結論。
+
+```{r  CI-exe-06,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/RFA.dta" 
+
+
+teffects ra (dodp, logit) (rfa), atet
+
+teffects ra (dodp i.hospital maxdia i.position, logit) (rfa), atet
+
+teffects ra (dodp age gender i.smoke i.hospital nodules mets duration ///
+    maxdia i.primary i.position, logit) (rfa), atet
+
+
+
+teffects ra (dodp age gender i.smoke i.hospital nodules mets duration ///
+    maxdia i.primary i.position coag, logit) (rfa), atet
+```
+
+模型的最後加了 `atet` 之後最大的不同是導致結果分析的**結論完全改變了**。這時候 RFA 的療效反而變得有利起來。每個模型都給出了小於零的**治療組因果危險度差 (causal risk difference in the treated)**。這主要是因為接受 RFA療法和常規手術治療的兩類患者本身有太大的不同 (strong effect heterogeneity)。因為患者如果腫塊尺寸小， RFA 可以給出很好的預後，如果腫塊的位置太難找無法使用標準療法的時候又只能選用RFA。這些都是決定醫生最終給患者使用哪種療法的重要參考因素。所以如果 ATT 是小於零的，意味著，在那些(被)選擇了 RFA療法的患者中，療效是良好的，可以有效的減少三年內死亡和病情加重的概率。
+
+另外值得一提的是，這裡調整了 `coag` 對ATT 估計的影響較小。這主要是因為，如果一個患者有凝血功能障礙，他/她就不可能接受 RFA 療法: 
+
+```{r  CI-exe-07,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/RFA.dta" 
+tab coag rfa, col chi
+```
+
+但是一個患者如果沒有凝血功能障礙，那麼他/她接受哪種療法就變得不受 `coag` 的影響。而此時我們使用 `etat` 估算的是所有接受 RFA 療法的患者中的療效。這裡受到模型變量共線性影響就較小。
 
 # Prospensity Score 傾向性評分  
 
