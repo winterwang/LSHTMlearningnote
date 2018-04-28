@@ -1126,7 +1126,145 @@ $$
 
 ## 鑑定 identification - conditional effects
 
-如果我們對暴露 $X$ 和結果 $Y$ 之間的條件因果危險度差 (risk difference)
+如果我們對暴露 $X$ 和結果 $Y$ 之間的條件因果危險度差 (conditional causal risk difference):
+
+$$
+\begin{aligned}
+\text{Pr}\{ Y(1) = 1 & | \mathbf{C=c}\}  - \text{Pr}\{ Y(0) = 1 | \mathbf{C=c}\} \\ 
+ & = \text{Pr}\{ Y(1) = 1 | X=1, \mathbf{C=c}\} - \text{Pr}\{ Y(0) = 1 | X=1, \mathbf{C=c}\} \\
+ & \text{By conditional exchangeability given }\mathbf{C} \uparrow \\
+ & = \text{Pr}\{ Y = 1 | X=1, \mathbf{C=c}\} - \text{Pr}\{ Y = 1 | X=1, \mathbf{C=c}\} \\
+ & \text{By consistency } \uparrow \\
+\end{aligned}
+$$
+
+
+相似地，條件因果對數危險度比 (conditional causal log risk ratio): 
+
+$$
+\begin{aligned}
+\log[\text{Pr}\{ Y(1) = 1 &| \mathbf{C=c} \}] - \log[\text{Pr}\{ Y(0) = 1 | \mathbf{C=c} \}] \\ 
+ & = \log\{\text{Pr}( Y = 1 | X=1, \mathbf{C=c})\} - \log\{\text{Pr}( Y = 1 | X=1, \mathbf{C=c})\} \\
+\end{aligned}
+$$
+
+
+條件因果對數比值比 (conditioanl causal log odds ratio):
+
+$$
+\begin{aligned}
+& \log[\frac{\text{Pr}\{Y(1) = 1 | \mathbf{C=c}\}}{1-\text{Pr}\{Y(1) = 1 | \mathbf{C=c}\}}] - \log[\frac{\text{Pr}\{Y(0) = 1 | \mathbf{C=c}\}}{1-\text{Pr}\{Y(0) = 1 | \mathbf{C=c}\}}] \\
+& =\log[\frac{\text{Pr}\{Y = 1 | X = 1, \mathbf{C=c}\}}{1-\text{Pr}\{Y = 1 |X = 1, \mathbf{C=c}\}}] - \log[\frac{\text{Pr}\{Y = 1 |X = 0,\mathbf{C=c}\}}{1-\text{Pr}\{Y = 1 |X = 0, \mathbf{C=c}\}}] \\
+\end{aligned}
+$$
+
+## 鑑定 identification - marginal effects
+
+### Marginal causal risk difference (ACE)
+
+$$
+\begin{aligned}
+\text{Pr}\{ Y(1) =1 \} &  - \text{Pr}\{ Y(0) =1 \}   \\
+=  & \sum_c\text{Pr}\{ Y(1)=1 |C = c \}\text{Pr}(C=c) \\
+& - \sum_c\text{Pr}\{ Y(0)=1 | C=c\}\text{Pr}(C=c) \\
+& (\text{by the law of total probability } \uparrow) \\
+= &\sum_c\text{Pr}\{ Y(1)=1|X=1, C=c \} \text{Pr}(C=c) \\ 
+& - \sum_c\text{Pr}\{ Y(0)=1|X=1, C=c \} \text{Pr}(C=c) \\ 
+& (\text{by conditional exchangeability } \uparrow) \\
+= &\sum_c\text{Pr}( Y=1|X=1, C=c ) \text{Pr}(C=c) \\ 
+& - \sum_c\text{Pr} (Y=1|X=1, C=c) \text{Pr}(C=c) \\ 
+& (\text{by consistency } \uparrow) \\
+= &  \sum_c\{ \text{Pr}( Y=1|X=1, C=c) - \\ 
+& \;\;\;\;\; \text{Pr}( Y=1|X=1, C=c) \}\text{Pr}(C=c)
+\end{aligned}
+$$
+
+### Marginal causal log risk ratio
+
+$$
+\begin{aligned}
+& \log[\text{Pr}\{ Y(1) = 1 \}] - \log[\text{Pr}\{ Y(0) =1 \}] \\
+& = \log[\sum_c\text{Pr}(Y = 1|X=1, C=c)\text{Pr}(C=c)] \\
+& \;\;\;\; - \log[\sum_c\text{Pr}(Y = 1|X=0, C=c)\text{Pr}(C=c)] \\
+\end{aligned}
+$$
+### Marginal causal log odds ratio (cannot be calculated)
+
+
+$$
+\begin{aligned}
+& \log[\frac{\text{Pr}\{Y(1) = 1\}}{1-\text{Pr}\{Y(1) = 1\}}] - \log[\frac{\text{Pr}\{Y(0) = 1\}}{1-\text{Pr}\{Y(0) = 1\}}] \\
+& = \log\{ \frac{\sum_c\text{Pr}(Y = 1|X=1, C=c)\text{Pr}(C=c)}{1-\sum_c\text{Pr}(Y = 1|X=1, C=c)\text{Pr}(C=c)} \} \\
+& \;\;\;\; - \log\{ \frac{\sum_c\text{Pr}(Y = 1|X=0, C=c)\text{Pr}(C=c)}{1-\sum_c\text{Pr}(Y = 1|X=0, C=c)\text{Pr}(C=c)} \}
+\end{aligned}
+$$
+
+
+## 通過邏輯回歸估計這些被估計量
+
+
+
+```{r CI-2-1, echo=TRUE, eval = TRUE, cache=TRUE}
+Log_lbw <- glm(lbweight ~ as.factor(mbsmoke) + mage + as.factor(fbaby) + as.factor(prenatal), family = binomial(link = "logit"), data = cattaneo2)
+summary(Log_lbw)
+```
+
+但是，在邏輯回歸的模型下，即使是滿足無互相幹擾，一致性和條件可置換性的前提，並且你就算是 100% 自信地認爲你的模型絕對正確，計算獲得的條件比值比 (conditional odds ratio) 總也無法被賦予因果關系的含義。這是由於邏輯回歸的不可壓縮性 (non-collapsiblity)，這也是越來越多的人傾向與不使用比值比作爲評價治療效果 (treatment effect) 的指標的原因之一。
+
+也因此，STATA 裏的 `teffects ra` 中即使你用的結果模型中加入 `logit` 的選項，它計算的是因果平均危險度差 (Marginal causal **risk difference** (ACE))。
+
+
+
+```{r CI-2-2, engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/cattaneo2.dta"
+teffects ra (lbweight mage i.fbaby i.prenatal, logit) (mbsmoke)
+```
+
+
+## Average causal/treatment effect in the exposed/treated (ATET)
+
+這是爲了回答公共衛生學上一個抽象的政策性問題: 對那些真的接受了治療/暴露/衛生政策幹預的人來說，他們身上發生的治療效果是怎樣的？因爲有些情況下你無法讓"所有人"都接受治療或幹預。
+
+It is often of public health interest to ask "what is the effect of this exposure on those who choose to take it?" rather than "what would be its effect on everyone?" 
+
+$$
+E\{ Y(1) - Y(0) | X=1 \}
+$$
+
+此時，條件可置換性的前提發生了微妙變化: 
+
+$$
+Y(0) \perp\perp X|\mathbf{C}
+$$
+
+對於一個簡單的分類型條件變量 $C$ 來說，它的 ATET 的鑑定過程如下: 
+
+$$
+\begin{aligned}
+E\{ Y(1)  -Y(0) |X =1  \}  = & \sum_cE\{ Y(1) |X=1, C=c \}\text{Pr}(C=c|X=1) \\ 
+& -  \sum_cE\{ Y(0) |X=1, C=c \}\text{Pr}(C=c|X=1) \\ 
+& \text{(by the law of total probability  } \uparrow) \\
+= & \sum_cE\{ Y(1) |X=1, C=c \}\text{Pr}(C=c|X=1) \\ 
+& -  \sum_cE\{ Y(0) |X=0, C=c \}\text{Pr}(C=c|X=1) \\ 
+& \text{(by conditional exchangeability  } \uparrow) \\
+= &\sum_cE (Y |X=1, C=c)\text{Pr}(C=c|X=1) \\ 
+& -  \sum_cE(Y |X=0, C=c)\text{Pr}(C=c|X=1) \\ 
+& \text{(by consistency } \uparrow) \\
+= &  \sum_c\{ E (Y |X=1, C=c) \\
+& \;\;\;- E(Y |X=0, C=c) \}\text{Pr}(C=c|X=1)
+\end{aligned}
+$$
+
+這時，我們只關心那些真正暴露的人 (predicted potential outcomes are predicted only for the exposed)。
+
+在 STATA 的 `teffects ra` 後面加上 `atet` 的選項即可: 
+
+```{r CI-2-3, engine='stata', cache=TRUE, echo=2}
+use "backupfiles/cattaneo2.dta"
+teffects ra (lbweight mage i.fbaby i.prenatal, logit) (mbsmoke), atet
+```
+
+這裏你看到的是 ATET 和 ACE 很接近的數字，還有別的情況下，你會發現，某種治療方案對於接受治療的人來說是有好處的，但是對其他人是有害/沒有用的。
 
 
 # Prospensity Score 傾向性評分  
