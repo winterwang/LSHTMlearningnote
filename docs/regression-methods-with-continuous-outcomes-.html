@@ -1419,511 +1419,506 @@ POmean                 |
 <div id="practical03---causal-inference" class="section level2">
 <h2><span class="header-section-number">92.4</span> Practical03 - causal inference</h2>
 <p>注意: 這裏的練習使用的是STATA 因爲，我在 R 裏找不到像 STATA 的 <code>teffects</code> 這樣靈活且方便的命令，如果你知道，歡迎告訴我: <a href="mailto:abelardccwang@gmail.com">abelardccwang@gmail.com</a>。</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(knitr)
-statapath &lt;-<span class="st"> &quot;/usr/local/stata/stata&quot;</span> <span class="co"># &lt;- 設定你的 STATA 路徑</span>
-opts_chunk<span class="op">$</span><span class="kw">set</span>(<span class="dt">engine=</span><span class="st">&quot;stata&quot;</span>, <span class="dt">engine.path=</span>statapath, <span class="dt">comment=</span><span class="st">&quot;&quot;</span>)</code></pre></div>
+<!-- # ```{r switch_engine, echo=TRUE, message=FALSE} -->
+<!-- # require(knitr) -->
+<!-- # statapath <- "/usr/local/stata/stata" # <- 設定你的 STATA 路徑 -->
+<!-- # opts_chunk$set(engine="stata", engine.path=statapath, comment="") -->
+<!-- # ``` -->
 <p>數據還是吸煙和新生兒體重的關系的數據:</p>
-<pre><code>
-. use &quot;backupfiles/cattaneo2.dta&quot;
-(Excerpt from Cattaneo (2010) Journal of Econometrics 155: 138-154)
-
-. describe
-
-Contains data from backupfiles/cattaneo2.dta
-  obs:         4,642                          Excerpt from Cattaneo (2010)
-                                                Journal of Econometrics 155:
-                                                138-154
- vars:            23                          21 Feb 2013 14:43
- size:       143,902                          
--------------------------------------------------------------------------------
-              storage   display    value
-variable name   type    format     label      variable label
--------------------------------------------------------------------------------
-bweight         int     %9.0g                 infant birth weight (grams)
-mmarried        byte    %10.0g     mmarried   1 if mother married
-mhisp           byte    %9.0g                 1 if mother hispanic
-fhisp           byte    %9.0g                 1 if father hispanic
-foreign         byte    %9.0g                 1 if mother born abroad
-alcohol         byte    %9.0g                 1 if alcohol consumed during
-                                                pregnancy
-deadkids        byte    %9.0g                 previous births where newborn
-                                                died
-mage            byte    %9.0g                 mother&#39;s age
-medu            byte    %9.0g                 mother&#39;s education attainment
-fage            byte    %9.0g                 father&#39;s age
-fedu            byte    %9.0g                 father&#39;s education attainment
-nprenatal       byte    %9.0g                 number of prenatal care visits
-monthslb        int     %9.0g                 months since last birth
-order           byte    %9.0g                 order of birth of the infant
-msmoke          byte    %27.0g     smoke      cigarettes smoked during
-                                                pregnancy
-mbsmoke         byte    %9.0g      mbsmoke    1 if mother smoked
-mrace           byte    %9.0g                 1 if mother is white
-frace           byte    %9.0g                 1 if father is white
-prenatal        byte    %9.0g                 trimester of first prenatal care
-                                                visit
-birthmonth      byte    %9.0g                 month of birth
-lbweight        byte    %9.0g                 1 if low birthweight baby
-fbaby           float   %9.0g      YesNo      1 if first baby
-prenatal1       float   %9.0g      YesNo      1 if first prenatal visit in 1
-                                                trimester
--------------------------------------------------------------------------------
-Sorted by: 
-
-. tab mbsmoke
-
-1 if mother |
-     smoked |      Freq.     Percent        Cum.
-------------+-----------------------------------
-  nonsmoker |      3,778       81.39       81.39
-     smoker |        864       18.61      100.00
-------------+-----------------------------------
-      Total |      4,642      100.00
-
-. 
-. summ bweight, detail
-
-                 infant birth weight (grams)
--------------------------------------------------------------
-      Percentiles      Smallest
- 1%         1474            340
- 5%         2438            340
-10%         2693            397       Obs               4,642
-25%         3033            454       Sum of Wgt.       4,642
-
-50%         3390                      Mean            3361.68
-                        Largest       Std. Dev.      578.8196
-75%         3726           5188
-90%         4026           5216       Variance       335032.2
-95%         4224           5387       Skewness       -.784952
-99%         4621           5500       Kurtosis       5.788678
-
-. 
-. *1. 用簡單線性回顧分析一下 `mbsmoke` 和 `bweight` 之間的關系: 
-. *a) 
-. regress bweight i.mbsmoke
-
-      Source |       SS           df       MS      Number of obs   =     4,642
--------------+----------------------------------   F(1, 4640)      =    164.62
-       Model |  53275939.9         1  53275939.9   Prob &gt; F        =    0.0000
-    Residual |  1.5016e+09     4,640  323622.478   R-squared       =    0.0343
--------------+----------------------------------   Adj R-squared   =    0.0341
-       Total |  1.5549e+09     4,641  335032.156   Root MSE        =    568.88
-
-------------------------------------------------------------------------------
-     bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     mbsmoke |
-     smoker  |  -275.2519    21.4528   -12.83   0.000    -317.3096   -233.1942
-       _cons |   3412.912   9.255254   368.75   0.000     3394.767    3431.056
-------------------------------------------------------------------------------
-
-. 
-. 
-. *b) 
-. 
-. regress bweight i.mbsmoke i.fbaby
-
-      Source |       SS           df       MS      Number of obs   =     4,642
--------------+----------------------------------   F(2, 4639)      =     91.56
-       Model |  59045489.8         2  29522744.9   Prob &gt; F        =    0.0000
-    Residual |  1.4958e+09     4,639  322448.533   R-squared       =    0.0380
--------------+----------------------------------   Adj R-squared   =    0.0376
-       Total |  1.5549e+09     4,641  335032.156   Root MSE        =    567.85
-
-------------------------------------------------------------------------------
-     bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     mbsmoke |
-     smoker  |  -281.0638   21.45789   -13.10   0.000    -323.1314   -238.9961
-             |
-       fbaby |
-        Yes  |  -71.20491    16.8333    -4.23   0.000    -104.2062   -38.20364
-       _cons |   3445.178   11.98063   287.56   0.000      3421.69    3468.666
-------------------------------------------------------------------------------
-
-. 
-. *2. 調整了 `fbaby` 之後，暴露和結果之間的關系發生了怎樣的變化？
-. //說明 `fbaby` 是什麼類型的混雜因子？
-. 
-. *看兩個結果的報告，吸煙的線性回歸系數從調整 `fbaby` 前的 `-275.25`，
-. // 絕對值變大爲 `-281.06`，這是一種負方向混雜 (negative confounding)。
-. // 這種混雜可以分析 `fbaby` 和 `mbsmoke` 以及 `bweight`
-. // 各自的關系看出，懷第一胎的母親比較少吸煙，且第一胎嬰兒的出生體重
-. // 均值比不是第一胎嬰兒的出生體重要低: 
-. 
-. tab fbaby mbsmoke, row
-
-+----------------+
-| Key            |
-|----------------|
-|   frequency    |
-| row percentage |
-+----------------+
-
-1 if first |  1 if mother smoked
-      baby | nonsmoker     smoker |     Total
------------+----------------------+----------
-        No |     2,066        543 |     2,609 
-           |     79.19      20.81 |    100.00 
------------+----------------------+----------
-       Yes |     1,712        321 |     2,033 
-           |     84.21      15.79 |    100.00 
------------+----------------------+----------
-     Total |     3,778        864 |     4,642 
-           |     81.39      18.61 |    100.. 
-. tabstat bweight, by(fbaby)
-
-Summary for variables: bweight
-     by categories of: fbaby (1 if first baby)
-
- fbaby |      mean
--------+----------
-    No |  3386.681
-   Yes |  3329.595
--------+----------
- Total |   3361.68
-------------------
-
-. 
-. tabstat bweight, by(mbsmoke)
-
-Summary for variables: bweight
-     by categories of: mbsmoke (1 if mother smoked)
-
-  mbsmoke |      mean
-----------+----------
-nonsmoker |  3412.912
-   smoker |   3137.66
-----------+----------
-    Total |   3361.68
----------------------
-
-. 
-. // 這裏需要重新強調的是，通過比較調整新變量前後的回歸系數的變化，
-. // 能且僅僅只能在線性回歸模型 (可壓縮模型) 時使用，邏輯回歸中不適用。
-. 
-. 
-. *3 在怎樣的假設條件下，這裏的線性回歸模型的回歸系數 `mbsmoke` 
-. // 可以被賦予因果關系？
-. 
-. // 1. 無相互幹擾 no interference: 一個懷孕母親吸煙與否，和另一個母親
-. //    生下的嬰兒的出生體重之間沒有關系。
-. // 2. 一致性 consistency: 實際觀察到的孕期吸煙母親的嬰兒出生體重，和
-. //    潛在條件下 (當一個懷孕母親被強制吸煙時) 的嬰兒出生體重 (潛在結果)
-. //    是相同的。同樣地，在另一種潛在條件下 (懷孕母親被禁止吸煙時) 的
-. //    嬰兒出生體重 (潛在結果)，和實際觀察到的不吸煙的母親生下的嬰兒體重
-. //    是相同的。
-. // 3. 條件可置換性 conditional exchangeability: 在 `fbaby` 的各個組別中，
-. //    兩種潛在暴露造成的潛在結果，調整了其它共變量之後，和她們真實的暴露情況
-. //    (母親是否吸煙)之間是相互獨立的。在這個模型裏，我們只調整了 `fbaby` 
-. //    一個共變量，所以如果要給它的回歸系數加上因果關系結論，還必須假設 (雖然
-. //    很可能不合理) 控制 `fbaby` 這個單一的變量，就完全調整了了母親孕期吸煙和
-. //    新生兒體重之間關系的全部混雜因素。
-. // 4. 模型被正確擬合 correct specification of the regression model: 這是指，
-. //    模型中加入的變量與變量之間的關系，被正確地擬合了，因爲目前只有兩個
-. //    分類型變量在模型中，且該模型沒有加入交互作用項，那麼這條前提假設的含義
-. //    就是，我們認爲 `fbaby` 對孕期吸煙和新生兒體重之間的關系沒有交互作用。
-. 
-. *4 在前面解釋過的因果關系的前提條件下，要給 `mbsmoke` 一個因果關系的解釋
-. // 的話，(b) 模型的回歸系數該怎麼解釋呢？用潛在結果的概念解釋。
-. 
-. //    在 3. 的前提條件下， `mbsmoke` 的回歸系數的因果關系解讀可以是: 
-. //    當條件變量 `fbaby` 嬰兒是否是第一胎的變量保持不變時，281.0638 是暴露
-. //    (孕期吸煙) 導致的新生兒體重下降的量，其95%信賴區間是 (238.9961, 323.131
-&gt; 4)。
-. //    這是一個潛在結果的差，所以假如所有的媽媽孕期都吸煙，和所有的媽媽孕期都
-. //    不吸煙相比(潛在暴露)，嬰兒的出生平均體重要輕 281.0638 克: 
-. //     E{Y(1) | C = c} - E{Y(0) | C = c} = 281.0638
-. 
-. *5 用 STATA 的 `teffects ra` 命令擬合相同的模型: 
-.   
-. teffects ra (bweight fbaby) (mbsmoke)
-
-Iteration 0:   EE criterion =  2.764e-25  
-Iteration 1:   EE criterion =  3.079e-26  
-
-Treatment-effects estimation                    Number of obs     =      4,642
-Estimator      : regression adjustment
-Outcome model  : linear
-Treatment model: none
-------------------------------------------------------------------------------
-             |               Robust
-     bweight |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-ATE          |
-     mbsmoke |
-    (smoker  |
-         vs  |
- nonsmoker)  |  -273.1552   20.93503   -13.05   0.000    -314.1872   -232.1233
--------------+----------------------------------------------------------------
-POmean       |
-     mbsmoke |
-  nonsmoker  |   3414.403   9.279263   367.96   0.000     3396.216     3432.59
-------------------------------------------------------------------------------
-
-. 
-. // 因果均差 (ACE) 的估計在 STATA 被叫做 `ATE`，但是估計的結果略低於
-. // 模型 (b) 的結果: -273.1552 vs. -281.0638。
-. 
-. *6 在線性回歸模型中加入 `i.mbsmoke##i.fbaby` 的交互作用項，試着計算
-. // `fbaby` 爲 0/1 時各自的 `mbsmoke` 回歸系數: 
-.   
-. regress bweight i.mbsmoke##i.fbaby
-
-      Source |       SS           df       MS      Number of obs   =     4,642
--------------+----------------------------------   F(3, 4638)      =     65.17
-       Model |  62890495.3         3  20963498.4   Prob &gt; F        =    0.0000
-    Residual |  1.4920e+09     4,638  321689.034   R-squared       =    0.0404
--------------+----------------------------------   Adj R-squared   =    0.0398
-       Total |  1.5549e+09     4,641  335032.156   Root MSE        =    567.18
-
-------------------------------------------------------------------------------
-     bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     mbsmoke |
-     smoker  |  -339.8145   27.35206   -12.42   0.000    -393.4375   -286.1914
-             |
-       fbaby |
-        Yes  |  -98.18832   18.53668    -5.30   0.000     -134.529   -61.84761
-             |
-     mbsmoke#|
-       fbaby |
- smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5142
-             |
-       _cons |   3457.406   12.47823   277.08   0.000     3432.942    3481.869
-------------------------------------------------------------------------------
-
-. est store a
-
-. 
-. *to get the stratum specific effects: 
-. 
-. lincom 1.mbsmoke  // when baby is not first born 
-
- ( 1)  1.mbsmoke = 0
-
-------------------------------------------------------------------------------
-     bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-         (1) |  -339.8145   27.35206   -12.42   0.000    -393.4375   -286.1914
-------------------------------------------------------------------------------
-
-. 
-. lincom 1.mbsmoke + 1.mbsmoke#1.fbaby // when baby is first born
-
- ( 1)  1.mbsmoke + 1.mbsmoke#1.fbaby = 0
-
-------------------------------------------------------------------------------
-     bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-         (1) |  -187.6098   34.49709    -5.44   0.000    -255.2405   -119.9791
-------------------------------------------------------------------------------
-
-. 
-. *7 計算 `fbaby` 各組所佔的百分比: (爲了計算孕期吸煙導致的新生兒體重下降
-. // 的邊際效應 marginal effect)
-. 
-. tab fbaby
-
- 1 if first |
-       baby |      Freq.     Percent        Cum.
-------------+-----------------------------------
-         No |      2,609       56.20       56.20
-        Yes |      2,033       43.80      100.00
-------------+-----------------------------------
-      Total |      4,642      100.00
-
-. 
-. *8 用 6, 7 的結果，手動計算一下 ACE 的估計量: 
-.   
-. 
-. *now restore model estimates
-. est restore a 
-(results a are active now)
-
-. 
-. lincom 0.562*1.mbsmoke  + 0.438*(1.mbsmoke + 1.mbsmoke#1.fbaby)
-
- ( 1)  1.mbsmoke + .438*1.mbsmoke#1.fbaby = 0
-
-------------------------------------------------------------------------------
-     bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-         (1) |  -273.1488   21.55453   -12.67   0.000     -315.406   -230.8917
-------------------------------------------------------------------------------
-
-. 
-. margins, dydx(mbsmoke) // 你也可以用這個 margins 的命令，很方便，但是它估計的
-&gt; 標準誤不使用穩健統計學方法，所以略有不同。
-
-Average marginal effects                        Number of obs     =      4,642
-Model VCE    : OLS
-
-Expression   : Linear prediction, predict()
-dy/dx w.r.t. : 1.mbsmoke
-
-------------------------------------------------------------------------------
-             |            Delta-method
-             |      dy/dx   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     mbsmoke |
-     smoker  |  -273.1552   21.55433   -12.67   0.000     -315.412   -230.8985
-------------------------------------------------------------------------------
-Note: dy/dx for factor levels is the discrete change from the base level.
-
-. 
-. *9 爲什麼沒有加交互作用項的模型 (b) 給出的回歸系數估計和 `teffects ra`
-. // 的結果相差很大？
-. 
-. //   這是因爲如果給模型 (b) 的回歸系數賦予因果關系的解釋的話，第四個前提假設
-. //   -- 模型選擇正確且變量在模型中的形式也是正確 -- 太過樂觀了。這個前提假設
-. //   認爲沒有交互作用，但是，如果你看加交互作用項的第三個模型中，交互作用項
-. //   的回顧系數其實是有意義的 (有證據顯示交互作用存在): 
-.   
-. // mbsmoke#|
-. //       fbaby |
-. // smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5
-&gt; 142  
-. 
-. *10 現在給模型中加入更多的共變量，用兩種命令分別擬合，比較其結果:
-.   
-. regress bweight mbsmoke fbaby mmarried alcohol fedu mage
-
-      Source |       SS           df       MS      Number of obs   =     4,642
--------------+----------------------------------   F(6, 4635)      =     46.86
-       Model |  88933839.4         6  14822306.6   Prob &gt; F        =    0.0000
-    Residual |  1.4660e+09     4,635  316278.403   R-squared       =    0.0572
--------------+----------------------------------   Adj R-squared   =    0.0560
-       Total |  1.5549e+09     4,641  335032.156   Root MSE        =    562.39
-
-------------------------------------------------------------------------------
-     bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     mbsmoke |  -221.2625   22.28894    -9.93   0.000    -264.9594   -177.5656
-       fbaby |  -49.45095   17.62184    -2.81   0.005    -83.99814   -14.90375
-    mmarried |   152.3058   21.86593     6.97   0.000     109.4382    195.1734
-     alcohol |  -64.26606   47.48732    -1.35   0.176    -157.3638    28.83168
-        fedu |   4.515101   2.573722     1.75   0.079    -.5306195    9.560821
-        mage |   1.282969   1.750586     0.73   0.464    -2.149013    4.714952
-       _cons |   3230.456   49.40366    65.39   0.000     3133.601    3327.311
-------------------------------------------------------------------------------
-
-. 
-. 
-. teffects ra (bweight fbaby mmarried alcohol fedu mage) (mbsmoke)
-
-Iteration 0:   EE criterion =  4.396e-24  
-Iteration 1:   EE criterion =  7.758e-26  
-
-Treatment-effects estimation                    Number of obs     =      4,642
-Estimator      : regression adjustment
-Outcome model  : linear
-Treatment model: none
-------------------------------------------------------------------------------
-             |               Robust
-     bweight |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-ATE          |
-     mbsmoke |
-    (smoker  |
-         vs  |
- nonsmoker)  |  -231.1408   24.50303    -9.43   0.000    -279.1659   -183.1158
--------------+----------------------------------------------------------------
-POmean       |
-     mbsmoke |
-  nonsmoker  |   3403.054   9.532216   357.01   0.000     3384.372    3421.737
-------------------------------------------------------------------------------
-
-. 
-. 
-. //   此時我們發現，簡單現行回歸估計的因果均值差(ATE)總是和考慮了更復雜關系的
-&gt; 模型相比
-. //   相差較多。
-. 
-. *11 你可以用下面的非 teffects 代碼還原上面的計算: 
-.   
-.  qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==0
-
-.  predict Y0
-(option xb assumed; fitted values)
-
-.  
-.  qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==1
-
-.  predict Y1
-(option xb assumed; fitted values)
-
-.  
-.  sum Y0
-
-    Variable |        Obs        Mean    Std. Dev.       Min        Max
--------------+---------------------------------------------------------
-          Y0 |      4,642    3403.054    101.6744   3163.591   3549.308
-
-.  gen E0=r(mean) 
-
-.  
-.  sum Y1
-
-    Variable |        Obs        Mean    Std. Dev.       Min        Max
--------------+---------------------------------------------------------
-          Y1 |      4,642    3171.914    67.17853   2839.728   3306.694
-
-.  gen E1=r(mean)
-
-.  
-.  gen ACE = E1-E0 
-
-.  sum ACE 
-
-    Variable |        Obs        Mean    Std. Dev.       Min        Max
--------------+---------------------------------------------------------
-         ACE |      4,642   -231.1409           0  -231.1409  -231.1409
-
-.  
-.  // 或者使用方便的 margins
-.  
-. qui regress bweight i.mbsmoke fbaby mmarried alcohol fedu mage ///
-&gt;                 i.mbsmoke#i.fbaby i.mbsmoke#i.mmarried i.mbsmoke#i.alcohol i.
-&gt; mbsmoke#c.fedu ///
-&gt;                 i.mbsmoke#c.mage
-
-.                 
-. margins, dydx(mbsmoke)
-
-Average marginal effects                        Number of obs     =      4,642
-Model VCE    : OLS
-
-Expression   : Linear prediction, predict()
-dy/dx w.r.t. : 1.mbsmoke
-
-------------------------------------------------------------------------------
-             |            Delta-method
-             |      dy/dx   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     mbsmoke |
-     smoker  |  -231.1408   24.05129    -9.61   0.000    -278.2928   -183.9888
-------------------------------------------------------------------------------
-Note: dy/dx for factor levels is the discrete change from the base level.
-
-. 
-. // 值得注意的是，即使是使用 `teffects ra` 我們可能對模型形式的指定還是過於簡
-&gt; 單，
-. // 例如上面的模型中加入了許多變量，但是 STATA 其實並沒有考慮有三個或者三個以
-&gt; 上
-. // 變量之間發生交互作用的情況，而且， `fedu, mage` 被認爲和結果變量 `bweight`
-. // 呈簡單一次的線性關系。</code></pre>
-<pre class="stata"><code>require(knitr)
-# statapath &lt;- &quot;/usr/local/stata/stata&quot; # &lt;- 設定你的 STATA 路徑
-opts_chunk$set(engine=&quot;R&quot;)</code></pre>
-<pre><code>
-. require(knitr)
-command require is unrecognized
-r(199);
-
-end of do-file
-r(199);</code></pre>
+<pre><code>## 
+## . use &quot;backupfiles/cattaneo2.dta&quot;
+## (Excerpt from Cattaneo (2010) Journal of Econometrics 155: 138-154)
+## 
+## . describe
+## 
+## Contains data from backupfiles/cattaneo2.dta
+##   obs:         4,642                          Excerpt from Cattaneo (2010)
+##                                                 Journal of Econometrics 155:
+##                                                 138-154
+##  vars:            23                          21 Feb 2013 14:43
+##  size:       143,902                          
+## -------------------------------------------------------------------------------
+##               storage   display    value
+## variable name   type    format     label      variable label
+## -------------------------------------------------------------------------------
+## bweight         int     %9.0g                 infant birth weight (grams)
+## mmarried        byte    %10.0g     mmarried   1 if mother married
+## mhisp           byte    %9.0g                 1 if mother hispanic
+## fhisp           byte    %9.0g                 1 if father hispanic
+## foreign         byte    %9.0g                 1 if mother born abroad
+## alcohol         byte    %9.0g                 1 if alcohol consumed during
+##                                                 pregnancy
+## deadkids        byte    %9.0g                 previous births where newborn
+##                                                 died
+## mage            byte    %9.0g                 mother&#39;s age
+## medu            byte    %9.0g                 mother&#39;s education attainment
+## fage            byte    %9.0g                 father&#39;s age
+## fedu            byte    %9.0g                 father&#39;s education attainment
+## nprenatal       byte    %9.0g                 number of prenatal care visits
+## monthslb        int     %9.0g                 months since last birth
+## order           byte    %9.0g                 order of birth of the infant
+## msmoke          byte    %27.0g     smoke      cigarettes smoked during
+##                                                 pregnancy
+## mbsmoke         byte    %9.0g      mbsmoke    1 if mother smoked
+## mrace           byte    %9.0g                 1 if mother is white
+## frace           byte    %9.0g                 1 if father is white
+## prenatal        byte    %9.0g                 trimester of first prenatal care
+##                                                 visit
+## birthmonth      byte    %9.0g                 month of birth
+## lbweight        byte    %9.0g                 1 if low birthweight baby
+## fbaby           float   %9.0g      YesNo      1 if first baby
+## prenatal1       float   %9.0g      YesNo      1 if first prenatal visit in 1
+##                                                 trimester
+## -------------------------------------------------------------------------------
+## Sorted by: 
+## 
+## . tab mbsmoke
+## 
+## 1 if mother |
+##      smoked |      Freq.     Percent        Cum.
+## ------------+-----------------------------------
+##   nonsmoker |      3,778       81.39       81.39
+##      smoker |        864       18.61      100.00
+## ------------+-----------------------------------
+##       Total |      4,642      100.00
+## 
+## . 
+## . summ bweight, detail
+## 
+##                  infant birth weight (grams)
+## -------------------------------------------------------------
+##       Percentiles      Smallest
+##  1%         1474            340
+##  5%         2438            340
+## 10%         2693            397       Obs               4,642
+## 25%         3033            454       Sum of Wgt.       4,642
+## 
+## 50%         3390                      Mean            3361.68
+##                         Largest       Std. Dev.      578.8196
+## 75%         3726           5188
+## 90%         4026           5216       Variance       335032.2
+## 95%         4224           5387       Skewness       -.784952
+## 99%         4621           5500       Kurtosis       5.788678
+## 
+## . 
+## . *1. 用簡單線性回顧分析一下 `mbsmoke` 和 `bweight` 之間的關系: 
+## . *a) 
+## . regress bweight i.mbsmoke
+## 
+##       Source |       SS           df       MS      Number of obs   =     4,642
+## -------------+----------------------------------   F(1, 4640)      =    164.62
+##        Model |  53275939.9         1  53275939.9   Prob &gt; F        =    0.0000
+##     Residual |  1.5016e+09     4,640  323622.478   R-squared       =    0.0343
+## -------------+----------------------------------   Adj R-squared   =    0.0341
+##        Total |  1.5549e+09     4,641  335032.156   Root MSE        =    568.88
+## 
+## ------------------------------------------------------------------------------
+##      bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##      mbsmoke |
+##      smoker  |  -275.2519    21.4528   -12.83   0.000    -317.3096   -233.1942
+##        _cons |   3412.912   9.255254   368.75   0.000     3394.767    3431.056
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . 
+## . *b) 
+## . 
+## . regress bweight i.mbsmoke i.fbaby
+## 
+##       Source |       SS           df       MS      Number of obs   =     4,642
+## -------------+----------------------------------   F(2, 4639)      =     91.56
+##        Model |  59045489.8         2  29522744.9   Prob &gt; F        =    0.0000
+##     Residual |  1.4958e+09     4,639  322448.533   R-squared       =    0.0380
+## -------------+----------------------------------   Adj R-squared   =    0.0376
+##        Total |  1.5549e+09     4,641  335032.156   Root MSE        =    567.85
+## 
+## ------------------------------------------------------------------------------
+##      bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##      mbsmoke |
+##      smoker  |  -281.0638   21.45789   -13.10   0.000    -323.1314   -238.9961
+##              |
+##        fbaby |
+##         Yes  |  -71.20491    16.8333    -4.23   0.000    -104.2062   -38.20364
+##        _cons |   3445.178   11.98063   287.56   0.000      3421.69    3468.666
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . *2. 調整了 `fbaby` 之後，暴露和結果之間的關系發生了怎樣的變化？
+## . //說明 `fbaby` 是什麼類型的混雜因子？
+## . 
+## . *看兩個結果的報告，吸煙的線性回歸系數從調整 `fbaby` 前的 `-275.25`，
+## . // 絕對值變大爲 `-281.06`，這是一種負方向混雜 (negative confounding)。
+## . // 這種混雜可以分析 `fbaby` 和 `mbsmoke` 以及 `bweight`
+## . // 各自的關系看出，懷第一胎的母親比較少吸煙，且第一胎嬰兒的出生體重
+## . // 均值比不是第一胎嬰兒的出生體重要低: 
+## . 
+## . tab fbaby mbsmoke, row
+## 
+## +----------------+
+## | Key            |
+## |----------------|
+## |   frequency    |
+## | row percentage |
+## +----------------+
+## 
+## 1 if first |  1 if mother smoked
+##       baby | nonsmoker     smoker |     Total
+## -----------+----------------------+----------
+##         No |     2,066        543 |     2,609 
+##            |     79.19      20.81 |    100.00 
+## -----------+----------------------+----------
+##        Yes |     1,712        321 |     2,033 
+##            |     84.21      15.79 |    100.00 
+## -----------+----------------------+----------
+##      Total |     3,778        864 |     4,642 
+##            |     81.39      18.61 |    100.. 
+## . tabstat bweight, by(fbaby)
+## 
+## Summary for variables: bweight
+##      by categories of: fbaby (1 if first baby)
+## 
+##  fbaby |      mean
+## -------+----------
+##     No |  3386.681
+##    Yes |  3329.595
+## -------+----------
+##  Total |   3361.68
+## ------------------
+## 
+## . 
+## . tabstat bweight, by(mbsmoke)
+## 
+## Summary for variables: bweight
+##      by categories of: mbsmoke (1 if mother smoked)
+## 
+##   mbsmoke |      mean
+## ----------+----------
+## nonsmoker |  3412.912
+##    smoker |   3137.66
+## ----------+----------
+##     Total |   3361.68
+## ---------------------
+## 
+## . 
+## . // 這裏需要重新強調的是，通過比較調整新變量前後的回歸系數的變化，
+## . // 能且僅僅只能在線性回歸模型 (可壓縮模型) 時使用，邏輯回歸中不適用。
+## . 
+## . 
+## . *3 在怎樣的假設條件下，這裏的線性回歸模型的回歸系數 `mbsmoke` 
+## . // 可以被賦予因果關系？
+## . 
+## . // 1. 無相互幹擾 no interference: 一個懷孕母親吸煙與否，和另一個母親
+## . //    生下的嬰兒的出生體重之間沒有關系。
+## . // 2. 一致性 consistency: 實際觀察到的孕期吸煙母親的嬰兒出生體重，和
+## . //    潛在條件下 (當一個懷孕母親被強制吸煙時) 的嬰兒出生體重 (潛在結果)
+## . //    是相同的。同樣地，在另一種潛在條件下 (懷孕母親被禁止吸煙時) 的
+## . //    嬰兒出生體重 (潛在結果)，和實際觀察到的不吸煙的母親生下的嬰兒體重
+## . //    是相同的。
+## . // 3. 條件可置換性 conditional exchangeability: 在 `fbaby` 的各個組別中，
+## . //    兩種潛在暴露造成的潛在結果，調整了其它共變量之後，和她們真實的暴露情況
+## . //    (母親是否吸煙)之間是相互獨立的。在這個模型裏，我們只調整了 `fbaby` 
+## . //    一個共變量，所以如果要給它的回歸系數加上因果關系結論，還必須假設 (雖然
+## . //    很可能不合理) 控制 `fbaby` 這個單一的變量，就完全調整了了母親孕期吸煙和
+## . //    新生兒體重之間關系的全部混雜因素。
+## . // 4. 模型被正確擬合 correct specification of the regression model: 這是指，
+## . //    模型中加入的變量與變量之間的關系，被正確地擬合了，因爲目前只有兩個
+## . //    分類型變量在模型中，且該模型沒有加入交互作用項，那麼這條前提假設的含義
+## . //    就是，我們認爲 `fbaby` 對孕期吸煙和新生兒體重之間的關系沒有交互作用。
+## . 
+## . *4 在前面解釋過的因果關系的前提條件下，要給 `mbsmoke` 一個因果關系的解釋
+## . // 的話，(b) 模型的回歸系數該怎麼解釋呢？用潛在結果的概念解釋。
+## . 
+## . //    在 3. 的前提條件下， `mbsmoke` 的回歸系數的因果關系解讀可以是: 
+## . //    當條件變量 `fbaby` 嬰兒是否是第一胎的變量保持不變時，281.0638 是暴露
+## . //    (孕期吸煙) 導致的新生兒體重下降的量，其95%信賴區間是 (238.9961, 323.131
+## &gt; 4)。
+## . //    這是一個潛在結果的差，所以假如所有的媽媽孕期都吸煙，和所有的媽媽孕期都
+## . //    不吸煙相比(潛在暴露)，嬰兒的出生平均體重要輕 281.0638 克: 
+## . //     E{Y(1) | C = c} - E{Y(0) | C = c} = 281.0638
+## . 
+## . *5 用 STATA 的 `teffects ra` 命令擬合相同的模型: 
+## .   
+## . teffects ra (bweight fbaby) (mbsmoke)
+## 
+## Iteration 0:   EE criterion =  2.764e-25  
+## Iteration 1:   EE criterion =  3.079e-26  
+## 
+## Treatment-effects estimation                    Number of obs     =      4,642
+## Estimator      : regression adjustment
+## Outcome model  : linear
+## Treatment model: none
+## ------------------------------------------------------------------------------
+##              |               Robust
+##      bweight |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+## ATE          |
+##      mbsmoke |
+##     (smoker  |
+##          vs  |
+##  nonsmoker)  |  -273.1552   20.93503   -13.05   0.000    -314.1872   -232.1233
+## -------------+----------------------------------------------------------------
+## POmean       |
+##      mbsmoke |
+##   nonsmoker  |   3414.403   9.279263   367.96   0.000     3396.216     3432.59
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . // 因果均差 (ACE) 的估計在 STATA 被叫做 `ATE`，但是估計的結果略低於
+## . // 模型 (b) 的結果: -273.1552 vs. -281.0638。
+## . 
+## . *6 在線性回歸模型中加入 `i.mbsmoke##i.fbaby` 的交互作用項，試着計算
+## . // `fbaby` 爲 0/1 時各自的 `mbsmoke` 回歸系數: 
+## .   
+## . regress bweight i.mbsmoke##i.fbaby
+## 
+##       Source |       SS           df       MS      Number of obs   =     4,642
+## -------------+----------------------------------   F(3, 4638)      =     65.17
+##        Model |  62890495.3         3  20963498.4   Prob &gt; F        =    0.0000
+##     Residual |  1.4920e+09     4,638  321689.034   R-squared       =    0.0404
+## -------------+----------------------------------   Adj R-squared   =    0.0398
+##        Total |  1.5549e+09     4,641  335032.156   Root MSE        =    567.18
+## 
+## ------------------------------------------------------------------------------
+##      bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##      mbsmoke |
+##      smoker  |  -339.8145   27.35206   -12.42   0.000    -393.4375   -286.1914
+##              |
+##        fbaby |
+##         Yes  |  -98.18832   18.53668    -5.30   0.000     -134.529   -61.84761
+##              |
+##      mbsmoke#|
+##        fbaby |
+##  smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5142
+##              |
+##        _cons |   3457.406   12.47823   277.08   0.000     3432.942    3481.869
+## ------------------------------------------------------------------------------
+## 
+## . est store a
+## 
+## . 
+## . *to get the stratum specific effects: 
+## . 
+## . lincom 1.mbsmoke  // when baby is not first born 
+## 
+##  ( 1)  1.mbsmoke = 0
+## 
+## ------------------------------------------------------------------------------
+##      bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##          (1) |  -339.8145   27.35206   -12.42   0.000    -393.4375   -286.1914
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . lincom 1.mbsmoke + 1.mbsmoke#1.fbaby // when baby is first born
+## 
+##  ( 1)  1.mbsmoke + 1.mbsmoke#1.fbaby = 0
+## 
+## ------------------------------------------------------------------------------
+##      bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##          (1) |  -187.6098   34.49709    -5.44   0.000    -255.2405   -119.9791
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . *7 計算 `fbaby` 各組所佔的百分比: (爲了計算孕期吸煙導致的新生兒體重下降
+## . // 的邊際效應 marginal effect)
+## . 
+## . tab fbaby
+## 
+##  1 if first |
+##        baby |      Freq.     Percent        Cum.
+## ------------+-----------------------------------
+##          No |      2,609       56.20       56.20
+##         Yes |      2,033       43.80      100.00
+## ------------+-----------------------------------
+##       Total |      4,642      100.00
+## 
+## . 
+## . *8 用 6, 7 的結果，手動計算一下 ACE 的估計量: 
+## .   
+## . 
+## . *now restore model estimates
+## . est restore a 
+## (results a are active now)
+## 
+## . 
+## . lincom 0.562*1.mbsmoke  + 0.438*(1.mbsmoke + 1.mbsmoke#1.fbaby)
+## 
+##  ( 1)  1.mbsmoke + .438*1.mbsmoke#1.fbaby = 0
+## 
+## ------------------------------------------------------------------------------
+##      bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##          (1) |  -273.1488   21.55453   -12.67   0.000     -315.406   -230.8917
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . margins, dydx(mbsmoke) // 你也可以用這個 margins 的命令，很方便，但是它估計的
+## &gt; 標準誤不使用穩健統計學方法，所以略有不同。
+## 
+## Average marginal effects                        Number of obs     =      4,642
+## Model VCE    : OLS
+## 
+## Expression   : Linear prediction, predict()
+## dy/dx w.r.t. : 1.mbsmoke
+## 
+## ------------------------------------------------------------------------------
+##              |            Delta-method
+##              |      dy/dx   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##      mbsmoke |
+##      smoker  |  -273.1552   21.55433   -12.67   0.000     -315.412   -230.8985
+## ------------------------------------------------------------------------------
+## Note: dy/dx for factor levels is the discrete change from the base level.
+## 
+## . 
+## . *9 爲什麼沒有加交互作用項的模型 (b) 給出的回歸系數估計和 `teffects ra`
+## . // 的結果相差很大？
+## . 
+## . //   這是因爲如果給模型 (b) 的回歸系數賦予因果關系的解釋的話，第四個前提假設
+## . //   -- 模型選擇正確且變量在模型中的形式也是正確 -- 太過樂觀了。這個前提假設
+## . //   認爲沒有交互作用，但是，如果你看加交互作用項的第三個模型中，交互作用項
+## . //   的回顧系數其實是有意義的 (有證據顯示交互作用存在): 
+## .   
+## . // mbsmoke#|
+## . //       fbaby |
+## . // smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5
+## &gt; 142  
+## . 
+## . *10 現在給模型中加入更多的共變量，用兩種命令分別擬合，比較其結果:
+## .   
+## . regress bweight mbsmoke fbaby mmarried alcohol fedu mage
+## 
+##       Source |       SS           df       MS      Number of obs   =     4,642
+## -------------+----------------------------------   F(6, 4635)      =     46.86
+##        Model |  88933839.4         6  14822306.6   Prob &gt; F        =    0.0000
+##     Residual |  1.4660e+09     4,635  316278.403   R-squared       =    0.0572
+## -------------+----------------------------------   Adj R-squared   =    0.0560
+##        Total |  1.5549e+09     4,641  335032.156   Root MSE        =    562.39
+## 
+## ------------------------------------------------------------------------------
+##      bweight |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##      mbsmoke |  -221.2625   22.28894    -9.93   0.000    -264.9594   -177.5656
+##        fbaby |  -49.45095   17.62184    -2.81   0.005    -83.99814   -14.90375
+##     mmarried |   152.3058   21.86593     6.97   0.000     109.4382    195.1734
+##      alcohol |  -64.26606   47.48732    -1.35   0.176    -157.3638    28.83168
+##         fedu |   4.515101   2.573722     1.75   0.079    -.5306195    9.560821
+##         mage |   1.282969   1.750586     0.73   0.464    -2.149013    4.714952
+##        _cons |   3230.456   49.40366    65.39   0.000     3133.601    3327.311
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . 
+## . teffects ra (bweight fbaby mmarried alcohol fedu mage) (mbsmoke)
+## 
+## Iteration 0:   EE criterion =  4.396e-24  
+## Iteration 1:   EE criterion =  7.758e-26  
+## 
+## Treatment-effects estimation                    Number of obs     =      4,642
+## Estimator      : regression adjustment
+## Outcome model  : linear
+## Treatment model: none
+## ------------------------------------------------------------------------------
+##              |               Robust
+##      bweight |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+## ATE          |
+##      mbsmoke |
+##     (smoker  |
+##          vs  |
+##  nonsmoker)  |  -231.1408   24.50303    -9.43   0.000    -279.1659   -183.1158
+## -------------+----------------------------------------------------------------
+## POmean       |
+##      mbsmoke |
+##   nonsmoker  |   3403.054   9.532216   357.01   0.000     3384.372    3421.737
+## ------------------------------------------------------------------------------
+## 
+## . 
+## . 
+## . //   此時我們發現，簡單現行回歸估計的因果均值差(ATE)總是和考慮了更復雜關系的
+## &gt; 模型相比
+## . //   相差較多。
+## . 
+## . *11 你可以用下面的非 teffects 代碼還原上面的計算: 
+## .   
+## .  qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==0
+## 
+## .  predict Y0
+## (option xb assumed; fitted values)
+## 
+## .  
+## .  qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==1
+## 
+## .  predict Y1
+## (option xb assumed; fitted values)
+## 
+## .  
+## .  sum Y0
+## 
+##     Variable |        Obs        Mean    Std. Dev.       Min        Max
+## -------------+---------------------------------------------------------
+##           Y0 |      4,642    3403.054    101.6744   3163.591   3549.308
+## 
+## .  gen E0=r(mean) 
+## 
+## .  
+## .  sum Y1
+## 
+##     Variable |        Obs        Mean    Std. Dev.       Min        Max
+## -------------+---------------------------------------------------------
+##           Y1 |      4,642    3171.914    67.17853   2839.728   3306.694
+## 
+## .  gen E1=r(mean)
+## 
+## .  
+## .  gen ACE = E1-E0 
+## 
+## .  sum ACE 
+## 
+##     Variable |        Obs        Mean    Std. Dev.       Min        Max
+## -------------+---------------------------------------------------------
+##          ACE |      4,642   -231.1409           0  -231.1409  -231.1409
+## 
+## .  
+## .  // 或者使用方便的 margins
+## .  
+## . qui regress bweight i.mbsmoke fbaby mmarried alcohol fedu mage ///
+## &gt;                 i.mbsmoke#i.fbaby i.mbsmoke#i.mmarried i.mbsmoke#i.alcohol i.
+## &gt; mbsmoke#c.fedu ///
+## &gt;                 i.mbsmoke#c.mage
+## 
+## .                 
+## . margins, dydx(mbsmoke)
+## 
+## Average marginal effects                        Number of obs     =      4,642
+## Model VCE    : OLS
+## 
+## Expression   : Linear prediction, predict()
+## dy/dx w.r.t. : 1.mbsmoke
+## 
+## ------------------------------------------------------------------------------
+##              |            Delta-method
+##              |      dy/dx   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##      mbsmoke |
+##      smoker  |  -231.1408   24.05129    -9.61   0.000    -278.2928   -183.9888
+## ------------------------------------------------------------------------------
+## Note: dy/dx for factor levels is the discrete change from the base level.
+## 
+## . 
+## . // 值得注意的是，即使是使用 `teffects ra` 我們可能對模型形式的指定還是過於簡
+## &gt; 單，
+## . // 例如上面的模型中加入了許多變量，但是 STATA 其實並沒有考慮有三個或者三個以
+## &gt; 上
+## . // 變量之間發生交互作用的情況，而且， `fedu, mage` 被認爲和結果變量 `bweight`
+## . // 呈簡單一次的線性關系。</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">require</span>(knitr)
+<span class="co"># statapath &lt;- &quot;/usr/local/stata/stata&quot; # &lt;- 設定你的 STATA 路徑</span>
+opts_chunk<span class="op">$</span><span class="kw">set</span>(<span class="dt">engine=</span><span class="st">&quot;R&quot;</span>)</code></pre></div>
 </div>
 </div>
 <h3>References</h3>
