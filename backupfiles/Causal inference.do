@@ -146,15 +146,20 @@ summarize maxdia
 
 tab position
 
+tab dodp
+
 * 4.1
 
 logit dodp rfa
 
-glm dodp 
+glm dodp rfa, family(binomial) link(logit)
 
+logit dodp rfa i.hospital maxdia i.position
 
-
-
+// the overall pattern of confounding appears to be that of positive confounding. 
+// the unadjusted analysis suggests a strong beneficial effect of RFA compared 
+// with standard surgery (nearly a halving of the odds of death of deases progre-
+// ssion within 3 years), However, after adjusting for 
 
 
 
