@@ -1471,7 +1471,7 @@ $$
 這一重要的性質告訴我們，其實在考慮調整混雜因素的時候，我們可以專注考慮這一個標量作爲混雜因素。實際操作中，這個標量通常需要通過一個邏輯回歸模型來擬合計算。這個計算傾向性評分的邏輯回歸模型，用的是對象是否被暴露作爲結果變量，用其他的和這個暴露相關的混雜因素作爲預測變量 $X|\mathbf{C}$。
 
 
-### 一些關於傾向性評分的直覺
+### 關於條件可置換性
 
 
 如果兩個觀察對象，經過計算，他們二人的傾向性評分相同，那麼從這些條件變量來看，這兩個對象是否被暴露，就是**完全隨機的**，他們有相同的概率屬於被暴露或非暴露人羣。這一點和RCT有些相似，如果，一個完美的隨機化試驗，那麼一個患者被分進治療組或者對照組的概率是完全相同的，他們是完全可以置換的 (exchangeable)。所以，在一個觀察性研究中，如果傾向性評分相同，在給定的觀察到的所有混雜因素的條件下，這兩個對象是否暴露的概率是相同的 (可以條件置換的 conditional exchangeability given the propensity score)。
@@ -1531,7 +1531,7 @@ summary(Pros_Score)
 
 正如我們預料的那樣，醫院，腫塊尺寸，和腫塊的位置是患者接受 RFA 治療與否的重要預測指標。
 
-```{r fig.height=6, fig.width=8, fig.cap='Density and histogram of the estimated propensity score in the two exposure groups.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r prop_score01, echo=FALSE, fig.height=6, fig.width=8, fig.cap='Density and histogram of the estimated propensity score in the two exposure groups.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 RFAcat$Score <- Pros_Score$fitted.values
 ggthemr('fresh', layout = 'scientific')
 RFAcat %>%
@@ -1547,11 +1547,178 @@ RFAcat %>%
   legend.position = "bottom", legend.direction = "horizontal") +
   labs(fill = "Treatment Methods") + 
   scale_fill_discrete(labels = c("Standard surgery", "RFA"))
+ggthemr_reset()
 ```
 
 
+從圖 \@ref(fig:prop_score01) 可以看出評分在兩個暴露組中的分布交叉十分令人滿意。
+
+## 怎樣使用傾向性評分
+
+傾向性評分在實際操作中的運用: 
+
+1. **分層 stratification**:  把觀察對象按照傾向性評分的高低分層成爲幾個組，進行組內的療效比較;
+2. **配對 matching**: 在真實的暴露組中的對象，爲他們每個人找一個非暴露的人，一兩個對象的傾向性評分盡可能接近爲配對的方法;
+3. **在模型中調整 adjustment**: 在回歸模型中調整這個傾向性評分，而不是調整那些計算評分時的那些條件變量; 
+4. 給每個研究對象按照其評分得分，使用**逆向加權法 (inverse weighting)**。
+
+### 分層法 stratification
+
+
+```{r stratification, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='', fig.align='center', out.width='90%', cache=TRUE}
+
+knitr::include_graphics("img/Selection_133.png")
+```
+
+
+$$
+\widehat{\text{ACE}}  = \frac{13.1 + 6.0 - 4.8 - 13.4}{4} = 0.2%
+$$
+
+
+
+$$
+\begin{aligned}
+\widehat{\text{ATT}} & = \frac{13.1\times100 + 6.0\times341 - 4.8\times544 - 13.4\times718}{100 + 341 + 544 + 718} \\
+& = -5.2%\\
+\end{aligned}
+$$
+
+再次印證了之前一章練習中的計算結果，也就是 RFA 如果施加給整體患者，那麼甚至可能還稍微提高三年內死亡/病情加重的概率。但是如果只給適合 RFA 療法的人，那麼 RFA 能明顯地降低死亡/病情加重的概率。
+
+### 配對法 matching
+
+用肺癌數據的例子來解釋，就是
+
+從選擇了 RFA 療法的患者出發，在標準療法的患者中尋找一名或者多名和 RFA 療法患者的評分接近的患者作對照，這樣計算的是 ATT (average treatment effect in the treated)。
+
+從選擇了標準手術療法的患者出發，在 RFA 療法的患者中尋找一名或者多名和 RFA 療法患者的評分接近的患者作對照，這樣計算的是 非暴露組中的平均療效 (average treatment effect in the untreated/unexposed)。
+
+此時，配對患者選用是可以重復出現的 (replacement is allowed)，所以，有的對照可能同時給好幾個病例做對照也有可能。所以當你的樣本可能不平衡，那麼從樣本量大的那一部分出發的時候，就會出現這種情況。
+
+選擇配對的方法也有很多: 
+
+- nearest neighbour matching (wthin calipers defined by the PS)
+- Kernel matching (nearest neighbour matching chooses one match)
+- etc.
+
+
+如果數據不適合使用傾向性評分法，那麼只要一做配對，就能立刻發現數據的問題，因爲如果違反了 positivity，那麼樣本中的某一組患者可能就大量地找不到相同相似PS評分的配對。另外配對法，可以配合調整變量共同使用，以增加估計的效能和穩健性。從經驗上來看 1:1 配對常常造成的效果是統計效能較低，而且即使使用配對法，觀察性研究還是觀察性研究，殘差混雜 (residual confounding) 依然存在。而且配對法導致估計量的標準誤難以估計，即使用自助重抽 (bootstrapping) 也常常是沒有效果。還好牛人 [@Abadie2016] 發現並發表了配對評分時的有效方差估計法，這個方法也已經加入了 STATA。
+
+在 STATA 裏使用 `teffects psmatch` 命令執行傾向性評分的配對法
+
+```{r  CI-05-02,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/RFA.dta" 
+teffects psmatch (dodp) (rfa age gender i.smoke i.hospital nodules mets duration maxidia i.primary i.position, logit)
+
+teffects psmatch (dodp) (rfa age gender i.smoke i.hospital nodules mets duration maxidia i.primary i.position, logit), atet
+```
+
+可見，結果和目前爲止計算的結果是吻合的。值得注意的是，配對法在文獻中被發現是最常(濫)用的方法，這裏提評分的配對法，不是因爲我贊成使用這種方法，而是因爲它常見，所以你需要知道這種配對的背後到底在幹啥。顯而易見的是，傾向性評分有它更好的使用方法 (逆向權重)。
+
+### 回歸模型校正法 adjustment
+
+$$
+E\{Y|X,p(\mathbf{C}) \} = \alpha + \beta X + \gamma p(\mathbf{C})
+$$
+
+校正傾向性評分，可以一定程度上克服**有限樣本造成的偏倚 (finite sample bias)**。
+
+## Practical05 - causal inference
+
+數據還是和前一章節一樣的數據。傾向性評分的 R 包有很多，下面用 R 來進行大多數的計算。
+
+### 初步熟悉數據內容
+
+```{r CI-05-03,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/RFAcat.dta" 
+describe
+
+**********************
+*  Explore the data  *
+**********************
+
+/*  Question 1  */
+* Exposure and outcome
+tab rfa
+tab dodp rfa, col
+
+* New (categorised) variables: 
+tab1 agecat nodcat durcat diacat, m
+
+```
+
+
+### 把連續型變量以分類型數據的形式放入模型中:  
+
+```
+***************************
+*  Regression adjustment  *
+***************************
+
+/*  Question 2  */
+// teffects ra (dodp   i.agecat gender i.smoke i.hospital i.nodcat ///
+// i.mets i.durcat i.diacat i.primary i.position, 	///
+// logit) (rfa)
+```
+
+你會發現 STATA 停不下來，計算永遠都不會收斂。這是因爲我們在這個模型中結果部分加入了太多的分類型變量，但數據又沒辦法進行足夠的計算。
+
+### 用相同的模型結構估計每個人的傾向性評分
+
+
+```{r  CI-05-exe00, cache=TRUE, echo=TRUE}
+RFAcat <- read_dta("backupfiles/RFAcat.dta")
+RFAcat <- RFAcat %>%
+  mutate(gender = factor(gender, labels = c("men", "women")), 
+         smoke = factor(smoke, labels = c("never", "ex", "current")),
+         hospital = as.factor(hospital),
+         primary = factor(primary, labels =  c("bladder", 
+                                     "breast", 
+                                     "colorectal",
+                                     "gullet", 
+                                     "kidney",
+                                     "prostate",
+                                     "skin",
+                                     "stomach", 
+                                     "testicular")),
+         position = factor(position, labels = c("easy", "moderate", "difficult")),
+         nodcat = factor(nodcat, labels = c("1","2","3","4","5-9","10+")),
+         mets = as.factor(mets), 
+         agecat = factor(agecat, labels = c("< 45", "45-49", "50-54", "55-59", "60-64","65+")), 
+         durcat = factor(durcat, labels = c("< 10m", "10-19m", "20-29m", "30-39m", "40+m")), 
+         diacat = factor(diacat, labels = c("<1.5cm", "1.5-1.9cm", "2-2.4cm", "2.5-2.9cm", 
+                                            "3cm+")))
+Pros_Score <- glm(rfa ~ agecat + gender + smoke + hospital + nodcat + mets + 
+                    durcat + diacat + primary + position, family = binomial(link = logit), 
+                  data = RFAcat)
+summary(Pros_Score)
+```
+
+```{r CI-05-exe01, cache=TRUE, echo=TRUE, fig.height=6, fig.width=8, fig.cap='Density and histogram of the estimated propensity score in the two exposure groups, **with confounders and predictors of outcome included in the PS model.**', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+RFAcat$Score <- Pros_Score$fitted.values # extract the fitted scores
+ggthemr('fresh', layout = 'scientific')
+RFAcat %>%
+  ggplot(aes(x = Score, y= ..density.., fill = as.factor(rfa))) + 
+  geom_histogram(position = "identity", color = "black", alpha = 0.5) +
+  geom_density(alpha = 0.2) +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 14),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) +
+ theme(legend.text = element_text(size = 19), 
+  legend.title = element_text(size = 19),
+  legend.position = "bottom", legend.direction = "horizontal") +
+  labs(fill = "Treatment Methods") + 
+  scale_fill_discrete(labels = c("Standard surgery", "RFA"))
+ggthemr_reset()
+```
+
+概率密度分布圖和直方圖的內容告訴
 
 # Inverse probability weighted estimation and doubly robust methods 
+
+
 
 # Causal mediation analysis 
 
