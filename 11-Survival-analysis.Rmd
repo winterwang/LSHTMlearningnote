@@ -1723,7 +1723,107 @@ $$
 
 
 
-# 競爭風險度 competing risk
+# 競爭風險模型 competing risk
+
+當我們在做風險模型研究的時候，除了重要的比例風險假設，另外一個 (經常被忘記的) 假設是我們認為**刪失值只是一堆無效信息 (non-informative censoring)**。這個假設通常來說都是合理的，但是如果某些刪失值是由於他們身上發生了別的事件，導致無法追踪或者無法再發生我們關心的事件。這樣的現象被叫做競爭風險 (competing risk)。最明顯的例子是我們關心某些疾病(心血管疾病，癌症)的發生，但是患者可能提前因為別的原因 (事故或者別的原因) 死亡而離開研究。這些離開研究的人，假如沒有死亡，繼續留在研究中，他們還是有可能會發生研究關心的事件的。那麼此時，我們說死亡事件，是一個疾病發生的競爭風險。
+
+## Cause-specific hazard
+
+如果，我們認為研究中存在 $k$ 種"事件(event/failure)"，我們可以定義這樣的因素別風險方程 (cause-specific hazard function):
+
+$$
+h_k(t) = \lim_{\delta t \rightarrow 0} \frac{1}{\delta t}\text{Pr}\{ t\leqslant T < t + \delta t, D = k | T\geqslant t  \}
+$$
+
+這可以被定義為在時間點 $t$，該對象發生事件 $k$ 的瞬間風險。(This can be interpreted as the instantaneous risk of dying from cause $k$ given the individual is alive at time $t$. i.e. they have not died of any cause before time $t$)
+
+(Cumulative cause-specific hazard)累積因素別風險方程則可以被定義為：
+
+$$
+H_k(t) = \int_0^t h_k(s)ds
+$$
+
+相應地，生存方程：
+
+$$
+S_k(t) = \exp(-H_k(t))
+$$
+
+Overall hazard is the sum of all cause-specific hazards:
+
+$$
+\begin{aligned}
+h(t) & = \sum_{e=1}^K \lim_{\delta t\rightarrow 0} \frac{1}{\delta t}\text{Pr}\{ t\leqslant T < t + \delta t, D = e | T\geqslant t  \} \\
+     & = \lim_{\delta t \rightarrow 0} \frac{1}{\delta t}\text{Pr}\{ t\leqslant T < t + \delta t | T \geqslant t  \}
+\end{aligned}
+$$
+
+
+It follows that the overall survival can be written as useful application of this cause-specific survivor function:
+
+$$
+S(t) = \exp[-\sum_{e=1}^KH_e(t)] = \prod_{e = 1}^K \exp(-H_e(t))
+$$
+
+### Cause-specific hazards models
+
+$$
+h_k(t|x) = h_{k, 0} (t)e^{\beta_k x}
+$$
+
+- People are censored at the time of any event that is not the event of interest
+- We fit a separate Cox model for each event type
+- $\beta_k$ represents the impact of $x$ on the hazard for event type k,** among those at risk of event type k**
+
+## Cumulative incidence function
+
+Other names: absolute cause-specific risk/Crude Probabilty of event
+
+$$
+I_k(t) = \int_0^t h_k(s)S(s)ds
+$$
+
+## Subdistribution hazard - Fine and Gray model
+
+The approach uses an alternative definition of the hazard, called the subdistribution hazard, which represents the instantaneous risk of dying from cause k given that an individual has not already died from cause k, that is:
+
+$$
+h^s_k(t) = \lim_{\delta t \rightarrow 0} \frac{1}{\delta t} \{ \text{Pr}(t \leqslant T < t + \delta t, K = k | T > t \text{ or } (T \leqslant t, K \neq k)) \}
+$$
+
+This differs from the cause-specific hazard in its risk set; here individuals are not removed from the risk set if they die from another competing cause of death than cause k.
+
+### Subdistribution hazard model
+
+$$
+h_k^s(t) = -\frac{d}{dt} \log(1 - I_k(t))
+$$
+
+
+$$
+h_k^s(t|x)  = h_{0,k}(t)e^{\beta^T_k x}
+$$
+
+The relationsship between the CIFs in the two treatment groups is given by:
+
+$$
+1 - I_k(t|1) = [1 - I_k(t|0)]^{\exp(\beta_kx)}
+$$
+
+## Multi-state models
+
+### The Markov model
+
+A common assumption for multi-state mode is that upon entering a particular state i, individuals are subject to common trasition rate for movement to state j, irrespective of their history. In other words, we assume that the transition rate does not differ according to the previous states an individual has been in. This is called the Markov assumption, and is often quite a strong assumption to make.
+
+
+### Cox proportional hazards model for transition intensities
+
+The transition intensities for transition i to j is given by:
+
+$$
+h_{ij} (t | x) = h_{ij,0} (t)\exp(\beta_{ij}^Tx)　
+$$
 
 # 其他手段
 
