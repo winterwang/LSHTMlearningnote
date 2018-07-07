@@ -1565,6 +1565,45 @@ hosmer(lbw$low, fitted(Modelgof))
 hosmer(lbw$low, fitted(Modelgof), group=5)
 ```
 
+## GLM Practical 04
+
+### 回到之前的昆蟲數據，嘗試評價該模型的擬合優度。
+
+1. 重新讀入昆蟲數據，擬合前一個練習中擬合過的模型，使用 `glm()` 命令。
+
+```{r GLM-prac04-01, cache=TRUE}
+Insect <- read.table("backupfiles/INSECT.RAW", header =  FALSE, sep ="", col.names = c("dose", "n_deaths", "n_subjects"))
+# print(Insect)
+Insect <- Insect %>% 
+  mutate(p = n_deaths/n_subjects)
+
+Model1 <- glm(cbind(n_deaths, n_subjects - n_deaths) ~ dose, family = binomial(link = logit), data = Insect)
+summary(Model1)
+```
+
+2. 根據上面模型輸出的結果，檢驗是否有證據證明該模型對數據的擬合不佳。
+
+上面模型擬合的輸出結果中，可以找到最下面的模型偏差值的大小和相應的自由度： `Residual deviance:   4.6155  on 6  degrees of freedom`。如果我們要檢驗該模型中假設的前提條件之一--昆蟲死亡的對數比值 (on a log-odds scale) 和藥物濃度 (dose) 之間是線性關係（或者你也可以說，檢驗是否有證據證明該模型對數據擬合不佳），我們可以比較計算獲得的模型偏差值在自由度為 6 的卡方分布 ($\chi^2_6$) 中出現的概率。這裡自由度 6 是由 $n - p = 8 - 2$ 計算獲得，其中 $n$ 是數據中觀察值個數，$p$ 是模型中估計的參數的個數。檢驗方法很簡單：
+
+```{r GLM-prac04-02, cache=TRUE}
+1 - pchisq(4.6155, df = 6)
+```
+
+所以，檢驗的結果，P 值就是 0.594，沒有任何證據反對零假設（模型擬合數據合理）。
+
+3. 試比較兩個模型對數據的擬合效果孰優孰劣：模型1，上面的模型；模型2，加入劑量的平方 (dose^2^)，作為新增的模型解釋變量。嵌套式模型之間的比較使用的是似然比檢驗法 (profile likelihood ratio test)，試着解釋這個比較方法和 Wald 檢驗之間的區別。
+
+```{r GLM-prac04-03, cache=TRUE}
+Model2 <- glm(cbind(n_deaths, n_subjects - n_deaths) ~ dose + I(dose^2), family = binomial(link = logit), data = Insect)
+summary(Model2)
+
+anova(Model1, Model2)
+# P-value for model comparison
+1 - pchisq(1.43, df = 1)
+```
+
+兩個模型比較的結果表明，無證據反對零假設（只用線性關係擬合數據是合理的），也就是說增加劑量的平方這一新的解釋變量並不能提升模型對數據的擬合程度。仔細觀察模型2的輸出結果中，可以發現 `I(dose^2)` 項的 Wald 檢驗結果是 `p = 0.24`，十分接近似然比檢驗的結果。因為它們兩者是漸近相同的 (asymptotically equivalent)。
+
 
 # 計數型因變量 Poisson regression
 
