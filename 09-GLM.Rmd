@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 # (PART) 廣義線性迴歸模型 {-}
 
 # 重要概念複習
@@ -1604,6 +1609,45 @@ anova(Model1, Model2)
 
 兩個模型比較的結果表明，無證據反對零假設（只用線性關係擬合數據是合理的），也就是說增加劑量的平方這一新的解釋變量並不能提升模型對數據的擬合程度。仔細觀察模型2的輸出結果中，可以發現 `I(dose^2)` 項的 Wald 檢驗結果是 `p = 0.24`，十分接近似然比檢驗的結果。因為它們兩者是漸近相同的 (asymptotically equivalent)。
 
+
+### 低出生體重數據
+
+1. 讀入該數據，試分析數據中和低出生體重可能相關的變量：
+
+```{r GLM-prac04-04, cache=TRUE, warning=FALSE, message=FALSE}
+lbw <- read_dta("backupfiles/lbw.dta")
+head(lbw)
+```
+
+2. 擬合一個這樣的邏輯回歸模型：結果變量使用低出生體重與否 `low`，解釋變量使用母親最後一次月經時體重 `lwt` (磅)。
+
+```{r GLM-prac04-05, cache=TRUE, warning=FALSE, message=FALSE}
+M <- glm(low ~ lwt, data = lbw, family = binomial(link = logit))
+summary(M)
+logistic.display(M)
+```
+
+3. 利用 `lowess` 平滑曲線作圖，評價在 logit 單位上，`lwt` 和 `low` 之間是否可以認為是線性關係。
+
+
+```{r  GLM-prac04-06,warning=FALSE, message=FALSE, cache=TRUE, echo=TRUE, fig.width=7, fig.height=5, fig.cap="The loess plot of the observed proportion with low birth weight against mother's weight at last menstural period. Span = 0.6", fig.align='center', out.width='100%'}
+pi <- M$fitted.values
+
+# with(lbw, scatter.smooth(lwt, pi, pch = 20, span = 0.4, lpars =
+#                  list(col = "blue", lwd = 3, lty = 1), col=rgb(0,0,0,0.004),
+#                  xlab = "Mother's weight at last menstural period (lbs)",
+#                  ylab = "Logit(probability) of being low birth weight",
+#                  frame = FALSE))
+
+plot(lbw$lwt, lbw$low, main="Lowess smoother plot\n of the prob of having a low brith weight baby", 
+     xlab = "Weight at at last menstural period (lbs)", 
+     ylab = "Probability")
+lines(lowess(lbw$lwt, lbw$low, f = 0.7), col=2, lwd = 2)
+points(lbw$lwt, pi)
+```
+
+
+Lowess 平滑曲線提示模型的擬合值(`fitted.values`)有一些變動，由於樣本採樣方法等原因，這是無法避免的。但是總體來說，擬合值和平滑曲線基本在同一個步調上，從該圖來看，認為母親的最後一次月經時體重和是否生下低出生體重兒的概率的 logit 之間的關係是線性的應該不是太大的問題。
 
 # 計數型因變量 Poisson regression
 

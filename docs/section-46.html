@@ -664,6 +664,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="46.4" data-path="section-46.html"><a href="section-46.html#gof"><i class="fa fa-check"></i><b>46.4</b> 個人數據擬合模型的優度檢驗</a></li>
 <li class="chapter" data-level="46.5" data-path="section-46.html"><a href="section-46.html#glm-practical-04"><i class="fa fa-check"></i><b>46.5</b> GLM Practical 04</a><ul>
 <li class="chapter" data-level="46.5.1" data-path="section-46.html"><a href="section-46.html#section-46.5.1"><i class="fa fa-check"></i><b>46.5.1</b> 回到之前的昆蟲數據，嘗試評價該模型的擬合優度。</a></li>
+<li class="chapter" data-level="46.5.2" data-path="section-46.html"><a href="section-46.html#section-46.5.2"><i class="fa fa-check"></i><b>46.5.2</b> 低出生體重數據</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="47" data-path="-poisson-regression.html"><a href="-poisson-regression.html"><i class="fa fa-check"></i><b>47</b> 計數型因變量 Poisson regression</a><ul>
@@ -1327,6 +1328,83 @@ Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw
 <span class="dv">1</span> <span class="op">-</span><span class="st"> </span><span class="kw">pchisq</span>(<span class="fl">1.43</span>, <span class="dt">df =</span> <span class="dv">1</span>)</code></pre></div>
 <pre><code>## [1] 0.23176444</code></pre>
 <p>兩個模型比較的結果表明，無證據反對零假設（只用線性關係擬合數據是合理的），也就是說增加劑量的平方這一新的解釋變量並不能提升模型對數據的擬合程度。仔細觀察模型2的輸出結果中，可以發現 <code>I(dose^2)</code> 項的 Wald 檢驗結果是 <code>p = 0.24</code>，十分接近似然比檢驗的結果。因為它們兩者是漸近相同的 (asymptotically equivalent)。</p>
+</div>
+<div id="section-46.5.2" class="section level3">
+<h3><span class="header-section-number">46.5.2</span> 低出生體重數據</h3>
+<ol style="list-style-type: decimal">
+<li>讀入該數據，試分析數據中和低出生體重可能相關的變量：</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">lbw &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/lbw.dta&quot;</span>)
+<span class="kw">head</span>(lbw)</code></pre></div>
+<pre><code>## # A tibble: 6 x 11
+##      id   low   age   lwt race      smoke       ptl    ht    ui   ftv   bwt
+##   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl+lbl&gt; &lt;dbl+lbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1    85     0    19   182 2         0             0     0     1     0  2523
+## 2    86     0    33   155 3         0             0     0     0     3  2551
+## 3    87     0    20   105 1         1             0     0     0     1  2557
+## 4    88     0    21   108 1         1             0     0     1     2  2594
+## 5    89     0    18   107 1         1             0     0     1     0  2600
+## 6    91     0    21   124 3         0             0     0     0     0  2622</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>擬合一個這樣的邏輯回歸模型：結果變量使用低出生體重與否 <code>low</code>，解釋變量使用母親最後一次月經時體重 <code>lwt</code> (磅)。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">M &lt;-<span class="st"> </span><span class="kw">glm</span>(low <span class="op">~</span><span class="st"> </span>lwt, <span class="dt">data =</span> lbw, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))
+<span class="kw">summary</span>(M)</code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = low ~ lwt, family = binomial(link = logit), data = lbw)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.09482  -0.90217  -0.80197   1.36105   1.98141  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)  
+## (Intercept)  0.9957634  0.7852434  1.2681  0.20476  
+## lwt         -0.0140371  0.0061685 -2.2756  0.02287 *
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 234.672  on 188  degrees of freedom
+## Residual deviance: 228.708  on 187  degrees of freedom
+## AIC: 232.708
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">logistic.display</span>(M)</code></pre></div>
+<pre><code>## 
+## Logistic regression predicting low 
+##  
+##                  OR(95%CI)      P(Wald&#39;s test) P(LR-test)
+## lwt (cont. var.) 0.99 (0.97,1)  0.023          0.015     
+##                                                          
+## Log-likelihood = -114.354
+## No. of observations = 189
+## AIC value = 232.7081</code></pre>
+<ol start="3" style="list-style-type: decimal">
+<li>利用 <code>lowess</code> 平滑曲線作圖，評價在 logit 單位上，<code>lwt</code> 和 <code>low</code> 之間是否可以認為是線性關係。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pi &lt;-<span class="st"> </span>M<span class="op">$</span>fitted.values
+
+<span class="co"># with(lbw, scatter.smooth(lwt, pi, pch = 20, span = 0.4, lpars =</span>
+<span class="co">#                  list(col = &quot;blue&quot;, lwd = 3, lty = 1), col=rgb(0,0,0,0.004),</span>
+<span class="co">#                  xlab = &quot;Mother&#39;s weight at last menstural period (lbs)&quot;,</span>
+<span class="co">#                  ylab = &quot;Logit(probability) of being low birth weight&quot;,</span>
+<span class="co">#                  frame = FALSE))</span>
+
+<span class="kw">plot</span>(lbw<span class="op">$</span>lwt, lbw<span class="op">$</span>low, <span class="dt">main=</span><span class="st">&quot;Lowess smoother plot</span><span class="ch">\n</span><span class="st"> of the prob of having a low brith weight baby&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;Weight at at last menstural period (lbs)&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;Probability&quot;</span>)
+<span class="kw">lines</span>(<span class="kw">lowess</span>(lbw<span class="op">$</span>lwt, lbw<span class="op">$</span>low, <span class="dt">f =</span> <span class="fl">0.7</span>), <span class="dt">col=</span><span class="dv">2</span>, <span class="dt">lwd =</span> <span class="dv">2</span>)
+<span class="kw">points</span>(lbw<span class="op">$</span>lwt, pi)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:GLM-prac04-06"></span>
+<img src="bookdown_files/figure-html/GLM-prac04-06-1.png" alt="The loess plot of the observed proportion with low birth weight against mother's weight at last menstural period. Span = 0.6" width="100%" />
+<p class="caption">
+圖 46.1: The loess plot of the observed proportion with low birth weight against mother’s weight at last menstural period. Span = 0.6
+</p>
+</div>
+<p>Lowess 平滑曲線提示模型的擬合值(<code>fitted.values</code>)有一些變動，由於樣本採樣方法等原因，這是無法避免的。但是總體來說，擬合值和平滑曲線基本在同一個步調上，從該圖來看，認為母親的最後一次月經時體重和是否生下低出生體重兒的概率的 logit 之間的關係是線性的應該不是太大的問題。</p>
 </div>
 </div>
 </div>
