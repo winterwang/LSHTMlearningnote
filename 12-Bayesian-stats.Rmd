@@ -1,5 +1,10 @@
 # (PART) 貝葉斯統計學 Bayesian Statistics {-}
 
+> Everybody is a Bayesian. It's just that some know it, and some don't. 
+> 
+> -- Trivellore Raghunathan
+
+
 # 爲什麼我們要用貝葉斯統計學方法？
 
 統計學模型 (理論)，結合現實的數據 (實踐)，才能讓我們深刻地理解這個世界，既能檢驗我們的理論，又能從中找出規律性，爲一些現象做出總結和結論。如果說這個理論和實踐相結合的過程有類別之分，那麼最大的兩個類別區分就是: 概率論，和貝葉斯理論。
@@ -53,6 +58,47 @@ knitr::include_graphics("img/Selection_030.png")
 
 我認爲，更加能夠回答大衆或患者們所關心的關於這個試驗的醫學問題應該是，"當我們獲得且分析了試驗數據以後，氨甲喋呤對於系統性硬皮病治療有效的概率是多少 (what is the probability that the intervention is effective given the data?)"。貝葉斯統計學其實可以讓我們正式地，在數學模型上把已知的對於某個事件的知識包括進試驗獲得的數據及其模型當中去，從而計算這個新的治療方法在考慮了已知的醫學背景，及現有的試驗數據之後，它對於疾病的治療是有效的概率到底是多少。這才應是每一個臨牀試驗真正想要回答的最關鍵的問題。
 
+### 貝葉斯統計分析結果
+
+使用貝葉斯統計理論分析相同臨牀試驗數據的結果，我們從論文[@johnson2009shifting]截取來放在圖 \@ref(fig:MTXbayes) 中。在該圖中，可以看見作者除了對完成試驗的患者的數據進行分析，同時使用補全法補過缺失值後的數據分析結果也展示在 "imputing missing data" 這一列中。
+
+
+```{r MTXbayes, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='Methotrexate in Seleroderma: results of a Bayesian analysis', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/Selection_031.png")
+```
+
+
+貝葉斯統計分析的結果，直接且正面的回答了我們想知道的問題，那就是 MTX 到底對於治療系統性硬皮病這一疾病來說是不是有效的。從圖 \@ref(fig:MTXbayes) 中的表格，以及該論文中作者用貝葉斯多元模型分析的結果可以看到，貝葉斯模型推算的是 MTX 在使用三種不同指標進行療效評估時，MTX可以**被認定爲有療效的概率**。[@johnson2009shifting]報告說，有96%的可能性，在使用三種療效評估方法中的兩種或者以上來評估時，我們講看到 MTX 其實是可以改善系統性硬皮病的病情的 (也就是有效的)。
+
+
+圖 \@ref(fig:MTXbayes) 中表格用的先驗概率是不明確的，沒有太多信息的先驗概率 (vague/flat prior)，其含義是: 
+
+1. 所有可能的治療效果，不論大小，都被認爲有相似的先驗概率 (prior)。(every possible size of treatment effect considered equally likely a priori)
+2. 沒有太多信息的先驗概率意味着不提供太多的背景知識給模型。(no external information to current trial incorporated in analysis)
+
+
+但是，其實我們是有背景知識的，在做這個臨牀試驗之前，已經有兩個小型試驗告訴人們， MTX很有可能可以治療系統性硬皮病，這才導致研究者組織了這一次臨牀試驗。這兩個小型試驗的結果，被 [@johnson2009shifting] 轉換成爲含有信息的先驗概率 (informative prior)。
+
+圖 \@ref(fig:MTXpriors) 展示的是，使用兩種先驗概率所計算的不同的後驗概率的結果之比較。左邊使用的是沒有信息的先驗概率 (flat, wide black prior distribution)，右邊則使用的是有信息的先驗概率。兩個圖中，黑色線均爲先驗概率，綠色線是似然 (來自本次實驗的數據)，紅色線是後驗概率。紅色的面積表示 MTX 在MRSS療效指標中支持其有效的概率，95%CrI是各自的可信區間。可見，當只使用來自本次試驗的數據的時候 (無信息的先驗概率，左邊圖)，療效的點估計，和可信區間，是十分接近概率論者計算的點估計和信賴區間的。與之相對的是，當我們給模型中加入了有信息的先驗概率分佈時，後驗概率分佈給出的點估計和可信區間發生了變化:
+
+- 後驗概率分佈向右邊 (治療無效) 發生了位移 (shift towards no treatment effect)，也就是療效的點估計從 -5.3 下降至 -3.4;
+- 95%可信區間的範圍變得比左邊使用無信息先驗概率的結果狹窄了 (估計變得精確了)，從之前的 (-11.8, 1.3) 變窄至 (-7.3, 0.4)。
+
+```{r MTXpriors, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='Methotrexate in Seleroderma: comparison of priors', fig.align='center', out.width='90%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/Selection_032.png")
+```
+
+紅色面積 (也就是支持 MTX 治療有效的概率)，因爲分佈的位移，以及可信區間變窄的原因，從 94% 略增加到了 96%。
+
+在這個實驗中先驗概率分佈和該次試驗計算的似然給模型提供了相似的信息量。在更多的情況下，歷史數據，背景知識只能給出有限的信息量。所以，一個使用貝葉斯方法計算的統計報告，你會看見統計學家使用多個不同的先驗概率分佈，加上該次試驗的似然，來計算多個不同先驗概率下給出的後驗概率分佈結果，從而展示他/她給出的結論對於不同先驗概率的敏感程度。
+
+這個實例給我們展示了貝葉斯統計學能做到，而概率論統計學不能做到的幾個要點: 
+
+1. 貝葉斯分析結果可以告訴我們，藥物有效的概率是多少，簡單直接了當。
+2. 背景知識，除了你可以洋洋灑灑地寫在論文中之外，竟然還可以被當做一種先驗概率分佈，有效地和實驗數據獲得的似然相結合，妙哉妙哉。
+3. 三種評估手段，可以通過貝葉斯統計學模型整合到一起，同時給出後驗概率的分佈，這在傳統的概率論統計學模型中是很難，甚至是不可能做到的。貝葉斯方法同時還允許我們建立十分複雜的模型，且不必擔心模型擬合計算量對電腦的要求。
+4. 中途退出試驗的患者數據可以使用貝葉斯方法簡單地歸納進統計模型中來，概率論統計學所使用的缺失值的補全法其實相比貝葉斯法來說顯得不完整，且可靠程度較低。
+5. 醫生從貝葉斯統計方法計算的結果中獲得了更加多的信息，和結論。你可以計算超過某個療效差異的概率大小。在貝葉斯統計學方法中，整個後延概率的分佈圖都可以給出，而不僅僅是一個點和信賴區間的估計。
 
 # 蒙特卡羅估計和預測 Mente Carlo estimation and prediction
 
