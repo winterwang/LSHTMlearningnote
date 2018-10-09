@@ -244,6 +244,66 @@ knitr::include_graphics("img/tinmouthBayes.png")
 
 ## 百分比的統計學推斷 inference on proportions
 
+我們先用一個新藥的臨牀試驗來作爲例子。
+
+### Example: New Drug
+
+有一種新研發的被用於治療慢性疼痛的藥物。爲了對其有效性進行科學客觀的評價，研究者需要組織一項評價其效用的小規模臨牀試驗。在實施這項臨牀試驗之前，我們自己心裏就會提出一個問題，這個新藥物用於治療慢性疼痛時有療效的百分比有可能會是多少（期望值，expectation）？
+
+假如經驗告訴我們，相似成分的藥物可能達到的有療效百分比是在0.2-0.6之間。那麼我們可以把這個經驗翻譯成爲，有效率的期望可能服從某個分布，其均值是0.4，標準差是 0.1，下一步就是用一個能夠具有這樣的均值和標準差特徵的分布來表達這個經驗。我們在數學的寶庫中發現了 Beta 分布這個可以用於描述百分比的分布。
+
+### Beta 分布
+
+Beta 分布的特徵是取值範圍嚴格限定在0, 1之間，這就滿足了百分比數值的取值範圍條件。它由兩個參數來決定分布的特徵。
+
+我們用 $\theta \sim \text{Beta}(a, b)$ 標記 Beta 分布。它的特徵值有：　
+
+$$
+\begin{aligned}
+p(\theta|a, b) & = \frac{\Gamma(a + b)}{\Gamma(a)\Gamma(b)}\theta^{a-1}(1-\theta)^{b-1}; \theta \in (0,1) \\
+\text{E}(\theta|a, b) & = \frac{a}{a+b} \\
+\text{V}(\theta|a, b) & = \frac{ab}{(a+b)^2(a + b + 1)}
+\end{aligned}
+$$
+
+其中 $\Gamma(a) = (a-1)!$ 是一個伽瑪方程。
+
+正如我們在貝葉斯入門的章節\@ref(beta-distribution-intro)也介紹過的那樣，Beta分布的一些形狀特徵總結如下：
+
+```{r beta-distr-bayes, echo=FALSE, fig.height=5, fig.width=7.5, fig.cap='Shape of some Beta distribution functions for various values of a, b', fig.align='center', out.width='90%', cache=TRUE}
+par(mfrow=c(2,3))
+pi <- Vectorize(function(theta) dbeta(theta, 0.5,0.5))
+curve(pi, xlab="Sucess Rate", ylab="Density", main="Beta prior: a=0.5, b=0.5", frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 1,1))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=1, b=1",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 5,1))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=5, b=0.3",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 5,5))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=5, b=5",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 5,20))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=5, b=20",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 50,200))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=2, b=8",frame=FALSE, lwd=2)
+```
+
+回到新藥試驗的話題上來看，我們的經驗被翻譯成了均值爲0.4, 標準差0.1，那麼把它們帶入Beta分布的均值方差的特徵值公式中去，就可以求得相對應的Beta分布：$\text{Beta}(9.2, 13.8)$
+
+$$
+\begin{aligned}
+\theta & \sim \text{Beta}(9.2, 13.8) \\ 
+\text{E}(\theta) & = \frac{9.2}{9.2 + 13.8} = 0.4 \\
+\text{V}(\theta) & = \frac{9.2\times13.8}{(9.2 + 13.8)^2(9.2+13.8+1)} = 0.01 = 0.1^2
+\end{aligned}
+$$
+
+這個本來只是一句話的經驗，就被我們成功用Beta分布翻譯成了數學模型可以使用的分布方程，它的概率密度曲線如下，使用這個Beta分布的含義就是，經驗告訴我們相似成分的藥物可能達到的有療效百分比是在0.2-0.6之間：
+
+```{r beta-distr-drug, echo=FALSE, fig.height=5, fig.width=7.5, fig.cap='Prior distribution for Drug Example', fig.align='center', out.width='90%', cache=TRUE}
+# par(mfrow=c(2,3))
+pi <- Vectorize(function(theta) dbeta(theta, 9.2,13.8))
+curve(pi, xlab="Probabiltiy of response", ylab="Density", main="Beta(9.2, 13.8)", frame=FALSE, lwd=2)
+```
+
 
 
 # 共軛先驗概率
