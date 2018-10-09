@@ -218,7 +218,7 @@ points(x, u, type = "l", col = "red")
 
 ## 起源
 
-```{r Bayes-problem, cache=TRUE, echo=FALSE, fig.asp=.7, fig.width=5, fig.cap='Reproduction of part of the original printed Bayes paper.', fig.align='center', out.width='50%'}
+```{r Bayes-problem, cache=TRUE, echo=FALSE, fig.asp=.7, fig.width=5, fig.cap='Reproduction of part of the original printed Bayes paper.', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/BayesProblem.png")
 ```
 
@@ -303,6 +303,69 @@ $$
 pi <- Vectorize(function(theta) dbeta(theta, 9.2,13.8))
 curve(pi, xlab="Probabiltiy of response", ylab="Density", main="Beta(9.2, 13.8)", frame=FALSE, lwd=2)
 ```
+
+### 作出預測
+
+在臨牀試驗觀測到有療效人數 $y$ 之前，我們可以通過把未知參數積分消除(intergrate out)的方法給出預測分布：
+
+$$
+p(y) = \int p(y|\theta)p(\theta)d\theta
+$$
+
+預測在很多領域都可以得到廣泛的應用，比如做天氣預報，經濟學上的成本效益分析，進行實驗設計，以及用於檢驗觀測數據是否和期望值相匹配，等等。
+
+### Example: 新藥表現預測
+
+我們再回到新藥治療慢性疼痛的臨牀試驗上來，假設我們設計接納20名患者進入這個臨牀試驗。那麼我們可能想根據已有的經驗，來預測一下這進來的20名患者中藥物有效的人數。
+
+我們已經知道用 Beta 分布來描述經驗（也就是先驗概率 prior distribution），此時，我們再加入用 $y$ 標記20名患者中有效人數的隨機變量。那麼很自然地，我們會使用二項分布作爲 $y$ 的理想模型：
+
+$$
+\begin{aligned}
+\theta & \sim \text{Beta} (a,b) \\
+y & \sim \text{Binomial}(\theta, n)
+\end{aligned}
+$$
+
+這個模型的預測模型能夠被計算得到（甚至不需要用到計算機），且它有個自己的專有名字 **Beta-Binomial**，它的概率方程是：
+
+$$
+\begin{aligned}
+p(y) & = \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}\binom{n}{y}\frac{\Gamma(a + y)\Gamma(b + n - y)}{\Gamma(a + b + n)} \\
+     & = \binom{n}{y}\frac{B(a + y, b + n -y)}{B(a,b)}
+\end{aligned}
+$$
+其中，$B(a,b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}$；
+
+均值是：
+
+$$
+\text{E}(Y) = n\frac{a}{a + b}
+$$
+
+那麼我們在進行這項試驗時我們可以預測，20名患者中有療效人數出現的概率，我們將它的預測概率分布圖和先驗概率分布放在一起：
+
+```{r Beta-binomial-def, echo=FALSE, fig.height=3.5, fig.width=8,fig.show='hold', fig.cap='Prior and predictive distribution for the drug example.', fig.align='center', out.width='90%', cache=TRUE}
+# # Beta Binomial Predictive distribution function
+# BetaBinom <- Vectorize(function(rp){
+# log.val <- lchoose(np, rp) + lbeta(rp+a+r,b+n-r+np-rp) - lbeta(a+r,b+n-r)
+# return(exp(log.val))
+# })
+par(mfrow=c(1,2))
+
+pi <- Vectorize(function(theta) dbeta(theta, 9.2,13.8))
+curve(pi, xlab="Probabiltiy of response", ylab="Density", main="(a) Prior distribution Beta(9.2, 13.8)", frame=FALSE, lwd=2)
+
+# or we can use the built-in function for beta-binomial distribution in package TailRank:
+library(TailRank)
+N <- 20; a <- 9.2; b <- 13.8; y <- 0:N
+yy <- dbb(y, N, a, b)
+barplot(yy, xlab = "Number of successes", names.arg = 0:20, axes = F,
+        ylim = c(0, 0.16), main = "(b) predictive distribution")
+axis(2,at=seq(0,0.16,0.02))
+```
+
+
 
 
 
