@@ -438,7 +438,37 @@ model{
 
 ### 用OpenBUGS對藥物臨牀試驗的結果做預測
 
-還記得我們在藥物對慢性疼痛治療療效評價的這一臨牀試驗中使用的先驗概率是 $\theta \sim \text{Beta}(9.2, 13.8)$
+還記得我們在藥物對慢性疼痛治療療效評價的這一臨牀試驗中使用的先驗概率是 $\theta \sim \text{Beta}(9.2, 13.8)$。我們再來思考一次，我們收集到20位志願者參加這個臨牀試驗，那麼"這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）"這件事發生的概率是多少？
+
+這時候，模型的先驗概率和似然，以及我們想要知道的問題，被數學語言寫成了下面的三句話：
+
+$$
+\begin{split}
+\theta & \sim \text{Beta}(9.2, 13.8) & \text{ Prior distribution} \\
+y      & \sim \text{Binomial}(\theta, 20) & \text{ Sampling distribution}  \\
+P_{crit} & = P(y \geqslant 15)           & \text{ Probability of exceeding critical threshold}
+\end{split}
+$$
+
+如果要把這三句話翻譯成爲BUGS語言，可以這樣表達：
+
+```
+model{
+  theta ~ dbeta(9.2, 13.8) # Prior distribution
+  y ~ dbin(theta, 20)      # Sampling distribution
+  P.crit <- step(y - 14.5) # = 1 if y >= 15, 0 otherwise
+}
+```
+
+計算機模擬試驗1000次以後獲得的結果可能是這樣子的
+
+```
+Node statistics
+    		mean	  sd	     MC_error	 val2.5pc	 median	 val97.5pc	start	sample
+P.crit 	0.015	  0.1216	 0.00121	 0.0	     0.0	   0.0	      1	    10000
+theta	  0.4008	0.09903	 9.683E-4	 0.2159	   0.3982	 0.5993	    1	    10000
+y	      8.034	  2.919	   0.02578	 3.0	     8.0	   14.0	      1	    10000
+```
 
 #共軛先驗概率
 
