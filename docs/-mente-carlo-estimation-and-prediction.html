@@ -1458,6 +1458,62 @@ chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span cla
 圖 81.9: History of the iterations.
 </p>
 </div>
+<p>對模型進行修改，嘗試計算相同設計的試驗，在徵集了30名患者，新藥的有效率爲0.7時，15名或者以內的患者有顯著療效的事件發生的概率是多少？</p>
+<pre><code>model{
+  y ~ dbin(0.7, 30) 
+  P15 &lt;- step(15.5 - y) # = 1 if Y is 15 or fewer
+} </code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/coinmodel30.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P15&quot;</span>, <span class="st">&quot;y&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;P15&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##        mean     sd MC_error val2.5pc median val97.5pc start sample
+## P15  0.0165 0.1274  0.00125        0      0         0     1  10000
+## y   21.0200 2.5120  0.02466       16     21        26     1  10000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P15 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P15&quot;</span>),
+                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))
+#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
+## samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)
+
+<span class="cf">for</span>(p_ <span class="cf">in</span> parameters)
+  {
+    <span class="kw">hist</span>(chain[[p_]], <span class="dt">main=</span>p_,
+         <span class="dt">ylab=</span><span class="ot">NA</span>, <span class="dt">xlab=</span><span class="ot">NA</span>,<span class="dt">prob =</span> <span class="ot">TRUE</span>,
+         <span class="dt">nclas=</span><span class="dv">50</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)
+  }</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS01"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS01-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.10: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS01"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS01-2.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.10: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<p>所以此時少於或等於１５人得到症狀改善的事件發生的概率被推測爲1.6%。</p>
 </div>
 </div>
 <h3>References</h3>

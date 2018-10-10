@@ -593,6 +593,53 @@ samplesHistory("*", mfrow = c(2,1), ask=FALSE)
 ```
 
 
+對模型進行修改，嘗試計算相同設計的試驗，在徵集了30名患者，新藥的有效率爲0.7時，15名或者以內的患者有顯著療效的事件發生的概率是多少？
+
+
+```
+model{
+  y ~ dbin(0.7, 30) 
+  P15 <- step(15.5 - y) # = 1 if Y is 15 or fewer
+} 
+```
+
+```{r　R-OpenBUGS01, cache=TRUE, fig.width=3.5, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/coinmodel30.txt") 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("P15", "y")
+samplesSet(parameters)
+# Generate 1000 iterations
+modelUpdate(10000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(P15 = samplesSample("P15"),
+                    y = samplesSample("y"))
+#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
+## samplesDensity("*", 1,  mfrow = c(2,2), ask=NULL)
+
+for(p_ in parameters)
+  {
+    hist(chain[[p_]], main=p_,
+         ylab=NA, xlab=NA,prob = TRUE,
+         nclas=50, col="red")
+  }
+```
+
+所以此時少於或等於１５人得到症狀改善的事件發生的概率被推測爲1.6%。
+
 
 #共軛先驗概率
 
