@@ -460,14 +460,95 @@ model{
 }
 ```
 
-計算機模擬試驗1000次以後獲得的結果可能是這樣子的
+計算機模擬試驗10000次以後獲得的結果可能是下面這樣子的
 
 ```
 Node statistics
-    		mean	  sd	     MC_error	 val2.5pc	 median	 val97.5pc	start	sample
-P.crit 	0.015	  0.1216	 0.00121	 0.0	     0.0	   0.0	      1	    10000
-theta	  0.4008	0.09903	 9.683E-4	 0.2159	   0.3982	 0.5993	    1	    10000
-y	      8.034	  2.919	   0.02578	 3.0	     8.0	   14.0	      1	    10000
+  		  mean	 sd	       MC_error	 val2.5pc	 median	 val97.5pc	start	sample
+P.crit 	0.015	 0.1216	   0.00121	 0.0	     0.0	   0.0	      1  	  10000
+theta   0.4008   0.09903	 9.683E-4	 0.2159	   0.3982	 0.5993	    1	    10000
+y       8.034    2.919	 0.02578	 3.0	     8.0	   14.0	      1	    10000
+```
+
+第一行我們可以看見顯示的是列的名稱，接下來每一行都是OpenBUGS的軟件在進行計算機模擬試驗過程中監測的(monitor)變量的結果，以及它們的數據描述。值得注意的是其中`P.crit`這一行，除了第一列的均值`mean = 0.015`有實際意義意外，其餘的數值是沒有什麼含義的，可以忽略。這個`P.crit`均值的含義即是我們關心的問題【"這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）"這件事發生的概率】的答案，
+
+
+我們可以把蒙特卡羅算法給出的計算機模擬試驗的結果，和精確統計學計算法獲得的結果相比較：
+
+- $\theta:$ 均值0.4，標準差0.1；
+- $y:$ 均值8, 標準差2.93。
+- 20人中15人及以上治療有效的概率是0.015。
+
+由於這些樣本是互相獨立的，輸出結果中的 `MC_error` $=\frac{\text{SD}}{\sqrt{\text{n of iterations}}}$。如果你願意，完全可以爲了提高精確度再增加計算機模擬試驗的次數。
+
+OpenBUGS 同時可以輸出計算機模擬計算過後的圖片：
+
+```{r OpenBUGSfigs, cache=TRUE, echo=FALSE, fig.width=4, fig.cap='Example OpenBUGS plots from the drug example', fig.align='center', out.width='80%', message=FALSE, warning=FALSE,  out.width='70%'}
+# library(png)
+# library(grid)
+# library(gridExtra)
+# img1 <-  rasterGrob(as.raster(readPNG("img/OpenBUGS01.png")), interpolate = FALSE)
+# img2 <-  rasterGrob(as.raster(readPNG("img/OpenBUGS02.png")), interpolate = FALSE)
+# grid.arrange(img1, img2, ncol = 2)
+knitr::include_graphics("img/OpenBUGS01.png")
+knitr::include_graphics("img/OpenBUGS02.png")
+```
+
+
+### 用蒙特卡羅法計算一個臨牀試驗的統計效能 allow uncertainty in power calculation
+
+假設有一個臨牀試驗是這樣設計的，計劃在治療組和對照組各徵集 $n$ 名患者，治療陽性反應率的標準差爲$\sigma = 1$。設計上希望達到一類錯誤 5%，和80%的效能。治療組和對照組的療效差異希望能達到 $\theta = 0.5$。計算樣本量爲$n$，療效差爲$\theta$的試驗的統計效能的數學公式已知爲：
+
+$$
+\text{Power} = \Phi(\sqrt{\frac{n\theta^2}{2\sigma^2}} - 1.96)
+$$
+
+再假設我們希望對$\theta,\sigma$同時描述其不確定性：
+
+$$
+\begin{aligned}
+\theta & \sim \text{Uniform}(0.3, 0.7) \\ 
+\sigma & \sim \text{Uniform}(0.5, 1.5) \\
+\end{aligned}
+$$
+
+接下來，我們可以利用這個公式和給出的先驗概率對統計效能的不確定性進行估計。
+
+1. 模擬從$\theta, \sigma$的先驗概率中各自選取相應的值；
+2. 把每次模擬試驗獲得的 $\theta, \sigma$ 代入上面計算效能的公式中計算每次可以獲得的統計效能；
+3. 重復步驟１，２許多次，獲取這個過程中計算得到的統計效能的預測分布(predictive distribution)。
+
+如果說每組患者人數是63人，那麼這個模型寫成BUGS語言就是：
+
+```
+model{
+  sigma ~ dunif(0.5, 1.5) 
+  theta ~ dunif(0.3, 0.7)
+  power <- phi(sqrt(63/2)*theta/sigma - 1.96)
+  prob70 <- step(power - 0.7) # is power >= 0.7
+}
+```
+
+該模型的輸出結果如下，預測的效能分布圖爲圖\@ref(fig:PowerBUGS)：
+
+```
+Node statistics
+         mean     sd       MC_error   val2.5pc   median   val97.5pc   start   sample
+power    0.7508   0.2249   0.00216    0.2846     0.8031   1.0         1       10000
+prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10000
+```
+
+當治療組對照組每組各只有６３人時，你會發現統計效能在電腦模擬１００００次試驗過後的中位數才勉強達到了80%，而且這麼寬的效能預測分布也提示我們６３人實在太少了，效能遠遠不能達到設計的要求。
+
+```{r PowerBUGS, cache=TRUE, echo=FALSE, fig.width=4, fig.cap='Predictive Distribution of Power', fig.align='center', out.width='80%', message=FALSE, warning=FALSE,  out.width='70%'}
+# library(png)
+# library(grid)
+# library(gridExtra)
+# img1 <-  rasterGrob(as.raster(readPNG("img/OpenBUGS01.png")), interpolate = FALSE)
+# img2 <-  rasterGrob(as.raster(readPNG("img/OpenBUGS02.png")), interpolate = FALSE)
+# grid.arrange(img1, img2, ncol = 2)
+knitr::include_graphics("img/PowerBUGS.png")
+# knitr::include_graphics("img/OpenBUGS02.png")
 ```
 
 #共軛先驗概率

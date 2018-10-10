@@ -1034,6 +1034,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li class="chapter" data-level="81.4" data-path="-mente-carlo-estimation-and-prediction.html"><a href="-mente-carlo-estimation-and-prediction.html#openbugs"><i class="fa fa-check"></i><b>81.4</b> 蒙特卡羅法分析軟件OpenBUGS</a><ul>
 <li class="chapter" data-level="81.4.1" data-path="-mente-carlo-estimation-and-prediction.html"><a href="-mente-carlo-estimation-and-prediction.html#openbugs"><i class="fa fa-check"></i><b>81.4.1</b> 用OpenBUGS對藥物臨牀試驗的結果做預測</a></li>
+<li class="chapter" data-level="81.4.2" data-path="-mente-carlo-estimation-and-prediction.html"><a href="-mente-carlo-estimation-and-prediction.html#-allow-uncertainty-in-power-calculation"><i class="fa fa-check"></i><b>81.4.2</b> 用蒙特卡羅法計算一個臨牀試驗的統計效能 allow uncertainty in power calculation</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="82" data-path="section-82.html"><a href="section-82.html"><i class="fa fa-check"></i><b>82</b> 共軛先驗概率</a></li>
@@ -1341,12 +1342,72 @@ P_{crit} &amp; = P(y \geqslant 15)           &amp; \text{ Probability of exceedi
   y ~ dbin(theta, 20)      # Sampling distribution
   P.crit &lt;- step(y - 14.5) # = 1 if y &gt;= 15, 0 otherwise
 }</code></pre>
-<p>計算機模擬試驗1000次以後獲得的結果可能是這樣子的</p>
+<p>計算機模擬試驗10000次以後獲得的結果可能是下面這樣子的</p>
 <pre><code>Node statistics
-            mean      sd         MC_error    val2.5pc    median  val97.5pc  start   sample
-P.crit  0.015     0.1216     0.00121     0.0         0.0       0.0        1     10000
-theta     0.4008    0.09903  9.683E-4    0.2159    0.3982    0.5993     1       10000
-y         8.034   2.919    0.02578   3.0         8.0       14.0       1     10000</code></pre>
+          mean   sd        MC_error  val2.5pc    median  val97.5pc  start   sample
+P.crit  0.015    0.1216    0.00121   0.0         0.0       0.0        1       10000
+theta   0.4008   0.09903     9.683E-4    0.2159    0.3982    0.5993     1       10000
+y       8.034    2.919   0.02578     3.0         8.0       14.0       1     10000</code></pre>
+<p>第一行我們可以看見顯示的是列的名稱，接下來每一行都是OpenBUGS的軟件在進行計算機模擬試驗過程中監測的(monitor)變量的結果，以及它們的數據描述。值得注意的是其中<code>P.crit</code>這一行，除了第一列的均值<code>mean = 0.015</code>有實際意義意外，其餘的數值是沒有什麼含義的，可以忽略。這個<code>P.crit</code>均值的含義即是我們關心的問題【“這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）”這件事發生的概率】的答案，</p>
+<p>我們可以把蒙特卡羅算法給出的計算機模擬試驗的結果，和精確統計學計算法獲得的結果相比較：</p>
+<ul>
+<li><span class="math inline">\(\theta:\)</span> 均值0.4，標準差0.1；</li>
+<li><span class="math inline">\(y:\)</span> 均值8, 標準差2.93。</li>
+<li>20人中15人及以上治療有效的概率是0.015。</li>
+</ul>
+<p>由於這些樣本是互相獨立的，輸出結果中的 <code>MC_error</code> <span class="math inline">\(=\frac{\text{SD}}{\sqrt{\text{n of iterations}}}\)</span>。如果你願意，完全可以爲了提高精確度再增加計算機模擬試驗的次數。</p>
+<p>OpenBUGS 同時可以輸出計算機模擬計算過後的圖片：</p>
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSfigs"></span>
+<img src="img/OpenBUGS01.png" alt="Example OpenBUGS plots from the drug example" width="70%" />
+<p class="caption">
+圖 81.7: Example OpenBUGS plots from the drug example
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSfigs"></span>
+<img src="img/OpenBUGS02.png" alt="Example OpenBUGS plots from the drug example" width="70%" />
+<p class="caption">
+圖 81.7: Example OpenBUGS plots from the drug example
+</p>
+</div>
+</div>
+<div id="-allow-uncertainty-in-power-calculation" class="section level3">
+<h3><span class="header-section-number">81.4.2</span> 用蒙特卡羅法計算一個臨牀試驗的統計效能 allow uncertainty in power calculation</h3>
+<p>假設有一個臨牀試驗是這樣設計的，計劃在治療組和對照組各徵集 <span class="math inline">\(n\)</span> 名患者，治療陽性反應率的標準差爲<span class="math inline">\(\sigma = 1\)</span>。設計上希望達到一類錯誤 5%，和80%的效能。治療組和對照組的療效差異希望能達到 <span class="math inline">\(\theta = 0.5\)</span>。計算樣本量爲<span class="math inline">\(n\)</span>，療效差爲<span class="math inline">\(\theta\)</span>的試驗的統計效能的數學公式已知爲：</p>
+<p><span class="math display">\[
+\text{Power} = \Phi(\sqrt{\frac{n\theta^2}{2\sigma^2}} - 1.96)
+\]</span></p>
+<p>再假設我們希望對<span class="math inline">\(\theta,\sigma\)</span>同時描述其不確定性：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\theta &amp; \sim \text{Uniform}(0.3, 0.7) \\ 
+\sigma &amp; \sim \text{Uniform}(0.5, 1.5) \\
+\end{aligned}
+\]</span></p>
+<p>接下來，我們可以利用這個公式和給出的先驗概率對統計效能的不確定性進行估計。</p>
+<ol style="list-style-type: decimal">
+<li>模擬從<span class="math inline">\(\theta, \sigma\)</span>的先驗概率中各自選取相應的值；</li>
+<li>把每次模擬試驗獲得的 <span class="math inline">\(\theta, \sigma\)</span> 代入上面計算效能的公式中計算每次可以獲得的統計效能；</li>
+<li>重復步驟１，２許多次，獲取這個過程中計算得到的統計效能的預測分布(predictive distribution)。</li>
+</ol>
+<p>如果說每組患者人數是63人，那麼這個模型寫成BUGS語言就是：</p>
+<pre><code>model{
+  sigma ~ dunif(0.5, 1.5) 
+  theta ~ dunif(0.3, 0.7)
+  power &lt;- phi(sqrt(63/2)*theta/sigma - 1.96)
+  prob70 &lt;- step(power - 0.7) # is power &gt;= 0.7
+}</code></pre>
+<p>該模型的輸出結果如下，預測的效能分布圖爲圖<a href="-mente-carlo-estimation-and-prediction.html#fig:PowerBUGS">81.8</a>：</p>
+<pre><code>Node statistics
+         mean     sd       MC_error   val2.5pc   median   val97.5pc   start   sample
+power    0.7508   0.2249   0.00216    0.2846     0.8031   1.0         1       10000
+prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10000</code></pre>
+<p>當治療組對照組每組各只有６３人時，你會發現統計效能在電腦模擬１００００次試驗過後的中位數才勉強達到了80%，而且這麼寬的效能預測分布也提示我們６３人實在太少了，效能遠遠不能達到設計的要求。</p>
+<div class="figure" style="text-align: center"><span id="fig:PowerBUGS"></span>
+<img src="img/PowerBUGS.png" alt="Predictive Distribution of Power" width="70%" />
+<p class="caption">
+圖 81.8: Predictive Distribution of Power
+</p>
+</div>
 </div>
 </div>
 </div>
