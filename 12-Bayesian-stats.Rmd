@@ -551,6 +551,49 @@ knitr::include_graphics("img/PowerBUGS.png")
 # knitr::include_graphics("img/OpenBUGS02.png")
 ```
 
+## Practical Bayesian Statistics 02
+
+1. 拋擲硬幣試驗
+
+用BUGS語言描述拋擲硬幣的模型，把寫有下列模型代碼的文件保存爲`coinmodel.txt`: 
+
+```
+model{
+  y ~ dbin(0.5, 10) 
+  P8 <- step(y - 7.5) # = 1 if Y is 8 or more
+} 
+```
+
+下面的代碼展示了如何在R裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：
+
+```{r　R-OpenBUGS00, cache=TRUE, fig.width=4, fig.cap='History of the iterations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+library(BRugs)
+# Step 1 check model
+modelCheck("backupfiles/coinmodel.txt") 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest
+samplesSet(c("P8", "y"))
+# Generate 1000 iterations
+modelUpdate(1000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(P8 = samplesSample("P8"),
+                    y = samplesSample("y"))
+samplesHistory("*", mfrow = c(2,1), ask=FALSE)
+```
+
+
+
 #共軛先驗概率
 
 # MCMC 

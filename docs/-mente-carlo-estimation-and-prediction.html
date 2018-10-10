@@ -1036,6 +1036,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="81.4.1" data-path="-mente-carlo-estimation-and-prediction.html"><a href="-mente-carlo-estimation-and-prediction.html#openbugs"><i class="fa fa-check"></i><b>81.4.1</b> 用OpenBUGS對藥物臨牀試驗的結果做預測</a></li>
 <li class="chapter" data-level="81.4.2" data-path="-mente-carlo-estimation-and-prediction.html"><a href="-mente-carlo-estimation-and-prediction.html#-allow-uncertainty-in-power-calculation"><i class="fa fa-check"></i><b>81.4.2</b> 用蒙特卡羅法計算一個臨牀試驗的統計效能 allow uncertainty in power calculation</a></li>
 </ul></li>
+<li class="chapter" data-level="81.5" data-path="-mente-carlo-estimation-and-prediction.html"><a href="-mente-carlo-estimation-and-prediction.html#practical-bayesian-statistics-02"><i class="fa fa-check"></i><b>81.5</b> Practical Bayesian Statistics 02</a></li>
 </ul></li>
 <li class="chapter" data-level="82" data-path="section-82.html"><a href="section-82.html"><i class="fa fa-check"></i><b>82</b> 共軛先驗概率</a></li>
 <li class="chapter" data-level="83" data-path="mcmc.html"><a href="mcmc.html"><i class="fa fa-check"></i><b>83</b> MCMC</a></li>
@@ -1408,6 +1409,54 @@ prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10
 圖 81.8: Predictive Distribution of Power
 </p>
 </div>
+</div>
+</div>
+<div id="practical-bayesian-statistics-02" class="section level2">
+<h2><span class="header-section-number">81.5</span> Practical Bayesian Statistics 02</h2>
+<ol style="list-style-type: decimal">
+<li>拋擲硬幣試驗</li>
+</ol>
+<p>用BUGS語言描述拋擲硬幣的模型，把寫有下列模型代碼的文件保存爲<code>coinmodel.txt</code>:</p>
+<pre><code>model{
+  y ~ dbin(0.5, 10) 
+  P8 &lt;- step(y - 7.5) # = 1 if Y is 8 or more
+} </code></pre>
+<p>下面的代碼展示了如何在R裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(BRugs)
+<span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/coinmodel.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest</span>
+<span class="kw">samplesSet</span>(<span class="kw">c</span>(<span class="st">&quot;P8&quot;</span>, <span class="st">&quot;y&quot;</span>))</code></pre></div>
+<pre><code>## monitor set for variable &#39;P8&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##     mean    sd MC_error val2.5pc median val97.5pc start sample
+## P8 0.054 0.226 0.007945        0      0         1     1   1000
+## y  4.980 1.588 0.051630        2      5         8     1   1000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P8 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P8&quot;</span>),
+                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))
+<span class="kw">samplesHistory</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">1</span>), <span class="dt">ask=</span><span class="ot">FALSE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS00"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS00-1.png" alt="History of the iterations." width="80%" />
+<p class="caption">
+圖 81.9: History of the iterations.
+</p>
 </div>
 </div>
 </div>
