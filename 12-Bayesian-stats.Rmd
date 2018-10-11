@@ -997,6 +997,59 @@ $$
 像這樣，先驗概率和事後概率兩個概率分布都來自相同家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。
 
 
+```{r R-OpenBUGS07, cache=TRUE, fig.width=3.5, fig.height=6, fig.cap='Prior, likelihood, and posterior for Drug example', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+par(mfrow=c(3,1))
+# Plot exact prior probability density 
+# values of the hyperparameters
+a <- 9.2 
+b <- 13.8
+
+# prior function
+prior <- Vectorize(function(theta) dbeta(theta, a, b))
+# Plot 
+curve(prior, 0, 1, type = "l", main = "Prior for "~theta, ylim = c(0, 4.5), frame = F,
+      xlab = "Probability of positive response", ylab = "Density", lwd = 2, cex.axis = 1.5, cex.lab = 1.5)
+
+# binomial likelihood function (likelihood)
+
+Likelihood <- Vectorize(function(theta) dbinom(15, 20, theta))
+
+# Plot
+curve(Likelihood, 0, 1, type = "l", main = "Likelihood for the data", 
+      frame = FALSE, xlab = "Probability of positive response", ylab = "Density", 
+      lwd = 2, cex.axis =  1.5, cex.lab = 1.5)
+# n <- 0; r <- 0; a <- 9.2; b <- 13.8; np <- 20
+# plot(0:20, BetaBinom(0:20), type = "b", xlab = "r*", ylab = "P(R = r*)", 
+#      main = "Prior predictive: a = 9.2, b = 13.8")
+
+# Posterior function 
+
+posterior <- Vectorize(function(theta) dbeta(theta, a+15, b+20-15))
+
+# Plot
+
+curve(posterior, 0, 1, type = "l", main = "Posterior for "~theta, 
+      frame = FALSE, xlab = "Probability of positive response", ylab = "Density", 
+      lwd = 2, cex.axis = 1.5, cex.lab = 1.5)
+```
+
+本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 \@ref(fig:R-OpenBUGS07) 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：
+
+
+```
+#  Monte Carlo model for Drug example
+
+model{
+	theta   ~ dbeta(9.2,13.8)          # prior distribution
+	y       ~ dbin(theta,20)           # sampling distribution (likelihood)
+	y       <- 15                      # data
+}
+```
+
+你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白我們現在要來做事後概率分布的計算了。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。
+
+
+
 
 # MCMC 
 

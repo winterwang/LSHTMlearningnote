@@ -1243,6 +1243,54 @@ p(\theta | y, n) &amp; \propto p(y|\theta, n)p(\theta) \\
 p(\theta | y,n) = \text{Beta}(a + y, b + n -y)
 \]</span></p>
 <p>像這樣，先驗概率和事後概率兩個概率分布都來自相同家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">1</span>))
+<span class="co"># Plot exact prior probability density </span>
+<span class="co"># values of the hyperparameters</span>
+a &lt;-<span class="st"> </span><span class="fl">9.2</span> 
+b &lt;-<span class="st"> </span><span class="fl">13.8</span>
+
+<span class="co"># prior function</span>
+prior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a, b))
+<span class="co"># Plot </span>
+<span class="kw">curve</span>(prior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Prior for &quot;</span><span class="op">~</span>theta, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">4.5</span>), <span class="dt">frame =</span> F,
+      <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)
+
+<span class="co"># binomial likelihood function (likelihood)</span>
+
+Likelihood &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbinom</span>(<span class="dv">15</span>, <span class="dv">20</span>, theta))
+
+<span class="co"># Plot</span>
+<span class="kw">curve</span>(Likelihood, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Likelihood for the data&quot;</span>, 
+      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, 
+      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span>  <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)
+<span class="co"># n &lt;- 0; r &lt;- 0; a &lt;- 9.2; b &lt;- 13.8; np &lt;- 20</span>
+<span class="co"># plot(0:20, BetaBinom(0:20), type = &quot;b&quot;, xlab = &quot;r*&quot;, ylab = &quot;P(R = r*)&quot;, </span>
+<span class="co">#      main = &quot;Prior predictive: a = 9.2, b = 13.8&quot;)</span>
+
+<span class="co"># Posterior function </span>
+
+posterior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a<span class="op">+</span><span class="dv">15</span>, b<span class="op">+</span><span class="dv">20</span><span class="op">-</span><span class="dv">15</span>))
+
+<span class="co"># Plot</span>
+
+<span class="kw">curve</span>(posterior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Posterior for &quot;</span><span class="op">~</span>theta, 
+      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, 
+      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS07"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS07-1.png" alt="Prior, likelihood, and posterior for Drug example" width="80%" />
+<p class="caption">
+圖 82.1: Prior, likelihood, and posterior for Drug example
+</p>
+</div>
+<p>本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 <a href="-congugate-priors.html#fig:R-OpenBUGS07">82.1</a> 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：</p>
+<pre><code>#  Monte Carlo model for Drug example
+
+model{
+    theta   ~ dbeta(9.2,13.8)          # prior distribution
+    y       ~ dbin(theta,20)           # sampling distribution (likelihood)
+    y       &lt;- 15                      # data
+}</code></pre>
+<p>你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白我們現在要來做事後概率分布的計算了。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。</p>
 </div>
 </div>
             </section>
