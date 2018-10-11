@@ -1101,10 +1101,8 @@ model{
 modelCheck("backupfiles/MCdrugP29.txt") 
 # there is no data so just compile the model
 modelCompile(numChains = 1) 
-# There is no need to provide initial values as this is 
-# a Monte Carlo forward sampling from a known distribution
-# but the program still requires initial values to begin
-# generate a random value.
+# There is no need to provide initial values as 
+# they are aleady provided in the model specification
 modelGenInits() #
 # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
 parameters <- c("P.crit", "theta", "y.pred")
@@ -1143,6 +1141,52 @@ plot(chain$theta, main="", type="l", ylab="theta",
 1. $\theta:$均值爲0.563，標準差是0.075；
 2. $y_{\text{pred}}:$均值22.51，標準差是4.31；
 3. 至少25名患者得到症狀改善的精確概率是 0.329。
+
+
+## 正態分布(似然)數據的共軛先驗概率
+
+例子：英國各地自來水公司依照法律規定，需要定期監測自己公司生產的自來水中三氯甲烷(trihalomethane, THM)的濃度。一年之中，每個公司都會在各個時期，不同的供水區域進行水樣的採集。假設現在我們需要來估計某個供水區域的自來水中三氯甲烷的濃度。
+
+已知已經進行了兩次取樣，監測到三氯甲烷濃度分別是 $y_1 = 128\mu g/l, y_2 = 132 \mu g/l$。兩次監測的均值爲 $130 \mu g/l$。如果，這一片固定供水區域監測三氯甲烷濃度時檢測值的標準差是已知的 $\sigma = 5\mu g/l$，那麼問題是，在這片固定供水區域的三氯甲烷濃度的估計值$(\theta)$能否計算？
+
+一個只有概率論知識的統計專家是這樣計算的：
+
+1. 樣本均值 $\bar y = 130 \mu g/l$是總體均值 $\theta$ 的一次估計；
+2. 它的標準誤是 $\frac{\sigma}{\sqrt{n}} = 5/\sqrt{2} = 3.5 \mu g/l$。
+3. 然後這兩次測量的結果告訴我們總體均值的點估計和95%信賴區間是: $\bar y \pm 1.96 \times \sigma/\sqrt{n} = 130 \pm 1.96\times3.5 = (123.1, 136.9) \mu g /l$
+
+但是一個擁有了貝葉斯統計學知識的統計專家則會是這樣思考的：
+
+這個模型中，我們知道**似然(likelihood)**是一個正態分布：$y_i \sim N(\theta, \sigma^2) (i = 1, \dots, n)$，且這裏的標準差是已知的 $\sigma = 5\mu g/l$。那麼我們給均值這個參數 $\theta$ 一個怎樣的先驗概率分布呢？
+
+$$
+\theta \sim N(\mu, \omega^2)
+$$
+
+- 先驗概率分布的方差 $\omega^2$ 常可以用數據的方差來表達：$\omega^2 = \sigma^2/n_0$。
+- 這裏的 $n_0$，可以被解釋爲隱藏的先驗概率樣本量(implicit prior sample size)。
+
+在 BUGS 標記法中，正態分布的代碼是 `y ~ dnorm(theta, tau)`，其中 `tau` 是方差的倒數(又叫做精確度)。
+
+這時候我們需要一些過去同一家供水廠監測三氯甲烷時濃度的數據來給這個先驗概率分布一些提示。例如翻閱記錄我們發現來自**同一家自來水公司，在其他供水區域的**三氯甲烷濃度均值是 $120 \mu g/l$，標準差是 $10 \mu g/l$。這就提供了 $N(120, 10^2)$ 作爲 $\theta$ 的先驗概率分布。這時我們把先驗概率分布的標準差用觀測區域的標準差來表達: $\omega^2 = \sigma^2/n_0$，此時 $n_0 = \sigma^2/\omega^2 = 5^2/10^2 = 0.25$。那麼先驗概率分布可以被表達成 $\theta \sim N(120, \sigma^2/0.25)$。如果 $n_0$ 靠近 $0$，那麼根據這個方程我們知道先驗概率分布的方差就會變大，意味着先驗概率給出的信息越不精確，分布越"平坦(flatter)"。
+
+此時貝葉斯統計專家把似然和先驗概率分布結合起來，計算事後概率分布：
+
+$$
+\begin{aligned}
+\theta | \mathbf{y}  & \sim  N(\frac{n_0 + n\bar y}{n_0 + n}, \frac{\sigma^2}{n_0 + n})\\  
+                     & \sim N(\frac{0.25\times 120 + 2 \times 130}{0.25 + 2}, \frac{5^2}{0.25 + 2}) \\ 
+                     & = N(128.9, 3.33^2 )
+\end{aligned}
+$$
+
+貝葉斯算法給出的事後概率分布的95%可信區間則是 $(122.4, 135.4) \mu g/l$。
+
+- 事後概率分布的均值$\frac{n_0 + n\bar y}{n_0 + n}$其實是先驗概率均值，和觀測數據均值之間加權之後的綜合值，它們加的權重，分別是各自的精確度(相對樣本量 relative sample size)。這其實告訴我們，觀測數據和先驗概率二者結合之時，需要各自妥協。(a compromise between the likelihood and the prior)
+
+- 事後概率分布的方差也是和先前提到的先驗概率樣本量有密切關系。它是觀測數據的方差除以觀測樣本量和先驗概率樣本量之和。
+
+- 當然，當你的觀測數據樣本量趨向於無窮大時 $n \rightarrow \infty$，事後概率分布本身就接近與觀測數據的似然 $p(\theta | \mathbf{y}) \rightarrow N(\bar y, \sigma^2/n)$。也就是說觀測數據的信息量佔絕對主導，先驗概率分布，不再能提供太多有價值的信息，可以忽略不計了。
 
 # MCMC 
 

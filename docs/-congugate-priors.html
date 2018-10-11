@@ -1043,6 +1043,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="82.2" data-path="-congugate-priors.html"><a href="-congugate-priors.html#section-82.2"><i class="fa fa-check"></i><b>82.2</b> 二項分布(似然)數據的共軛先驗概率</a><ul>
 <li class="chapter" data-level="82.2.1" data-path="-congugate-priors.html"><a href="-congugate-priors.html#section-82.2.1"><i class="fa fa-check"></i><b>82.2.1</b> 事後概率分布預測</a></li>
 </ul></li>
+<li class="chapter" data-level="82.3" data-path="-congugate-priors.html"><a href="-congugate-priors.html#section-82.3"><i class="fa fa-check"></i><b>82.3</b> 正態分布(似然)數據的共軛先驗概率</a></li>
 </ul></li>
 <li class="chapter" data-level="83" data-path="mcmc.html"><a href="mcmc.html"><i class="fa fa-check"></i><b>83</b> MCMC</a></li>
 <li class="chapter" data-level="84" data-path="section-84.html"><a href="section-84.html"><i class="fa fa-check"></i><b>84</b> 建模和模型的檢查</a></li>
@@ -1332,10 +1333,8 @@ P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \t
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
 <span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
 <pre><code>## model compiled</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
-<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
-<span class="co"># but the program still requires initial values to begin</span>
-<span class="co"># generate a random value.</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
+<span class="co"># they are aleady provided in the model specification</span>
 <span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
 <pre><code>## initial values generated, model initialized</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
@@ -1389,6 +1388,42 @@ chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span cla
 <li>至少25名患者得到症狀改善的精確概率是 0.329。</li>
 </ol>
 </div>
+</div>
+<div id="section-82.3" class="section level2">
+<h2><span class="header-section-number">82.3</span> 正態分布(似然)數據的共軛先驗概率</h2>
+<p>例子：英國各地自來水公司依照法律規定，需要定期監測自己公司生產的自來水中三氯甲烷(trihalomethane, THM)的濃度。一年之中，每個公司都會在各個時期，不同的供水區域進行水樣的採集。假設現在我們需要來估計某個供水區域的自來水中三氯甲烷的濃度。</p>
+<p>已知已經進行了兩次取樣，監測到三氯甲烷濃度分別是 <span class="math inline">\(y_1 = 128\mu g/l, y_2 = 132 \mu g/l\)</span>。兩次監測的均值爲 <span class="math inline">\(130 \mu g/l\)</span>。如果，這一片固定供水區域監測三氯甲烷濃度時檢測值的標準差是已知的 <span class="math inline">\(\sigma = 5\mu g/l\)</span>，那麼問題是，在這片固定供水區域的三氯甲烷濃度的估計值<span class="math inline">\((\theta)\)</span>能否計算？</p>
+<p>一個只有概率論知識的統計專家是這樣計算的：</p>
+<ol style="list-style-type: decimal">
+<li>樣本均值 <span class="math inline">\(\bar y = 130 \mu g/l\)</span>是總體均值 <span class="math inline">\(\theta\)</span> 的一次估計；</li>
+<li>它的標準誤是 <span class="math inline">\(\frac{\sigma}{\sqrt{n}} = 5/\sqrt{2} = 3.5 \mu g/l\)</span>。</li>
+<li>然後這兩次測量的結果告訴我們總體均值的點估計和95%信賴區間是: <span class="math inline">\(\bar y \pm 1.96 \times \sigma/\sqrt{n} = 130 \pm 1.96\times3.5 = (123.1, 136.9) \mu g /l\)</span></li>
+</ol>
+<p>但是一個擁有了貝葉斯統計學知識的統計專家則會是這樣思考的：</p>
+<p>這個模型中，我們知道<strong>似然(likelihood)</strong>是一個正態分布：<span class="math inline">\(y_i \sim N(\theta, \sigma^2) (i = 1, \dots, n)\)</span>，且這裏的標準差是已知的 <span class="math inline">\(\sigma = 5\mu g/l\)</span>。那麼我們給均值這個參數 <span class="math inline">\(\theta\)</span> 一個怎樣的先驗概率分布呢？</p>
+<p><span class="math display">\[
+\theta \sim N(\mu, \omega^2)
+\]</span></p>
+<ul>
+<li>先驗概率分布的方差 <span class="math inline">\(\omega^2\)</span> 常可以用數據的方差來表達：<span class="math inline">\(\omega^2 = \sigma^2/n_0\)</span>。</li>
+<li>這裏的 <span class="math inline">\(n_0\)</span>，可以被解釋爲隱藏的先驗概率樣本量(implicit prior sample size)。</li>
+</ul>
+<p>在 BUGS 標記法中，正態分布的代碼是 <code>y ~ dnorm(theta, tau)</code>，其中 <code>tau</code> 是方差的倒數(又叫做精確度)。</p>
+<p>這時候我們需要一些過去同一家供水廠監測三氯甲烷時濃度的數據來給這個先驗概率分布一些提示。例如翻閱記錄我們發現來自<strong>同一家自來水公司，在其他供水區域的</strong>三氯甲烷濃度均值是 <span class="math inline">\(120 \mu g/l\)</span>，標準差是 <span class="math inline">\(10 \mu g/l\)</span>。這就提供了 <span class="math inline">\(N(120, 10^2)\)</span> 作爲 <span class="math inline">\(\theta\)</span> 的先驗概率分布。這時我們把先驗概率分布的標準差用觀測區域的標準差來表達: <span class="math inline">\(\omega^2 = \sigma^2/n_0\)</span>，此時 <span class="math inline">\(n_0 = \sigma^2/\omega^2 = 5^2/10^2 = 0.25\)</span>。那麼先驗概率分布可以被表達成 <span class="math inline">\(\theta \sim N(120, \sigma^2/0.25)\)</span>。如果 <span class="math inline">\(n_0\)</span> 靠近 <span class="math inline">\(0\)</span>，那麼根據這個方程我們知道先驗概率分布的方差就會變大，意味着先驗概率給出的信息越不精確，分布越“平坦(flatter)”。</p>
+<p>此時貝葉斯統計專家把似然和先驗概率分布結合起來，計算事後概率分布：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\theta | \mathbf{y}  &amp; \sim  N(\frac{n_0 + n\bar y}{n_0 + n}, \frac{\sigma^2}{n_0 + n})\\  
+                     &amp; \sim N(\frac{0.25\times 120 + 2 \times 130}{0.25 + 2}, \frac{5^2}{0.25 + 2}) \\ 
+                     &amp; = N(128.9, 3.33^2 )
+\end{aligned}
+\]</span></p>
+<p>貝葉斯算法給出的事後概率分布的95%可信區間則是 <span class="math inline">\((122.4, 135.4) \mu g/l\)</span>。</p>
+<ul>
+<li><p>事後概率分布的均值<span class="math inline">\(\frac{n_0 + n\bar y}{n_0 + n}\)</span>其實是先驗概率均值，和觀測數據均值之間加權之後的綜合值，它們加的權重，分別是各自的精確度(相對樣本量 relative sample size)。這其實告訴我們，觀測數據和先驗概率二者結合之時，需要各自妥協。(a compromise between the likelihood and the prior)</p></li>
+<li><p>事後概率分布的方差也是和先前提到的先驗概率樣本量有密切關系。它是觀測數據的方差除以觀測樣本量和先驗概率樣本量之和。</p></li>
+<li><p>當然，當你的觀測數據樣本量趨向於無窮大時 <span class="math inline">\(n \rightarrow \infty\)</span>，事後概率分布本身就接近與觀測數據的似然 <span class="math inline">\(p(\theta | \mathbf{y}) \rightarrow N(\bar y, \sigma^2/n)\)</span>。也就是說觀測數據的信息量佔絕對主導，先驗概率分布，不再能提供太多有價值的信息，可以忽略不計了。</p></li>
+</ul>
 </div>
 </div>
             </section>
