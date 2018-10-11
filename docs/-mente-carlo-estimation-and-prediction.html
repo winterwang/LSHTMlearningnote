@@ -1560,8 +1560,15 @@ sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</s
 chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>),
                     <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>),
                     <span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>))
-#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
-## samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+##1. samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)
+<span class="co"># or 2. by looping </span>
+<span class="co"># for(p_ in parameters)</span>
+<span class="co">#   {</span>
+<span class="co">#     hist(chain[[p_]], main=p_,</span>
+<span class="co">#          ylab=NA, xlab=NA, #prob = TRUE,</span>
+<span class="co">#          nclas=50, col=&quot;red&quot;)</span>
+<span class="co">#   }</span>
 <span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
 
 <span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, 
@@ -1574,12 +1581,125 @@ chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span cla
 圖 81.11: Predictive distribution of the nodes of interest.
 </p>
 </div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># for(p_ in parameters)</span>
-<span class="co">#   {</span>
-<span class="co">#     hist(chain[[p_]], main=p_,</span>
-<span class="co">#          ylab=NA, xlab=NA, #prob = TRUE,</span>
-<span class="co">#          nclas=50, col=&quot;red&quot;)</span>
-<span class="co">#   }</span></code></pre></div>
+<p>如果把藥物治療的臨牀試驗例子的先驗概率分布修改一下，修改成爲一個沒有信息的均一分布 <span class="math inline">\(\text{Uniform}(0, 1)\)</span>，模型的結果會有怎樣的變化呢？嘗試繪制成功次數的預測概率分布，此時“20名患者中大於或者等於15名患者有療效”這一事件發生的概率是多少？</p>
+<pre><code>#  Monte Carlo predictions for Drug example
+#  with a uniform prior
+
+model{
+#   theta   ~ dbeta(9.2,13.8)          # prior distribution
+  theta   ~ dunif(0,1)               # prior distribution
+    y         ~ dbin(theta,20)         # sampling distribution
+    P.crit   &lt;- step(y-14.5)           # =1 if y &gt;= 15, 0 otherwise
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/drug-MCuniform.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;P.crit&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##          mean     sd MC_error val2.5pc  median val97.5pc start sample
+## P.crit 0.2805 0.4492 0.004402  0.00000  0.0000    1.0000     1  10000
+## theta  0.4975 0.2883 0.002962  0.02472  0.4977    0.9731     1  10000
+## y      9.9450 6.0590 0.063150  0.00000 10.0000   20.0000     1  10000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>),
+                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>),
+                    <span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+
+<span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
+<span class="kw">hist</span>(chain<span class="op">$</span>y, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS03"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS03-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.12: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<p>這個條件下，“20名患者中大於或者等於15名患者有療效”這一事件發生的概率爲28.05%。</p>
+<ol start="3" style="list-style-type: decimal">
+<li>嘗試自己來寫一個模型。</li>
+</ol>
+<p>3.1 打開一個空白文檔，試着寫一個模型，它的先驗概率是一個標準正態分布，(OpenBUGS code: <code>x ~ dnorm(0,1)</code>)。值得注意的是，在OpenBUGS的環境下，標準正態分布的描述方式和平時概率論統計學有些不一樣：概率論的標準差或者方差，在貝葉斯統計學中被冠以另一種新的概念–精確度(precision, = 1/variance)。試着嘗試用蒙特卡羅模擬試驗的方法計算標準正態分布中取值低於-1.96，和-2.326的事件發生的概率各自是多少。（已知二者的理論值分別是0.025, 0.01）。</p>
+<pre><code>#  Monte Carlo predictions
+#  with a standard normal distribution prior
+
+model{
+  x        ~ dnorm(0, 1)             # prior distribution
+    p.1     &lt;- step(-1.96 - x)         # = 1 if x &lt;= -1.96, 0 otherwise
+    p.2     &lt;- step(-2.32 - x)         # = 1 if x &lt;= -2.32, 0 otherwise
+}</code></pre>
+<p>分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/standardnormalMC.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p.1&quot;</span>, <span class="st">&quot;p.2&quot;</span>, <span class="st">&quot;x&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;p.1&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;p.2&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;x&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">100</span>)</code></pre></div>
+<pre><code>## 100 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##       mean     sd  MC_error val2.5pc  median val97.5pc start sample
+## p.1 0.0000 0.0000 1.000e-11    0.000 0.00000     0.000     1    100
+## p.2 0.0000 0.0000 1.000e-11    0.000 0.00000     0.000     1    100
+## x   0.0606 0.9453 8.951e-02   -1.559 0.05174     2.003     1    100</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">900</span>)</code></pre></div>
+<pre><code>## 900 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##       mean     sd MC_error val2.5pc    median val97.5pc start sample
+## p.1 0.0240 0.1530 0.005491    0.000  0.000000     0.000     1   1000
+## p.2 0.0110 0.1043 0.003899    0.000  0.000000     0.000     1   1000
+## x   0.0261 1.0090 0.036770   -1.928 -0.007392     2.032     1   1000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">99000</span>)</code></pre></div>
+<pre><code>## 99000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##          mean     sd  MC_error val2.5pc   median val97.5pc start sample
+## p.1  0.025160 0.1566 0.0004711    0.000  0.00000     1.000     1 100000
+## p.2  0.010180 0.1004 0.0002970    0.000  0.00000     0.000     1 100000
+## x   -0.003323 1.0020 0.0031550   -1.962 -0.00278     1.967     1 100000</code></pre>
+<p>我們知道理論上 <span class="math inline">\(x\sim N(0,1^2)\)</span>，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到<code>p.1, p.2</code>的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，<code>MC_error</code>也在變得越來越小（越來越精確）。事實上，這個<code>MC_error</code>本身約等於<span class="math inline">\(\frac{\text{sd}}{\sqrt{\text{sample size}}}\)</span>。所以對<span class="math inline">\(x\)</span>來說，經過1000次蒙特卡羅計算，<span class="math inline">\(\text{sd}(x) = 1.009\)</span>，那麼此時的<code>MC_error</code><span class="math inline">\(=\frac{1.009}{\sqrt{1000}} \approx 0.0319\)</span>，十分接近計算機給出的<code>MC_error = 0.03677</code>。<code>MC_error</code>本身可以作爲這個<span class="math inline">\(x\)</span>均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值<span class="math inline">\(\pm 2\times\)</span> <code>MC_error</code>範圍內。</p>
 </div>
 </div>
 <h3>References</h3>

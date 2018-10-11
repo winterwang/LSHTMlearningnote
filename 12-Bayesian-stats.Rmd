@@ -681,22 +681,134 @@ print(sample.statistics)
 chain <- data.frame(theta = samplesSample("theta"),
                     y = samplesSample("y"),
                     P.crit = samplesSample("P.crit"))
-#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
-## samplesDensity("*", 1,  mfrow = c(2,2), ask=NULL)
-par(mfrow=c(1,2))
-
-plot(density(chain$theta), main = "theta sample 10000", 
-     ylab = "P(theta)", xlab = "theta", col = "red")
-hist(chain$y, main = "y sample 10000", ylab = "P(Y)", 
-     xlab = "y", col = "red", prob = TRUE)
-
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+##1. samplesDensity("*", 1,  mfrow = c(2,2), ask=NULL)
+# or 2. by looping 
 # for(p_ in parameters)
 #   {
 #     hist(chain[[p_]], main=p_,
 #          ylab=NA, xlab=NA, #prob = TRUE,
 #          nclas=50, col="red")
 #   }
+par(mfrow=c(1,2))
+
+plot(density(chain$theta), main = "theta sample 10000", 
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(chain$y, main = "y sample 10000", ylab = "P(Y)", 
+     xlab = "y", col = "red", prob = TRUE)
 ```
+
+如果把藥物治療的臨牀試驗例子的先驗概率分布修改一下，修改成爲一個沒有信息的均一分布 $\text{Uniform}(0, 1)$，模型的結果會有怎樣的變化呢？嘗試繪制成功次數的預測概率分布，此時"20名患者中大於或者等於15名患者有療效"這一事件發生的概率是多少？
+
+```
+#  Monte Carlo predictions for Drug example
+#  with a uniform prior
+
+model{
+#	theta   ~ dbeta(9.2,13.8)          # prior distribution
+  theta   ~ dunif(0,1)               # prior distribution
+	y         ~ dbin(theta,20)         # sampling distribution
+	P.crit   <- step(y-14.5)           # =1 if y >= 15, 0 otherwise
+}
+```
+
+
+```{r　R-OpenBUGS03, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/drug-MCuniform.txt") 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("theta", "y", "P.crit")
+samplesSet(parameters)
+# Generate 1000 iterations
+modelUpdate(10000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(theta = samplesSample("theta"),
+                    y = samplesSample("y"),
+                    P.crit = samplesSample("P.crit"))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+
+par(mfrow=c(1,2))
+
+plot(density(chain$theta), main = "theta sample 10000", 
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(chain$y, main = "y sample 10000", ylab = "P(Y)", 
+     xlab = "y", col = "red", prob = TRUE)
+```
+
+這個條件下，"20名患者中大於或者等於15名患者有療效"這一事件發生的概率爲28.05%。
+
+3. 嘗試自己來寫一個模型。
+
+3.1 打開一個空白文檔，試着寫一個模型，它的先驗概率是一個標準正態分布，(OpenBUGS code: `x ~ dnorm(0,1)`)。值得注意的是，在OpenBUGS的環境下，標準正態分布的描述方式和平時概率論統計學有些不一樣：概率論的標準差或者方差，在貝葉斯統計學中被冠以另一種新的概念--精確度(precision, = 1/variance)。試着嘗試用蒙特卡羅模擬試驗的方法計算標準正態分布中取值低於-1.96，和-2.326的事件發生的概率各自是多少。（已知二者的理論值分別是0.025, 0.01）。
+
+
+```
+#  Monte Carlo predictions
+#  with a standard normal distribution prior
+
+model{
+  x        ~ dnorm(0, 1)             # prior distribution
+	p.1     <- step(-1.96 - x)         # = 1 if x <= -1.96, 0 otherwise
+	p.2     <- step(-2.32 - x)         # = 1 if x <= -2.32, 0 otherwise
+}
+```
+
+分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。
+
+```{r　R-OpenBUGS04, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/standardnormalMC.txt") 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("p.1", "p.2", "x")
+samplesSet(parameters)
+# Generate 100 iterations
+modelUpdate(100)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+# Generate 100 iterations
+modelUpdate(900)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+# Generate 100 iterations
+modelUpdate(99000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+```
+
+
+我們知道理論上 $x\sim N(0,1^2)$，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到`p.1, p.2`的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，`MC_error`也在變得越來越小（越來越精確）。事實上，這個`MC_error`本身約等於$\frac{\text{sd}}{\sqrt{\text{sample size}}}$。所以對$x$來說，經過1000次蒙特卡羅計算，$\text{sd}(x) = 1.009$，那麼此時的`MC_error`$=\frac{1.009}{\sqrt{1000}} \approx 0.0319$，十分接近計算機給出的`MC_error = 0.03677`。`MC_error`本身可以作爲這個$x$均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值$\pm 2\times$ `MC_error`範圍內。
+
+
+
 
 #共軛先驗概率 Congugate priors
 
@@ -710,7 +822,6 @@ hist(chain$y, main = "y sample 10000", ylab = "P(Y)",
 2. 本次試驗數據得到的結果，支持怎樣的療效差異 (the **likelihood**)；<br>
 之後需要將上述兩個資源通過合理的數學模型結合在一起，用於產生
 3. 最終療效是否存在的意見和建議，證據的總結 (the **posterior distribution**)
-
 
 
 
