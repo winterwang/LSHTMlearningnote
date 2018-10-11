@@ -1040,7 +1040,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 <li class="chapter" data-level="82" data-path="-congugate-priors.html"><a href="-congugate-priors.html"><i class="fa fa-check"></i><b>82</b> 共軛先驗概率 Congugate priors</a><ul>
 <li class="chapter" data-level="82.1" data-path="-congugate-priors.html"><a href="-congugate-priors.html#section-82.1"><i class="fa fa-check"></i><b>82.1</b> 貝葉斯推斷的基礎</a></li>
-<li class="chapter" data-level="82.2" data-path="-congugate-priors.html"><a href="-congugate-priors.html#section-82.2"><i class="fa fa-check"></i><b>82.2</b> 二項分布(似然)數據的共軛先驗概率</a></li>
+<li class="chapter" data-level="82.2" data-path="-congugate-priors.html"><a href="-congugate-priors.html#section-82.2"><i class="fa fa-check"></i><b>82.2</b> 二項分布(似然)數據的共軛先驗概率</a><ul>
+<li class="chapter" data-level="82.2.1" data-path="-congugate-priors.html"><a href="-congugate-priors.html#section-82.2.1"><i class="fa fa-check"></i><b>82.2.1</b> 事後概率分布預測</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="83" data-path="mcmc.html"><a href="mcmc.html"><i class="fa fa-check"></i><b>83</b> MCMC</a></li>
 <li class="chapter" data-level="84" data-path="section-84.html"><a href="section-84.html"><i class="fa fa-check"></i><b>84</b> 建模和模型的檢查</a></li>
@@ -1291,6 +1293,87 @@ model{
     y       &lt;- 15                      # data
 }</code></pre>
 <p>你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白我們現在要來做事後概率分布的計算了。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。</p>
+<div id="section-82.2.1" class="section level3">
+<h3><span class="header-section-number">82.2.1</span> 事後概率分布預測</h3>
+<p>假如這個新藥的效果仍然無法讓人覺得信服，我們考慮再做一次試驗徵集更多的患者，如果在這個試驗中，40名患者中有25名或者更多的患者症狀得到緩解，可以考慮把該藥物加入下一次發展計劃當中。這時候，又一次回到了預測概率的問題上來，我們想知道，“再做40人的試驗時，有25名或者更多的患者的症狀可以得到緩解”這件事可能發生的概率。這時候的模型可以被擴展如下：</p>
+<p><span class="math display">\[
+\begin{split}
+\theta &amp; \sim \text{Beta}(a,b) &amp; \text{ Prior distribution} \\
+y      &amp; \sim \text{Binomial}(\theta, n) &amp; \text{ Sampling distribution} \\
+y_{\text{pred}} &amp; \sim \text{Binomial}(\theta, m) &amp; \text{ Predictive distribution} \\
+P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \text{ Probability of exceeding critical threshold}
+\end{split}
+\]</span></p>
+<p>這段模型翻譯成BUGS語言可以描述爲：</p>
+<pre><code>model{
+  theta     ~ dbeta(a, b)                  # prior distribution
+  y         ~ dbin(theta, n)               # sampling distribution
+  y.pred    ~ dbin(theta, m)               # predictive distribution
+  P.crit   &lt;- step(y.pred - mcrit + 0.5)   # = 1 if y.pred &gt;= mcrit, 0 otherwise
+}</code></pre>
+<p>我們可以把數據寫在另一個txt文件裏面：</p>
+<pre><code>list(a = 9.2,             # parameters of prior distribution 
+     b = 13.8, 
+     y = 15,              # number of successes in completed trial
+     n = 20,              # number of patients in completed trial
+     m = 40,              # number of patients in future trial 
+     mcrit = 25)          # critical value of future successes</code></pre>
+<p>當然這是一個很簡單的例子，你完全可以把數據和模型寫在一起：</p>
+<pre><code>model{
+  theta     ~ dbeta(9.2, 13.8)                  # prior distribution
+  y         ~ dbin(theta, 20)                   # sampling distribution
+  y.pred    ~ dbin(theta, 40)                   # predictive distribution
+  P.crit   &lt;- step(y.pred - 24.5)               # = 1 if y.pred &gt;= mcrit, 0 otherwise
+  y        &lt;- 15
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/MCdrugP29.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;P.crit&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y.pred&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 50000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">50000</span>)</code></pre></div>
+<pre><code>## 50000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##           mean      sd  MC_error val2.5pc median val97.5pc start sample
+## P.crit  0.3316 0.47080 0.0020680   0.0000  0.000    1.0000     1  50000
+## theta   0.5632 0.07483 0.0003351   0.4153  0.564    0.7068     1  50000
+## y.pred 22.5500 4.30900 0.0190200  14.0000 23.000   31.0000     1  50000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>), 
+                    <span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>), 
+                    <span class="dt">y.pred =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y.pred&quot;</span>))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+<span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 50000&quot;</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),
+     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of response&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
+
+<span class="kw">hist</span>(chain<span class="op">$</span>y.pred, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 50000&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>),
+     <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS08"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS08-1.png" alt="Posterior and predictive distributions for Drug example" width="80%" />
+<p class="caption">
+圖 82.2: Posterior and predictive distributions for Drug example
+</p>
+</div>
+</div>
 </div>
 </div>
             </section>
