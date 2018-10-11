@@ -1160,15 +1160,51 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
             <section class="normal" id="section-">
 <div id="-congugate-priors" class="section level1">
 <h1><span class="header-section-number">第 82 章</span> 共軛先驗概率 Congugate priors</h1>
-<p>本章節我們重溫一下最早在貝葉斯統計學入門部分<a href="intro-Bayes.html#intro-Bayes">40</a>介紹過的一些基本原則。特別是關於共軛先驗概率的概念，並提供一些使用BUGS語言來運算這些模型的例子。</p>
+<p>本章節我們重溫一下最早在貝葉斯統計學入門部分(Chapter <a href="intro-Bayes.html#intro-Bayes">40</a>)介紹過的一些基本原則。特別是關於共軛先驗概率的概念，並提供一些使用BUGS模型的例子來展示如何運算這些模型。</p>
 <div id="section-82.1" class="section level2">
 <h2><span class="header-section-number">82.1</span> 貝葉斯推斷的基礎</h2>
 <p>在一個臨牀試驗中，作爲一名貝葉斯統計學者，必須清晰明瞭地闡述如下幾個問題:</p>
 <ol style="list-style-type: decimal">
 <li>合理地描述目前爲止，在瞭解本次試驗數據的結果之前，類似研究曾經給出過的療效差異的報告結果，可能的取值範圍 (the <strong>prior distribution</strong>)；</li>
 <li>本次試驗數據得到的結果，支持怎樣的療效差異 (the <strong>likelihood</strong>)；<br> 之後需要將上述兩個資源通過合理的數學模型結合在一起，用於產生</li>
-<li>最終療效是否存在的意見和建議，證據的總結 (the <strong>posterior distribution</strong>)</li>
+<li>最終療效是否存在的意見和建議，證據的總結 (the <strong>posterior distribution</strong>)。</li>
 </ol>
+<p>最後第三步將先驗概率和似然相結合的過程，用到的是貝葉斯定理(Bayes Theorem)。通過貝葉斯定理把目前位置的經驗作爲先驗概率統合現階段試驗數據給出的似然的過程，其實是一個自我學習不斷更新知識的過程。經過貝葉斯推斷，給出事後概率分布之時，我們可以拿它來做什麼呢？</p>
+<ul>
+<li>估計和評價治療效果，治療差異。</li>
+<li>估計和評價模型中參數的不確定性。</li>
+<li>計算你感興趣的那個變量（可以是療效差異，可以是模型中的參數）達到或者超過某個特定目標值的概率。</li>
+<li>預測你感興趣的那個變量可能存在的範圍。</li>
+<li>作爲未來要進行的試驗設計階段的先驗概率分布。</li>
+<li>給決策者提供證據。</li>
+</ul>
+<p>你是否還記得貝葉斯定理的公式: 如果<span class="math inline">\(A, B\)</span>分別標記兩個事件，那麼有</p>
+<p><span class="math display">\[
+p(A|B) = \frac{p(B|A)p(A)}{p(B)}
+\]</span></p>
+<p>如果<span class="math inline">\(A_i\)</span>是一系列互斥不相交事件，也就是<span class="math inline">\(p(\cup_iA_i) = \sum_ip(A_i) = 1\)</span>，貝葉斯定理可以被改寫成爲：</p>
+<p><span class="math display">\[
+p(A_i|B) = \frac{p(B|A_i)p(A_i)}{\sum_jp(B|A_j)p(A_j)}
+\]</span></p>
+<p>貝葉斯統計學推斷從根本上的特點在於嚴格區分：</p>
+<ol style="list-style-type: decimal">
+<li>觀測數據 <span class="math inline">\(y\)</span>，也就是試驗獲得的數據。</li>
+<li>未知參數 <span class="math inline">\(\theta\)</span>，這裏，<span class="math inline">\(\theta\)</span>可以用統計學工具來描述，它可以是統計學參數，可以是缺失值，可以是測量誤差數據等等。</li>
+</ol>
+<ul>
+<li>這裏貝葉斯統計學把未知參數當做一個可以變化的隨機變量(parameters are treated as random variables)；</li>
+<li>在貝葉斯統計學框架下，我們對參數的不確定性進行描述(we make probability statements about model parameters)。</li>
+<li>在概率論統計學框架下，統計學參數是未知，但是確實不變的。使用概率論統計學進行推斷時，我們只對數據進行不確定性的描述(<strong>parameters are fixed non-random quantities</strong> and the probability statements concern the data.)</li>
+</ul>
+<p>貝葉斯統計學推斷中，我們仍然需要建立模型用來描述 <span class="math inline">\(p(y|\theta)\)</span>，這個也就是概率論統計學中常見的<strong>似然(likelihood)</strong>。似然是把各個變量關聯起來的完整的<strong>概率模型(full probability model)</strong>。</p>
+<p>從貝葉斯統計學推斷的觀點出發，</p>
+<ul>
+<li>在實施試驗，收集數據之前，參數(<span class="math inline">\(\theta\)</span>)是未知的，所以它需要由一個<strong>概率分布(probability distribution)</strong>來反應它的不確定性，也就是說，我們需要先對參數可能來自的分布進行描述，指定一個<strong>先驗概率(prior distribution)</strong><span class="math inline">\(p(\theta)\)</span>；</li>
+<li>試驗進行完了，數據整理分析之時，我們知道了<span class="math inline">\(y\)</span>，這就是我們來和先驗概率結合的似然，使用貝葉斯定理，從而獲得給定了觀測數據之後(conditional on)，服從先驗概率的參數現在服從的概率分布，這被叫做<strong>事後概率分布(posterior distribution)</strong>。</li>
+</ul>
+<p><span class="math display">\[
+p(\theta|y) = \frac{p(\theta)p(y|\theta)}{\int p(\theta)p(y|\theta)d\theta} \propto p(\theta)p(y|\theta)
+\]</span></p>
 </div>
 </div>
             </section>
