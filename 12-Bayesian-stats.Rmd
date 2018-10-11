@@ -752,7 +752,7 @@ hist(chain$y, main = "y sample 10000", ylab = "P(Y)",
 
 3. 嘗試自己來寫一個模型。
 
-3.1 打開一個空白文檔，試着寫一個模型，它的先驗概率是一個標準正態分布，(OpenBUGS code: `x ~ dnorm(0,1)`)。值得注意的是，在OpenBUGS的環境下，標準正態分布的描述方式和平時概率論統計學有些不一樣：概率論的標準差或者方差，在貝葉斯統計學中被冠以另一種新的概念--精確度(precision, = 1/variance)。試着嘗試用蒙特卡羅模擬試驗的方法計算標準正態分布中取值低於-1.96，和-2.326的事件發生的概率各自是多少。（已知二者的理論值分別是0.025, 0.01）。
+打開一個空白文檔，試着寫一個模型，它的先驗概率是一個標準正態分布，(OpenBUGS code: `x ~ dnorm(0,1)`)。值得注意的是，在OpenBUGS的環境下，標準正態分布的描述方式和平時概率論統計學有些不一樣：概率論的標準差或者方差，在貝葉斯統計學中被冠以另一種新的概念--精確度(precision, = 1/variance)。試着嘗試用蒙特卡羅模擬試驗的方法計算標準正態分布中取值低於-1.96，和-2.326的事件發生的概率各自是多少。（已知二者的理論值分別是0.025, 0.01）。
 
 
 ```
@@ -768,7 +768,7 @@ model{
 
 分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。
 
-```{r　R-OpenBUGS04, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r　R-OpenBUGS04, cache=TRUE, message=TRUE, warning=FALSE}
 
 # Step 1 check model
 modelCheck("backupfiles/standardnormalMC.txt") 
@@ -789,14 +789,14 @@ modelUpdate(100)
 sample.statistics <- samplesStats("*")
 print(sample.statistics)
 
-# Generate 100 iterations
+# Generate 900 iterations
 modelUpdate(900)
 
 #### SHOW POSTERIOR STATISTICS
 sample.statistics <- samplesStats("*")
 print(sample.statistics)
 
-# Generate 100 iterations
+# Generate 100000 iterations
 modelUpdate(99000)
 
 #### SHOW POSTERIOR STATISTICS
@@ -807,8 +807,95 @@ print(sample.statistics)
 
 我們知道理論上 $x\sim N(0,1^2)$，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到`p.1, p.2`的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，`MC_error`也在變得越來越小（越來越精確）。事實上，這個`MC_error`本身約等於$\frac{\text{sd}}{\sqrt{\text{sample size}}}$。所以對$x$來說，經過1000次蒙特卡羅計算，$\text{sd}(x) = 1.009$，那麼此時的`MC_error`$=\frac{1.009}{\sqrt{1000}} \approx 0.0319$，十分接近計算機給出的`MC_error = 0.03677`。`MC_error`本身可以作爲這個$x$均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值$\pm 2\times$ `MC_error`範圍內。
 
+下面我們來探索一下 t分布。嘗試寫下一個BUGS模型，它的先驗概率分布是一個自由度爲4的t分布，`y ~ dt(0,1,4)`。然後進行10000次蒙特卡羅採樣計算，並給出概率密度分布圖。
+
+```
+#  Monte Carlo predictions
+#  with a t distribution prior with degree of freedom = 4
+
+model{
+  y ~ dt(0, 1, 4)
+}
+```
+
+```{r　R-OpenBUGS05, cache=TRUE, fig.width=3.5, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/MCt.txt") 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("y")
+samplesSet(parameters)
+# Generate 10000 iterations
+modelUpdate(10000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(y = samplesSample("y"))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+
+plot(density(chain$y), main = "y sample 10000", 
+     ylab = "P(y)", xlab = "y", col = "red")
 
 
+```
+
+下面再嘗試計算一個來自均值爲1，標準差爲2的正態分布的隨機變量，它的三次方的期望值是多少。已知標準差$SD = 2$，那麼方差爲$Var = 4$，那麼翻譯成BUGS語言就是精確度爲 $\frac{1}{4} = 0.25$。
+
+```
+#  Monte Carlo predictions
+
+model{
+  y ~ dnorm(1, 0.25) 
+  ycubed <- pow(y, 3) # note how to write power in BUGS
+}
+```
+
+```{r　R-OpenBUGS06, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/MCcube.txt") 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("y", "ycubed")
+samplesSet(parameters)
+# Generate 100 iterations
+modelUpdate(100000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(y = samplesSample("y"), 
+                    ycubed = samplesSample("ycubed"))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+par(mfrow=c(1,2))
+
+
+plot(density(chain$y), main = "y sample 100000", 
+     ylab = "P(y)", xlab = "y", col = "red")
+
+plot(density(chain$ycubed), main = "ycubed sample 100000", 
+     ylab = "P(ycubed)", xlab = "ycubed", col = "red")
+```
+
+所以，一個隨機變量如果它來自一個均值爲1，標準差爲2的正態分布，那麼它的三次方的期望值是13，注意`ycubed`右側的尾巴很長。
 
 #共軛先驗概率 Congugate priors
 
