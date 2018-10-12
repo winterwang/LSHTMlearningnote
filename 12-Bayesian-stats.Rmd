@@ -1189,7 +1189,7 @@ $$
 - 當然，當你的觀測數據樣本量趨向於無窮大時 $n \rightarrow \infty$，事後概率分布本身就接近與觀測數據的似然 $p(\theta | \mathbf{y}) \rightarrow N(\bar y, \sigma^2/n)$。也就是說觀測數據的信息量佔絕對主導，先驗概率分布，不再能提供太多有價值的信息，可以忽略不計了。
 
 
-```{r normalconjugate, cache=TRUE, fig.width=4.5, fig.height=4.5, fig.cap='Prior, likelihood and posterior for THM example.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r normalconjugate, cache=TRUE, fig.width=4.5, fig.height=4.5, fig.cap='PDF of Prior, likelihood and posterior for THM example.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
 
 # prior function
 xseq<-seq(80,180,.01)
@@ -1199,7 +1199,7 @@ densities<-dnorm(xseq, 120,10)
 plot(xseq, densities, col="darkgreen",xlab="mean THM concentration, ug/l (theta)", 
      ylab="Density", type="l",lwd=2, cex=2, 
      # main="PDF of Prior, likelihood, and posterior for THM example.", 
-     cex.axis=1.3, cex.lab = 1.3, ylim = c(0,0.12))
+     cex.axis=0.9, cex.lab = 1, ylim = c(0,0.12))
 
 # normal likelihood function (likelihood)
 
@@ -1219,6 +1219,62 @@ points(xseq, posterior, col="black", type="l",lwd=2, cex=2)
 
 legend("topright", c("Prior", "Likelihood", "Posterior"), bty = "n", lwd = 2,
        lty = c(1,1,1), col = c("darkgreen", "darkred", "black"))
+```
+
+## 泊淞分布(似然)的共軛先驗概率
+
+接下來，我們把注意力轉到計數型數據的模型，泊淞分布上來。如果一組數據是計數型數據，$y_1, y_2, \dots. , y_n$，它們可以被認爲是服從泊淞分布的話，它們的總體均值是$\mu$，其似然(likelihood)方程可以寫作：
+
+$$
+p(\mathbf{y} | \mu) = \prod_i\frac{\mu^{y_i}e^{-\mu}}{y_i!}
+$$
+
+那麼，經過前輩探索，我們知道，泊淞分布的似然它也有一個共軛先驗概率分布，是伽馬分布(Gamma distribution)：
+
+$$
+p(\mu) = \text{Gamma}(a,b) = \frac{b^a}{\Gamma(a)}\mu^{a-1}e^{-b\mu}
+$$
+
+伽馬分布是一個十分靈活的分布，適用於要求數據嚴格爲正的模型(positive quantities)。如果 $\mu \sim \text{Gamma}(a,b)$：
+
+$$
+\begin{aligned}
+p(\mu | a,b) & = \frac{b^a}{\Gamma(a)}\mu^{a-1}e^{-b\mu}, \mu \in (0,\infty) \\ 
+\text{E}(\mu |a,b) & = \frac{a}{b} \\ 
+\text{V}(\mu |a,b) & = \frac{a}{b^2}
+\end{aligned}
+$$
+
+它的模型在BUGS語言可以用 `mu ~ dgamma(a,b)` 來表述。伽馬分布還有如下的一些有趣的特徵：
+
+- $\text{Gamma}(1,b)$ 是均值爲 $\frac{1}{b}$ 的指數分布。
+- $\text{Gamma}(\frac{v}{2},\frac{1}{2})$，其實是自由度爲 $v$ 的卡方分布 $\chi_v^2$。
+- $\mu \sim \text{Gamma}(0,0)$ 其實等價於 $p(\mu) \propto \frac{1}{\mu}$，或者 $\log \mu \sim \text{Uniform}$。
+- 伽馬分布同時也是正態分布數據（似然）的精確度（方差的倒數，inverse variance or precision）共軛先驗概率。
+- 伽馬分布也可以用於正向非對稱性分布(skewed positive valued quantities)的樣本分布。
+
+下圖展示了一些常見伽馬分布的形狀：
+
+```{r gammadistri, echo=FALSE, fig.height=5, fig.width=7.5, fig.cap='Shape of some Gamma distribution functions for various values of a, b', fig.align='center', out.width='90%', cache=TRUE}
+par(mfrow=c(2,3))
+pi <- Vectorize(function(theta) dgamma(theta, 0.1,0.1))
+curve(pi, xlab="", ylab="Density", main="Gamma(0.1, 0.1)", xlim = c(0,5),
+      frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 1,1))
+curve(pi, xlab="　", ylab="Density", main="Gamma(1,1)",xlim = c(0,5),
+      frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 3,3))
+curve(pi, xlab="　", ylab="Density", main="Gamma(3,3)",xlim = c(0,5),
+      frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 3,0.5))
+curve(pi, xlab="　", ylab="Density", main="Gamma(3,0.5)",xlim = c(0,15),
+      ylim = c(0, 0.4),frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 30,5))
+curve(pi, xlab="　", ylab="Density", main="Gamma(30,5)",xlim = c(0,15),
+      ylim = c(0, 0.4),frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 10,0.5))
+curve(pi, xlab="　", ylab="Density", main="Gamma(10, 0.5)",xlim = c(0,40),
+      ylim = c(0, 0.4),frame=FALSE, lwd=2)
 ```
 
 
