@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="cluster-analysis.html">
-<link rel="next" href="principal-component-analysis.html">
+<link rel="prev" href="-mente-carlo-estimation-and-prediction.html">
+<link rel="next" href="mcmc.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -1162,16 +1162,277 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="missing-data-1" class="section level1">
-<h1><span class="header-section-number">第 67 章</span> Missing data 1</h1>
+<div id="-conjugate-priors" class="section level1">
+<h1><span class="header-section-number">第 82 章</span> 共軛先驗概率 Conjugate priors</h1>
+<p>本章節我們重溫一下最早在貝葉斯統計學入門部分(Chapter <a href="intro-Bayes.html#intro-Bayes">40</a>)介紹過的一些基本原則。特別是關於共軛先驗概率的概念，並提供一些使用BUGS模型的例子來展示如何運算這些模型。</p>
+<div id="section-82.1" class="section level2">
+<h2><span class="header-section-number">82.1</span> 貝葉斯推斷的基礎</h2>
+<p>在一個臨牀試驗中，作爲一名貝葉斯統計學者，必須清晰明瞭地闡述如下幾個問題:</p>
+<ol style="list-style-type: decimal">
+<li>合理地描述目前爲止，在瞭解本次試驗數據的結果之前，類似研究曾經給出過的療效差異的報告結果，可能的取值範圍 (the <strong>prior distribution</strong>)；</li>
+<li>本次試驗數據得到的結果，支持怎樣的療效差異 (the <strong>likelihood</strong>)；<br> 之後需要將上述兩個資源通過合理的數學模型結合在一起，用於產生</li>
+<li>最終療效是否存在的意見和建議，證據的總結 (the <strong>posterior distribution</strong>)。</li>
+</ol>
+<p>最後第三步將先驗概率和似然相結合的過程，用到的是貝葉斯定理(Bayes Theorem)。通過貝葉斯定理把目前位置的經驗作爲先驗概率統合現階段試驗數據給出的似然的過程，其實是一個自我學習不斷更新知識的過程。經過貝葉斯推斷，給出事後概率分布之時，我們可以拿它來做什麼呢？</p>
+<ul>
+<li>估計和評價治療效果，治療差異。</li>
+<li>估計和評價模型中參數的不確定性。</li>
+<li>計算你感興趣的那個變量（可以是療效差異，可以是模型中的參數）達到或者超過某個特定目標值的概率。</li>
+<li>預測你感興趣的那個變量可能存在的範圍。</li>
+<li>作爲未來要進行的試驗設計階段的先驗概率分布。</li>
+<li>給決策者提供證據。</li>
+</ul>
+<p>你是否還記得貝葉斯定理的公式: 如果<span class="math inline">\(A, B\)</span>分別標記兩個事件，那麼有</p>
+<p><span class="math display">\[
+p(A|B) = \frac{p(B|A)p(A)}{p(B)}
+\]</span></p>
+<p>如果<span class="math inline">\(A_i\)</span>是一系列互斥不相交事件，也就是<span class="math inline">\(p(\cup_iA_i) = \sum_ip(A_i) = 1\)</span>，貝葉斯定理可以被改寫成爲：</p>
+<p><span class="math display">\[
+p(A_i|B) = \frac{p(B|A_i)p(A_i)}{\sum_jp(B|A_j)p(A_j)}
+\]</span></p>
+<p>貝葉斯統計學推斷從根本上的特點在於嚴格區分：</p>
+<ol style="list-style-type: decimal">
+<li>觀測數據 <span class="math inline">\(y\)</span>，也就是試驗獲得的數據。</li>
+<li>未知參數 <span class="math inline">\(\theta\)</span>，這裏，<span class="math inline">\(\theta\)</span>可以用統計學工具來描述，它可以是統計學參數，可以是缺失值，可以是測量誤差數據等等。</li>
+</ol>
+<ul>
+<li>這裏貝葉斯統計學把未知參數當做一個可以變化的隨機變量(parameters are treated as random variables)；</li>
+<li>在貝葉斯統計學框架下，我們對參數的不確定性進行描述(we make probability statements about model parameters)。</li>
+<li>在概率論統計學框架下，統計學參數是未知，但是確實不變的。使用概率論統計學進行推斷時，我們只對數據進行不確定性的描述(<strong>parameters are fixed non-random quantities</strong> and the probability statements concern the data.)</li>
+</ul>
+<p>貝葉斯統計學推斷中，我們仍然需要建立模型用來描述 <span class="math inline">\(p(y|\theta)\)</span>，這個也就是概率論統計學中常見的<strong>似然(likelihood)</strong>。似然是把各個變量關聯起來的完整的<strong>概率模型(full probability model)</strong>。</p>
+<p>從貝葉斯統計學推斷的觀點出發，</p>
+<ul>
+<li>在實施試驗，收集數據之前，參數(<span class="math inline">\(\theta\)</span>)是未知的，所以它需要由一個<strong>概率分布(probability distribution)</strong>來反應它的不確定性，也就是說，我們需要先對參數可能來自的分布進行描述，指定一個<strong>先驗概率(prior distribution)</strong><span class="math inline">\(p(\theta)\)</span>；</li>
+<li>試驗進行完了，數據整理分析之時，我們知道了<span class="math inline">\(y\)</span>，這就是我們來和先驗概率結合的似然，使用貝葉斯定理，從而獲得給定了觀測數據之後(conditional on)，服從先驗概率的參數現在服從的概率分布，這被叫做<strong>事後概率分布(posterior distribution)</strong>。</li>
+</ul>
+<p><span class="math display">\[
+p(\theta|y) = \frac{p(\theta)p(y|\theta)}{\int p(\theta)p(y|\theta)d\theta} \propto p(\theta)p(y|\theta)
+\]</span></p>
+<p>總結一下就是，</p>
+<ol style="list-style-type: decimal">
+<li>先驗概率(prior distribution)，<span class="math inline">\(p(\theta)\)</span>描述的是在<strong>收集數據之前</strong>參數的不確定性。</li>
+<li>事後概率(posterior distribution)，<span class="math inline">\(p(\theta | y)\)</span> 描述的是在<strong>收集數據之後</strong>參數的不確定性。</li>
+</ol>
+</div>
+<div id="section-82.2" class="section level2">
+<h2><span class="header-section-number">82.2</span> 二項分布(似然)數據的共軛先驗概率</h2>
+<p>沿用前一個章節新藥試驗的例子。我們在實施試驗之前對藥物的認知是，我們認爲它的藥效概率可能在 0.2-0.6 之間。我們把這個試驗前對藥物療效的估計認知翻譯成一個服從均值爲0.4，標準差爲0.1的Beta分布。這個Beta分布使用的參數(參數的參數被叫做<strong>超參數, hyperparameter</strong>)，是9.2, 13.8，寫作<span class="math inline">\(\text{Beta}(9.2, 13.8)\)</span>。那麼現在我們假設試驗結束，收集的20名患者中15名療效顯著。接下來貝葉斯統計學家要回答的問題是，這個試驗結果對先驗概率分布產生了多大的影響(How should this trial change our opinion about the positive response rate)？</p>
+<p>在這個例子中，我們現在來詳細給出先驗概率和似然。</p>
+<ul>
+<li>似然 likelihood (distribution of the data)：<br>如果患者可以被認爲是相互獨立的，他們來自一個相同的總體，在這個總體中有一個未知的對藥物療效有效反應(positive response)的概率 <span class="math inline">\(\theta\)</span>，這樣的數據可以用一個二項分布似然來描述 binomial likelihood:</li>
+</ul>
+<p><span class="math display">\[
+p(y | n, \theta) = \binom{n}{y}\theta^y(1-\theta)^{n-y} \propto \theta^y(1-\theta)^{n-y}
+\]</span></p>
+<ul>
+<li>描述試驗前我們對<span class="math inline">\(\theta\)</span>的認知的先驗概率 prior distribution，這是一個連續型先驗概率分布。<br>對於百分比，我們用Beta分布來描述：</li>
+</ul>
+<p><span class="math display">\[
+\begin{aligned}
+\theta &amp; \sim   \text{Beta}(a,b) \\ 
+p(\theta) &amp; = \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)} \theta^{a-1}(1-\theta)^{b-1}\\
+\end{aligned}
+\]</span></p>
+<p>根據貝葉斯定理，我們來把先驗概率分布和似然相結合（相乘），來獲取事後概率分布：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(\theta | y, n) &amp; \propto p(y|\theta, n)p(\theta) \\
+                 &amp; \propto \theta^y(1-\theta)^{n-y}\theta^{a-1}(1-\theta)^{b-1} \\
+                 &amp; = \theta^{y + a -1}(1-\theta)^{n - y + b -1}
+\end{aligned}
+\]</span> 眼尖的人立刻能看出來，這個事後概率分布本身也是一個Beta分布的概率方程，只是它的超參數和先驗概率相比發生了變化(更新)：</p>
+<p><span class="math display">\[
+p(\theta | y,n) = \text{Beta}(a + y, b + n -y)
+\]</span></p>
+<p>像這樣，先驗概率和事後概率兩個概率分布都來自相同家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">1</span>))
+<span class="co"># Plot exact prior probability density </span>
+<span class="co"># values of the hyperparameters</span>
+a &lt;-<span class="st"> </span><span class="fl">9.2</span> 
+b &lt;-<span class="st"> </span><span class="fl">13.8</span>
+
+<span class="co"># prior function</span>
+prior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a, b))
+<span class="co"># Plot </span>
+<span class="kw">curve</span>(prior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Prior for &quot;</span><span class="op">~</span>theta, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">4.5</span>), <span class="dt">frame =</span> F,
+      <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)
+
+<span class="co"># binomial likelihood function (likelihood)</span>
+
+Likelihood &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbinom</span>(<span class="dv">15</span>, <span class="dv">20</span>, theta))
+
+<span class="co"># Plot</span>
+<span class="kw">curve</span>(Likelihood, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Likelihood for the data&quot;</span>, 
+      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, 
+      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span>  <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)
+<span class="co"># n &lt;- 0; r &lt;- 0; a &lt;- 9.2; b &lt;- 13.8; np &lt;- 20</span>
+<span class="co"># plot(0:20, BetaBinom(0:20), type = &quot;b&quot;, xlab = &quot;r*&quot;, ylab = &quot;P(R = r*)&quot;, </span>
+<span class="co">#      main = &quot;Prior predictive: a = 9.2, b = 13.8&quot;)</span>
+
+<span class="co"># Posterior function </span>
+
+posterior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a<span class="op">+</span><span class="dv">15</span>, b<span class="op">+</span><span class="dv">20</span><span class="op">-</span><span class="dv">15</span>))
+
+<span class="co"># Plot</span>
+
+<span class="kw">curve</span>(posterior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Posterior for &quot;</span><span class="op">~</span>theta, 
+      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, 
+      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS07"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS07-1.png" alt="Prior, likelihood, and posterior for Drug example" width="80%" />
+<p class="caption">
+圖 82.1: Prior, likelihood, and posterior for Drug example
+</p>
+</div>
+<p>本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 <a href="-conjugate-priors.html#fig:R-OpenBUGS07">82.1</a> 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：</p>
+<pre><code>#  Monte Carlo model for Drug example
+
+model{
+    theta   ~ dbeta(9.2,13.8)          # prior distribution
+    y       ~ dbin(theta,20)           # sampling distribution (likelihood)
+    y       &lt;- 15                      # data
+}</code></pre>
+<p>你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白我們現在要來做事後概率分布的計算了。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。</p>
+<div id="section-82.2.1" class="section level3">
+<h3><span class="header-section-number">82.2.1</span> 事後概率分布預測</h3>
+<p>假如這個新藥的效果仍然無法讓人覺得信服，我們考慮再做一次試驗徵集更多的患者，如果在這個試驗中，40名患者中有25名或者更多的患者症狀得到緩解，可以考慮把該藥物加入下一次發展計劃當中。這時候，又一次回到了預測概率的問題上來，我們想知道，“再做40人的試驗時，有25名或者更多的患者的症狀可以得到緩解”這件事可能發生的概率。這時候的模型可以被擴展如下：</p>
+<p><span class="math display">\[
+\begin{split}
+\theta &amp; \sim \text{Beta}(a,b) &amp; \text{ Prior distribution} \\
+y      &amp; \sim \text{Binomial}(\theta, n) &amp; \text{ Sampling distribution} \\
+y_{\text{pred}} &amp; \sim \text{Binomial}(\theta, m) &amp; \text{ Predictive distribution} \\
+P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \text{ Probability of exceeding critical threshold}
+\end{split}
+\]</span></p>
+<p>這段模型翻譯成BUGS語言可以描述爲：</p>
+<pre><code>model{
+  theta     ~ dbeta(a, b)                  # prior distribution
+  y         ~ dbin(theta, n)               # sampling distribution
+  y.pred    ~ dbin(theta, m)               # predictive distribution
+  P.crit   &lt;- step(y.pred - mcrit + 0.5)   # = 1 if y.pred &gt;= mcrit, 0 otherwise
+}</code></pre>
+<p>我們可以把數據寫在另一個txt文件裏面：</p>
+<pre><code>list(a = 9.2,             # parameters of prior distribution 
+     b = 13.8, 
+     y = 15,              # number of successes in completed trial
+     n = 20,              # number of patients in completed trial
+     m = 40,              # number of patients in future trial 
+     mcrit = 25)          # critical value of future successes</code></pre>
+<p>當然這是一個很簡單的例子，你完全可以把數據和模型寫在一起：</p>
+<pre><code>model{
+  theta     ~ dbeta(9.2, 13.8)                  # prior distribution
+  y         ~ dbin(theta, 20)                   # sampling distribution
+  y.pred    ~ dbin(theta, 40)                   # predictive distribution
+  P.crit   &lt;- step(y.pred - 24.5)               # = 1 if y.pred &gt;= mcrit, 0 otherwise
+  y        &lt;- 15
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/MCdrugP29.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
+<span class="co"># they are aleady provided in the model specification</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;P.crit&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y.pred&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 50000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">50000</span>)</code></pre></div>
+<pre><code>## 50000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##           mean      sd  MC_error val2.5pc median val97.5pc start sample
+## P.crit  0.3316 0.47080 0.0020680   0.0000  0.000    1.0000     1  50000
+## theta   0.5632 0.07483 0.0003351   0.4153  0.564    0.7068     1  50000
+## y.pred 22.5500 4.30900 0.0190200  14.0000 23.000   31.0000     1  50000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>), 
+                    <span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>), 
+                    <span class="dt">y.pred =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y.pred&quot;</span>))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+<span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 50000&quot;</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),
+     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of response&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
+
+<span class="kw">hist</span>(chain<span class="op">$</span>y.pred, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 50000&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>),
+     <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS08"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS08-1.png" alt="Posterior and predictive distributions for Drug example" width="80%" />
+<p class="caption">
+圖 82.2: Posterior and predictive distributions for Drug example
+</p>
+</div>
+<p>圖<a href="-conjugate-priors.html#fig:R-OpenBUGS08">82.2</a>左邊的圖，是前一次試驗結果的事後概率分布，20名患者中觀察到15名患者症狀改善。右邊的圖則是對下一次40人的試驗的結果做的預測，平均22.5名患者可能會有症狀改善，這個均值的標準差是4.3。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(chain<span class="op">$</span>theta, <span class="dt">main=</span><span class="st">&quot;&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>, <span class="dt">ylab=</span><span class="st">&quot;theta&quot;</span>, 
+     <span class="dt">xlab=</span><span class="st">&quot;iteration&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="fl">1.2</span>))</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:MCMC00"></span>
+<img src="bookdown_files/figure-html/MCMC00-1.png" alt="Plot of the MCMC chain of the parameter, Drug example." width="80%" />
+<p class="caption">
+圖 82.3: Plot of the MCMC chain of the parameter, Drug example.
+</p>
+</div>
+<p>爲了比較，我們可以把精確計算獲得的答案和蒙特卡羅算法給出的預測做個比較：</p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(\theta:\)</span>均值爲0.563，標準差是0.075；</li>
+<li><span class="math inline">\(y_{\text{pred}}:\)</span>均值22.51，標準差是4.31；</li>
+<li>至少25名患者得到症狀改善的精確概率是 0.329。</li>
+</ol>
+</div>
+</div>
+<div id="section-82.3" class="section level2">
+<h2><span class="header-section-number">82.3</span> 正態分布(似然)數據的共軛先驗概率</h2>
+<p>例子：英國各地自來水公司依照法律規定，需要定期監測自己公司生產的自來水中三氯甲烷(trihalomethane, THM)的濃度。一年之中，每個公司都會在各個時期，不同的供水區域進行水樣的採集。假設現在我們需要來估計某個供水區域的自來水中三氯甲烷的濃度。</p>
+<p>已知已經進行了兩次取樣，監測到三氯甲烷濃度分別是 <span class="math inline">\(y_1 = 128\mu g/l, y_2 = 132 \mu g/l\)</span>。兩次監測的均值爲 <span class="math inline">\(130 \mu g/l\)</span>。如果，這一片固定供水區域監測三氯甲烷濃度時檢測值的標準差是已知的 <span class="math inline">\(\sigma = 5\mu g/l\)</span>，那麼問題是，在這片固定供水區域的三氯甲烷濃度的估計值<span class="math inline">\((\theta)\)</span>能否計算？</p>
+<p>一個只有概率論知識的統計專家是這樣計算的：</p>
+<ol style="list-style-type: decimal">
+<li>樣本均值 <span class="math inline">\(\bar y = 130 \mu g/l\)</span>是總體均值 <span class="math inline">\(\theta\)</span> 的一次估計；</li>
+<li>它的標準誤是 <span class="math inline">\(\frac{\sigma}{\sqrt{n}} = 5/\sqrt{2} = 3.5 \mu g/l\)</span>。</li>
+<li>然後這兩次測量的結果告訴我們總體均值的點估計和95%信賴區間是: <span class="math inline">\(\bar y \pm 1.96 \times \sigma/\sqrt{n} = 130 \pm 1.96\times3.5 = (123.1, 136.9) \mu g /l\)</span></li>
+</ol>
+<p>但是一個擁有了貝葉斯統計學知識的統計專家則會是這樣思考的：</p>
+<p>這個模型中，我們知道<strong>似然(likelihood)</strong>是一個正態分布：<span class="math inline">\(y_i \sim N(\theta, \sigma^2) (i = 1, \dots, n)\)</span>，且這裏的標準差是已知的 <span class="math inline">\(\sigma = 5\mu g/l\)</span>。那麼我們給均值這個參數 <span class="math inline">\(\theta\)</span> 一個怎樣的先驗概率分布呢？</p>
+<p><span class="math display">\[
+\theta \sim N(\mu, \omega^2)
+\]</span></p>
+<ul>
+<li>先驗概率分布的方差 <span class="math inline">\(\omega^2\)</span> 常可以用數據的方差來表達：<span class="math inline">\(\omega^2 = \sigma^2/n_0\)</span>。</li>
+<li>這裏的 <span class="math inline">\(n_0\)</span>，可以被解釋爲隱藏的先驗概率樣本量(implicit prior sample size)。</li>
+</ul>
+<p>在 BUGS 標記法中，正態分布的代碼是 <code>y ~ dnorm(theta, tau)</code>，其中 <code>tau</code> 是方差的倒數(又叫做精確度)。</p>
+<p>這時候我們需要一些過去同一家供水廠監測三氯甲烷時濃度的數據來給這個先驗概率分布一些提示。例如翻閱記錄我們發現來自<strong>同一家自來水公司，在其他供水區域的</strong>三氯甲烷濃度均值是 <span class="math inline">\(120 \mu g/l\)</span>，標準差是 <span class="math inline">\(10 \mu g/l\)</span>。這就提供了 <span class="math inline">\(N(120, 10^2)\)</span> 作爲 <span class="math inline">\(\theta\)</span> 的先驗概率分布。這時我們把先驗概率分布的標準差用觀測區域的標準差來表達: <span class="math inline">\(\omega^2 = \sigma^2/n_0\)</span>，此時 <span class="math inline">\(n_0 = \sigma^2/\omega^2 = 5^2/10^2 = 0.25\)</span>。那麼先驗概率分布可以被表達成 <span class="math inline">\(\theta \sim N(120, \sigma^2/0.25)\)</span>。如果 <span class="math inline">\(n_0\)</span> 靠近 <span class="math inline">\(0\)</span>，那麼根據這個方程我們知道先驗概率分布的方差就會變大，意味着先驗概率給出的信息越不精確，分布越“平坦(flatter)”。</p>
+<p>此時貝葉斯統計專家把似然和先驗概率分布結合起來，計算事後概率分布：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\theta | \mathbf{y}  &amp; \sim  N(\frac{n_0 + n\bar y}{n_0 + n}, \frac{\sigma^2}{n_0 + n})\\  
+                     &amp; \sim N(\frac{0.25\times 120 + 2 \times 130}{0.25 + 2}, \frac{5^2}{0.25 + 2}) \\ 
+                     &amp; = N(128.9, 3.33^2 )
+\end{aligned}
+\]</span></p>
+<p>貝葉斯算法給出的事後概率分布的95%可信區間則是 <span class="math inline">\((122.4, 135.4) \mu g/l\)</span>。</p>
+<ul>
+<li><p>事後概率分布的均值<span class="math inline">\(\frac{n_0 + n\bar y}{n_0 + n}\)</span>其實是先驗概率均值，和觀測數據均值之間加權之後的綜合值，它們加的權重，分別是各自的精確度(相對樣本量 relative sample size)。這其實告訴我們，觀測數據和先驗概率二者結合之時，需要各自妥協。(a compromise between the likelihood and the prior)</p></li>
+<li><p>事後概率分布的方差也是和先前提到的先驗概率樣本量有密切關系。它是觀測數據的方差除以觀測樣本量和先驗概率樣本量之和。</p></li>
+<li><p>當然，當你的觀測數據樣本量趨向於無窮大時 <span class="math inline">\(n \rightarrow \infty\)</span>，事後概率分布本身就接近與觀測數據的似然 <span class="math inline">\(p(\theta | \mathbf{y}) \rightarrow N(\bar y, \sigma^2/n)\)</span>。也就是說觀測數據的信息量佔絕對主導，先驗概率分布，不再能提供太多有價值的信息，可以忽略不計了。</p></li>
+</ul>
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="cluster-analysis.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="principal-component-analysis.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="-mente-carlo-estimation-and-prediction.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="mcmc.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1201,7 +1462,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/10-Hierarchical-models.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/12-Bayesian-stats.Rmd",
 "text": "編輯"
 },
 "download": ["bookdown.epub"],
