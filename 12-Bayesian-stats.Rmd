@@ -1221,7 +1221,7 @@ legend("topright", c("Prior", "Likelihood", "Posterior"), bty = "n", lwd = 2,
        lty = c(1,1,1), col = c("darkgreen", "darkred", "black"))
 ```
 
-## 泊淞分布(似然)的共軛先驗概率
+## 泊淞分布(似然)數據的共軛先驗概率
 
 接下來，我們把注意力轉到計數型數據的模型，泊淞分布上來。如果一組數據是計數型數據，$y_1, y_2, \dots. , y_n$，它們可以被認爲是服從泊淞分布的話，它們的總體均值是$\mu$，其似然(likelihood)方程可以寫作：
 
@@ -1276,6 +1276,65 @@ pi <- Vectorize(function(theta) dgamma(theta, 10,0.5))
 curve(pi, xlab="　", ylab="Density", main="Gamma(10, 0.5)",xlim = c(0,40),
       ylim = c(0, 0.4),frame=FALSE, lwd=2)
 ```
+
+將伽馬分布的概率方程和泊淞分布似然方程相結合，貝葉斯定理告訴我們，它會變成另外一個更新過後的伽馬分布：
+
+$$
+\begin{aligned}
+p(\mu | \mathbf{y}) & \propto p(\mu) p(\mathbf{y} | \mu) \\ 
+                    & = \frac{b^a}{\Gamma(a)}\mu^{a-1}e^{-b\mu} \prod_{i=1}^ne^{-\mu}\frac{\mu^{y_i}}{y_i!} \\
+                    & \propto \mu^{a + n\bar y -1} e^{-(b+n)\mu} \\ 
+                    & = \text{Gamma}(a + n\bar y, b+n)
+\end{aligned}
+$$
+
+這個新的伽馬分布的期望值是：
+
+$$
+E(\mu | \mathbf{y}) = \frac{a + n\bar y}{b + n} = \bar y (\frac{n}{n + b}) + \frac{a}{b}(1 - \frac{n}{n + b})
+$$
+
+也就是說事後概率分布的伽馬分布，它的均值（期望）是先驗概率分布的均值 $\frac{a}{b}$ 和數據樣本均值 $\bar y$ 相互妥協的結果。
+
+## 共軛先驗概率分布的總結
+
+從這些共軛概率分布的結果和他們的特徵值的推導來看，我們發現：
+
+1. 事後概率分布的均值，總是將先驗概率分布均值和觀察數據的樣本均值相結合並且互相妥協之後的結果。
+2. 事後概率分布的標準差（方差），總是小於先驗概率分布的方差和觀察數據的樣本標準差的任何一個。
+
+而且，當樣本數據的樣本量很大， $n \rightarrow \infty$：
+
+1. 事後概率分布的均值都會無限接近觀察數據的樣本均值。$\text{The posterior mean } \rightarrow \text{ the sample mean}$；
+2. 事後概率分布的標準差會無限接近觀察數據的樣本標準誤。$\text{The posterior standard deviation } \rightarrow \text{ the standard error}$；
+3. 事後概率分布就不再依賴先驗概率分布了。
+
+當事後概率分布，和先驗概率分布恰好都來自相同分布家族時，我們稱這樣的分布具有**共軛性質(conjugacy)**。此時，先驗概率分布的參數常常可以被解讀成爲**先驗概率樣本(prior sample)**。
+
+這樣的分布我們總結一下常見的例子：
+
+
+```{r Conjugate, cache=TRUE, echo=FALSE}
+Examples <- tibble::tribble(
+  ~Likelihood,      ~Parameter,   ~Prior, ~Posterior,
+     "Normal",          "mean", "Normal",   "Normal",
+     "Normal",     "precision",  "Gamma",    "Gamma",
+   "Binomial", "success prob.",   "Beta",     "Beta",
+    "Poisson",  "rate or mean",  "Gamma",    "Gamma"
+  )
+# 
+# require(knitr)
+# require(kableExtra)
+kable_styling(
+              kable(Examples, digits = 3, row.names = FALSE, align = "c",
+              caption = "Examples of conjugate distributions and likelihood.", format = "html"),
+        bootstrap_options = c("striped", "hover", "condensed"),
+        position = "center", full_width = FALSE) 
+
+```
+
+
+共軛先驗概率分布在數學上是十分便利的，但是並不是所有的似然都能找到它的共軛概率分布做先驗概率。這時候我們就需要求助於計算機模擬試驗的威力，下一章我們會接觸到怎樣使用 Markov Chain Monte Carlo (MCMC)來克服我們找不到共軛先驗概率的似然時，後驗概率分布的計算。它的中文名被翻譯成馬爾可夫鏈蒙特卡羅。
 
 
 # MCMC 
