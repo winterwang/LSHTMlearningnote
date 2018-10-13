@@ -1508,7 +1508,7 @@ p(\mu | \mathbf{y}) &amp; \propto p(\mu) p(\mathbf{y} | \mu) \\
 <p><span class="math display">\[
 E(\mu | \mathbf{y}) = \frac{a + n\bar y}{b + n} = \bar y (\frac{n}{n + b}) + \frac{a}{b}(1 - \frac{n}{n + b})
 \]</span></p>
-<p>也就是說事後概率分布的伽馬分布，它的均值（期望）是先驗概率分布的均值 <span class="math inline">\(\frac{a}{b}\)</span> 和數據樣本均值 <span class="math inline">\(\bar y\)</span> 相互妥協的結果。</p>
+<p>也就是說事後概率分布的伽馬分布，它的均值（期望）是先驗概率分布的均值 <span class="math inline">\(\frac{a}{b}\)</span> 和數據樣本均值 <span class="math inline">\(\bar y\)</span> 相互妥協的結果。泊淞－伽馬分布的模型常常可以用於估計發病率(rate)，或者相對危險度(relative risk)，反而較少用於估計率數據的均值(mean of possion data)。</p>
 </div>
 <div id="section-82.5" class="section level2">
 <h2><span class="header-section-number">82.5</span> 共軛先驗概率分布的總結</h2>
@@ -1823,6 +1823,153 @@ sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</s
 <pre><code>##       mean    sd MC_error val2.5pc median val97.5pc start sample
 ## theta  130 3.554  0.03855    123.1    130       137     1  10000</code></pre>
 <p>MC試驗10000次給出的事後均值是130.0，它和樣本均值相同，因爲此時我們給模型一個幾乎不含有效信息的先驗概率分佈時，意味着我們讓試驗獲得的數據做完全主導作用，“data speak for themselves”。</p>
+<p>C. Disease risk in a small area</p>
+<p>下面的BUGS模型代碼可以用來進行泊淞－伽馬分布似然的MC計算。在這個例子中，在某個區域我們觀察到５例白血病新病例，已知該區域的年齡性別標準化發病期望病例數是<span class="math inline">\(E = 2.8\)</span>。注意看我們在代碼中加入了兩種不同類型的先驗概率分布，一個是沒有太多信息的(vague prior distribution)<code>dgamma(0.1, 0.1)</code>，一個則是有一定信息的(informative prior, stribution) <code>dgamma(48, 40)</code>。我們把兩個先驗概率分布同時加在一個模型裏，這是十分便於進行兩種先驗概率對結果的影響的比較的手段。你當然可以把它寫成兩個不同的模型。注意模型代碼是如何表示事後概率分布和計算相對危險度比(relative risk)大於1的概率的。</p>
+<pre><code>model {
+
+    lambda[1]  ~ dgamma(0.1, 0.1)   # vague prior distribution
+    lambda[2]  ~ dgamma(48, 40)     # informative prior distribution
+
+    y[1]  ~ dpois(mu[1])             # sampling distribution
+    mu[1] &lt;- lambda[1] * 2.8
+
+    # repeat for second model
+    y[2] ~ dpois(mu[2])             # sampling distribution
+    mu[2] &lt;- lambda[2] * 2.8
+  
+  # Is relative risk &gt; 1
+  P.excess[1] &lt;- step(lambda[1] - 1) 
+  P.excess[2] &lt;- step(lambda[2] - 1)
+ 
+    # data
+    y[1] &lt;- 5
+    y[2] &lt;- 5             # replicate data to fit both models together
+
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/disease-model.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
+<span class="co"># they are aleady provided in the model specification</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P.excess[1]&quot;</span>, <span class="st">&quot;P.excess[2]&quot;</span>, <span class="st">&quot;lambda[1]&quot;</span>, <span class="st">&quot;lambda[2]&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;P.excess[1]&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;P.excess[2]&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;lambda[1]&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;lambda[2]&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 10000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##               mean     sd MC_error val2.5pc median val97.5pc start sample
+## P.excess[1] 0.8459 0.3610 0.003641   0.0000  1.000     1.000     1  10000
+## P.excess[2] 0.9268 0.2605 0.002188   0.0000  1.000     1.000     1  10000
+## lambda[1]   1.7660 0.7821 0.007282   0.5896  1.649     3.623     1  10000
+## lambda[2]   1.2390 0.1711 0.001643   0.9236  1.231     1.598     1  10000</code></pre>
+<p>在沒有信息的先驗概率(<code>dgamma(0.1, 0.1)</code>)分布條件下，該地區可能有較高白血病發病率的概率是85%，但是在有參考價值信息的先驗概率分布(<code>dgamma(48, 40)</code>)條件下，該地區可能有較高白血病發病率的概率是93%。所以，盡管相對危險度(relative risk)的事後均值在沒有信息的先驗概率分布條件下比較高(<code>lambda[1] = 1.766 &gt; lambda[2] = 1.239</code>)，但是沒有信息的先驗概率分布條件下，這個相對危險度大於1的概率(85%)要比有信息的先驗概率分布條件下相對危險度大於1的概率要低(93%)。這是因爲在沒有信息的先驗概率分布條件下，相對危險度估計本身有太多的不確定性(uncertainty，圖@ref(fig: R-OpenBUGS15))。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P.excess1 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.excess[1]&quot;</span>), 
+                    <span class="dt">P.excess2 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.excess[2]&quot;</span>), 
+                    <span class="dt">lambda1 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;lambda[1]&quot;</span>), 
+                    <span class="dt">lambda2 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;lambda[2]&quot;</span>))
+
+<span class="kw">boxplot</span>(chain<span class="op">$</span>lambda1,chain<span class="op">$</span>lambda2, <span class="dt">col =</span> <span class="st">&quot;green&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;lambda&quot;</span>, 
+        <span class="dt">outline=</span><span class="ot">FALSE</span>, <span class="dt">main =</span> <span class="st">&quot;boxplot: lambda&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">4</span>), 
+        <span class="dt">names =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>)) 
+<span class="kw">abline</span>(<span class="dt">h =</span> <span class="fl">1.5</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS15"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS15-1.png" alt="Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2)." width="80%" />
+<p class="caption">
+圖 82.7: Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2).
+</p>
+</div>
+<p>圖@ref(fig: R-OpenBUGS15)的箱式圖也告訴我們，相對危險度的事後概率分布在有信息的先驗概率分布條件下要精確得多，其標準差<code>sd[2] = 0.17</code>也要小得多 <code>sd[1] = 0.78</code>。所以，此時，先驗概率分布對我們的事後概率分布推斷產生了較大的影響，有信息的先驗概率分布把相對危險度的估計值更加拉近了1的同時(more realistic)，也使得相對危險度的事後概率估計變得更加精確。</p>
+<p>接下來，假設我們在該區域進行了更長時間的觀察，收集到100個新的白血病病例，同時在這段時間內病例的期望值只有56例。據此，重新改寫這個模型，在兩種先驗概率分布條件下，此時由於觀察數據信息量的增加，相對危險度的事後估計有怎樣的變化？</p>
+<pre><code>model {
+
+    lambda[1]  ~ dgamma(0.1, 0.1)   # vague prior distribution
+    lambda[2]  ~ dgamma(48, 40)     # informative prior distribution
+
+    y[1]  ~ dpois(mu[1])             # sampling distribution
+    mu[1] &lt;- lambda[1] * 56          # the expectation changed from 2.8 to 56
+
+    # repeat for second model
+    y[2] ~ dpois(mu[2])             # sampling distribution
+    mu[2] &lt;- lambda[2] * 56         # the expectation changed from 2.8 to 56
+  
+  # Is relative risk &gt; 1
+  P.excess[1] &lt;- step(lambda[1] - 1) 
+  P.excess[2] &lt;- step(lambda[2] - 1)
+ 
+    # data
+    y[1] &lt;- 100             # the observed new cases changed from 5 to 100
+    y[2] &lt;- 100             # replicate data to fit both models together
+
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/disease-modelupdated.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
+<span class="co"># they are aleady provided in the model specification</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P.excess[1]&quot;</span>, <span class="st">&quot;P.excess[2]&quot;</span>, <span class="st">&quot;lambda[1]&quot;</span>, <span class="st">&quot;lambda[2]&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;P.excess[1]&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;P.excess[2]&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;lambda[1]&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;lambda[2]&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 10000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##              mean     sd  MC_error val2.5pc median val97.5pc start sample
+## P.excess[1] 1.000 0.0000 1.000e-12    1.000  1.000     1.000     1  10000
+## P.excess[2] 1.000 0.0000 1.000e-12    1.000  1.000     1.000     1  10000
+## lambda[1]   1.786 0.1785 1.581e-03    1.449  1.779     2.147     1  10000
+## lambda[2]   1.541 0.1278 1.288e-03    1.301  1.537     1.799     1  10000</code></pre>
+<p>有了更多的觀察數據的模型，我們看到，相對危險度的事後估計<code>lambda[1], lambda[2]</code>都變得更加精確了，有了更小的標準差。這和我們的預期相同，因爲觀察數據增加自然會提高相對危險度估計的精確度。可是，我們發現在沒有信息的先驗概率分布條件下，相對危險度的事後估計幾乎沒有太大的變化(1.786 v.s. 1.766)。相反地，有信息的先驗概率分布條件下，相對危險度的事後估計比之前增加了不少(1.541 v.s. 1.239)。這主要是因爲，現在我們得到更多的觀察數據，這些數據得到的信息被給予了更多的權重，且觀察數據提示相對危險度應該要比較大(100/56 = 1.786)。</p>
+<p>盡管觀察數據確實給模型提供了較多的有價值的信息，你會發現，我們使用的第二個先驗概率分布（也就是有信息的先驗概率分布）仍然對相對危險度的事後估計起到了相當的影響(the prior variance is 0.03, giving prior sd of 0.17)。這也是因爲這個先驗概率分布給出的信息量，幾乎相當於觀察數據給出的信息量（二者的標準差很接近）。另外一種理解次現象的方法是看事後概率分布推導出的新的伽馬分布的計算式：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(\lambda | y, E) &amp; \propto p(\lambda) p (y | \lambda, E) \\ 
+                  &amp; \propto \frac{b^a}{\Gamma(a)}\lambda^{a-1}e^{-b\lambda} \frac{(\lambda E)^ye^{-\lambda E}}{y!} \\ 
+                  &amp; \propto \lambda^{a + y -1}e^{-(b+E)\lambda} \\ 
+                  &amp; = \text{Gamma}(a + y, b + E)
+\end{aligned}
+\]</span></p>
+<p>由於伽馬分布的方差（標準差）主要由第二個參數<span class="math inline">\((b + n)\)</span>決定，從上面的公式推導我們可以看見，事後伽馬分布的第二個參數<span class="math inline">\((b + E)\)</span>，分別是先驗概率分布的第二個參數<span class="math inline">\((b = 40)\)</span>，和觀察數據的期望值<span class="math inline">\((E = 56)\)</span>。由於這兩個數值大小接近，所以我們也可以理解此時先驗概率提供的信息和我們觀察數據提供的信息旗鼓相當。另外，在這個新的觀察數據條件下，我們無論使用哪個先驗概率分布做條件，都獲得了100%的結果也就是這個特定區域的白血病發病率大於期望值的概率是100%。也就是我們此時有100%的把握認爲這個特定區域的白血病發病率較高。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P.excess1 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.excess[1]&quot;</span>), 
+                    <span class="dt">P.excess2 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.excess[2]&quot;</span>), 
+                    <span class="dt">lambda1 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;lambda[1]&quot;</span>), 
+                    <span class="dt">lambda2 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;lambda[2]&quot;</span>))
+
+<span class="kw">boxplot</span>(chain<span class="op">$</span>lambda1,chain<span class="op">$</span>lambda2, <span class="dt">col =</span> <span class="st">&quot;green&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;lambda&quot;</span>, 
+        <span class="dt">outline=</span><span class="ot">FALSE</span>, <span class="dt">main =</span> <span class="st">&quot;boxplot: lambda&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">4</span>), 
+        <span class="dt">names =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>)) 
+<span class="kw">abline</span>(<span class="dt">h =</span> <span class="fl">1.66</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS17"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS17-1.png" alt="Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2) with more observations." width="80%" />
+<p class="caption">
+圖 82.8: Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2) with more observations.
+</p>
+</div>
+<p>D. James Bond Example.</p>
 </div>
 </div>
             </section>

@@ -1294,7 +1294,7 @@ $$
 E(\mu | \mathbf{y}) = \frac{a + n\bar y}{b + n} = \bar y (\frac{n}{n + b}) + \frac{a}{b}(1 - \frac{n}{n + b})
 $$
 
-也就是說事後概率分布的伽馬分布，它的均值（期望）是先驗概率分布的均值 $\frac{a}{b}$ 和數據樣本均值 $\bar y$ 相互妥協的結果。
+也就是說事後概率分布的伽馬分布，它的均值（期望）是先驗概率分布的均值 $\frac{a}{b}$ 和數據樣本均值 $\bar y$ 相互妥協的結果。泊淞－伽馬分布的模型常常可以用於估計發病率(rate)，或者相對危險度(relative risk)，反而較少用於估計率數據的均值(mean of possion data)。
 
 ## 共軛先驗概率分布的總結
 
@@ -1589,6 +1589,155 @@ print(sample.statistics)
 
 MC試驗10000次給出的事後均值是130.0，它和樣本均值相同，因爲此時我們給模型一個幾乎不含有效信息的先驗概率分佈時，意味着我們讓試驗獲得的數據做完全主導作用，"data speak for themselves"。
 
+C. Disease risk in a small area
+
+下面的BUGS模型代碼可以用來進行泊淞－伽馬分布似然的MC計算。在這個例子中，在某個區域我們觀察到５例白血病新病例，已知該區域的年齡性別標準化發病期望病例數是$E = 2.8$。注意看我們在代碼中加入了兩種不同類型的先驗概率分布，一個是沒有太多信息的(vague prior distribution)`dgamma(0.1, 0.1)`，一個則是有一定信息的(informative prior, stribution) `dgamma(48, 40)`。我們把兩個先驗概率分布同時加在一個模型裏，這是十分便於進行兩種先驗概率對結果的影響的比較的手段。你當然可以把它寫成兩個不同的模型。注意模型代碼是如何表示事後概率分布和計算相對危險度比(relative risk)大於1的概率的。
+
+```
+model {
+
+	lambda[1]  ~ dgamma(0.1, 0.1)   # vague prior distribution
+	lambda[2]  ~ dgamma(48, 40)     # informative prior distribution
+
+	y[1]  ~ dpois(mu[1])             # sampling distribution
+	mu[1] <- lambda[1] * 2.8
+
+	# repeat for second model
+	y[2] ~ dpois(mu[2])             # sampling distribution
+	mu[2] <- lambda[2] * 2.8
+  
+  # Is relative risk > 1
+  P.excess[1] <- step(lambda[1] - 1) 
+  P.excess[2] <- step(lambda[2] - 1)
+ 
+	# data
+	y[1] <- 5
+	y[2] <- 5             # replicate data to fit both models together
+
+}
+```
+
+```{r　R-OpenBUGS14, cache=TRUE, message=TRUE, warning=FALSE}
+
+
+# Step 1 check model
+modelCheck("backupfiles/disease-model.txt") 
+
+# compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as 
+# they are aleady provided in the model specification
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+samplesSet(parameters)
+
+# Generate 10000 iterations
+modelUpdate(10000)
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+```
+
+在沒有信息的先驗概率(`dgamma(0.1, 0.1)`)分布條件下，該地區可能有較高白血病發病率的概率是85%，但是在有參考價值信息的先驗概率分布(`dgamma(48, 40)`)條件下，該地區可能有較高白血病發病率的概率是93%。所以，盡管相對危險度(relative risk)的事後均值在沒有信息的先驗概率分布條件下比較高(`lambda[1] = 1.766 > lambda[2] = 1.239`)，但是沒有信息的先驗概率分布條件下，這個相對危險度大於1的概率(85%)要比有信息的先驗概率分布條件下相對危險度大於1的概率要低(93%)。這是因爲在沒有信息的先驗概率分布條件下，相對危險度估計本身有太多的不確定性(uncertainty，圖\@ref(fig: R-OpenBUGS15))。
+
+
+```{r R-OpenBUGS15, cache=TRUE, fig.width=4, fig.height=4, fig.cap='Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2).', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
+                    P.excess2 = samplesSample("P.excess[2]"), 
+                    lambda1 = samplesSample("lambda[1]"), 
+                    lambda2 = samplesSample("lambda[2]"))
+
+boxplot(chain$lambda1,chain$lambda2, col = "green", ylab = "lambda", 
+        outline=FALSE, main = "boxplot: lambda", ylim = c(0,4), 
+        names = c("1", "2")) 
+abline(h = 1.5)
+```
+
+圖\@ref(fig: R-OpenBUGS15)的箱式圖也告訴我們，相對危險度的事後概率分布在有信息的先驗概率分布條件下要精確得多，其標準差`sd[2] = 0.17`也要小得多 `sd[1] = 0.78`。所以，此時，先驗概率分布對我們的事後概率分布推斷產生了較大的影響，有信息的先驗概率分布把相對危險度的估計值更加拉近了1的同時(more realistic)，也使得相對危險度的事後概率估計變得更加精確。
+
+
+接下來，假設我們在該區域進行了更長時間的觀察，收集到100個新的白血病病例，同時在這段時間內病例的期望值只有56例。據此，重新改寫這個模型，在兩種先驗概率分布條件下，此時由於觀察數據信息量的增加，相對危險度的事後估計有怎樣的變化？
+
+
+```
+model {
+
+	lambda[1]  ~ dgamma(0.1, 0.1)   # vague prior distribution
+	lambda[2]  ~ dgamma(48, 40)     # informative prior distribution
+
+	y[1]  ~ dpois(mu[1])             # sampling distribution
+	mu[1] <- lambda[1] * 56          # the expectation changed from 2.8 to 56
+
+	# repeat for second model
+	y[2] ~ dpois(mu[2])             # sampling distribution
+	mu[2] <- lambda[2] * 56         # the expectation changed from 2.8 to 56
+  
+  # Is relative risk > 1
+  P.excess[1] <- step(lambda[1] - 1) 
+  P.excess[2] <- step(lambda[2] - 1)
+ 
+	# data
+	y[1] <- 100             # the observed new cases changed from 5 to 100
+	y[2] <- 100             # replicate data to fit both models together
+
+}
+```
+
+
+```{r　R-OpenBUGS16, cache=TRUE, message=TRUE, warning=FALSE}
+
+
+# Step 1 check model
+modelCheck("backupfiles/disease-modelupdated.txt") 
+
+# compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as 
+# they are aleady provided in the model specification
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+samplesSet(parameters)
+
+# Generate 10000 iterations
+modelUpdate(10000)
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+```
+
+有了更多的觀察數據的模型，我們看到，相對危險度的事後估計`lambda[1], lambda[2]`都變得更加精確了，有了更小的標準差。這和我們的預期相同，因爲觀察數據增加自然會提高相對危險度估計的精確度。可是，我們發現在沒有信息的先驗概率分布條件下，相對危險度的事後估計幾乎沒有太大的變化(1.786 v.s. 1.766)。相反地，有信息的先驗概率分布條件下，相對危險度的事後估計比之前增加了不少(1.541 v.s. 1.239)。這主要是因爲，現在我們得到更多的觀察數據，這些數據得到的信息被給予了更多的權重，且觀察數據提示相對危險度應該要比較大(100/56 = 1.786)。
+
+盡管觀察數據確實給模型提供了較多的有價值的信息，你會發現，我們使用的第二個先驗概率分布（也就是有信息的先驗概率分布）仍然對相對危險度的事後估計起到了相當的影響(the prior variance is 0.03, giving prior sd of 0.17)。這也是因爲這個先驗概率分布給出的信息量，幾乎相當於觀察數據給出的信息量（二者的標準差很接近）。另外一種理解次現象的方法是看事後概率分布推導出的新的伽馬分布的計算式：
+
+$$
+\begin{aligned}
+p(\lambda | y, E) & \propto p(\lambda) p (y | \lambda, E) \\ 
+                  & \propto \frac{b^a}{\Gamma(a)}\lambda^{a-1}e^{-b\lambda} \frac{(\lambda E)^ye^{-\lambda E}}{y!} \\ 
+                  & \propto \lambda^{a + y -1}e^{-(b+E)\lambda} \\ 
+                  & = \text{Gamma}(a + y, b + E)
+\end{aligned}
+$$
+
+由於伽馬分布的方差（標準差）主要由第二個參數$(b + n)$決定，從上面的公式推導我們可以看見，事後伽馬分布的第二個參數$(b + E)$，分別是先驗概率分布的第二個參數$(b = 40)$，和觀察數據的期望值$(E = 56)$。由於這兩個數值大小接近，所以我們也可以理解此時先驗概率提供的信息和我們觀察數據提供的信息旗鼓相當。另外，在這個新的觀察數據條件下，我們無論使用哪個先驗概率分布做條件，都獲得了100%的結果也就是這個特定區域的白血病發病率大於期望值的概率是100%。也就是我們此時有100%的把握認爲這個特定區域的白血病發病率較高。
+
+
+```{r R-OpenBUGS17, cache=TRUE, fig.width=4, fig.height=4, fig.cap='Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2) with more observations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
+                    P.excess2 = samplesSample("P.excess[2]"), 
+                    lambda1 = samplesSample("lambda[1]"), 
+                    lambda2 = samplesSample("lambda[2]"))
+
+boxplot(chain$lambda1,chain$lambda2, col = "green", ylab = "lambda", 
+        outline=FALSE, main = "boxplot: lambda", ylim = c(0,4), 
+        names = c("1", "2")) 
+abline(h = 1.66)
+```
+
+D. James Bond Example.
 
 # 馬爾可夫鏈蒙特卡羅MCMC，圖形模型，BUGS語言
 
