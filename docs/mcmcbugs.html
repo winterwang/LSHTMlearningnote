@@ -1051,6 +1051,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="83" data-path="mcmcbugs.html"><a href="mcmcbugs.html"><i class="fa fa-check"></i><b>83</b> 馬爾可夫鏈蒙特卡羅MCMC，圖形模型，BUGS語言</a><ul>
 <li class="chapter" data-level="83.1" data-path="mcmcbugs.html"><a href="mcmcbugs.html#markov-chain-monte-carlo-"><i class="fa fa-check"></i><b>83.1</b> Markov Chain Monte Carlo 馬爾可夫鏈蒙特卡羅算法</a><ul>
 <li class="chapter" data-level="83.1.1" data-path="mcmcbugs.html"><a href="mcmcbugs.html#simulation-methods"><i class="fa fa-check"></i><b>83.1.1</b> 爲什麼我們需要用計算機模擬算法(simulation methods)來進行貝葉斯統計推斷？</a></li>
+<li class="chapter" data-level="83.1.2" data-path="mcmcbugs.html"><a href="mcmcbugs.html#section-83.1.2"><i class="fa fa-check"></i><b>83.1.2</b> 吉布斯採樣</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="84" data-path="section-84.html"><a href="section-84.html"><i class="fa fa-check"></i><b>84</b> 建模和模型的檢查</a></li>
@@ -1187,6 +1188,18 @@ p(\mathbf{\theta}|x) \propto p(x|\mathbf{\theta})\times p(\mathbf{\theta})
 </ul>
 <p>那麼我們無法獲得解析解 (analytical solution/closed solution) 的情況下，只好求助於數學上的數值解 (numerical solution/intergration)。</p>
 <p>第二章 <a href="MC-estimation.html#MC-estimation">81</a> 我們已經見識過了蒙特卡羅模擬法可以用來從先驗概率分布，或者從<strong>閉合解形式(closed form)</strong>的事後概率分布中採樣計算的過程。如果我們可以把人類不可能完成的任務，也交給計算機來對無法獲取閉合解的事後概率分布做蒙特卡羅樣本採集的話，那麼貝葉斯統計學推斷就可以被推廣到幾乎任何一種模型，任何一種試驗設計中。</p>
+<p>所以，我們的目的是希望從無法獲得閉合解形式的多維(多變量)事後概率分布<span class="math inline">\(p(\mathbf{\theta}|x)\)</span>中採集樣本做計算機模擬實驗(simulation)。但是，現實中從這樣的事後概率分布中採集<strong>相互獨立(independent)</strong>的樣本，是不容易的一件事。反其道行之，科學家發現，從事後概率分布<strong>有依賴性的馬爾可夫鏈式樣本採集(dependent sampling from a Markov chain)</strong>，作爲一種穩態分布(stationary/equilibrium distribution)卻相對容易。</p>
+<p>一連串的隨機變量 <span class="math inline">\(\theta^{(0)},\theta^{(1)},\theta^{(2)},\cdots\)</span> 形成的<a href="https://en.wikipedia.org/wiki/Markov_chain">馬爾可夫鏈</a>，其重點在於 <span class="math inline">\(\theta^{(i + 1)} \sim p(\theta|\theta^{(i)}\)</span>，也就是在 <span class="math inline">\(\theta^{(i)}\)</span> 的條件下 <span class="math inline">\(\theta^{(i+1)}\)</span> 和它之前的樣本 <span class="math inline">\(\theta^{(i - 1)},\cdots,\theta^{(0)}\)</span>是獨立的。這樣的馬爾科夫鏈式採樣，需要特殊的方法來進行。<a href="https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm">美特羅波利斯-海斯廷斯(Metroplis-Hastings)算法(algorithm)</a>是其中的一種。而<a href="https://en.wikipedia.org/wiki/Gibbs_sampling">吉布斯(Gibbs)採樣法</a>是 Metropolis-Hastings 算法的一種特殊形態。吉布斯採樣法是從<strong>全條件分布(full conditional distributions)</strong>中產生一串馬爾科夫鏈的算法。我們下面來看看吉布斯採樣法的特徵和使用方法，其詳細的算法我們過後再來討論。</p>
+</div>
+<div id="section-83.1.2" class="section level3">
+<h3><span class="header-section-number">83.1.2</span> 吉布斯採樣</h3>
+<p>假設，現在我們在給定了數據 <span class="math inline">\(x\)</span> 之後，我們需要在關於它的一個未知參數的向量中<span class="math inline">\(\mathbf{\theta} = (\theta_1, \theta_2, \dots,\theta_k)\)</span>採集事後概率分布樣本。那麼吉布斯採樣法的具體過程描述如下：</p>
+<ol style="list-style-type: decimal">
+<li>把未知參數向量分成不同的成分，最簡單的就是每個元素爲一個部分 <span class="math inline">\(\mathbf{\theta} = (\theta_1, \theta_2, \dots,\theta_k)\)</span>；</li>
+<li>給每個部分/參數選取一個起始值(starting/initial values) <span class="math inline">\(\theta_1^{(0)},\theta_2^{(0)},\dots,\theta_k^{(0)}\)</span>；</li>
+<li>然後:<br>從<span class="math inline">\(p(\theta_1^{(1)}|\theta_2^{(0)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)\)</span>中採集 <span class="math inline">\(\theta_1^{(1)}\)</span><br>從<span class="math inline">\(p(\theta_2^{(1)}|\theta_1^{(1)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)\)</span>中採集<span class="math inline">\(\theta_2^{(1)}\)</span><br><span class="math inline">\(\vdots\)</span><br>從<span class="math inline">\(p(\theta_k^{(1)}|\theta_1^{(1)},\theta_2^{(1)},\dots,\theta_{k-1}^{(0)},x)\)</span>中採集<span class="math inline">\(\theta_k^{(1)}\)</span></li>
+<li>重復第3步 <span class="math inline">\(N\)</span> 次，我們就可以獲得一串參數的事後分布樣本 <span class="math inline">\(\mathbf{\theta}^{(0)},\mathbf{\theta}^{(1)},\dots,\mathbf{\theta}^{(N)}\)</span>。當 <span class="math inline">\(N\rightarrow\infty\)</span> 我們就獲得了多維事後概率分布的一個樣本 <span class="math inline">\(p(\mathbf{\theta}|x)\)</span>。</li>
+</ol>
 </div>
 </div>
 </div>
