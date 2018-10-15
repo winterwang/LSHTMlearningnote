@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="section-44.html">
-<link rel="next" href="section-46.html">
+<link rel="prev" href="section-80.html">
+<link rel="next" href="-conjugate-priors.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-bookdown.css" rel="stylesheet" />
@@ -1169,543 +1169,649 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="-logistic-regression-model" class="section level1">
-<h1><span class="header-section-number">第 45 章</span> 二項分佈數據的廣義線性迴歸模型 logistic regression model</h1>
-<p>二項分佈數據在醫學研究中很常見，例子有千千萬，下面這些只是作爲拋磚引玉：</p>
-<ol style="list-style-type: decimal">
-<li>心臟搭橋手術和血管成形術兩組病人比較療效時，結果變量可以是：死亡 (是/否)；心肌梗死發作 (是/否)；</li>
-<li>機械心臟瓣膜手術結果：成功/失敗；</li>
-<li>用小鼠作不同劑量二硫化碳暴露下的毒理學實驗，結果變量是：小鼠死亡 (是/否)；</li>
-<li>隊列研究中追蹤對象中出現心肌梗死病例，結果變量是：心肌梗死發作 (是/否)。</li>
-</ol>
-<div id="-grouped-individual-" class="section level2">
-<h2><span class="header-section-number">45.1</span> 彙總後/個人 (grouped / individual) 的二項分佈數據</h2>
-<p>下面的數據，來自某個毒理學實驗，不同劑量的二硫化碳暴露下小鼠的死亡數和總數的數據：</p>
-<pre><code>##    dose n_deaths n_subjects
-## 1 49.06        6         59
-## 2 52.99       13         60
-## 3 56.91       18         62
-## 4 60.84       28         56
-## 5 64.76       52         63
-## 6 68.69       53         59
-## 7 72.61       60         62
-## 8 76.54       59         60</code></pre>
-<p>很容易理解這是一個典型的彙總後二項分佈數據 (grouped binary data)。每組不同的劑量，第二列，第三列分別是死亡數和實驗總數。另外一種個人二項分佈數據 (individual binary data) 的形式是這樣的：</p>
-<pre><code>##     dose death
-## 1  49.06     1
-## 2  49.06     1
-## 3  49.06     1
-## 4  49.06     1
-## 5  49.06     1
-## 6  49.06     1
-## 7  49.06     0
-## 8  49.06     0
-## 9  49.06     0
-## 10 49.06     0
-## 11     .     .
-## 12     .     .
-## 13     .     .</code></pre>
-<p>個人二項分佈數據其實就是把每個觀察對象的事件發生與否的信息都呈現出來。通常個人二項分佈數據又被稱爲<strong>伯努利數據</strong>，分組型的二項分佈數據被稱爲<strong>二項數據</strong>。兩種表達形式，但是存儲的是一樣的數據。</p>
+<div id="MC-estimation" class="section level1">
+<h1><span class="header-section-number">第 81 章</span> 蒙特卡羅估計和預測 Mente Carlo estimation and prediction</h1>
+<div id="section-81.1" class="section level2">
+<h2><span class="header-section-number">81.1</span> 起源</h2>
+<div class="figure" style="text-align: center"><span id="fig:Bayes-problem"></span>
+<img src="img/BayesProblem.png" alt="Reproduction of part of the original printed Bayes paper." width="80%" />
+<p class="caption">
+圖 81.1: Reproduction of part of the original printed Bayes paper.
+</p>
 </div>
-<div id="section-45.2" class="section level2">
-<h2><span class="header-section-number">45.2</span> 二項分佈數據的廣義線性迴歸模型</h2>
-<p>而所有的 GLM 一樣，二項分佈的 GLM 包括三個部分：</p>
-<ol style="list-style-type: decimal">
-<li>因變量的分佈 Distribution：因變量應相互獨立，且服從二項分佈 <br> <span class="math display">\[\begin{aligned} Y_i &amp;\sim \text{Bin}(n_i, \pi_i), i = 1, \cdots, n \\ E(Y_i) &amp;= \mu_i = n_i\pi_i\end{aligned}\]</span></li>
-<li>線性預測方程 Linear predictor：第 <span class="math inline">\(i\)</span> 名觀測對象的預測變量的線性迴歸模型 <br> <span class="math display">\[\eta_i = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}\]</span></li>
-<li>鏈接方程 Link function：鏈接方程連接的是 <span class="math inline">\(\mu_i = n\pi_i\)</span> 和線性預測方程。一個二項分佈因變量數據，可以有許多種鏈接方程：
+<p>一切都開始於1763年，英國東南地區叫做唐橋井 (Tunbridge Wells) 的地方有個叫做託馬斯貝葉斯的牧師死後，他的朋友將他遺留下的手稿發表於世。圖 <a href="MC-estimation.html#fig:Bayes-problem">81.1</a> 是他遺作論文的節選。這段話使用的當時的英文有點令人摸不着頭腦，但其實翻譯成現代文的意思是（這裏請在大腦中想象我們最長使用的投擲一枚可能有偏的硬幣的場景）：我們一共投擲硬幣 <span class="math inline">\(n\)</span> 次，這其中有 <span class="math inline">\(y\)</span> 次硬幣是正面朝上的（事件發生）。假定 <span class="math inline">\(y\)</span> 服從參數爲 <span class="math inline">\(\theta\)</span> 的二項分布：<span class="math inline">\(y \sim \text{Binomial}(\theta, n)\)</span>，那麼<span class="math inline">\(\theta\)</span>就是硬幣正面朝上的概率。</p>
+<p>貝葉斯牧師感興趣的是，參數<span class="math inline">\(\theta\)</span>，落在某個範圍內 <span class="math inline">\(\text{Pr}(\theta_1 &lt; \theta &lt; \theta_2 | y, n)\)</span>的<strong>可能性(chance)</strong>。這句話，在當年那個概率論持有者爲主流的社會中是極爲危險而且激進的 (radical) ，因爲貝葉斯牧師使用<strong>可能性 (chance)</strong>來描述一個參數的不確定性(uncertainty)。本質上說，貝葉斯牧師打算對一個無法直接觀測的參數用一個簡單直接的數學表達式來描述它的不確定性。這句話對於概率論觀點持有者佔主流的統計學領域來說，是一種明顯的異端邪說。因爲在概率論觀點持有者的語境下，概率是在無數次可重復實驗中事件發生的平均次數 (probability is interpreted in terms of a long run sequence of events)，這個無法觀測到的參數，是不會改變的 (the key idea is that the unknown parameter is considered to be a random variable under Bayesian theory, rather than fixed but unknown)。</p>
+<p>我們在第一章也看到了，貝葉斯牧師提出的理論有助於我們直接，正面地回答研究中我們想知道的問題。圖 <a href="MC-estimation.html#fig:Bayes-tinmouth">81.2</a> 提供了一個很好的例子，它節選自論文<span class="citation">(Tinmouth et al. <a href="#ref-tinmouth2004low">2004</a>)</span>中，該文的作者是這樣描述的：“There is an 89% probability that the absolute increase in major bleeds is less than 10 percent with low-dose PLT transfusions. (使用低劑量PLT輸血時，患者大出血的出血量增加的絕對值小於10%的可能性是89%。)”</p>
+<div class="figure" style="text-align: center"><span id="fig:Bayes-tinmouth"></span>
+<img src="img/tinmouthBayes.png" alt="Example of a direct expression about an unknown parameter." width="50%" />
+<p class="caption">
+圖 81.2: Example of a direct expression about an unknown parameter.
+</p>
+</div>
+<p>像圖 <a href="MC-estimation.html#fig:Bayes-tinmouth">81.2</a> 這樣使用一個概率分布來描述我們想知道的參數有什麼好處呢？</p>
 <ul>
-<li><span class="math inline">\(\mathbf{logit}:\)</span> <span class="math display">\[\text{logit}(\pi) = \text{ln}(\frac{\pi}{1-\pi})\]</span></li>
-<li><span class="math inline">\(\mathbf{probit}:\)</span> <span class="math display">\[\text{probit}(\pi) = \Phi^{-1}(\pi)\]</span></li>
-<li><span class="math inline">\(\mathbf{complementary\; log-log}:\)</span> <span class="math display">\[\text{cloglog}(\pi) = \text{ln}\{ - \text{ln}(1-\pi) \}\]</span></li>
-<li><span class="math inline">\(\mathbf{log:}\)</span> <span class="math display">\[\text{log}(\pi) = \text{ln}(\pi)\]</span></li>
-</ul></li>
-</ol>
-</div>
-<div id="logit-or-log" class="section level2">
-<h2><span class="header-section-number">45.3</span> 注</h2>
-<ol style="list-style-type: decimal">
-<li>概率鏈接方程 <span class="math inline">\(\text{probit}\)</span>，<span class="math inline">\(\Phi\)</span> 被定義爲標準正態分佈的累積概率方程 (Section <a href="section-7.html#standardNormal">7.3</a>)： <span class="math display">\[\Phi(z) = \text{Pr}(Z \leqslant z), \text{ for } Z\sim N(0,1)\]</span></li>
-<li>二項分佈數據的標準參數 (canonical parameter) <span class="math inline">\(\theta_i\)</span> 的標準鏈接方程是 <span class="math inline">\(\theta_i = \text{logit}(\pi_i)\)</span>。</li>
-<li><span class="math inline">\(\text{logit, probit, complementary log-log}\)</span> 三種鏈接方程都能達到把閾值僅限於 <span class="math inline">\(0 \sim 1\)</span> 之間的因變量概率映射到線性預測方程的全實數閾值 <span class="math inline">\((-\infty,+\infty)\)</span> 的目的。但是最後一個 <span class="math inline">\(\text{log}\)</span> 鏈接方程只能映射全部的非零負實數 <span class="math inline">\((-\infty,0)\)</span>。</li>
-<li><span class="math inline">\(\text{logit, probit}\)</span> 鏈接方程都是以 <span class="math inline">\(\pi= 0.5\)</span> 爲對稱軸左右對稱的。但是 <span class="math inline">\(\text{cloglog}\)</span> 則沒有對稱的性質。</li>
-<li>鏈接方程 <span class="math inline">\(\text{log}\)</span> 具有可以直接被解讀爲對數危險度比 (log Risk Ratio) 的優點，所以也常常在應用中見到。對數鏈接方程還有其他的優點 (非塌陷性 non-collapsibility)，但是它的最大缺點是，有時候利用這個鏈接方程的模型無法收斂 (converge)。</li>
-<li><span class="math inline">\(\text{logit}\)</span> 鏈接方程是我們最常見的，也最直觀易於理解。利用這個鏈接方程擬合的模型的迴歸係數能夠直接被理解爲對數比值比 (log Odds Ratio)。</li>
-<li>如果是個人數據 (individual data)，那麼 <span class="math inline">\(n_i = 1\)</span>，<span class="math inline">\(i\)</span> 是每一個觀測對象的編碼。那麼 <span class="math inline">\(Y_i = 0\text{ or }1\)</span>，代表事件發生或沒發生/成功或者失敗。如果是分組數據 (grouped data)，<span class="math inline">\(i\)</span> 是每個組的編號，<span class="math inline">\(n_i\)</span> 指的是第 <span class="math inline">\(i\)</span> 組中觀測對象的人數，<span class="math inline">\(Y_i\)</span> 是第 <span class="math inline">\(i\)</span> 組的 <span class="math inline">\(n\)</span> 名對象中事件發生的次數/成功的次數。</li>
-</ol>
-<hr />
-<div id="exercise.-link-functions." class="section level3">
-<h3><span class="header-section-number">45.3.1</span> Exercise. Link functions.</h3>
-<p>推導出鏈接參數分別是</p>
-<ol style="list-style-type: decimal">
-<li><span class="math inline">\(\text{log}\)</span></li>
-<li><span class="math inline">\(\text{logit}\)</span></li>
-<li><span class="math inline">\(\text{complementary log-log}\)</span></li>
-</ol>
-<p>時，用參數 <span class="math inline">\(\alpha, \beta_1, \cdots, \beta_p\)</span> 表達的參數 <span class="math inline">\(\pi_i=?, E(Y_i)=\mu_i=?\)</span></p>
-<p><strong>解</strong></p>
-<ol style="list-style-type: decimal">
-<li><p><span class="math inline">\(\text{log}\)</span> <span class="math display">\[
-\begin{aligned}
-\text{ln}(\pi_i) &amp; = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip} \\
-\Rightarrow \pi_i &amp; = e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}} \\
-        \mu_i &amp; = n_i\pi_i = n_i e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}}
-\end{aligned}
-\]</span></p></li>
-<li><p><span class="math inline">\(\text{logit}\)</span></p></li>
-</ol>
-<p><span class="math display">\[
-\begin{aligned}
-\text{logit}(\pi_i) &amp; = \text{ln}(\frac{\pi_i}{1-\pi_i})  \\
-                    &amp; = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip} \\
-\Rightarrow \pi_i   &amp; = \frac{e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}}}{1+e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}}} \\
-              \mu_i &amp; = \frac{n_i e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}}}{1+e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}}}
-\end{aligned}
-\]</span></p>
-<ol start="3" style="list-style-type: decimal">
-<li><span class="math inline">\(\text{complementary log-log}\)</span></li>
-</ol>
-<p><span class="math display">\[
-\begin{aligned}
-\text{cloglog}(\pi_i) &amp; = \text{ln}\{ - \text{ln}(1-\pi) \} \\
-                      &amp; = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip} \\
-\Rightarrow \pi_i     &amp; = 1 - e^{-e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}}} \\
-            \mu_i     &amp; = n_i\pi_i = n_i(1-e^{-e^{\alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}}})
-\end{aligned}
-\]</span></p>
-<hr />
-</div>
-</div>
-<div id="section-45.4" class="section level2">
-<h2><span class="header-section-number">45.4</span> 邏輯迴歸模型迴歸係數的實際意義</h2>
-<p>邏輯迴歸 (logistic regression) 的模型可以寫成是</p>
-<p><span class="math display">\[
-\text{logist}(\pi_i) = \text{ln}(\frac{\pi_i}{1-\pi_i}) = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}
-\]</span></p>
-<p>假如觀察對象 <span class="math inline">\(j\)</span> 和 <span class="math inline">\(i\)</span> 兩人中，其餘的預測變量都相同，二者之間有且僅有最後一個預測變量相差一個單位：</p>
-<p><span class="math display">\[
-\begin{aligned}
-\text{logit}(\pi_j) &amp; = \text{ln}(\frac{\pi_j}{1-\pi_j}) = \alpha + \beta_1 x_{j1} + \beta_2 x_{j2} + \cdots + \beta_p x_{jp} \\
-\text{logit}(\pi_i) &amp; = \text{ln}(\frac{\pi_i}{1-\pi_i}) = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip} \\
-\text{Because they are} &amp; \text{ in the same model share the same parameters, and } \\
-x_{jp} &amp; = x_{ip} + 1\\
-\Rightarrow \text{logit}(\pi_j) - \text{logit}(\pi_i) &amp; = \beta_p (x_{jp} + 1 - x_{jp}) = \beta_p \\
-\Rightarrow \beta_p &amp; =  \text{ln}(\frac{\pi_j}{1-\pi_j})  -  \text{ln}(\frac{\pi_i}{1-\pi_i})  \\
-                    &amp; = \text{ln}(\frac{\frac{\pi_j}{1-\pi_j}}{\frac{\pi_i}{1-\pi_i}}) \\
-                    &amp; = \text{ln}(\text{Odds Ratio})
-\end{aligned}
-\]</span></p>
-<p>所以迴歸係數 <span class="math inline">\(\beta_p\)</span> 可以被理解爲是 <span class="math inline">\(j\)</span> 與 <span class="math inline">\(i\)</span> 相比較時的對數比值比 log Odds Ratio。我們只要對迴歸係數求反函數，即可求得比值比。</p>
-</div>
-<div id="BSEinfection" class="section level2">
-<h2><span class="header-section-number">45.5</span> 邏輯迴歸實際案例</h2>
-<p>一組數據如下：</p>
-<p>其中，牲畜來自兩大羣 (group)；每羣有五個組的牲畜被飼養五種不同濃度的飼料 (dfactor)；每組牲畜我們記錄了牲畜的總數 (cattle) 以及感染了瘋牛病的牲畜數量 (infect)：</p>
-<pre><code>##    group dfactor cattle infect
-## 1      1       1     11      8
-## 2      1       2     10      7
-## 3      1       3     12      5
-## 4      1       4     11      3
-## 5      1       5     12      2
-## 6      2       1     10     10
-## 7      2       2     10      9
-## 8      2       3     12      8
-## 9      2       4     11      6
-## 10     2       5     10      4</code></pre>
-<div id="section-45.5.1" class="section level3">
-<h3><span class="header-section-number">45.5.1</span> 分析目的</h3>
-<p>通過對本數據的分析，回答如下的問題：</p>
-<ol style="list-style-type: decimal">
-<li>考慮了牲畜來自兩羣以後，不同的飼料 (dfactor) 是否和感染瘋牛病有關？</li>
-<li>兩羣牲畜之間，飼料和瘋牛病感染之間的關係是否不同？</li>
-</ol>
-</div>
-<div id="-1--" class="section level3">
-<h3><span class="header-section-number">45.5.2</span> 模型 1 飼料 + 羣</h3>
-<p><span class="math display">\[
-\begin{aligned}
-\text{Assume } Y_i &amp; \sim \text{Bin} (n_i, \pi_i) \\
-\text{logit}(\pi_i) &amp; = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2}
-\end{aligned}
-\]</span></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw">cbind</span>(infect, cattle <span class="op">-</span><span class="st"> </span>infect) <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(group) <span class="op">+</span><span class="st"> </span>dfactor, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit), <span class="dt">data =</span> Cattle)
-<span class="kw">summary</span>(Model1)</code></pre></div>
-<pre><code>## 
-## Call:
-## glm(formula = cbind(infect, cattle - infect) ~ factor(group) + 
-##     dfactor, family = binomial(link = logit), data = Cattle)
-## 
-## Deviance Residuals: 
-##      Min        1Q    Median        3Q       Max  
-## -0.60847  -0.17831   0.10110   0.31150   1.16876  
-## 
-## Coefficients:
-##                Estimate Std. Error z value   Pr(&gt;|z|)    
-## (Intercept)     2.13104    0.61130  3.4861  0.0004902 ***
-## factor(group)2  1.30590    0.46540  2.8060  0.0050163 ** 
-## dfactor        -0.78744    0.18135 -4.3422 0.00001411 ***
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance: 33.52556  on 9  degrees of freedom
-## Residual deviance:  2.45082  on 7  degrees of freedom
-## AIC: 32.2537
-## 
-## Number of Fisher Scoring iterations: 4</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model1)</code></pre></div>
-<pre><code>##  
-##                        OR  lower95ci  upper95ci       Pr(&gt;|Z|)
-## factor(group)2 3.69102114 1.48251011 9.18957451 0.005016342395
-## dfactor        0.45500721 0.31889988 0.64920551 0.000014109282</code></pre>
-<p>於是，我們可以寫下這個邏輯迴歸的數學模型：</p>
-<p><span class="math display">\[
-\begin{aligned}
-\text{logit}(\hat\pi_i) &amp; = \text{ln}(\frac{\hat\pi_i}{1-\hat\pi_i})  = \hat\alpha + \hat\beta_1 x_{i1} + \hat\beta_2 x_{i2} \\
-                        &amp; = 2.1310 - 0.7874 \times \text{dfactor} + 1.3059 \times \text{group}
-\end{aligned}
-\]</span></p>
-<p><strong>解讀這些參數估計的意義</strong></p>
-<ul>
-<li>截距 <span class="math inline">\(\hat\alpha = 2.1310\)</span> 的含義是，當 <span class="math inline">\(x_{1}, x_{2}\)</span> 都等於零，i.e. 飼料濃度 0，在第一羣的那些牲畜感染瘋牛病的<strong>對數比值 (log-odds)</strong>；</li>
-<li>斜率 <span class="math inline">\(\hat\beta_1 = -0.7874\)</span> 的含義是，當牲畜羣不變時，飼料濃度每增加一個單位，牲畜感染瘋牛病的<strong>對數比值的估計變化量 (estimated increase in log odds of infection)</strong>；</li>
-<li>迴歸係數 <span class="math inline">\(\hat\beta_2 = 1.3059\)</span> 的含義是，當飼料濃度不變時，兩羣牲畜之間感染瘋牛病的<strong>對數比值比 (log-Odds Ratio)</strong>，所以第二羣牲畜比第一羣牲畜感染瘋牛病的比值比的估計量，以及 <span class="math inline">\(95\%\text{CI}\)</span> 的計算方法就是：<br> <span class="math display">\[\begin{aligned} \text{exp}(\hat\beta_2) &amp; = \text{exp}(1.3059) = 3.69,\\ \text{ with 95% CI: } &amp; \text{exp}(\hat\beta_2 \pm 1.96\times \text{Std.Error}_{\hat\beta_2}) \\  &amp; = (1.48, 9.19) \end{aligned}\]</span></li>
+<li>最重要的好處是，用概率分布描述這個未知參數可以直觀地告訴我們這個參數它本身可能分布的範圍，和在各自分布點時的可能性。</li>
+<li>沒有 p 值，因爲我們要計算整個參數可能分布的範圍，這是概率密度分布的面積。</li>
+<li>沒有(難以令人理解的)信賴區間的概念(confidence interval)，相反地，我們需要盡可能詳細地描述參數可能的分布，它的中位數，它的均值，它可能取值的範圍，它中間包含了95%可信範圍的參數(credible interval)</li>
+<li>方便地直接應用於預測。</li>
+<li>自然地適用於決策分析 (decision analysis)，經濟學的成本效益分析 (cost-effective analysis)等。</li>
+<li>貝葉斯理論讓我們從數學上把經驗（已經發表的實驗結果，以及已有的專家意見）納入到參數的估計上來，這是一個自我學習進化的過程。</li>
 </ul>
 </div>
-<div id="-2---times-" class="section level3">
-<h3><span class="header-section-number">45.5.3</span> 模型 2 增加交互作用項 飼料 <span class="math inline">\(\times\)</span> 羣</h3>
-<p>飼料濃度與瘋牛病感染之間的關係，是否因爲牲畜所在的 “羣” 不同而發生改變？</p>
-<p>定義增加了飼料和羣交互作用項的邏輯迴歸模型：</p>
-<p><span class="math display">\[
-\text{logit}(\pi_i) = \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i1}\times x_{i2}
-\]</span></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model2 &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw">cbind</span>(infect, cattle <span class="op">-</span><span class="st"> </span>infect) <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(group) <span class="op">+</span><span class="st"> </span>dfactor <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(group)<span class="op">*</span>dfactor, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit), <span class="dt">data =</span> Cattle)
-<span class="kw">summary</span>(Model2)</code></pre></div>
-<pre><code>## 
-## Call:
-## glm(formula = cbind(infect, cattle - infect) ~ factor(group) + 
-##     dfactor + factor(group) * dfactor, family = binomial(link = logit), 
-##     data = Cattle)
-## 
-## Deviance Residuals: 
-##      Min        1Q    Median        3Q       Max  
-## -0.71914  -0.16508  -0.02111   0.34451   1.00127  
-## 
-## Coefficients:
-##                        Estimate Std. Error z value Pr(&gt;|z|)   
-## (Intercept)             1.89028    0.73584  2.5689 0.010203 * 
-## factor(group)2          1.98867    1.34471  1.4789 0.139172   
-## dfactor                -0.70508    0.22955 -3.0716 0.002129 **
-## factor(group)2:dfactor -0.20583    0.37553 -0.5481 0.583619   
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance: 33.52556  on 9  degrees of freedom
-## Residual deviance:  2.14476  on 6  degrees of freedom
-## AIC: 33.9477
-## 
-## Number of Fisher Scoring iterations: 4</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model2)</code></pre></div>
-<pre><code>##  
-##                                OR  lower95ci    upper95ci     Pr(&gt;|Z|)
-## factor(group)2         7.30580425 0.52365757 101.92686809 0.1391720038
-## dfactor                0.49406759 0.31506152   0.77477816 0.0021289774
-## factor(group)2:dfactor 0.81396890 0.38989883   1.69927508 0.5836187644</code></pre>
-<p>從輸出的報告來看，增加了交互作用項以後，在第一羣牲畜中，飼料濃度每增加一個單位，感染瘋牛病的比值比 (OR) 是</p>
-<p><span class="math display">\[
-\text{exp}(-0.7051) = 0.49
-\]</span></p>
-<p>在第二羣牲畜中，飼料濃度每增加一個單位，感染瘋牛病的比值比 (OR) 變成了</p>
-<p><span class="math display">\[
-\text{exp}(-0.7051 - 0.2058) = 0.40
-\]</span></p>
-<p>通過對 <span class="math inline">\(\hat\beta_3 = 0\)</span> 的假設檢驗，就可以推斷飼料濃度和感染瘋牛病之間的關係是否因爲不同牲畜 “羣” 而不同。所以上面的報告中也已經有了交互作用項的檢驗結果 <span class="math inline">\(p = 0.584\)</span>，所以，此處可以下的結論是：沒有足夠的證據證明交互作用存在。</p>
+<div id="-inference-on-proportions" class="section level2">
+<h2><span class="header-section-number">81.2</span> 百分比的統計學推斷 inference on proportions</h2>
+<p>我們先用一個新藥的臨牀試驗來作爲例子。</p>
+<div id="example-new-drug" class="section level3">
+<h3><span class="header-section-number">81.2.1</span> Example: New Drug</h3>
+<p>有一種新研發的被用於治療慢性疼痛的藥物。爲了對其有效性進行科學客觀的評價，研究者需要組織一項評價其效用的小規模臨牀試驗。在實施這項臨牀試驗之前，我們自己心裏就會提出一個問題，這個新藥物用於治療慢性疼痛時有療效的百分比有可能會是多少（期望值，expectation）？</p>
+<p>假如經驗告訴我們，相似成分的藥物可能達到的有療效百分比是在0.2-0.6之間。那麼我們可以把這個經驗翻譯成爲，有效率的期望可能服從某個分布，其均值是0.4，標準差是 0.1，下一步就是用一個能夠具有這樣的均值和標準差特徵的分布來表達這個經驗。我們在數學的寶庫中發現了 Beta 分布這個可以用於描述百分比的分布。</p>
 </div>
-</div>
-<div id="glm-practical-03" class="section level2">
-<h2><span class="header-section-number">45.6</span> GLM-Practical 03</h2>
-<p>數據來自一個毒理學實驗，該實驗中 8 組昆蟲在不同濃度的二硫化碳下暴露四個小時，實驗的目的是研究二硫化碳劑量和昆蟲死亡率之間的關系。</p>
-<div id="section-45.6.1" class="section level3">
-<h3><span class="header-section-number">45.6.1</span> 昆蟲的死亡率</h3>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Insect &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;backupfiles/INSECT.RAW&quot;</span>, <span class="dt">header =</span>  <span class="ot">FALSE</span>, <span class="dt">sep =</span><span class="st">&quot;&quot;</span>, <span class="dt">col.names =</span> <span class="kw">c</span>(<span class="st">&quot;dose&quot;</span>, <span class="st">&quot;n_deaths&quot;</span>, <span class="st">&quot;n_subjects&quot;</span>))
-<span class="kw">print</span>(Insect)</code></pre></div>
-<pre><code>##    dose n_deaths n_subjects
-## 1 49.06        6         59
-## 2 52.99       13         60
-## 3 56.91       18         62
-## 4 60.84       28         56
-## 5 64.76       52         63
-## 6 68.69       53         59
-## 7 72.61       60         62
-## 8 76.54       59         60</code></pre>
-<ol style="list-style-type: decimal">
-<li>計算每組實驗濃度下死亡昆蟲的比例</li>
-</ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Insect &lt;-<span class="st"> </span>Insect <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">p =</span> n_deaths<span class="op">/</span>n_subjects)
-<span class="kw">print</span>(Insect)</code></pre></div>
-<pre><code>##    dose n_deaths n_subjects          p
-## 1 49.06        6         59 0.10169492
-## 2 52.99       13         60 0.21666667
-## 3 56.91       18         62 0.29032258
-## 4 60.84       28         56 0.50000000
-## 5 64.76       52         63 0.82539683
-## 6 68.69       53         59 0.89830508
-## 7 72.61       60         62 0.96774194
-## 8 76.54       59         60 0.98333333</code></pre>
-<ol start="2" style="list-style-type: decimal">
-<li>將濃度和死亡比例做散點圖</li>
-</ol>
-<div class="figure" style="text-align: center"><span id="fig:GLM-exe-3-3"></span>
-<img src="bookdown_files/figure-html/GLM-exe-3-3-1.png" alt="Scatter plot of CS2 dose and proportion killed." width="80%" />
+<div id="beta-" class="section level3">
+<h3><span class="header-section-number">81.2.2</span> Beta 分布</h3>
+<p>Beta 分布的特徵是取值範圍嚴格限定在0, 1之間，這就滿足了百分比數值的取值範圍條件。它由兩個參數來決定分布的特徵。</p>
+<p>我們用 <span class="math inline">\(\theta \sim \text{Beta}(a, b)\)</span> 標記 Beta 分布。它的特徵值有：　</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(\theta|a, b) &amp; = \frac{\Gamma(a + b)}{\Gamma(a)\Gamma(b)}\theta^{a-1}(1-\theta)^{b-1}; \theta \in (0,1) \\
+\text{E}(\theta|a, b) &amp; = \frac{a}{a+b} \\
+\text{V}(\theta|a, b) &amp; = \frac{ab}{(a+b)^2(a + b + 1)}
+\end{aligned}
+\]</span></p>
+<p>其中 <span class="math inline">\(\Gamma(a) = (a-1)!\)</span> 是一個伽瑪方程。</p>
+<p>正如我們在貝葉斯入門的章節<a href="section-41.html#beta-distribution-intro">41.2.1</a>也介紹過的那樣，Beta分布的一些形狀特徵總結如下：</p>
+<div class="figure" style="text-align: center"><span id="fig:beta-distr-bayes"></span>
+<img src="bookdown_files/figure-html/beta-distr-bayes-1.png" alt="Shape of some Beta distribution functions for various values of a, b" width="90%" />
 <p class="caption">
-圖 45.1: Scatter plot of CS2 dose and proportion killed.
+圖 81.3: Shape of some Beta distribution functions for various values of a, b
 </p>
 </div>
-<p>這裏如果使用<strong>線性回歸模型是不合適的</strong>，這是因爲:</p>
+<p>回到新藥試驗的話題上來看，我們的經驗被翻譯成了均值爲0.4, 標準差0.1，那麼把它們帶入Beta分布的均值方差的特徵值公式中去，就可以求得相對應的Beta分布：<span class="math inline">\(\text{Beta}(9.2, 13.8)\)</span></p>
+<p><span class="math display">\[
+\begin{aligned}
+\theta &amp; \sim \text{Beta}(9.2, 13.8) \\ 
+\text{E}(\theta) &amp; = \frac{9.2}{9.2 + 13.8} = 0.4 \\
+\text{V}(\theta) &amp; = \frac{9.2\times13.8}{(9.2 + 13.8)^2(9.2+13.8+1)} = 0.01 = 0.1^2
+\end{aligned}
+\]</span></p>
+<p>這個本來只是一句話的經驗，就被我們成功用Beta分布翻譯成了數學模型可以使用的分布方程，它的概率密度曲線如下，使用這個Beta分布的含義就是，經驗告訴我們相似成分的藥物可能達到的有療效百分比是在0.2-0.6之間：</p>
+<div class="figure" style="text-align: center"><span id="fig:beta-distr-drug"></span>
+<img src="bookdown_files/figure-html/beta-distr-drug-1.png" alt="Prior distribution for Drug Example" width="90%" />
+<p class="caption">
+圖 81.4: Prior distribution for Drug Example
+</p>
+</div>
+</div>
+<div id="section-81.2.3" class="section level3">
+<h3><span class="header-section-number">81.2.3</span> 作出預測</h3>
+<p>在臨牀試驗觀測到有療效人數 <span class="math inline">\(y\)</span> 之前，我們可以通過把未知參數積分消除(intergrate out)的方法給出預測分布：</p>
+<p><span class="math display">\[
+p(y) = \int p(y|\theta)p(\theta)d\theta
+\]</span></p>
+<p>預測在很多領域都可以得到廣泛的應用，比如做天氣預報，經濟學上的成本效益分析，進行實驗設計，以及用於檢驗觀測數據是否和期望值相匹配，等等。</p>
+</div>
+<div id="example-" class="section level3">
+<h3><span class="header-section-number">81.2.4</span> Example: 新藥表現預測</h3>
+<p>我們再回到新藥治療慢性疼痛的臨牀試驗上來，假設我們設計接納20名患者進入這個臨牀試驗。那麼我們可能想根據已有的經驗，來預測一下這進來的20名患者中藥物有效的人數。</p>
+<p>我們已經知道用 Beta 分布來描述經驗（也就是先驗概率 prior distribution），此時，我們再加入用 <span class="math inline">\(y\)</span> 標記20名患者中有效人數的隨機變量。那麼很自然地，我們會使用二項分布作爲 <span class="math inline">\(y\)</span> 的理想模型：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\theta &amp; \sim \text{Beta} (a,b) \\
+y &amp; \sim \text{Binomial}(\theta, n)
+\end{aligned}
+\]</span></p>
+<p>這個模型的預測模型能夠被計算得到（甚至不需要用到計算機），且它有個自己的專有名字 <strong>Beta-Binomial</strong>，它的概率方程是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(y) &amp; = \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}\binom{n}{y}\frac{\Gamma(a + y)\Gamma(b + n - y)}{\Gamma(a + b + n)} \\
+     &amp; = \binom{n}{y}\frac{B(a + y, b + n -y)}{B(a,b)}
+\end{aligned}
+\]</span> 其中，<span class="math inline">\(B(a,b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}\)</span>；</p>
+<p>均值是：</p>
+<p><span class="math display">\[
+\text{E}(Y) = n\frac{a}{a + b}
+\]</span></p>
+<p>那麼我們在進行這項試驗時我們可以預測，20名患者中有療效人數出現的概率，我們將它的預測概率分布圖和先驗概率分布放在一起：</p>
+<div class="figure" style="text-align: center"><span id="fig:Beta-binomial-def"></span>
+<img src="bookdown_files/figure-html/Beta-binomial-def-1.png" alt="Prior and predictive distribution for the drug example." width="90%" />
+<p class="caption">
+圖 81.5: Prior and predictive distribution for the drug example.
+</p>
+</div>
+<p>我們根據這個預測概率分布，或者預測概率方程，可以計算“20名患者中有15名或者更多的患者的症狀得到改善”這一事件出現的概率會是：</p>
+<p><span class="math display">\[
+P(y \geqslant 15) = \sum_{15}^{20}p(y) = 0.015
+\]</span></p>
+</div>
+</div>
+<div id="section-81.3" class="section level2">
+<h2><span class="header-section-number">81.3</span> 蒙特卡羅估計</h2>
+<p>但是在一般的情況下，像這個新藥臨牀試驗這樣能夠獲得一個閉環式 (closed-form) 概率預測概率方程的情況少之又少，有時候幾乎是不太可能完成的任務。假設我們本來也無法順利計算出上面的 Beta-Binomial概率公式，我們是否有其他的手段來獲得我們想要的預測概率結果呢？答案是，有的。人類發明的計算機，可以通過模擬試驗的方式(computer simulation)幫我們計算這個結果，它有個很酷的名字，叫做蒙特卡羅積分 (Monte Carlo integration)。</p>
+<div id="section-81.3.1" class="section level3">
+<h3><span class="header-section-number">81.3.1</span> 用蒙特卡羅法估計概率分佈尾側累積概率(面積)</h3>
+<p>假設要求一個很簡單的問題，一枚完美的硬幣，投擲10次中8次甚至更多次正面朝上的概率是多少？</p>
+<p>在概率數學上，我們會用正式的方法來求:</p>
+<p><span class="math display">\[
+\begin{aligned}
+y &amp; \sim \text{Binomial}(0.5, 10), \text{Pr}(y \geqslant 8)? \\ 
+\text{Pr}(y\geqslant 8 \text{ heads}) &amp; = \sum_{y = 8}^{10}p(y | \theta = 0.5, n = 10) \\ 
+&amp; = \binom{10}{8}(0.5)^8(0.5)^2 + \binom{10}{9}(0.5)^9(0.5)^1 + \binom{10}{10}(0.5)^{10}(0.5^0) \\
+&amp; = 0.0547
+\end{aligned}
+\]</span></p>
+<p>但是，如果有人很懶，他可以不這樣計算，而是真的拿那個硬幣過來不停的進行很多很多次投擲試驗，然後計算其中8次正面朝上出現的試驗的比例，那麼從長遠來說，就能夠無線接近理論計算的概率數值。</p>
+<p>那麼，計算機進行模擬試驗的過程 (simulation)，其實就是讓計算機代替我們進行投擲硬幣試驗的過程。圖 <a href="MC-estimation.html#fig:coin-tosses">81.6</a> 展示的是計算機模擬投擲硬幣(a) 100次 (b) 10,000 次時正面朝上次數的概率分佈，以及 (c) 真實的概率分佈。</p>
+<div class="figure" style="text-align: center"><span id="fig:coin-tosses"></span>
+<img src="img/tosses10heads.png" alt="Proportion of simulations with 8 or more &quot;heads&quot; in 10 tosses." width="80%" />
+<p class="caption">
+圖 81.6: Proportion of simulations with 8 or more “heads” in 10 tosses.
+</p>
+</div>
+<p>從中可以計算每種情況下硬幣正面朝上10次中出現8次或者更多的事件出現的概率分別是:</p>
 <ul>
-<li>散點圖提示濃度和死亡比例之間不是線性關系;</li>
-<li>“比例”這一數據被局限在 (0,1) 範圍之內，線性回歸的結果變量不會滿足這個條件;</li>
-<li>觀察數據本身的方差不齊，也就是每個觀察點(死亡比例)的變化程度無法保證是相同的。</li>
+<li><ol style="list-style-type: lower-alpha">
+<li>100次模擬試驗: 0.08</li>
+</ol></li>
+<li><ol start="2" style="list-style-type: lower-alpha">
+<li>10000次模擬試驗: 0.0562</li>
+</ol></li>
+<li><ol start="3" style="list-style-type: lower-alpha">
+<li>真實的二項分佈累積概率: 0.0547</li>
+</ol></li>
 </ul>
-<ol start="3" style="list-style-type: decimal">
-<li>計算死亡比例的對數比值比 (log-odds)，再作相同的散點圖，你會得出什麼樣的結論？</li>
-</ol>
-<div class="figure" style="text-align: center"><span id="fig:GLM-exe-3-4"></span>
-<img src="bookdown_files/figure-html/GLM-exe-3-4-1.png" alt="Scatter plot of CS2 dose and log-odds of proportion killed." width="80%" />
-<p class="caption">
-圖 45.2: Scatter plot of CS2 dose and log-odds of proportion killed.
-</p>
+<p>可見，當模擬試驗的次數增加，計算想要的事件出現的比例，就越來越接近理論計算的真實值。蒙特卡羅積分法，用的也是類似計算機模擬試驗的方法來計算預測概率分佈的。</p>
 </div>
-<p>死亡比例的對數比值比和二硫化碳濃度之間更加接近線性關系。</p>
-<ol start="4" style="list-style-type: decimal">
-<li>寫下此模型的數學表達式，你的表達式必須指明數據的分布，線性預測方程，和鏈接方程三個部分。用 R 擬合你寫下的模型。</li>
-</ol>
-<p><strong>解</strong></p>
-<p>本數據中，隨機變量是每組昆蟲中死亡的個數。用 <span class="math inline">\(Y_i\)</span> 標記第 <span class="math inline">\(i\)</span> 組昆蟲中死亡昆蟲數量，<span class="math inline">\(d_i\)</span> 表示第 <span class="math inline">\(i\)</span> 組昆蟲被暴露的二硫化碳濃度。對於所有的廣義線性回歸模型來說，它都由三個部分組成: 1) 反應量分布 the response distribution; 2) 鏈接方程 link function; 3) 線性預測方程 linear predictor.</p>
-<p>反應量分布:</p>
-<p><span class="math display">\[
-Y_i \sim \text{Bin}(n_i, \pi_i),i = 1, \cdots, 8
-\]</span></p>
-<p><span class="math inline">\(Y_i\)</span> 的期望值是 <span class="math inline">\(\mu_i\)</span> 的話，鏈接方程是</p>
-<p><span class="math display">\[
-\eta_i = \log(\frac{\mu_i}{n_i - \mu_i}) = \log(\frac{\pi_i}{1- \pi_i}) = \text{logit}(\pi_i)
-\]</span></p>
-<p>線性預測方程是</p>
-<p><span class="math display">\[
-\eta_i = \beta_0 + \beta_1 d_i
-\]</span></p>
-<p>用 R 來擬合這個模型:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw">cbind</span>(n_deaths, n_subjects <span class="op">-</span><span class="st"> </span>n_deaths) <span class="op">~</span><span class="st"> </span>dose, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit), <span class="dt">data =</span> Insect)
-<span class="kw">summary</span>(Model1)</code></pre></div>
-<pre><code>## 
-## Call:
-## glm(formula = cbind(n_deaths, n_subjects - n_deaths) ~ dose, 
-##     family = binomial(link = logit), data = Insect)
-## 
-## Deviance Residuals: 
-##      Min        1Q    Median        3Q       Max  
-## -1.14983  -0.22403   0.25301   0.70846   0.99107  
-## 
-## Coefficients:
-##               Estimate Std. Error z value  Pr(&gt;|z|)    
-## (Intercept) -14.086403   1.228393 -11.467 &lt; 2.2e-16 ***
-## dose          0.236593   0.020303  11.653 &lt; 2.2e-16 ***
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance: 268.26829  on 7  degrees of freedom
-## Residual deviance:   4.61548  on 6  degrees of freedom
-## AIC: 37.394
-## 
-## Number of Fisher Scoring iterations: 4</code></pre>
+<div id="section-81.3.2" class="section level3">
+<h3><span class="header-section-number">81.3.2</span> 用蒙特卡羅法計算預測概率分佈</h3>
+<p>如果用蒙特卡羅法，也就是計算機模擬試驗的方法來計算預測概率分佈的話，那麼我們就不需要再通過 Beta-binomial 概率分佈的公式來進行計算了。取而代之的就是，蒙特卡羅積分法:</p>
 <ol style="list-style-type: decimal">
-<li>計算 CS<sub>2</sub> 在 55mg/l 時該模型預測的昆蟲死亡概率是多少。</li>
+<li>從先驗概率分佈中隨機選取一個值 <span class="math inline">\(\theta = \theta_1\)</span></li>
+<li>把從先驗概率分佈中隨機選取的 <span class="math inline">\(\theta_1\)</span> 作爲已知量放到二項分佈中再隨機選取一個服從 <span class="math inline">\(n = 20, \theta = \theta_1\)</span> 二項分佈數據中的 <span class="math inline">\(y\)</span>。</li>
 </ol>
+<p>重複上面步驟1，2成千上萬次之後，獲得的新的概率分佈，就是 <span class="math inline">\(y\)</span> 的預測分佈的一個樣本。這樣獲得的樣本，我們就可以想進各種方法來描述它，可以是取均值，取方差，取四分位，等任何你可以用來描述的特徵值來作爲對預測概率分佈的描述。</p>
+</div>
+</div>
+<div id="openbugs" class="section level2">
+<h2><span class="header-section-number">81.4</span> 蒙特卡羅法分析軟件OpenBUGS</h2>
+<p>本書中我們用 <a href="http://www.openbugs.net/w/FrontPage">OpenBUGS</a> 這一軟件進行全部的貝葉斯分析。 ### 用 OpenBUGS 分析投擲硬幣數據 , 回到投擲硬幣的簡單模型上來，我們的隨機變量 <span class="math inline">\(y\)</span> 服從的是二項分佈，<span class="math inline">\(y \sim \text{Binomial}(0.5, 10)\)</span>，我們想要計算的是“8次或者更多次正面朝上”事件出現的概率: <span class="math inline">\(P(y\geqslant 8)\)</span>。這一模型在 BUGS 語言下被描述爲:</p>
+<pre><code>model{
+    y ~ dbin(0.5, 10)
+    P8 &lt;- step(y - 7.5)
+}</code></pre>
+<p>其中<code>step</code>是一個能夠產生邏輯結果(True or False)的指示方程(indicator function)。<code>P8 &lt;- step(y - 7.5)</code>這段BUGS語句的含義是，當<code>y - 7.5</code>的結果<span class="math inline">\(\geqslant0\)</span>，<code>P8</code>將會取 1 (True)，反之將返回結果 0 (False)。意思就是使得當隨機選取的二項分布樣本 <span class="math inline">\(y\geqslant8\)</span> 時，<code>P8</code>會取值1，否則取0。</p>
+<p>將這一段計算機模擬拋擲硬幣的語句重復一萬次以上(iterations)，然後對獲得的所有10000個<code>P8</code>取均值，獲得的就會是 <span class="math inline">\(y\geqslant8\)</span> 這一事件將會出現的概率。</p>
+<div id="openbugs" class="section level3">
+<h3><span class="header-section-number">81.4.1</span> 用OpenBUGS對藥物臨牀試驗的結果做預測</h3>
+<p>還記得我們在藥物對慢性疼痛治療療效評價的這一臨牀試驗中使用的先驗概率是 <span class="math inline">\(\theta \sim \text{Beta}(9.2, 13.8)\)</span>。我們再來思考一次，我們收集到20位志願者參加這個臨牀試驗，那麼“這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）”這件事發生的概率是多少？</p>
+<p>這時候，模型的先驗概率和似然，以及我們想要知道的問題，被數學語言寫成了下面的三句話：</p>
 <p><span class="math display">\[
-\text{logit}(\hat\pi_i) = -14.09 + 0.2366\times55 \\
-\Rightarrow \hat\pi_i = \frac{\exp(-14.09 + 0.2366\times55)}{1+\exp(-14.09 + 0.2366\times55)} = 0.254
+\begin{split}
+\theta &amp; \sim \text{Beta}(9.2, 13.8) &amp; \text{ Prior distribution} \\
+y      &amp; \sim \text{Binomial}(\theta, 20) &amp; \text{ Sampling distribution}  \\
+P_{crit} &amp; = P(y \geqslant 15)           &amp; \text{ Probability of exceeding critical threshold}
+\end{split}
 \]</span></p>
-<ol start="2" style="list-style-type: decimal">
-<li>計算昆蟲死亡比例達到50%的CS<sub>2</sub>濃度(LD50)。</li>
-</ol>
-<p>當死亡比例達到一半時， <span class="math inline">\(\hat\pi = 0.5 \Rightarrow \text{logit}(\hat\pi) = 0\)</span></p>
-<p><span class="math display">\[
-0 = -14.09 + 0.2366 \times \text{LD50} \\
-\Rightarrow \text{LD50} = 59.5 \text{mg/l}
-\]</span></p>
-<ol start="3" style="list-style-type: decimal">
-<li>有證據證明昆蟲的死亡率隨着 CS<sub>2</sub> 濃度的增加而升高嗎？</li>
-</ol>
-<p>有極強的證據證明昆蟲死亡率隨着 CS<sub>2</sub> 濃度增加而升高 <span class="math inline">\((z = 11.65, P &lt; 0.001, \text{Wald test})\)</span>。</p>
-<ol start="4" style="list-style-type: decimal">
-<li>將參數轉換成比值比，並解釋其實際含義。</li>
-</ol>
-<p>CS<sub>2</sub> 濃每增加 1 個單位 (1 mg/l)，昆蟲死亡率的比值比是 <span class="math inline">\(\exp(0.2366) = 1.27\)</span>，95% 信賴區間下限: <span class="math inline">\(\exp(0.2366 - 1.96\times0.0203) = 1.22\)</span>，上限: <span class="math inline">\(\exp(0.2366 + 1.96\times0.0203) = 1.32\)</span>。</p>
-<p>下面是在 R 裏計算的 OR 及其對應的信賴區間:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(Model1)</code></pre></div>
-<pre><code>## 
-## Logistic regression predicting cbind(n_deaths, n_subjects - n_deaths) 
-##  
-##                   OR(95%CI)         P(Wald&#39;s test) P(LR-test)
-## dose (cont. var.) 1.27 (1.22,1.32)  &lt; 0.001        &lt; 0.001   
-##                                                              
-## Log-likelihood = -16.697
-## No. of observations = 8
-## AIC value = 37.394</code></pre>
-<ol start="5" style="list-style-type: decimal">
-<li>提取模型中擬合值 fitted value</li>
-</ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># the fitted values relate to the probability of the deaths in each group</span>
-Model1<span class="op">$</span>fitted.values</code></pre></div>
-<pre><code>##           1           2           3           4           5           6           7           8 
-## 0.077332565 0.175181106 0.349349622 0.576375269 0.774754491 0.897077450 0.956586871 0.982405536</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># to calculate the counts of numbers of deaths in each group</span>
-Model1<span class="op">$</span>fitted.values <span class="op">*</span><span class="st"> </span>Insect<span class="op">$</span>n_subjects</code></pre></div>
-<pre><code>##          1          2          3          4          5          6          7          8 
-##  4.5626213 10.5108663 21.6596766 32.2770151 48.8095329 52.9275695 59.3083860 58.9443322</code></pre>
-<ol start="6" style="list-style-type: decimal">
-<li>把模型擬合的概率和觀測概率放在同一個散點圖中比較:</li>
-</ol>
-<div class="figure" style="text-align: center"><span id="fig:GLM-exe-3-8"></span>
-<img src="bookdown_files/figure-html/GLM-exe-3-8-1.png" alt="Observed (circles) and fitted (triangles) proportions are generally similar, with differences greatest in the third and fourth dose groups." width="80%" />
+<p>如果要把這三句話翻譯成爲BUGS語言，可以這樣表達：</p>
+<pre><code>model{
+  theta ~ dbeta(9.2, 13.8) # Prior distribution
+  y ~ dbin(theta, 20)      # Sampling distribution
+  P.crit &lt;- step(y - 14.5) # = 1 if y &gt;= 15, 0 otherwise
+}</code></pre>
+<p>計算機模擬試驗10000次以後獲得的結果可能是下面這樣子的</p>
+<pre><code>Node statistics
+          mean   sd        MC_error  val2.5pc    median  val97.5pc  start   sample
+P.crit  0.015    0.1216    0.00121   0.0         0.0       0.0        1       10000
+theta   0.4008   0.09903     9.683E-4    0.2159    0.3982    0.5993     1       10000
+y       8.034    2.919   0.02578     3.0         8.0       14.0       1     10000</code></pre>
+<p>第一行我們可以看見顯示的是列的名稱，接下來每一行都是OpenBUGS的軟件在進行計算機模擬試驗過程中監測的(monitor)變量的結果，以及它們的數據描述。值得注意的是其中<code>P.crit</code>這一行，除了第一列的均值<code>mean = 0.015</code>有實際意義意外，其餘的數值是沒有什麼含義的，可以忽略。這個<code>P.crit</code>均值的含義即是我們關心的問題【“這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）”這件事發生的概率】的答案，</p>
+<p>我們可以把蒙特卡羅算法給出的計算機模擬試驗的結果，和精確統計學計算法獲得的結果相比較：</p>
+<ul>
+<li><span class="math inline">\(\theta:\)</span> 均值0.4，標準差0.1；</li>
+<li><span class="math inline">\(y:\)</span> 均值8, 標準差2.93。</li>
+<li>20人中15人及以上治療有效的概率是0.015。</li>
+</ul>
+<p>由於這些樣本是互相獨立的，輸出結果中的 <code>MC_error</code> <span class="math inline">\(=\frac{\text{SD}}{\sqrt{\text{n of iterations}}}\)</span>。如果你願意，完全可以爲了提高精確度再增加計算機模擬試驗的次數。</p>
+<p>OpenBUGS 同時可以輸出計算機模擬計算過後的圖片：</p>
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSfigs"></span>
+<img src="img/OpenBUGS01.png" alt="Example OpenBUGS plots from the drug example" width="70%" />
 <p class="caption">
-圖 45.3: Observed (circles) and fitted (triangles) proportions are generally similar, with differences greatest in the third and fourth dose groups.
+圖 81.7: Example OpenBUGS plots from the drug example
 </p>
 </div>
-<ol start="7" style="list-style-type: decimal">
-<li>現在計算一個新的濃度值 dose2 = dose<sup>2</sup>。這個新的變量用於分析是否模型中使用濃度平方可以提升模型的擬合優度。1) 用 Wald 檢驗的結果說明濃度平方的回歸系數是否有意義。2) 新模型的擬合值是否有所改善？</li>
-</ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Insect &lt;-<span class="st"> </span>Insect <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">dose2 =</span> dose<span class="op">^</span><span class="dv">2</span>)
-Model2 &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw">cbind</span>(n_deaths, n_subjects <span class="op">-</span><span class="st"> </span>n_deaths) <span class="op">~</span><span class="st"> </span>dose <span class="op">+</span><span class="st"> </span>dose2, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit), <span class="dt">data =</span> Insect)
-<span class="kw">summary</span>(Model2)</code></pre></div>
-<pre><code>## 
-## Call:
-## glm(formula = cbind(n_deaths, n_subjects - n_deaths) ~ dose + 
-##     dose2, family = binomial(link = logit), data = Insect)
-## 
-## Deviance Residuals: 
-##         1          2          3          4          5          6          7          8  
-## -0.004545   0.634377  -0.691056  -0.681962   1.223967  -0.154036  -0.029880  -0.561968  
-## 
-## Coefficients:
-##               Estimate Std. Error z value Pr(&gt;|z|)
-## (Intercept) -2.4881722  9.8677198 -0.2522   0.8009
-## dose        -0.1500054  0.3291786 -0.4557   0.6486
-## dose2        0.0031871  0.0027273  1.1686   0.2426
-## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance: 268.26829  on 7  degrees of freedom
-## Residual deviance:   3.18361  on 5  degrees of freedom
-## AIC: 37.9621
-## 
-## Number of Fisher Scoring iterations: 4</code></pre>
-<p>加入了濃度平方以後，該項本身的 Wald 檢驗結果告訴我們，沒有證據證明濃度和昆蟲死亡比例的對數比值比之間呈拋物線關系。</p>
-<div class="figure" style="text-align: center"><span id="fig:GLM-exe-3-10"></span>
-<img src="bookdown_files/figure-html/GLM-exe-3-10-1.png" alt="Fitted probabilities for each dose from two models" width="80%" />
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSfigs"></span>
+<img src="img/OpenBUGS02.png" alt="Example OpenBUGS plots from the drug example" width="70%" />
 <p class="caption">
-圖 45.4: Fitted probabilities for each dose from two models
+圖 81.7: Example OpenBUGS plots from the drug example
 </p>
 </div>
-<p>加入濃度平方二次項的模型在第三和第四組給出了比一次模型更加接近觀測值的估計。但是這種提升是極爲有限的，且統計學上加入的二次項的回歸系數並無意義。</p>
-<p>所以，本數據分析的結論是，有很強的證據證明昆蟲死亡的概率隨着CS<sub>2</sub> 濃度的升高而升高 (P&lt;0.001)。死亡的比值 (odds)，隨着濃度每升高1個單位 (mg/l) 而升高 27% (95% CI: 22%-32%)。</p>
 </div>
-<div id="section-45.6.2" class="section level3">
-<h3><span class="header-section-number">45.6.2</span> 哮喘門診數據</h3>
-<p>在一項橫斷面研究中，訪問哮喘門診連續達到 6 個月以上的全部患者被一一詢問其目前的用藥情況和症狀。下面的表格總結的是這些患者中，目前使用口服類固醇藥物與否，及患者報告夜間由於哮喘症狀而從睡眠中醒來的次數。</p>
-<table class="table table-striped table-hover table-condensed" style="width: auto !important; margin-left: auto; margin-right: auto;">
-<caption>
-<span id="tab:GLM-exe-3-11">表 45.1: </span>Frequency of night waking due to asthma
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-Corticosteroids
-</th>
-<th style="text-align:center;">
-Never
-</th>
-<th style="text-align:center;">
-Less.than.once.a.week
-</th>
-<th style="text-align:center;">
-More.than.once.a.week
-</th>
-<th style="text-align:center;">
-Every.night
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-User
-</td>
-<td style="text-align:center;">
-27
-</td>
-<td style="text-align:center;">
-41
-</td>
-<td style="text-align:center;">
-44
-</td>
-<td style="text-align:center;">
-38
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Non-user
-</td>
-<td style="text-align:center;">
-20
-</td>
-<td style="text-align:center;">
-10
-</td>
-<td style="text-align:center;">
-8
-</td>
-<td style="text-align:center;">
-22
-</td>
-</tr>
-</tbody>
-</table>
-<p>下面的 STATA 輸出報告，是對上述數據擬合的邏輯回歸的結果。其中變量 <code>user</code> 和 <code>never</code> 被編碼爲 0/1，1 代表該患者正在使用口服類固醇藥物，或者從未因爲哮喘而在夜間醒來。變量 <code>sev</code> 是患者自己報告的哮喘症狀嚴重程度 (0-3 分，分數越高症狀越嚴重)。</p>
-<p><img src="img/Selection_125.png" width="90%" style="display: block; margin: auto;" /></p>
+<div id="-allow-uncertainty-in-power-calculation" class="section level3">
+<h3><span class="header-section-number">81.4.2</span> 用蒙特卡羅法計算一個臨牀試驗的統計效能 allow uncertainty in power calculation</h3>
+<p>假設有一個臨牀試驗是這樣設計的，計劃在治療組和對照組各徵集 <span class="math inline">\(n\)</span> 名患者，治療陽性反應率的標準差爲<span class="math inline">\(\sigma = 1\)</span>。設計上希望達到一類錯誤 5%，和80%的效能。治療組和對照組的療效差異希望能達到 <span class="math inline">\(\theta = 0.5\)</span>。計算樣本量爲<span class="math inline">\(n\)</span>，療效差爲<span class="math inline">\(\theta\)</span>的試驗的統計效能的數學公式已知爲：</p>
+<p><span class="math display">\[
+\text{Power} = \Phi(\sqrt{\frac{n\theta^2}{2\sigma^2}} - 1.96)
+\]</span></p>
+<p>再假設我們希望對<span class="math inline">\(\theta,\sigma\)</span>同時描述其不確定性：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\theta &amp; \sim \text{Uniform}(0.3, 0.7) \\ 
+\sigma &amp; \sim \text{Uniform}(0.5, 1.5) \\
+\end{aligned}
+\]</span></p>
+<p>接下來，我們可以利用這個公式和給出的先驗概率對統計效能的不確定性進行估計。</p>
 <ol style="list-style-type: decimal">
-<li>用表格的數據實施了一個總體的卡方檢驗還有一個卡方檢驗的傾向性檢驗。這兩個卡方檢驗的統計量分別是 12.87, 和 0.25。請解釋這兩個統計量的實際含義。</li>
+<li>模擬從<span class="math inline">\(\theta, \sigma\)</span>的先驗概率中各自選取相應的值；</li>
+<li>把每次模擬試驗獲得的 <span class="math inline">\(\theta, \sigma\)</span> 代入上面計算效能的公式中計算每次可以獲得的統計效能；</li>
+<li>重復步驟１，２許多次，獲取這個過程中計算得到的統計效能的預測分布(predictive distribution)。</li>
 </ol>
-<p>在零假設 – 使用口服類固醇藥物和夜間因爲哮喘而醒來次數之間沒有關系 – 條件下，表格總體的卡方檢驗服從 <span class="math inline">\(\chi^2_3\)</span> 分布。查表或者在 R 裏使用</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">1</span><span class="op">-</span><span class="kw">pchisq</span>(<span class="fl">12.87</span>, <span class="dv">3</span>)</code></pre></div>
-<pre><code>## [1] 0.0049263406</code></pre>
-<p>可以知道 p = 0.005。這是極強的反對零假設的證據。</p>
-<p>相反，卡方檢驗的傾向性檢驗結果是 p = 0.62，這個結果提示使用類固醇藥物所佔的比例沒有傾向性:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="dv">1</span><span class="op">-</span><span class="kw">pchisq</span>(<span class="fl">0.25</span>, <span class="dv">1</span>)</code></pre></div>
-<pre><code>## [1] 0.61707508</code></pre>
-<p>兩個卡方檢驗的顯著不同應是因爲用類固醇藥物的患者比例在 “從不”, “低於每周一次”，“多餘每周一次” 中遞增，但是到了最後一組 “每天” 時又下降。傾向性檢驗比起總體的卡方檢驗在關系是單調遞增或者單調遞減時統計學效能更好，但是當關系變得復雜以後，傾向性卡方檢驗變得不再有優勢。傾向性檢驗其實等同於用一個變量 (用藥與否) 和另一個變量 (夜間因爲哮喘醒來次數) 做線性回歸。對於這個表格的數據來說，這是一個 U 型的關系，所以做線性回歸的結果也是會給出沒有意義的 p 值。</p>
-<ol start="2" style="list-style-type: decimal">
-<li>利用 STATA 的邏輯回歸報告，能對哮喘的嚴重程度和患者報告夜間從未因爲哮喘醒來(never wake up)之間的關系作出怎樣的結論？</li>
-</ol>
-<p>從 STATA 計算的結果來看，該數據提供了極強的證據證明哮喘的嚴重程度和報告從未因哮喘而醒來之間呈負相關。特別地，哮喘嚴重程度爲 2 的患者比 1 的患者報告從未醒來的比值比 (odds ratio) 是 0.077 (95% CI: 0.027, 0.224, p &lt; 0.001); 哮喘嚴重程度爲 3 的患者 比 1 的患者報告醒來的比值比是 0.0128 (95% CI: 0.0022, 0.0738, p &lt; 0.001)。所以，哮喘越嚴重，報告夜裏從未醒來的概率越低。</p>
-<ol start="3" style="list-style-type: decimal">
-<li>利用 STATA 的邏輯回歸報告，能對是否使用口服類固醇藥物和報告從未因哮喘而醒來之間的關系作出怎樣的結論？</li>
-</ol>
-<p>如果要計算未調整的比值比，我們可以把表格中第2-4列的數據合並，那麼在使用類固醇藥物的患者 (n = 150) 中 27 人報告從未醒來，在不使用類固醇藥物的患者中 (n = 60)，有 20 人報告從未醒來。這樣未調整的比值比就是 <span class="math inline">\(\frac{27 \times 40}{20 \times 123} = 0.44\)</span>。STATA 計算的邏輯回歸模型的結果顯示，這一數字在調整了哮喘症狀之後，發生了本質的變化: <span class="math inline">\(e^{0.815} = 2.26\)</span>。雖然調整後的比值比並沒有統計學意義。但是它從小於 1 變成了大於 1，方向上發生了轉變。所以，調整了哮喘嚴重程度之後，數據似乎提示使用類固醇藥物和報告從不在夜間因哮喘醒來的概率呈正相關 (用藥者睡得更好)，但是這個相關性沒有統計學意義，其95%信賴區間很寬。</p>
-<ol start="4" style="list-style-type: decimal">
-<li>從這些分析來看，哮喘嚴重程度和是否口服類固醇藥物之間有什麼樣的關系？</li>
-</ol>
-<p>因爲用類固醇藥物和報告夜間不曾醒來在調整了哮喘嚴重程度之後從原先的負相關變成了正相關。又因爲哮喘嚴重程度本身和報告夜間不曾醒來之間是負相關，所以，是否口服類固醇藥物和哮喘嚴重程度之間呈正相關，也就是哮喘越嚴重，患者越傾向於使用類固醇藥物。</p>
+<p>如果說每組患者人數是63人，那麼這個模型寫成BUGS語言就是：</p>
+<pre><code>model{
+  sigma ~ dunif(0.5, 1.5) 
+  theta ~ dunif(0.3, 0.7)
+  power &lt;- phi(sqrt(63/2)*theta/sigma - 1.96)
+  prob70 &lt;- step(power - 0.7) # is power &gt;= 0.7
+}</code></pre>
+<p>該模型的輸出結果如下，預測的效能分布圖爲圖<a href="MC-estimation.html#fig:PowerBUGS">81.8</a>：</p>
+<pre><code>Node statistics
+         mean     sd       MC_error   val2.5pc   median   val97.5pc   start   sample
+power    0.7508   0.2249   0.00216    0.2846     0.8031   1.0         1       10000
+prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10000</code></pre>
+<p>當治療組對照組每組各只有６３人時，你會發現統計效能在電腦模擬１００００次試驗過後的中位數才勉強達到了80%，而且這麼寬的效能預測分布也提示我們６３人實在太少了，效能遠遠不能達到設計的要求。</p>
+<div class="figure" style="text-align: center"><span id="fig:PowerBUGS"></span>
+<img src="img/PowerBUGS.png" alt="Predictive Distribution of Power" width="70%" />
+<p class="caption">
+圖 81.8: Predictive Distribution of Power
+</p>
 </div>
+</div>
+</div>
+<div id="practical-bayesian-statistics-02" class="section level2">
+<h2><span class="header-section-number">81.5</span> Practical Bayesian Statistics 02</h2>
+<ol style="list-style-type: decimal">
+<li>拋擲硬幣試驗</li>
+</ol>
+<p>用BUGS語言描述拋擲硬幣的模型，把寫有下列模型代碼的文件保存爲<code>coinmodel.txt</code>:</p>
+<pre><code>model{
+  y ~ dbin(0.5, 10) 
+  P8 &lt;- step(y - 7.5) # = 1 if Y is 8 or more
+} </code></pre>
+<p>下面的代碼展示了如何在R裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(BRugs)
+<span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/coinmodel.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest</span>
+<span class="kw">samplesSet</span>(<span class="kw">c</span>(<span class="st">&quot;P8&quot;</span>, <span class="st">&quot;y&quot;</span>))</code></pre></div>
+<pre><code>## monitor set for variable &#39;P8&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##     mean    sd MC_error val2.5pc median val97.5pc start sample
+## P8 0.054 0.226 0.007945        0      0         1     1   1000
+## y  4.980 1.588 0.051630        2      5         8     1   1000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P8 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P8&quot;</span>),
+                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))
+<span class="kw">samplesHistory</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">1</span>), <span class="dt">ask=</span><span class="ot">FALSE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS00"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS00-1.png" alt="History of the iterations." width="80%" />
+<p class="caption">
+圖 81.9: History of the iterations.
+</p>
+</div>
+<p>對模型進行修改，嘗試計算相同設計的試驗，在徵集了30名患者，新藥的有效率爲0.7時，15名或者以內的患者有顯著療效的事件發生的概率是多少？</p>
+<pre><code>model{
+  y ~ dbin(0.7, 30) 
+  P15 &lt;- step(15.5 - y) # = 1 if Y is 15 or fewer
+} </code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/coinmodel30.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P15&quot;</span>, <span class="st">&quot;y&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;P15&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##        mean     sd MC_error val2.5pc median val97.5pc start sample
+## P15  0.0165 0.1274  0.00125        0      0         0     1  10000
+## y   21.0200 2.5120  0.02466       16     21        26     1  10000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P15 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P15&quot;</span>),
+                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))
+#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
+## samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)
+
+<span class="cf">for</span>(p_ <span class="cf">in</span> parameters)
+  {
+    <span class="kw">hist</span>(chain[[p_]], <span class="dt">main=</span>p_,
+         <span class="dt">ylab=</span><span class="ot">NA</span>, <span class="dt">xlab=</span><span class="ot">NA</span>, <span class="co">#prob = TRUE,</span>
+         <span class="dt">nclas=</span><span class="dv">50</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)
+  }</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS01"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS01-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.10: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS01"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS01-2.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.10: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<p>所以此時少於或等於１５人得到症狀改善的事件發生的概率被推測爲1.6%。</p>
+<ol start="2" style="list-style-type: decimal">
+<li>藥物治療臨牀試驗</li>
+</ol>
+<p>藥物臨牀試驗的例子中，我們建立的模型如下：</p>
+<pre><code>#  Monte Carlo predictions for Drug example
+
+model{
+    theta   ~ dbeta(9.2,13.8)          # prior distribution
+    y         ~ dbin(theta,20)         # sampling distribution
+    P.crit   &lt;- step(y-14.5)           # =1 if y &gt;= 15, 0 otherwise
+}</code></pre>
+<p>把這個模型存儲成<code>drug-MC.txt</code>文件之後，可以使用OpenBUGS完成這個模型的蒙特卡羅模擬試驗計算：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/drug-MC.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;P.crit&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##          mean      sd  MC_error val2.5pc median val97.5pc start sample
+## P.crit 0.0150 0.12160 0.0012100   0.0000 0.0000    0.0000     1  10000
+## theta  0.4008 0.09903 0.0009683   0.2159 0.3982    0.5993     1  10000
+## y      8.0340 2.91900 0.0257800   3.0000 8.0000   14.0000     1  10000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>),
+                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>),
+                    <span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+##1. samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)
+<span class="co"># or 2. by looping </span>
+<span class="co"># for(p_ in parameters)</span>
+<span class="co">#   {</span>
+<span class="co">#     hist(chain[[p_]], main=p_,</span>
+<span class="co">#          ylab=NA, xlab=NA, #prob = TRUE,</span>
+<span class="co">#          nclas=50, col=&quot;red&quot;)</span>
+<span class="co">#   }</span>
+<span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
+<span class="kw">hist</span>(chain<span class="op">$</span>y, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS02"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS02-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.11: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<p>如果把藥物治療的臨牀試驗例子的先驗概率分布修改一下，修改成爲一個沒有信息的均一分布 <span class="math inline">\(\text{Uniform}(0, 1)\)</span>，模型的結果會有怎樣的變化呢？嘗試繪制成功次數的預測概率分布，此時“20名患者中大於或者等於15名患者有療效”這一事件發生的概率是多少？</p>
+<pre><code>#  Monte Carlo predictions for Drug example
+#  with a uniform prior
+
+model{
+#   theta   ~ dbeta(9.2,13.8)          # prior distribution
+  theta   ~ dunif(0,1)               # prior distribution
+    y         ~ dbin(theta,20)         # sampling distribution
+    P.crit   &lt;- step(y-14.5)           # =1 if y &gt;= 15, 0 otherwise
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/drug-MCuniform.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;P.crit&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##          mean     sd MC_error val2.5pc  median val97.5pc start sample
+## P.crit 0.2805 0.4492 0.004402  0.00000  0.0000    1.0000     1  10000
+## theta  0.4975 0.2883 0.002962  0.02472  0.4977    0.9731     1  10000
+## y      9.9450 6.0590 0.063150  0.00000 10.0000   20.0000     1  10000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>),
+                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>),
+                    <span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+
+<span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
+<span class="kw">hist</span>(chain<span class="op">$</span>y, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS03"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS03-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.12: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<p>這個條件下，“20名患者中大於或者等於15名患者有療效”這一事件發生的概率爲28.05%。</p>
+<ol start="3" style="list-style-type: decimal">
+<li>嘗試自己來寫一個模型。</li>
+</ol>
+<p>打開一個空白文檔，試着寫一個模型，它的先驗概率是一個標準正態分布，(OpenBUGS code: <code>x ~ dnorm(0,1)</code>)。值得注意的是，在OpenBUGS的環境下，標準正態分布的描述方式和平時概率論統計學有些不一樣：概率論的標準差或者方差，在貝葉斯統計學中被冠以另一種新的概念–精確度(precision, = 1/variance)。試着嘗試用蒙特卡羅模擬試驗的方法計算標準正態分布中取值低於-1.96，和-2.326的事件發生的概率各自是多少。（已知二者的理論值分別是0.025, 0.01）。</p>
+<pre><code>#  Monte Carlo predictions
+#  with a standard normal distribution prior
+
+model{
+  x        ~ dnorm(0, 1)             # prior distribution
+    p.1     &lt;- step(-1.96 - x)         # = 1 if x &lt;= -1.96, 0 otherwise
+    p.2     &lt;- step(-2.32 - x)         # = 1 if x &lt;= -2.32, 0 otherwise
+}</code></pre>
+<p>分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/standardnormalMC.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p.1&quot;</span>, <span class="st">&quot;p.2&quot;</span>, <span class="st">&quot;x&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;p.1&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;p.2&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;x&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">100</span>)</code></pre></div>
+<pre><code>## 100 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##       mean     sd  MC_error val2.5pc  median val97.5pc start sample
+## p.1 0.0000 0.0000 1.000e-11    0.000 0.00000     0.000     1    100
+## p.2 0.0000 0.0000 1.000e-11    0.000 0.00000     0.000     1    100
+## x   0.0606 0.9453 8.951e-02   -1.559 0.05174     2.003     1    100</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 900 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">900</span>)</code></pre></div>
+<pre><code>## 900 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##       mean     sd MC_error val2.5pc    median val97.5pc start sample
+## p.1 0.0240 0.1530 0.005491    0.000  0.000000     0.000     1   1000
+## p.2 0.0110 0.1043 0.003899    0.000  0.000000     0.000     1   1000
+## x   0.0261 1.0090 0.036770   -1.928 -0.007392     2.032     1   1000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">99000</span>)</code></pre></div>
+<pre><code>## 99000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##          mean     sd  MC_error val2.5pc   median val97.5pc start sample
+## p.1  0.025160 0.1566 0.0004711    0.000  0.00000     1.000     1 100000
+## p.2  0.010180 0.1004 0.0002970    0.000  0.00000     0.000     1 100000
+## x   -0.003323 1.0020 0.0031550   -1.962 -0.00278     1.967     1 100000</code></pre>
+<p>我們知道理論上 <span class="math inline">\(x\sim N(0,1^2)\)</span>，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到<code>p.1, p.2</code>的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，<code>MC_error</code>也在變得越來越小（越來越精確）。事實上，這個<code>MC_error</code>本身約等於<span class="math inline">\(\frac{\text{sd}}{\sqrt{\text{sample size}}}\)</span>。所以對<span class="math inline">\(x\)</span>來說，經過1000次蒙特卡羅計算，<span class="math inline">\(\text{sd}(x) = 1.009\)</span>，那麼此時的<code>MC_error</code><span class="math inline">\(=\frac{1.009}{\sqrt{1000}} \approx 0.0319\)</span>，十分接近計算機給出的<code>MC_error = 0.03677</code>。<code>MC_error</code>本身可以作爲這個<span class="math inline">\(x\)</span>均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值<span class="math inline">\(\pm 2\times\)</span> <code>MC_error</code>範圍內。</p>
+<p>下面我們來探索一下 t分布。嘗試寫下一個BUGS模型，它的先驗概率分布是一個自由度爲4的t分布，<code>y ~ dt(0,1,4)</code>。然後進行10000次蒙特卡羅採樣計算，並給出概率密度分布圖。</p>
+<pre><code>#  Monte Carlo predictions
+#  with a t distribution prior with degree of freedom = 4
+
+model{
+  y ~ dt(0, 1, 4)
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/MCt.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 10000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
+<pre><code>## 10000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##       mean   sd MC_error val2.5pc    median val97.5pc start sample
+## y -0.02244 1.43  0.01534   -2.857 -0.001755     2.725     1  10000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>y), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS05"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS05-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.13: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<p>下面再嘗試計算一個來自均值爲1，標準差爲2的正態分布的隨機變量，它的三次方的期望值是多少。已知標準差<span class="math inline">\(SD = 2\)</span>，那麼方差爲<span class="math inline">\(Var = 4\)</span>，那麼翻譯成BUGS語言就是精確度爲 <span class="math inline">\(\frac{1}{4} = 0.25\)</span>。</p>
+<pre><code>#  Monte Carlo predictions
+
+model{
+  y ~ dnorm(1, 0.25) 
+  ycubed &lt;- pow(y, 3) # note how to write power in BUGS
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/MCcube.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
+<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
+<span class="co"># but the program still requires initial values to begin</span>
+<span class="co"># generate a random value.</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>, <span class="st">&quot;ycubed&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;ycubed&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">100000</span>)</code></pre></div>
+<pre><code>## 100000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##           mean     sd MC_error val2.5pc median val97.5pc start sample
+## y       0.9934  2.004  0.00631   -2.925 0.9944     4.933     1 100000
+## ycubed 12.9700 39.720  0.12930  -25.020 0.9834   120.100     1 100000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>), 
+                    <span class="dt">ycubed =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;ycubed&quot;</span>))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+<span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>y), <span class="dt">main =</span> <span class="st">&quot;y sample 100000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
+
+<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>ycubed), <span class="dt">main =</span> <span class="st">&quot;ycubed sample 100000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(ycubed)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;ycubed&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS06"></span>
+<img src="bookdown_files/figure-html/R-OpenBUGS06-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 81.14: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<p>所以，一個隨機變量如果它來自一個均值爲1，標準差爲2的正態分布，那麼它的三次方的期望值是13，注意<code>ycubed</code>右側的尾巴很長。</p>
+</div>
+</div>
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-tinmouth2004low">
+<p>Tinmouth, Alan, Ian F Tannock, Michael Crump, George Tomlinson, Joseph Brandwein, Mark Minden, and David Sutton. 2004. “Low-Dose Prophylactic Platelet Transfusions in Recipients of an Autologous Peripheral Blood Progenitor Cell Transplant and Patients with Acute Leukemia: A Randomized Controlled Trial with a Sequential Bayesian Design.” <em>Transfusion</em> 44 (12). Wiley Online Library: 1711–9.</p>
 </div>
 </div>
             </section>
@@ -1713,8 +1819,8 @@ Non-user
           </div>
         </div>
       </div>
-<a href="section-44.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="section-46.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="section-80.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="-conjugate-priors.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1744,7 +1850,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/09-GLM.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/12-Bayesian-stats.Rmd",
 "text": "編輯"
 },
 "download": ["bookdown.epub"],
