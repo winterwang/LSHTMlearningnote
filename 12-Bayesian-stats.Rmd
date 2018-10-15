@@ -1832,9 +1832,9 @@ $$
 3. 然後:<br>從$p(\theta_1|\theta_2^{(0)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)$中採集 $\theta_1^{(1)}$<br>從$p(\theta_2|\theta_1^{(1)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)$中採集$\theta_2^{(1)}$<br>$\vdots$<br>從$p(\theta_k|\theta_1^{(1)},\theta_2^{(1)},\dots,\theta_{k-1}^{(0)},x)$中採集$\theta_k^{(1)}$
 4. 重復第3步 $N$ 次，我們就可以獲得一串參數的事後分布樣本 $\mathbf{\theta}^{(0)},\mathbf{\theta}^{(1)},\dots,\mathbf{\theta}^{(N)}$。當 $N\rightarrow\infty$ 我們就獲得了多維事後概率分布的一個樣本 $p(\mathbf{\theta}|x)$。
 
-用只有兩個位置參數的向量來解釋就是：$k = 2, \text{ i.e. } \mathbf{\theta} = (\theta_1, \theta_2)$。下圖 \@ref(fig:gibbs_sampling) 展示了對兩個未知參數進行吉布斯採樣的一個過程：當我們先設定一組起始值 $\mathbf{\theta}^{(0)}$，之後從$p(\theta_1|\theta_2^{(0)}, x)$中採集$\theta_1^{(1)}$，然後再從 $p(\theta_2|\theta_1^{(1)}, x)$中採集$\theta_2^{(1)}$，這樣就獲得了樣本 $\mathbf{\theta}^{(1)}$。然後再重復相同搞得過程採集接下來的參數樣本。
+用只有兩個位置參數的向量來解釋就是：$k = 2, \text{ i.e. } \mathbf{\theta} = (\theta_1, \theta_2)$。下圖 \@ref(fig:gibbssampling) 展示了對兩個未知參數進行吉布斯採樣的一個過程：當我們先設定一組起始值 $\mathbf{\theta}^{(0)}$，之後從$p(\theta_1|\theta_2^{(0)}, x)$中採集$\theta_1^{(1)}$，然後再從 $p(\theta_2|\theta_1^{(1)}, x)$中採集$\theta_2^{(1)}$，這樣就獲得了樣本 $\mathbf{\theta}^{(1)}$。然後再重復相同搞得過程採集接下來的參數樣本。
 
-```{r gibbs_sampling, cache=TRUE, echo=FALSE, fig.height=4, fig.width=5, fig.cap='Gibbs sampling with k = 2.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r gibbssampling, cache=TRUE, echo=FALSE, fig.height=4, fig.width=5, fig.cap='Gibbs sampling with k = 2.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 knitr::include_graphics("img/gibbs_sampling.png")
 ```
 
@@ -1850,7 +1850,24 @@ knitr::include_graphics("img/gibbs_sampling.png")
 
 MCMC過程需要對所有的未知參數先給出起始值(initial/starting values)。我們在使用BUGS進行貝葉斯統計學推斷時，可以利用先驗概率分布對各個未知參數隨機產生各自的起始值，但是這要建立在先驗概率分布是含有有價值的信息的前提下(informative priors)，如果我們只有一些聊勝於無的先驗概率分布(vague priors)，隨機從這樣的分布中產生起始值的話，很可能導致計算機選取很不恰當的起始值使得模型需要花很長的時間才能收斂，有些時候甚至導致計算機崩潰。這時候，統計學家的經驗是我們最好人爲地給模型中的未知參數設定幾個"合理"的起始值(separate reasonable initial values lists)，以防止不收斂或者計算機崩潰的情況出現。同時，我們也發現用戶如果給模型提供合理的起始值，也有助於鑑別模型收斂(convergence checking)。
 
-在 BUGS 語言中，起始值可以直接寫在模型中，也可以寫在另外一個獨立的文件裏。需要明確指出的是，這些起始值是用來輔助 MCMC 採樣的，起始值並不是先验概率(initial values are not priors)。
+在 BUGS 語言中，起始值可以直接寫在模型中，也可以寫在另外一個獨立的文件裏。需要明確指出的是，這些起始值是用來輔助 MCMC 採樣的，**起始值並不是先验概率(initial values are not priors)**。
+
+## 使用 MCMC 時需要考慮的一些問題
+
+在使用 MCMC 時有兩個主要的問題需要我們思考：
+
+1. 收斂時間：MCMC採集的樣本 $\{\mathbf{\theta}^{(t)}\}$，需要多久時間能夠到達或者接近事後概率分布 $p(\mathbf{\theta}|x)$。
+2. 效率：從採集的樣本 $\mathbf{\theta}^{(t)}$ 中估計的參數是否在事後概率分布 $p(\mathbf{\theta}|x)$ 中真的有效 (how well are functionals of $p(\mathbf{\theta}|x)$ estimated from $\{\mathbf{\theta}^{(t)}\}$)。
+
+### 收斂時間
+
+收斂時間，是我們關心的最主要的問題之一，我們在進行 MCMC 時要花多長時間才能使採集的樣本達到或者接近(數學上叫做收斂)真是的事後概率分布呢？換句話說，我們需要從採集的樣本中刨除掉多少一開始採集的不穩定的樣本呢(how do we know the number of "burn-in" iterations)？可以說沒有人能準確地給出一個答案。所以在檢查MCMC採樣是否收斂時，我們需要格外的小心。很多時候，沒有人能夠給出100%確定的答案說一條MCMC鏈達到了收斂，但是幸運地是，我們能準確地判斷沒有成功收斂的 MCMC 鏈。
+
+檢查MCMC是否收斂，最常用的方法是視覺檢查，作出MCMC鏈式圖來輔助我們診斷。我們建議，使用多個不同的起始值，產生多個不同的 MCMC 樣本鏈來輔助診斷。當然，除了視覺診斷，另外還存在一些比較鏈內(within)和鏈間(between)方差的方法來進行收斂診斷的手段。但是，沒有哪種方法是萬無一失的。在 R 裏面，有一個很強大的包 [`coda`](https://cran.r-project.org/doc/Rnews/Rnews_2006-1.pdf#page=7)，它被設計來把OpenBUGS的輸出結果 (output) 轉變成爲輸入對象 (input object)，利用R來便利地進行模型分析和診斷。許多對模型收斂程度的診斷，都會認爲未知參數的起始值是相對事後概率分布來說過度離散的。所以，建議在提供起始值的時候，每一個未知參數的起始值，都盡量爲每一個MCMC鏈給出幾個**"合理"但差異較大(plausible but widely differing initial values)**的起始值。
+
+
+
+
 
 # 建模和模型的檢查
 
