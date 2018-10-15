@@ -1815,7 +1815,7 @@ $$
 - 某個或者某些參數的事後概率分布 $p(\theta_i | x) = \int\int\dots\int p(\mathbf{\theta}|x)d\mathbf{\theta_{(-i)}}$ (where $\mathbf{\theta_{(-i)}}$ denotes the vector of $\theta$s excluding $\theta_i$)。
 - 計算某個或者某些參數的事後概率分布的數學性質，特徵值如均值 $= \int\theta_i p(\theta_i | x)d\theta_i$，或者尾部的概率面積(tail areas) $=\int_T^\infty p(\theta_i |x)d\theta_i$等等。
 
-那麼我們無法獲得解析解 (analytical solution/closed solution) 的情況下，只好求助於數學上的數值解 (numerical solution/intergration)。
+我們無法獲得解析解 (analytical solution/closed solution) 的情況下，我們可以求助於數學上的數值解 (numerical solution/intergration)。
 
 第二章 \@ref(MC-estimation) 我們已經見識過了蒙特卡羅模擬法可以用來從先驗概率分布，或者從**閉合解形式(closed form)**的事後概率分布中採樣計算的過程。如果我們可以把人類不可能完成的任務，也交給計算機來對無法獲取閉合解的事後概率分布做蒙特卡羅樣本採集的話，那麼貝葉斯統計學推斷就可以被推廣到幾乎任何一種模型，任何一種試驗設計中。
 
@@ -1829,10 +1829,28 @@ $$
 
 1. 把未知參數向量分成不同的成分，最簡單的就是每個元素爲一個部分 $\mathbf{\theta} = (\theta_1, \theta_2, \dots,\theta_k)$；
 2. 給每個部分/參數選取一個起始值(starting/initial values) $\theta_1^{(0)},\theta_2^{(0)},\dots,\theta_k^{(0)}$；
-3. 然後:<br>從$p(\theta_1^{(1)}|\theta_2^{(0)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)$中採集 $\theta_1^{(1)}$<br>從$p(\theta_2^{(1)}|\theta_1^{(1)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)$中採集$\theta_2^{(1)}$<br>$\vdots$<br>從$p(\theta_k^{(1)}|\theta_1^{(1)},\theta_2^{(1)},\dots,\theta_{k-1}^{(0)},x)$中採集$\theta_k^{(1)}$
+3. 然後:<br>從$p(\theta_1|\theta_2^{(0)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)$中採集 $\theta_1^{(1)}$<br>從$p(\theta_2|\theta_1^{(1)},\theta_3^{(0)},\dots,\theta_k^{(0)},x)$中採集$\theta_2^{(1)}$<br>$\vdots$<br>從$p(\theta_k|\theta_1^{(1)},\theta_2^{(1)},\dots,\theta_{k-1}^{(0)},x)$中採集$\theta_k^{(1)}$
 4. 重復第3步 $N$ 次，我們就可以獲得一串參數的事後分布樣本 $\mathbf{\theta}^{(0)},\mathbf{\theta}^{(1)},\dots,\mathbf{\theta}^{(N)}$。當 $N\rightarrow\infty$ 我們就獲得了多維事後概率分布的一個樣本 $p(\mathbf{\theta}|x)$。
 
+用只有兩個位置參數的向量來解釋就是：$k = 2, \text{ i.e. } \mathbf{\theta} = (\theta_1, \theta_2)$。下圖 \@ref(fig:gibbs_sampling) 展示了對兩個未知參數進行吉布斯採樣的一個過程：當我們先設定一組起始值 $\mathbf{\theta}^{(0)}$，之後從$p(\theta_1|\theta_2^{(0)}, x)$中採集$\theta_1^{(1)}$，然後再從 $p(\theta_2|\theta_1^{(1)}, x)$中採集$\theta_2^{(1)}$，這樣就獲得了樣本 $\mathbf{\theta}^{(1)}$。然後再重復相同搞得過程採集接下來的參數樣本。
 
+```{r gibbs_sampling, cache=TRUE, echo=FALSE, fig.height=4, fig.width=5, fig.cap='Gibbs sampling with k = 2.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/gibbs_sampling.png")
+```
+
+利用馬爾科夫鏈的性質，可以被證明的是當採樣達到無窮大 $N\rightarrow\infty$，無論起始樣本 $(\theta_1^{(0)},\theta_2^{(0)},\dots,\theta_k^{(0)})$ 如何採樣，最終產生的事後概率樣本 $\mathbf{\theta}^{(0)},\mathbf{\theta}^{(1)},\dots,\mathbf{\theta}^{(N)}$ 將會收斂成爲真實的事後概率分布 $p(\mathbf{\theta}|y)$，所以確保了重復這個過程的次數是無窮大時，起初的一部分采样，$N_0$可作爲初始樣本，並且因爲通常一開始的採樣過程是不穩定的，而把他們從總體事後概率分布樣本中刨除，這個過程被叫做 burn in。最終可獲得樣本量爲 $N-N_0$ 的事後概率分布樣本。
+
+我们需要指出的是，這一採集事後概率分布樣本的方法之所以有用，是因爲條件事後概率分布(conditional posterior sampling)的採集，要比全事後概率分布(full posterior sampling)的採集要容易得多。否則，我們爲啥不直接從全事後概率分布中採樣呢。
+
+簡單地說，比如我們需要同時對正態分布數據似然的均值，和方差兩個未知參數進行事後概率分布樣本的採集，兩個未知參數的事後概率分布需要用到復雜的微積分推導過程，但是我們知道已知均值時方差的事後概率分布，或者是已知方差時均值的事後概率分布，它們都比兩個未知參數時的計算和推導要簡單明了得多。
+
+接下來我們來討論一下使用MCMC在貝葉斯統計學推斷中的實際應用和一些技巧。
+
+### 初始值 initial values
+
+MCMC過程需要對所有的未知參數先給出起始值(initial/starting values)。我們在使用BUGS進行貝葉斯統計學推斷時，可以利用先驗概率分布對各個未知參數隨機產生各自的起始值，但是這要建立在先驗概率分布是含有有價值的信息的前提下(informative priors)，如果我們只有一些聊勝於無的先驗概率分布(vague priors)，隨機從這樣的分布中產生起始值的話，很可能導致計算機選取很不恰當的起始值使得模型需要花很長的時間才能收斂，有些時候甚至導致計算機崩潰。這時候，統計學家的經驗是我們最好人爲地給模型中的未知參數設定幾個"合理"的起始值(separate reasonable initial values lists)，以防止不收斂或者計算機崩潰的情況出現。同時，我們也發現用戶如果給模型提供合理的起始值，也有助於鑑別模型收斂(convergence checking)。
+
+在 BUGS 語言中，起始值可以直接寫在模型中，也可以寫在另外一個獨立的文件裏。需要明確指出的是，這些起始值是用來輔助 MCMC 採樣的，起始值並不是先验概率(initial values are not priors)。
 
 # 建模和模型的檢查
 
