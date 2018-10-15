@@ -1739,6 +1739,63 @@ abline(h = 1.66)
 
 D. James Bond Example.
 
+007邦德喝了16杯馬丁尼酒，每飲一杯，都被問道那杯馬丁尼酒是被調酒師用搖的(shaken)還是用攪拌的(stired)調制的。結果在這邦德喝過的16杯馬丁尼酒中，他居然答對了13杯。（007就是流弊）
+
+1. 嘗試修改新藥試驗的模型代碼，用均一分布作爲參數$\theta$的先驗概率分布，你是否能進行一個貝葉斯分析來回答這個問題：“邦德能夠正確區分一杯馬丁尼酒的調制方法的概率是多少？”
+
+2. 那如果把這個問題稍微改變一下，“邦德能夠區分馬丁尼酒的調制方法的概率是多少？(what is the probability that James Bond has at least some ability to tell the difference between shaken and stirred martinis?i.e. better than guessing)”你能回答嗎？
+
+3. 假定這樣一個場景，你和另外三個朋友在酒吧遇見了邦德，你們每個人都說要和邦德玩品酒的遊戲，如果邦德能準確分辨出馬丁尼酒的調制方法，你們就付那一杯酒錢，如果邦德答錯了，那他要把酒錢付給你們。在這樣的場景下，已知邦德能分辨16杯馬丁尼酒中的13杯，你們４人有多大的概率能把酒錢都賺回來？
+
+
+```
+# Bond example - model code
+
+model{
+   theta    ~ dunif(0, 1)               # prior distribution
+   y        ~ dbin(theta,16)            # sampling distribution
+   
+   P.ability <- step(theta - 0.5)       # = 1 if theta > 0.5 (i.e. if better than guessing)
+   
+   y.pred   ~ dbin(theta,4)             # predictive distribution for 4 new taste tests
+   
+   P.Moneyback   <- step(0.5 - y.pred)  # =1 if y.pred <= 0.5, 0 otherwise
+  #P.Moneyback   <- equals(y.pred, 0)   # alternative way of calculating predictive prob of 0 correct taste tests
+# data 
+  y <- 13                               # observed number of correct taste tests in original experiment
+  
+}
+```
+
+
+```{r　R-OpenBUGS18, cache=TRUE, message=TRUE, warning=FALSE}
+
+
+# Step 1 check model
+modelCheck("backupfiles/bondmodel.txt") 
+
+# compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as 
+# they are aleady provided in the model specification
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("P.ability", "P.Moneyback", "theta", "y.pred")
+samplesSet(parameters)
+
+# Generate 100000 iterations
+modelUpdate(100000)
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+```
+
+1. 第一個問題，可以用 `theta` 的事後概率分布來回答，十萬次MC計算的結果顯示，邦德能夠準確分辨馬丁尼酒的調制方法的概率是0.78，且這個事後概率分布的95%可信區間是(0.5653, 0.9317)。
+
+2. 第二個問題，邦德擁有能準確分辨馬丁尼酒調制方法的能力(不是猜的)的概率是 `P.ability = 0.9935`。如果邦德只是瞎猜，那麼 `theta` 就只能等於或者十分接近0.5。所以我們相信邦德有這樣一種分辨能力的概率是99.4%。
+
+3. 你和４名好友在酒吧能從邦德身上把4被馬丁尼酒錢賺回來的概率，也就等價於邦德在這四次猜酒的結果上都給出了錯誤的答案，四次全錯的概率，就是 `P.Moneyback = 0.0057`。模型代碼中 `y.pred` 用來預測邦德在接下來４次猜酒遊戲中給出的答案是 0還是 1(四次都對的話和爲4)。結果顯示 `y.pred` 的均值達到了3.116，４次全錯的概率是驚人的0.006。
+
 # 馬爾可夫鏈蒙特卡羅MCMC，圖形模型，BUGS語言
 
 ## Markov Chain Monte Carlo 馬爾可夫鏈蒙特卡羅算法

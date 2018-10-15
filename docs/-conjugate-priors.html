@@ -1974,6 +1974,61 @@ chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span cla
 </p>
 </div>
 <p>D. James Bond Example.</p>
+<p>007邦德喝了16杯馬丁尼酒，每飲一杯，都被問道那杯馬丁尼酒是被調酒師用搖的(shaken)還是用攪拌的(stired)調制的。結果在這邦德喝過的16杯馬丁尼酒中，他居然答對了13杯。（007就是流弊）</p>
+<ol style="list-style-type: decimal">
+<li><p>嘗試修改新藥試驗的模型代碼，用均一分布作爲參數<span class="math inline">\(\theta\)</span>的先驗概率分布，你是否能進行一個貝葉斯分析來回答這個問題：“邦德能夠正確區分一杯馬丁尼酒的調制方法的概率是多少？”</p></li>
+<li><p>那如果把這個問題稍微改變一下，“邦德能夠區分馬丁尼酒的調制方法的概率是多少？(what is the probability that James Bond has at least some ability to tell the difference between shaken and stirred martinis?i.e. better than guessing)”你能回答嗎？</p></li>
+<li><p>假定這樣一個場景，你和另外三個朋友在酒吧遇見了邦德，你們每個人都說要和邦德玩品酒的遊戲，如果邦德能準確分辨出馬丁尼酒的調制方法，你們就付那一杯酒錢，如果邦德答錯了，那他要把酒錢付給你們。在這樣的場景下，已知邦德能分辨16杯馬丁尼酒中的13杯，你們４人有多大的概率能把酒錢都賺回來？</p></li>
+</ol>
+<pre><code># Bond example - model code
+
+model{
+   theta    ~ dunif(0, 1)               # prior distribution
+   y        ~ dbin(theta,16)            # sampling distribution
+   
+   P.ability &lt;- step(theta - 0.5)       # = 1 if theta &gt; 0.5 (i.e. if better than guessing)
+   
+   y.pred   ~ dbin(theta,4)             # predictive distribution for 4 new taste tests
+   
+   P.Moneyback   &lt;- step(0.5 - y.pred)  # =1 if y.pred &lt;= 0.5, 0 otherwise
+  #P.Moneyback   &lt;- equals(y.pred, 0)   # alternative way of calculating predictive prob of 0 correct taste tests
+# data 
+  y &lt;- 13                               # observed number of correct taste tests in original experiment
+  
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/bondmodel.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
+<span class="co"># they are aleady provided in the model specification</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P.ability&quot;</span>, <span class="st">&quot;P.Moneyback&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;P.ability&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;P.Moneyback&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;y.pred&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">100000</span>)</code></pre></div>
+<pre><code>## 100000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##                mean      sd  MC_error val2.5pc median val97.5pc start sample
+## P.Moneyback 0.00568 0.07515 0.0002297   0.0000 0.0000    0.0000     1 100000
+## P.ability   0.99350 0.08067 0.0002434   1.0000 1.0000    1.0000     1 100000
+## theta       0.77780 0.09533 0.0003000   0.5653 0.7881    0.9317     1 100000
+## y.pred      3.11600 0.89460 0.0028830   1.0000 3.0000    4.0000     1 100000</code></pre>
+<ol style="list-style-type: decimal">
+<li><p>第一個問題，可以用 <code>theta</code> 的事後概率分布來回答，十萬次MC計算的結果顯示，邦德能夠準確分辨馬丁尼酒的調制方法的概率是0.78，且這個事後概率分布的95%可信區間是(0.5653, 0.9317)。</p></li>
+<li><p>第二個問題，邦德擁有能準確分辨馬丁尼酒調制方法的能力(不是猜的)的概率是 <code>P.ability = 0.9935</code>。如果邦德只是瞎猜，那麼 <code>theta</code> 就只能等於或者十分接近0.5。所以我們相信邦德有這樣一種分辨能力的概率是99.4%。</p></li>
+<li><p>你和４名好友在酒吧能從邦德身上把4被馬丁尼酒錢賺回來的概率，也就等價於邦德在這四次猜酒的結果上都給出了錯誤的答案，四次全錯的概率，就是 <code>P.Moneyback = 0.0057</code>。模型代碼中 <code>y.pred</code> 用來預測邦德在接下來４次猜酒遊戲中給出的答案是 0還是 1(四次都對的話和爲4)。結果顯示 <code>y.pred</code> 的均值達到了3.116，４次全錯的概率是驚人的0.006。</p></li>
+</ol>
 </div>
 </div>
             </section>
