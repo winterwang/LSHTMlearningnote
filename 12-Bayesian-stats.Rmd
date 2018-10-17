@@ -1866,8 +1866,51 @@ MCMC過程需要對所有的未知參數先給出起始值(initial/starting valu
 檢查MCMC是否收斂，最常用的方法是視覺檢查，作出MCMC鏈式圖來輔助我們診斷。我們建議，使用多個不同的起始值，產生多個不同的 MCMC 樣本鏈來輔助診斷。當然，除了視覺診斷，另外還存在一些比較鏈內(within)和鏈間(between)方差的方法來進行收斂診斷的手段。但是，沒有哪種方法是萬無一失的。在 R 裏面，有一個很強大的包 [`coda`](https://cran.r-project.org/doc/Rnews/Rnews_2006-1.pdf#page=7)，它被設計來把OpenBUGS的輸出結果 (output) 轉變成爲輸入對象 (input object)，利用R來便利地進行模型分析和診斷。許多對模型收斂程度的診斷，都會認爲未知參數的起始值是相對事後概率分布來說過度離散的。所以，建議在提供起始值的時候，每一個未知參數的起始值，都盡量爲每一個MCMC鏈給出幾個**"合理"但差異較大(plausible but widely differing initial values)**的起始值。
 
 
-評估MCMC的收斂與否，一個比較實用的手段是雙保險的方法: 就是既從圖形視覺上來診斷產生的MCMC樣本鏈的收斂程度，也通過統計檢驗方法對收斂作收斂與否的統計學分析。當某些模型含有衆多的未知的參數的時候，可能你想對每一個未知參數的事後概率分佈的MCMC採樣是否收斂進行分析和檢驗是不太實際的，
+評估MCMC的收斂與否，一個比較實用的手段是雙保險的方法: 就是既從圖形視覺上來診斷產生的MCMC樣本鏈的收斂程度，也通過統計檢驗方法對收斂作收斂與否的統計學分析。當某些模型含有衆多的未知的參數的時候，你想對每一個未知參數的事後概率分佈的MCMC採樣是否收斂進行分析和檢驗可能是不太實際的，此時的常見手段是隨機選取衆多未知參數中幾個來分析其MCMC採樣結果的收斂與否。
 
+我們的選擇包括：
+
+- 把MCMC事後概率分布採樣過程的整個歷史(history)痕跡(trace)全部繪制出來-不同起始值的同一個未知參數的MCMC鏈是否都給出了相對穩定的歷史痕跡？他們是否有合理的相互重疊(overlapping)？
+- 檢查自我相關程度(autocorrelation)-過高的自相關暗示收斂過程較慢。(high autocorrelation is a symtom of slow convergence)。
+- 看Gelman-Rubin收斂統計量-它通過比較MCMC鏈內方差(within variability)和鏈間方差(between variability)來評估MCMC鏈是否達到收斂。
+
+#### 視覺檢驗方法
+
+視覺檢驗方法是一種十分有效的輔助鑑別MCMC樣本鏈是否收斂的手段。常用的方法是使用幾個不同，且合理的起始值進行MCMC採樣運算，看他們是否最終都收斂到相同的位置。通常我們會把採集的 $\theta^{(i)}$ 樣本和 $i$ (也就是採樣次數) 做圖，如果順利達到收斂，圖形應該顯示爲隨機出現在一條直線上下附近的散點圖。
+
+在BUGS軟件裏，通常有兩種方法可以供用戶查看未知參數的MCMC樣本鏈的歷史痕跡(history trace)：
+
+
+1. 實時觀察MCMC樣本採集的歷史痕跡。 (只能在windows下進行，需要用到OpenBUGS的窗口)
+2. MCMC樣本採集結束以後把採集的未知參數事後樣本的歷史痕跡一次性全部繪制出來。
+
+繪制歷史痕跡時用不同顏色來表示不同起始值的MCMC鏈會更加有助於我們在圖形上識別出MCMC鏈是否分別都達到了令人滿意的模型收斂，互相的重疊程度也能一目了然。
+
+至於(Brooks-)Gelman-Rubin (BGR)診斷收斂統計量，它的使用前提是必須使用合理且差異較大的不同起始值（至少兩個）。
+
+### 模型效率 efficiency
+
+一旦你認爲MCMC採集的樣本鏈已經達到收斂於事後概率分布。接下來要做的是繼續MCMC樣本採集，採集的事後概率分布樣本越多，事後概率推斷就越精確。通常一個表現良好的事後概率分布，我們的經驗是4000個左右的獨立樣本產生的95%可信區間能夠給出94%-96%實際的事後概率分布(actual posterior probability) [@Raftery92howmany]。但是實際上MCMC採集的樣本鏈是高度自相關的(autocorrelated)，因此實際有效的樣本量會少於真實的樣本量。(effective sample size < actual sample size)
+
+計算事後概率分布對未知參數的估計的精確度的方法之一，是給每一個未知參數計算蒙特卡羅標準誤(Monte Carlo standard error)。它是對MCMC樣本參數均值和真實事後均值之間差的估計(estimate of the difference between the mean of the sampled values, which we are using as our estimate of the posterior mean for each parameter, and the true posterior mean.)。
+
+MCSE (Monte Carlo Standard Error) 等於未知參數的事後樣本均值的標準誤。此時，事後樣本均值被當做是事後期望值的理論取值的一個估計 (an estimate of the theoretical posterior expectation) $E(\theta|y)$。
+
+如果採集的樣本是相互獨立的，那麼$\text{MCSE}^{ind} = \frac{s}{\sqrt{N}}$ 其中，$s = \text{posterior SD}$ 參數$\theta$的事後樣本標準差，$N$ 是採集的事後樣本的樣本量。但是我們真正能採集到的樣本是自相關樣本(autocorrelated samples)，自相關樣本的$\text{MCSE}^{ac} > \text{MCSE}^{ind}$。
+
+一個有自相關的MCMC鏈的**有效樣本量 (effective sample size)**$N^*$可以這樣估計：
+
+$$
+N^* = (\frac{s}{\text{MCSE}^{ac}})^2
+$$
+
+所以，如果：
+
+- $\text{MCSE}^{ac} \approx 0.05s \Rightarrow N^* \approx 1/0.05^2 = 400$;
+- $\text{MCSE}^{ac} \approx 0.015s \Rightarrow N^* \approx 1/0.015^2 = 4444$;
+- $\text{MCSE}^{ac} \approx 0.01s \Rightarrow N^* \approx 1/0.01^2 = 10000$;
+
+由事後樣本的標準差和蒙特卡羅標準誤之間的關系可見，基本上MCMC鏈達到收斂以後，你需要重復MCMC採樣的次數，也就是採集的事後分布樣本量的大小要使得蒙特卡羅標準誤小於事後樣本標準差的1/100才能基本滿足要求。未知參數的事後估計和總結也就是要建立在有效樣本量至少爲10000或更多的基礎之上。
 
 # 建模和模型的檢查
 
