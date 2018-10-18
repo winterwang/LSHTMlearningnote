@@ -1066,7 +1066,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="83.5" data-path="mcmcbugs.html"><a href="mcmcbugs.html#bugs-language"><i class="fa fa-check"></i><b>83.5</b> BUGS language</a><ul>
 <li class="chapter" data-level="83.5.1" data-path="mcmcbugs.html"><a href="mcmcbugs.html#-types-of-nodes"><i class="fa fa-check"></i><b>83.5.1</b> 節點的種類 types of nodes</a></li>
 <li class="chapter" data-level="83.5.2" data-path="mcmcbugs.html"><a href="mcmcbugs.html#section-83.5.2"><i class="fa fa-check"></i><b>83.5.2</b> 分布的標記法</a></li>
+<li class="chapter" data-level="83.5.3" data-path="mcmcbugs.html"><a href="mcmcbugs.html#arrays-and-loops"><i class="fa fa-check"></i><b>83.5.3</b> Arrays and loops</a></li>
+<li class="chapter" data-level="83.5.4" data-path="mcmcbugs.html"><a href="mcmcbugs.html#section-83.5.4"><i class="fa fa-check"></i><b>83.5.4</b> 常用的方程</a></li>
 </ul></li>
+<li class="chapter" data-level="83.6" data-path="mcmcbugs.html"><a href="mcmcbugs.html#bugs-model"><i class="fa fa-check"></i><b>83.6</b> 爲BUGS model模型準備格式正確的數據</a></li>
+<li class="chapter" data-level="83.7" data-path="mcmcbugs.html"><a href="mcmcbugs.html#practical-bayesian-statistics-04"><i class="fa fa-check"></i><b>83.7</b> Practical Bayesian Statistics 04</a></li>
 </ul></li>
 <li class="chapter" data-level="84" data-path="section-84.html"><a href="section-84.html"><i class="fa fa-check"></i><b>84</b> 建模和模型的檢查</a></li>
 <li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a></li>
@@ -1400,7 +1404,68 @@ p(E|A,B,C,D,F) = p(E|A,F)
 </tr>
 </tbody>
 </table>
+<p>要注意的是，這裏的正態分布的參數是均值 <code>mu</code>，和精確度 precision <code>tau</code>:</p>
+<p><span class="math display">\[
+\text{precision} = \frac{1}{\text{variance}} = \frac{1}{sd^2}
+\]</span></p>
+<p>另外，在 BUGS 語言中，我們無法在指定分布時給參數使用方程，這種時候必須做的是分步驟來寫模型：</p>
+<pre><code>y ~ dnorm(mu, tau); mu &lt;- a + b*x</code></pre>
+<p>不能被寫作：</p>
+<pre><code>y ~ dnorm(a+b*x, tau)</code></pre>
 </div>
+<div id="arrays-and-loops" class="section level3">
+<h3><span class="header-section-number">83.5.3</span> Arrays and loops</h3>
+<p>當有些模型需要有重復執行的步驟的時候，可以使用排列 (arrays) 或者循環 (loops) 的方式來寫你的BUGS模型。例如下面的代碼用來表示在長度或者人數爲 <span class="math inline">\(m\)</span> 的數據中循環相同的步驟，其中<code>n, p, r</code>都是具有相同長度的向量：</p>
+<pre><code>for (i in 1:m){ # loop over m individuals
+  r[i] ~ dbin(p[i], n[i]) 
+  p[i] ~ dunif(0, 1)
+}</code></pre>
+<p>所有被包括在大括號 <code>{}</code> 裏面的命令都跟着變量 <code>i</code> 被從 <code>1</code> 開始重復相同的步驟直至第 <code>m</code> 個對象。</p>
+</div>
+<div id="section-83.5.4" class="section level3">
+<h3><span class="header-section-number">83.5.4</span> 常用的方程</h3>
+<p>BUGS 建立貝葉斯模型你會常用到的方程有：</p>
+<ol style="list-style-type: decimal">
+<li><code>p &lt;- step(x - 0.7)</code>: 當 <span class="math inline">\(x\geqslant0.7\)</span>時<span class="math inline">\(=1\)</span>，反之 <span class="math inline">\(=0\)</span>；類似這樣的方程可以拿來監測 <code>p</code> 這個節點，如果取它的均值，我們就得到 <span class="math inline">\(x\geqslant0.7\)</span> 的概率。</li>
+<li><code>p &lt;- equals(x, 0.7)</code>: 當 <span class="math inline">\(x = 0.7\)</span>時<span class="math inline">\(=1\)</span>，反之 <span class="math inline">\(=0\)</span>。</li>
+<li><code>tau &lt;- 1/pow(s, 2)</code>: 這是用來給變量節點 <code>s</code> 加指數方程的命令等價於 <span class="math inline">\(\tau = \frac{1}{s^2}\)</span>。</li>
+<li><code>s &lt;- 1/sqrt(tau)</code>: 等價於 <span class="math inline">\(s = \frac{1}{\sqrt{\tau}}\)</span>。</li>
+</ol>
+<p>在BUGS手冊的 “Model Specification/Logical nodes” 章節有更多對不同方程命令的描述。</p>
+<p>一般地，方程的定義要出現在 <code>&lt;-</code> 的右邊，例如 <code>totalx &lt;- sum(x[])</code>，但是並不是全部都必須如此的，例如在廣義線性回歸模型(GLM)中，鏈接方程 (link function) 是允許出現在箭頭的左邊的：</p>
+<pre><code>logit(p[i]) &lt;- a +b*x[i]
+log(m[i]) &lt;- c + d*y[i]</code></pre>
+<p><code>mean(p[])</code>的含義是對 <code>p</code> 的所有成分取均值，如果是 <code>mean(p[m:n])</code>，則是對數列 <code>p</code> 中成分排序在 <code>m,n</code> 之間取均值，忽略掉其前後的元素。相似的概念也適用於 <code>sum(p[])</code> 命令。</p>
+</div>
+</div>
+<div id="bugs-model" class="section level2">
+<h2><span class="header-section-number">83.6</span> 爲BUGS model模型準備格式正確的數據</h2>
+<p>OpenBUGS 只能接受格式爲 R/S-plus 的，或者是整理成形狀爲長方形的文字格式數據。例如，名叫GREAT的臨牀試驗數據中，</p>
+<ul>
+<li>在家中接受治療的患者人數是163，其中13例死亡；</li>
+<li>在醫院內接受治療的患者人數是148，其中23例死亡。</li>
+</ul>
+<p>這個模型可以用循環寫作：</p>
+<pre><code>for(i in 1:2){ # loop through the arms
+    deaths[i] ~ dbin(p[i], n[i]) # likelihood for each arm
+    p[i]  ~ dbeta(alpha, beta)  # same prior for each arm
+}</code></pre>
+<p>這個模型的標記中， <code>deaths[i]</code> 表示第 <span class="math inline">\(i\)</span> 組對象中死亡人數，<code>n[i]</code> 則表示第 <span class="math inline">\(i\)</span> 組實驗對象中的總人數。而 <code>p[i]</code> 則代表了第 <span class="math inline">\(i\)</span> 組對象中實驗對象死亡的概率。</p>
+<p>那麼這個數據應該用怎樣的語言來描述才合理呢？</p>
+<p>如果用長方形格式數據，要寫作：</p>
+<pre><code>n[] deaths[]
+163 13
+148 23
+END
+</code></pre>
+<p>這種格式中，第一行需要給出變量名稱，每一列是變量相對應的數據，變量名稱也必須和模型中的變量名稱相匹配。在數據最後一行則需要用<code>END</code>來結束，並且接着要有一個空行。（所以在這樣的數據格式中最後一行必須是空行）</p>
+<p>R/S-plus格式的數據，我們已經很熟悉了，可以寫作：</p>
+<pre><code>list(n = c(163, 148), 
+     deaths = c(13, 23))</code></pre>
+<p>OpenBUGS同時還允許你給模型加載多個數據文件，你如果願意的話，可以把不同格式的數據混合使用，一起加載在模型裏運算。</p>
+</div>
+<div id="practical-bayesian-statistics-04" class="section level2">
+<h2><span class="header-section-number">83.7</span> Practical Bayesian Statistics 04</h2>
 </div>
 </div>
 <h3>References</h3>
