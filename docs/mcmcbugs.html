@@ -1047,7 +1047,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="82.3" data-path="-conjugate-priors.html"><a href="-conjugate-priors.html#section-82.3"><i class="fa fa-check"></i><b>82.3</b> 正態分布(似然)數據的共軛先驗概率</a></li>
 <li class="chapter" data-level="82.4" data-path="-conjugate-priors.html"><a href="-conjugate-priors.html#section-82.4"><i class="fa fa-check"></i><b>82.4</b> 泊淞分布(似然)數據的共軛先驗概率</a></li>
 <li class="chapter" data-level="82.5" data-path="-conjugate-priors.html"><a href="-conjugate-priors.html#section-82.5"><i class="fa fa-check"></i><b>82.5</b> 共軛先驗概率分布的總結</a></li>
-<li class="chapter" data-level="82.6" data-path="-conjugate-priors.html"><a href="-conjugate-priors.html#practical-bayesian-statistics-03"><i class="fa fa-check"></i><b>82.6</b> Practical Bayesian Statistics 03</a></li>
+<li class="chapter" data-level="82.6" data-path="-conjugate-priors.html"><a href="-conjugate-priors.html#BayesPrac03"><i class="fa fa-check"></i><b>82.6</b> Practical Bayesian Statistics 03</a></li>
 </ul></li>
 <li class="chapter" data-level="83" data-path="mcmcbugs.html"><a href="mcmcbugs.html"><i class="fa fa-check"></i><b>83</b> 馬爾可夫鏈蒙特卡羅MCMC，圖形模型，BUGS語言</a><ul>
 <li class="chapter" data-level="83.1" data-path="mcmcbugs.html"><a href="mcmcbugs.html#markov-chain-monte-carlo-"><i class="fa fa-check"></i><b>83.1</b> Markov Chain Monte Carlo 馬爾可夫鏈蒙特卡羅算法</a><ul>
@@ -1466,6 +1466,129 @@ END
 </div>
 <div id="practical-bayesian-statistics-04" class="section level2">
 <h2><span class="header-section-number">83.7</span> Practical Bayesian Statistics 04</h2>
+<p>這一次練習題的主要目的是，通過使用OpenBUGS來思考，它是如何從非共軛模型的事後概率分布中採集MCMC樣本的。這個過程和從共軛模型的事後概率分布中採樣有哪些不同。</p>
+<p>思考前一次，第三章的課後練習題裏的(Chapter <a href="-conjugate-priors.html#BayesPrac03">82.6</a>)新藥試驗的例子。還是用這個場景，但是我們這次實施8個不同的試驗，<span class="math inline">\(i = 1,\dots,8\)</span>，其中第<span class="math inline">\(i\)</span>次試驗有 <span class="math inline">\(n_i\)</span> 名患者，其中 <span class="math inline">\(y_i\)</span> 名患者的治療被認爲有顯著療效。每次試驗中的 <span class="math inline">\(n_i\)</span> 名患者都給予相同劑量<span class="math inline">\(x_i\)</span>，但是不同於其他次試驗時的使用劑量的藥物。此時我們把注意力轉到，評估治療有效百分比 <span class="math inline">\(\theta_i\)</span>，和劑量<span class="math inline">\(x_i\)</span>之間的關系上來。</p>
+<p>一種方法是，我們可以對這個數據擬合一個邏輯回歸模型，在貝葉斯統計學中，邏輯回歸模型的擬合方式如下：</p>
+<p><span class="math display">\[
+\begin{aligned}
+y_i &amp; \sim \text{Binomial}(\theta_i, n_i) \\ 
+\text{logit}(\theta_i) &amp; = \beta_0 +  \beta_1 x_i
+\end{aligned}
+\]</span></p>
+<p>其中 <span class="math inline">\(\text{logit}\)</span> 轉換是方便地把 <span class="math inline">\(0\sim1\)</span> 之間的百分比變量轉化成爲 <span class="math inline">\(-\infty, +\infty\)</span> 變量的鏈接方程。另外，貝葉斯統計學模型中，我們需要給所有模型中出現的未知參數，提供一個先驗概率分布。在上面這個模型中，我們給有效百分比 <span class="math inline">\(\theta_i\)</span> 定義了一個回歸方程式，因此，我們需要給這個回歸方程式的回歸系數(regression coefficients)指定先驗概率分布。我們先使用模糊的，沒有太多信息的先驗概率分布，例如均一分布：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\beta_0 &amp; \sim \text{Uniform}(-100, 100)\\
+\beta_1 &amp; \sim \text{Uniform}(-100, 100)
+\end{aligned}
+\]</span></p>
+<p>1.首先，用第三章練習題中的新藥試驗模型，使用 <span class="math inline">\(\text{beta}(1, 1)\)</span> 作爲 <span class="math inline">\(\theta\)</span>的先驗概率分布（已知<span class="math inline">\(\text{beta}(1, 1)\)</span>其實等價於一個均一分布）。設定監測未知參數 <code>theta</code>，執行1000次MCMC運算之後，繪制 <code>theta</code> 的歷史痕跡。</p>
+<pre><code># original conjugate drug model with uniform beta(0,1) prior on theta
+
+model{
+    theta ~ dbeta(1,1)     # prior distribution
+    y     ~ dbin(theta, 20)# sampling distribution for 20 observed patients
+    y    &lt;- 15
+}</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/MCdrugPractical04.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
+<span class="co"># they are aleady provided in the model specification</span>
+<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>))
+
+#### PLOT THE MCMC CHAINS:
+<span class="kw">plot</span>(chain<span class="op">$</span>theta, <span class="dt">main=</span><span class="op">~</span>theta, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="fl">0.2</span>, <span class="fl">1.2</span>),
+         <span class="dt">ylab=</span><span class="st">&quot;theta&quot;</span>, <span class="dt">xlab=</span><span class="st">&quot;iteration&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSPractical0400"></span>
+<img src="bookdown_files/figure-html/OpenBUGSPractical0400-1.png" alt="History plot showing 1000 samples of theta" width="80%" />
+<p class="caption">
+圖 83.5: History plot showing 1000 samples of theta
+</p>
+</div>
+<ol start="2" style="list-style-type: decimal">
+<li>下面我們來看題幹中的邏輯回歸模型的BUGS版本：</li>
+</ol>
+<pre><code>model {
+       for( i in 1 : N ) { # loop thorugh experiments
+            y[i] ~ dbin(theta[i],n[i])
+           logit(theta[i]) &lt;- beta0 + beta1 * x[i]    
+       }
+       # priors
+       beta0 ~ dunif(-100, 100)
+       beta1 ~ dunif(-100, 100)
+}</code></pre>
+<p>試驗獲得觀察數據如下：</p>
+<pre><code>list(y = c(1, 3, 6, 8, 11, 15, 17, 19), 
+     n = c(20, 20, 20, 20, 20, 20, 20, 20), 
+     x = c(30, 32, 34, 36, 38, 40, 42, 44), 
+     N = 8 )</code></pre>
+<ol start="3" style="list-style-type: decimal">
+<li>嘗試使用OpenBUGS來跑這個模型。記得你需要把數據加載到軟件裏面去。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/logistic-reg-model.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/logistic-reg-data.txt&quot;</span>)     </code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate initial values </span>
+<span class="kw">modelGenInits</span>() </code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<ol start="4" style="list-style-type: decimal">
+<li>對未知參數，也就是邏輯回歸的回歸系數 <code>beta0, beta1</code>，和第六次試驗的治療成功百分比 <code>theta[6]</code> 設定監測追蹤其採樣軌跡。試着執行1000次MCMC採樣，把這三個跟蹤的未知參數的採樣歷史軌跡繪制下來。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;beta0&quot;</span>, <span class="st">&quot;beta1&quot;</span>, <span class="st">&quot;theta[6]&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;beta0&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta1&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;theta[6]&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">beta0  =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;beta0&quot;</span>),
+                    <span class="dt">beta1  =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;beta1&quot;</span>),
+                    <span class="dt">theta6 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta[6]&quot;</span>))
+
+#### PLOT THE MCMC CHAINS:
+<span class="kw">plot</span>(chain<span class="op">$</span>beta0[<span class="dv">1</span><span class="op">:</span><span class="dv">1000</span>], <span class="dt">main=</span><span class="st">&quot;beta0&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">100</span>, <span class="dv">180</span>),
+         <span class="dt">ylab=</span><span class="st">&quot;beta0&quot;</span>, <span class="dt">xlab=</span><span class="st">&quot;iteration&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSPractical0402"></span>
+<img src="bookdown_files/figure-html/OpenBUGSPractical0402-1.png" alt="History plot showing 1000 samples of beta0" width="80%" />
+<p class="caption">
+圖 83.6: History plot showing 1000 samples of beta0
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSPractical0403"></span>
+<img src="bookdown_files/figure-html/OpenBUGSPractical0403-1.png" alt="History plot showing 1000 samples of beta1" width="80%" />
+<p class="caption">
+圖 83.7: History plot showing 1000 samples of beta1
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSPractical0404"></span>
+<img src="bookdown_files/figure-html/OpenBUGSPractical0404-1.png" alt="History plot showing 1000 samples of beta1" width="80%" />
+<p class="caption">
+圖 83.8: History plot showing 1000 samples of beta1
+</p>
+</div>
 </div>
 </div>
 <h3>References</h3>

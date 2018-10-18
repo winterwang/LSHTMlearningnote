@@ -1337,7 +1337,7 @@ kable_styling(
 
 共軛先驗概率分布在數學上是十分便利的，但是並不是所有的似然都能找到它的共軛概率分布做先驗概率。這時候我們就需要求助於計算機模擬試驗的威力，下一章我們會接觸到怎樣使用 Markov Chain Monte Carlo (MCMC)來克服我們找不到共軛先驗概率的似然時，後驗概率分布的計算。它的中文名被翻譯成馬爾可夫鏈蒙特卡羅。
 
-## Practical Bayesian Statistics 03
+## Practical Bayesian Statistics 03 {#BayesPrac03}
 
 A. 新藥試驗模型
 
@@ -2124,6 +2124,135 @@ list(n = c(163, 148),
 OpenBUGS同時還允許你給模型加載多個數據文件，你如果願意的話，可以把不同格式的數據混合使用，一起加載在模型裏運算。
 
 ## Practical Bayesian Statistics 04
+
+這一次練習題的主要目的是，通過使用OpenBUGS來思考，它是如何從非共軛模型的事後概率分布中採集MCMC樣本的。這個過程和從共軛模型的事後概率分布中採樣有哪些不同。
+
+思考前一次，第三章的課後練習題裏的(Chapter \@ref(BayesPrac03))新藥試驗的例子。還是用這個場景，但是我們這次實施8個不同的試驗，$i = 1,\dots,8$，其中第$i$次試驗有 $n_i$ 名患者，其中 $y_i$ 名患者的治療被認爲有顯著療效。每次試驗中的 $n_i$ 名患者都給予相同劑量$x_i$，但是不同於其他次試驗時的使用劑量的藥物。此時我們把注意力轉到，評估治療有效百分比 $\theta_i$，和劑量$x_i$之間的關系上來。
+
+一種方法是，我們可以對這個數據擬合一個邏輯回歸模型，在貝葉斯統計學中，邏輯回歸模型的擬合方式如下：
+
+$$
+\begin{aligned}
+y_i & \sim \text{Binomial}(\theta_i, n_i) \\ 
+\text{logit}(\theta_i) & = \beta_0 +  \beta_1 x_i
+\end{aligned}
+$$
+
+其中 $\text{logit}$ 轉換是方便地把 $0\sim1$ 之間的百分比變量轉化成爲 $-\infty, +\infty$ 變量的鏈接方程。另外，貝葉斯統計學模型中，我們需要給所有模型中出現的未知參數，提供一個先驗概率分布。在上面這個模型中，我們給有效百分比 $\theta_i$ 定義了一個回歸方程式，因此，我們需要給這個回歸方程式的回歸系數(regression coefficients)指定先驗概率分布。我們先使用模糊的，沒有太多信息的先驗概率分布，例如均一分布：
+
+$$
+\begin{aligned}
+\beta_0 & \sim \text{Uniform}(-100, 100)\\
+\beta_1 & \sim \text{Uniform}(-100, 100)
+\end{aligned}
+$$
+
+
+1.首先，用第三章練習題中的新藥試驗模型，使用 $\text{beta}(1, 1)$ 作爲 $\theta$的先驗概率分布（已知$\text{beta}(1, 1)$其實等價於一個均一分布）。設定監測未知參數 `theta`，執行1000次MCMC運算之後，繪制 `theta` 的歷史痕跡。
+
+
+```
+# original conjugate drug model with uniform beta(0,1) prior on theta
+
+model{
+    theta ~ dbeta(1,1)     # prior distribution
+    y     ~ dbin(theta, 20)# sampling distribution for 20 observed patients
+    y    <- 15
+}
+```
+
+```{r　OpenBUGSPractical0400, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of theta', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+
+# Step 1 check model
+modelCheck("backupfiles/MCdrugPractical04.txt") 
+
+# compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as 
+# they are aleady provided in the model specification
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("theta")
+samplesSet(parameters)
+
+# Generate 1000 iterations
+modelUpdate(1000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(theta = samplesSample("theta"))
+
+#### PLOT THE MCMC CHAINS:
+plot(chain$theta, main=~theta, type="l", ylim = c(0.2, 1.2),
+         ylab="theta", xlab="iteration", col="red")
+```
+
+2. 下面我們來看題幹中的邏輯回歸模型的BUGS版本：
+
+```
+model {
+	   for( i in 1 : N ) { # loop thorugh experiments
+		    y[i] ~ dbin(theta[i],n[i])
+ 	       logit(theta[i]) <- beta0 + beta1 * x[i]    
+	   }
+	   # priors
+	   beta0 ~ dunif(-100, 100)
+	   beta1 ~ dunif(-100, 100)
+}
+```
+
+試驗獲得觀察數據如下：
+
+```
+list(y = c(1, 3, 6, 8, 11, 15, 17, 19), 
+     n = c(20, 20, 20, 20, 20, 20, 20, 20), 
+     x = c(30, 32, 34, 36, 38, 40, 42, 44), 
+     N = 8 )
+```
+
+3. 嘗試使用OpenBUGS來跑這個模型。記得你需要把數據加載到軟件裏面去。
+
+```{r OpenBUGSPractical0401, cache=TRUE, message=TRUE, warning=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/logistic-reg-model.txt") 
+# Load the data 
+modelData("backupfiles/logistic-reg-data.txt")     
+# compile the model
+modelCompile(numChains = 1) 
+# generate initial values 
+modelGenInits() 
+```
+
+4. 對未知參數，也就是邏輯回歸的回歸系數 `beta0, beta1`，和第六次試驗的治療成功百分比 `theta[6]` 設定監測追蹤其採樣軌跡。試着執行1000次MCMC採樣，把這三個跟蹤的未知參數的採樣歷史軌跡繪制下來。
+
+
+```{r OpenBUGSPractical0402, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of beta0', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("beta0", "beta1", "theta[6]")
+samplesSet(parameters)
+
+# Generate 1000 iterations
+modelUpdate(1000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"),
+                    theta6 = samplesSample("theta[6]"))
+
+#### PLOT THE MCMC CHAINS:
+plot(chain$beta0[1:1000], main="beta0", type="l", ylim = c(-100, 180),
+         ylab="beta0", xlab="iteration", col="red")
+```
+
+
+```{r OpenBUGSPractical0403, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+plot(chain$beta1[1:1000], main="beta1", type="l", ylim = c(-100, 180),
+         ylab="beta1", xlab="iteration", col="red")
+```
+
+```{r OpenBUGSPractical0404, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+plot(chain$theta6[1:1000], main="theta[6]", type="l", ylim = c(-0, 1.2),
+         ylab="beta[6]", xlab="iteration", col="red")
+```
 
 # 建模和模型的檢查
 
