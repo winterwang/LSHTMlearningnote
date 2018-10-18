@@ -1928,6 +1928,109 @@ JAGS的全稱是 **J**ust **A**nother **G**ibbs **S**ampler，開發者是 [Mart
 
 其他著名的軟件還有 [Stan](http://mc-stan.org/)。它也是開源的自由軟件。
 
+
+## 圖形模型 statistical graphical models - Directed Acyclic Graphs (DAGs)
+
+在統計學模型中我們常常默認指定一些隨機變量之間的邏輯關系，這樣的邏輯關系可以用圖形來表示：
+
+- **節點 nodes**：用來表示變量(variables)；
+- **連接線 links**：用來表示變量之間的邏輯依賴關系(dependence association)。
+
+**帶方向的連接線 (directed links)**被用來表示邏輯依賴關系的方向(natural ordering of the dependence association)。
+其實這連接線所帶的方向本身就是回歸模型中表示預測變量和結果變量之間的依賴關系。貝葉斯統計學中常用的有向無環圖 (directed acyclic graphs, DAGs)，是我們常用的輔助建立貝葉斯模型的示意圖。
+
+例如一個描述吸煙，肥胖和心髒病發病可能的關系的的有向無環圖如下圖 \@ref(fig:DAGS-bayesian)。途中帶方向的連線（箭頭）表示預測變量和結果變量之間的依賴關系。
+
+
+```{r DAGS-bayesian, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for heart disease example', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/heartDAG.png")
+```
+
+### 條件獨立的概念 conditional independence concept
+
+在概率論入門(Chapter \@ref(intro))中學習過獨立的概念：
+
+$$
+p(Y,X) = p(Y)p(X)
+$$
+
+我們說 $X,Y$ 以條件 $Z$ 獨立如果他們滿足：
+
+$$
+p(X,Y|Z) = p(Y|Z)p(X|Z)
+$$
+
+條件獨立的關系可以用下面的有向無環圖 \@ref(fig:DAGS-condind) 來表示：
+
+
+```{r DAGS-condind, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for conditional independence', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/conditionalindependence.png")
+```
+
+
+**基因型例子 genotype example:**如果 $X,Y$ 分別是同一個家庭中的兩個孩子的基因型，$Z$是其父母的基因型。那麼兩個孩子之間的基因型就是以父母的基因型爲條件獨立的關系: $p(X,Y|Z) = p(Y|Z)p(X|Z)$。如果沒有父母親基因型的條件，兩個孩子的基因型就不互相獨立，而是相關的（很顯然因爲他們是親兄弟/妹）。
+
+在有向無環圖的術語中，一個變量的Parent(父/母)指的是有向連線指向該變量的最近的那個變量，反過來這個被指向的變量就被叫做Child(子)。所以如果從變量 $\alpha$ 存在指向 $\beta$ 的箭頭連線，那麼 $\alpha$ 被叫做 $\beta$ 的父/母(parent)，$\beta$ 被叫做 $\alpha$ 的子(child)。
+
+**硬幣例子 coin example:**如果一枚硬幣正面朝上或者反面朝上的概率分別是 $p(H), p(T)$，那麼令 $p(H) = \theta = 1 - p(T)$，如果兩次投擲硬幣試驗的結果分別是 $X, Y$，那麼 $X,Y$ 就是以 $\theta$ 爲條件的獨立事件: $p(X,Y|\theta) = p(Y|\theta)p(X|\theta)$。這裏的 $\theta$ 在貝葉斯統計學的環境下不是固定不變的，而是一個隨機的未知參數。
+
+
+條件獨立是一個十分重要的概念，因爲它爲$X,Y,Z$三個未知參數的聯合分布(joint distribution)提供了十分有用的因式分解理論依據：
+
+$$
+p(X,Y,Z)  = p(Y|Z)p(X|Z)p(Z)
+$$
+
+
+因爲，即使使用計算機進行模擬實驗 (simulation)，從條件分布$p(Y|Z), p(X|Z)$中採集事後概率分布樣本，也比從 $p(X,Y,Z)$ 中直接採集樣本要容易進行得多。
+
+一般地，一個含有許多個變量節點(nodes)的向量的聯合分布可以寫作：
+
+$$
+p(V) = \prod_{v\in V} p(v|\text{parents}[v])
+$$
+
+下圖\@ref(fig:DAGS-complex)給出的一個較爲復雜的 DAG 模型，其實它沒有看起來那麼復雜，有了條件獨立的概念，我們可以方便地把它的聯合分布進行因式分解：
+
+$$
+p(V) = p(A)p(F)p(B|A)p(C|A)p(E|A,F)p(D|B,C)
+$$
+
+```{r DAGS-complex, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='More complex DAG for conditional independence', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/complexDAG.png")
+```
+
+BUGS軟件也是利用這一概念來進行復雜的事後概率分布模型的計算，例如上述的模型中，
+
+$$
+p(E|A,B,C,D,F) = p(E|A,F)
+$$
+
+
+## BUGS language 
+
+在 BUGS 軟件提供的手冊裏有對 BUGS 語言更加詳盡的介紹，這裏我們只是對其精要部分做簡單概括的介紹。
+
+### 節點的種類 types of nodes
+
+在 BUGS 環境下，每個變量或者參數都被叫做一個節點。它主要被分爲兩類：
+
+- **隨機節點 (stochastic nodes)：**需要我們給出它們分布的描述。一個波浪線 `~` 被用來幫助我們描述這些隨機節點的分布，例如 ` r ~ dunif(a, b)` 的含義就是，在區間 $[a,b]$ 內，$r$服從均一分布。
+- **邏輯節點 (logical nodes)：**則表示的是對節點和節點之間關系的定義，它常常是一個方程，用 `<-` 來輔助定義。例如，`m <- alpha + beta*x` 定義的是 $m$ 和 $alpha, beta, x$ 節點之間的數學關系。
+
+### 分布的標記法
+
+BUGS語言中常用的分布和其對應的標記法歸納如下:
+
+| Expression 	| Distribution 	|        Usage       	|
+|:----------:	|:------------:	|:------------------:	|
+|    `dbin`    	|   binomial   	|    ` r ~ dbin(p,n)`   	|
+|    `dnorm`   	|    normal    	| `x ~ dnorm(mu, tau)` 	|
+|    `dpois`   	|    Poisson   	|   ` r ~ dpois(lambda)` 	|
+|    `dunif`   	|    uniform   	|   `x ~ dunif(a, b)`  	|
+|   `dgamma`   	|     gamma    	|  `x ~ dgamma(a, b)`  	|
+
+
 # 建模和模型的檢查
 
 # 貝葉斯統計學框架下的實驗設計
