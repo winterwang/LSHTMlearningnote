@@ -1584,11 +1584,52 @@ chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span cla
 </p>
 </div>
 <div class="figure" style="text-align: center"><span id="fig:OpenBUGSPractical0404"></span>
-<img src="bookdown_files/figure-html/OpenBUGSPractical0404-1.png" alt="History plot showing 1000 samples of beta1" width="80%" />
+<img src="bookdown_files/figure-html/OpenBUGSPractical0404-1.png" alt="History plot showing 1000 samples of theta[6]" width="80%" />
 <p class="caption">
-圖 83.8: History plot showing 1000 samples of beta1
+圖 83.8: History plot showing 1000 samples of theta[6]
 </p>
 </div>
+<p>對這三個位置變量的採樣歷史繪制痕跡圖之後，你發現每個參數期初的一些採樣是十分不穩定的，有很大的變動(variability)。</p>
+<ol start="5" style="list-style-type: decimal">
+<li>接下來，我們給上面同一個邏輯回歸模型增加另一條MCMC採樣鏈，重復跑相同的模型1000次，繪制同樣是這三個未知參數的事後分布MCMC採樣歷史痕跡圖。</li>
+</ol>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/logistic-reg-model.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/logistic-reg-data.txt&quot;</span>)     </code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate initial values </span>
+<span class="kw">modelGenInits</span>() </code></pre></div>
+<pre><code>## initial values generated, model initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;beta0&quot;</span>, <span class="st">&quot;beta1&quot;</span>, <span class="st">&quot;theta[6]&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;beta0&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta1&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;theta[6]&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">beta0  =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;beta0&quot;</span>),
+                    <span class="dt">beta1  =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;beta1&quot;</span>),
+                    <span class="dt">theta6 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta[6]&quot;</span>))
+
+#### PLOT THE MCMC CHAINS:
+<span class="kw">plot</span>(chain<span class="op">$</span>beta0[<span class="dv">1</span><span class="op">:</span><span class="dv">1000</span>], <span class="dt">main=</span><span class="st">&quot;beta0&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">100</span>, <span class="dv">180</span>),
+         <span class="dt">ylab=</span><span class="st">&quot;beta0&quot;</span>, <span class="dt">xlab=</span><span class="st">&quot;iteration&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)</code></pre></div>
+<img src="bookdown_files/figure-html/OpenBUGSPractical0405-1.png" width="672" />
+<div class="figure" style="text-align: center"><span id="fig:OpenBUGSPractical0406"></span>
+<img src="bookdown_files/figure-html/OpenBUGSPractical0406-1.png" alt="History plot showing 1000 samples of beta0, beta1, and theta[6]" width="80%" />
+<p class="caption">
+圖 83.9: History plot showing 1000 samples of beta0, beta1, and theta[6]
+</p>
+</div>
+<p>使用兩個不同的起始值作爲MCMC的採樣起點時，每個未知參數分別獲得兩條不同顏色的歷史痕跡圖。和之前只有一條MCMC採樣鏈時一樣，採樣的起始部分(大約100次左右)都有一些不穩定的值。等到100次採樣過後，我們發現每個參數的採樣結果都趨向於比較穩定，也就是方差，變化小了很多。但是藍色鏈，紅色鏈一直到200-300次採樣之後才逐漸互相交叉重疊。</p>
 </div>
 </div>
 <h3>References</h3>

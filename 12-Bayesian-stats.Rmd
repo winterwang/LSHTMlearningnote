@@ -2249,10 +2249,47 @@ plot(chain$beta1[1:1000], main="beta1", type="l", ylim = c(-100, 180),
          ylab="beta1", xlab="iteration", col="red")
 ```
 
-```{r OpenBUGSPractical0404, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+```{r OpenBUGSPractical0404, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
 plot(chain$theta6[1:1000], main="theta[6]", type="l", ylim = c(-0, 1.2),
-         ylab="beta[6]", xlab="iteration", col="red")
+         ylab="theta[6]", xlab="iteration", col="red")
 ```
+
+對這三個位置變量的採樣歷史繪制痕跡圖之後，你發現每個參數期初的一些採樣是十分不穩定的，有很大的變動(variability)。
+
+5. 接下來，我們給上面同一個邏輯回歸模型增加另一條MCMC採樣鏈，重復跑相同的模型1000次，繪制同樣是這三個未知參數的事後分布MCMC採樣歷史痕跡圖。
+
+
+```{r OpenBUGSPractical0405, cache=TRUE, message=TRUE, warning=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/logistic-reg-model.txt") 
+# Load the data 
+modelData("backupfiles/logistic-reg-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+modelGenInits() 
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("beta0", "beta1", "theta[6]")
+samplesSet(parameters)
+
+# Generate 1000 iterations
+modelUpdate(1000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"),
+                    theta6 = samplesSample("theta[6]"))
+
+#### PLOT THE MCMC CHAINS:
+plot(chain$beta0[1:1000], main="beta0", type="l", ylim = c(-100, 180),
+         ylab="beta0", xlab="iteration", col="red")
+```
+```{r OpenBUGSPractical0406, cache=TRUE, fig.width=7, fig.height=7, fig.cap='History plot showing 1000 samples of beta0, beta1, and theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesHistory("*", mfrow = c(3,1), ask = FALSE)
+```
+
+
+使用兩個不同的起始值作爲MCMC的採樣起點時，每個未知參數分別獲得兩條不同顏色的歷史痕跡圖。和之前只有一條MCMC採樣鏈時一樣，採樣的起始部分(大約100次左右)都有一些不穩定的值。等到100次採樣過後，我們發現每個參數的採樣結果都趨向於比較穩定，也就是方差，變化小了很多。但是藍色鏈，紅色鏈一直到200-300次採樣之後才逐漸互相交叉重疊。
 
 # 建模和模型的檢查
 
