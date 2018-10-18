@@ -2279,17 +2279,68 @@ modelUpdate(1000)
 chain <- data.frame(beta0  = samplesSample("beta0"),
                     beta1  = samplesSample("beta1"),
                     theta6 = samplesSample("theta[6]"))
-
-#### PLOT THE MCMC CHAINS:
-plot(chain$beta0[1:1000], main="beta0", type="l", ylim = c(-100, 180),
-         ylab="beta0", xlab="iteration", col="red")
 ```
 ```{r OpenBUGSPractical0406, cache=TRUE, fig.width=7, fig.height=7, fig.cap='History plot showing 1000 samples of beta0, beta1, and theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
 samplesHistory("*", mfrow = c(3,1), ask = FALSE)
 ```
 
 
-使用兩個不同的起始值作爲MCMC的採樣起點時，每個未知參數分別獲得兩條不同顏色的歷史痕跡圖。和之前只有一條MCMC採樣鏈時一樣，採樣的起始部分(大約100次左右)都有一些不穩定的值。等到100次採樣過後，我們發現每個參數的採樣結果都趨向於比較穩定，也就是方差，變化小了很多。但是藍色鏈，紅色鏈一直到200-300次採樣之後才逐漸互相交叉重疊。
+使用兩個不同的起始值作爲MCMC的採樣起點時，每個未知參數分別獲得兩條不同顏色的歷史痕跡圖。和之前只有一條MCMC採樣鏈時一樣，採樣的起始部分(大約100次左右)都有一些不穩定的值。等到100次採樣過後，我們發現每個參數的採樣結果都趨向於比較穩定，也就是方差，變化小了很多。但是藍色鏈，紅色鏈一直到200-300次採樣之後才逐漸互相交叉重疊。下面的圖把起初的500次採樣刨除了之後重新對每個未知參數的MCMC採樣繪制歷史痕跡。
+
+```{r OpenBUGSPractical0407, cache=TRUE, fig.width=7, fig.height=7, fig.cap='History plot showing 1000 samples of beta0, beta1, and theta[6], iteration between 501-1000', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+samplesHistory("*", mfrow = c(3,1), beg = 501, ask = FALSE)
+```
+
+500-1000次之間的隨機採樣被放大了觀察之後，我們發現 `beta0, beta1` 的兩條MCMC鏈條的重疊程度並不理想，不像`theta[6]`那樣呈現令人滿意地重疊，兩條採樣鏈上下扭動，且在一些地方差異較大。
+
+繪制每個參數的MCMC鏈的自相關圖 (autocorrelation)，下面的圖中只繪制了500-1000次範圍內採樣的自相關圖。
+
+
+```{r OpenBUGSPractical040808, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 501,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 501, 
+             ask = FALSE, main = "", lag.max = 100)
+# acf(chain$beta0, main="beta0",lwd=4,col="red", lag.max = 50)
+```
+
+```{r OpenBUGSPractical0409, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 501,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 501,
+             ask = FALSE, main = "", lag.max = 100)
+```
+
+```{r OpenBUGSPractical0410, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("theta[6]", mfrow = c(1, 1), 1, beg = 501,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("theta[6]", mfrow = c(1, 1), 2, beg = 501,
+             ask = FALSE, main = "", lag.max = 100)
+```
+
+其中 `theta[6]` 可以在視覺上認爲這些樣本基本沒有自相關。但是 `beta0, beta1` 的自相關圖提示相隔50次以上的採樣之間仍然有較強的，不能被忽視的自相關。這一點在 `beta0, beta1`各自的歷史痕跡圖中也能看出來因爲他們各自的痕跡圖提示採樣時的跳躍並不顯著，相對照的， `theta[6]`的採樣的跳躍就比較顯著，反映了這個未知參數事後概率分布採樣時的連續互相獨立性較好(near-independence of the values being sampled at consecutive iterations.)。
+
+```{r OpenBUGSPractical0408, eval=FALSE, cache=TRUE, fig.width=7, fig.height=7, fig.cap='Autocorrelation plots for beta0, beta1, and theta[6], iteration between 501-1000', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+# output.dir <- "backupfiles/bugsoutput/"
+# 
+# bugs.data <- list("y", "n", "x")
+# 
+# # set up list of parameters to be monitored
+# pars <- c("beta0", "beta1", "theta[6]")
+# 
+# # specify directory for BUGS output
+# 
+# drug.odir <- paste(output.dir, "drug-logistic-model/", sep = "")
+# 
+# # Call OpenBUGS to run model 
+# drug.log.sim <- bugs(data = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote/backupfiles/logistic-reg-data.txt", parameters.to.save = pars, 
+#                      model.file = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote/backupfiles/logistic-reg-model.txt", inits = NULL,
+#                      n.chains = 2, n.iter = 1000, 
+#                      n.burnin = 0, DIC = T, working.directory = drug.odir,
+#                      codaPkg = TRUE)
+
+```
+
 
 # 建模和模型的檢查
 
