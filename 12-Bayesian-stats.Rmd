@@ -2393,6 +2393,147 @@ gelman.diag(postsamples)
 gelman.plot(postsamples)
 ```
 
+從Gelman.plot的圖形可以看出，在2000次及以上的採集樣本過後，基本上可以認爲採集的樣本收斂於事後概率分布。
+
+7. 確認了你想要刨除的初始樣本量(burn-in)，繼續再進行MCMC採樣直到獲得100,000個事後概率分布樣本。此時你對獲得的事後概率分布樣本量提供的參數估計精確度滿意否？(MC_error is about 1% of the posterior SD?)嘗試報告此時獲得的參數們的事後均值，及其95%可信區間。
+
+
+
+```{r OpenBUGSPractical04110000, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/logistic-reg-model.txt") 
+# Load the data 
+modelData("backupfiles/logistic-reg-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(beta0=-45, beta1=38)
+modelInits(bugsData(initlist))
+initlist1 <- list(beta0=60, beta1=-40)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("beta0", "beta1", "theta[6]")
+samplesSet(parameters)
+
+# Generate 10000 iterations
+modelUpdate(10000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"),
+                    theta6 = samplesSample("theta[6]"))
+
+# #### PLOT the chain history of beta0, beta1
+# samplesHistory("beta0", mfrow = c(1,1), ask = FALSE)
+# samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
+```
+
+
+
+
+```{r OpenBUGSPractical0413, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE}
+
+
+# Generate another 1000000 iterations
+modelUpdate(42000) 
+sample.statistics <- samplesStats("*", beg = 2001)
+print(sample.statistics)
+```
+
+
+由於 `beta0, beta1` 事後MCMC採樣的高度自相關性，我們不得不採取獲得十萬以上的事後樣本量的手段來獲取較爲精確的事後參數的均值估計。此時，`beta0`的`MC_error` 仍然也只達到事後樣本標準差的3.6% (0.077560/2.17800)。其對應的有效樣本量(effective sample size)大約是 1/(0.036^2) = 772。即使我們再繼續進行MCMC採樣達到一百萬的事後樣本量，我們也只能勉強讓MC_error達到事後標準差的1.4%(=0.02742/2.09200)，對應的有效樣本量是 1/(0.014^2) = 5102。
+
+```{r OpenBUGSPractical0414, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE}
+
+
+# Generate another 900000 iterations
+modelUpdate(480000) 
+sample.statistics <- samplesStats("*", beg = 2001)
+print(sample.statistics)
+```
+
+8. 繪制此時`beta0,beta1`的自相關圖。
+
+```{r OpenBUGSPractical0415, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 2001,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 2001,
+             ask = FALSE, main = "", lag.max = 100)
+```
+
+```{r OpenBUGSPractical0416, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 2001,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 2001,
+             ask = FALSE, main = "", lag.max = 100)
+```
+
+```{r OpenBUGSPractical0417, cache=TRUE, fig.width=5, fig.height=5, fig.cap='The joint posterior distribution, scatter plot of meta0 and meta1.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"),
+                    theta6 = samplesSample("theta[6]"))
+plot(chain$beta0[2001:100000], chain$beta1[2001:100000], main="Scatterplot", 
+  	xlab="beta0", ylab="beta1", pch=19, col=c(1,2))
+```
+
+此圖\@ref(fig:OpenBUGSPractical0417)提示我們該邏輯回歸模型的截距(intercept)`beta0`，和斜率(slope)`beta1`其實是高度相關的。這導致了未知參數(兩個回歸系數)的事後概率分布樣本高度內部相關(high autocorrealtion within the samples of each individual parameter)。這是他們效率低下，需要大量的採集樣本仍然無法滿足或者達到理想的收斂的主要原因。
+
+9. 給邏輯回歸的回歸系數中心化之後的模型：我們來把兩個回歸系數的樣本中心化(centre the covariate $x$)。在BUGS語言中可以使用`x[i] - mean(x[])`的命令來把未知參數的事後概率分布MCMC採樣過程中心化。然後我們重復一下上面的計算過程，看結果有怎樣的變化。與前者的分析比較一下收斂所需要的時間和未知參數事後估計的效率差別。
+
+
+```
+# logistic regression model with centred covariate
+model{
+  for{i in 1:N}{# loop through experiments
+              y[i] ~ dbin(theta[i], n[i])
+   logit(theta[i]) <- beta0 + beta1 * (x[i] - mean(x[]))
+  }
+  # priors 
+  beta0 ~ dunif(-100, 100)
+  beta1 ~ dunif(-100, 100)
+}
+```
+
+
+
+```{r OpenBUGSPractical0418, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='History plots based on first 10000 iterations with centred covariates.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+
+# Step 1 check model
+modelCheck("backupfiles/logistic-reg-model-centred.txt") 
+# Load the data 
+modelData("backupfiles/logistic-reg-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(beta0=-45, beta1=38)
+modelInits(bugsData(initlist))
+initlist1 <- list(beta0=60, beta1=-40)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("beta0", "beta1", "theta[6]")
+samplesSet(parameters)
+
+# Generate 10000 iterations
+modelUpdate(10000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"),
+                    theta6 = samplesSample("theta[6]"))
+
+#### PLOT the chain history of beta0, beta1
+samplesHistory("beta0", mfrow = c(1,1), ask = FALSE)
+samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
+```
+
+
+
+用中心化之後的模型我們發現需要更多的起始樣本來達到事後概率分布的收斂(7500左右)。
+
 
 # 建模和模型的檢查
 
