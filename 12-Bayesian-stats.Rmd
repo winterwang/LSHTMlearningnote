@@ -2487,7 +2487,7 @@ plot(chain$beta0[2001:100000], chain$beta1[2001:100000], main="Scatterplot",
 ```
 # logistic regression model with centred covariate
 model{
-  for{i in 1:N}{# loop through experiments
+  for(i in 1:N){# loop through experiments
               y[i] ~ dbin(theta[i], n[i])
    logit(theta[i]) <- beta0 + beta1 * (x[i] - mean(x[]))
   }
@@ -2532,7 +2532,149 @@ samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
 
 
 
-用中心化之後的模型我們發現需要更多的起始樣本來達到事後概率分布的收斂(7500左右)。
+用中心化之後的模型我們發現需要更多的起始樣本來達到事後概率分布的收斂(7500左右)。BGR診斷圖 \@ref(fig:OpenBUGSPractical0419) 也提示我們大概在7500次之後的重復採樣才能達到收斂。所以我們決定要刨除起始7500次採集的樣本。(burn-in = 7500)
+
+
+```{r OpenBUGSPractical0419, cache=TRUE, fig.width=8, fig.cap='Brooks-Gelman-Rubin diagnostic graph', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+# Let's use R2OpenBUGS to run the model again
+# Call OpenBUGS to run model
+output.dir <- "backupfiles/bugsoutput/"
+drug.odir <- paste(output.dir, "drug-logistic-model/", sep = "")
+ pars <- c("beta0", "beta1")
+drug.log.sim <- bugs(data = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote/backupfiles/logistic-reg-data.txt", parameters.to.save = pars,
+                     model.file = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote/backupfiles/logistic-reg-model-centred.txt", inits = list(initlist, initlist1),
+                     n.chains = 2, n.iter = 20000,
+                     n.burnin = 0, DIC = T, working.directory = drug.odir,
+                     codaPkg = TRUE)
+drug.log.sim
+
+postsamples <- read.bugs(drug.log.sim)
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+```
+
+刨除了起始7500次採集的樣本之後，剩餘的25000個MCMC樣本的自相關也基本都降至0，說明這時候採集的事後概率分布樣本基本上都可以認爲是相互獨立的樣本，散點圖 (Fig. \@ref(fig:OpenBUGSPractical0423))同樣支持了這一觀點。此時有效樣本量基本上約等於採集到的樣本量。
+
+```{r OpenBUGSPractical0420, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/logistic-reg-model-centred.txt") 
+# Load the data 
+modelData("backupfiles/logistic-reg-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(beta0=-45, beta1=38)
+modelInits(bugsData(initlist))
+initlist1 <- list(beta0=60, beta1=-40)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("beta0", "beta1", "theta[6]")
+samplesSet(parameters)
+
+# Generate 10000 iterations
+modelUpdate(20000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"),
+                    theta6 = samplesSample("theta[6]"))
+sample.statistics <- samplesStats("*", beg = 7501)
+print(sample.statistics)
+```
+
+
+```{r OpenBUGSPractical0421, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 7501,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 7501,
+             ask = FALSE, main = "", lag.max = 100)
+```
+```{r OpenBUGSPractical0422, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 7501,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 7501,
+             ask = FALSE, main = "", lag.max = 100)
+```
+```{r OpenBUGSPractical0423, cache=TRUE, fig.width=5, fig.height=5, fig.cap='The joint posterior distribution, scatter plot of meta0 and meta1 with centred covariates.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+plot(chain$beta0[7501:20000], chain$beta1[7501:20000], main="Scatterplot", 
+  	xlab="beta0", ylab="beta1", pch=19, col=c(1,2))
+```
+
+10. 這時候我們獲得的回歸系數的事後估計的均值 `beta1 = 0.3746`，和它的95%可信區間，`0.2706, 0.4887`。它其實是藥物劑量每增加1mg，隨之增加的藥物有效百分比的對數比值比 (log-odds-ratio of a positive response per 1 mg increase in dose.)，你有沒有發現其實我們很難解釋這個變量的實際含義呢？有沒有什麼辦法可以來改善這個結果，讓它更加容易讓人明白呢？
+
+11. 想辦法在未知參數被中心的話邏輯回歸模型中增加新的語句，生成一些新的容易讓人解釋的變量，改善模型的易解釋程度。也許你可以把對數比值比轉換成比值比，你也許可以自己算一下在哪種劑量條件下可以讓95%的患者都有治療療效(ED95)：
+
+$$
+\begin{aligned}
+\text{logit}0.95 & = \beta_0 + \beta_1(ED95 - \bar x) \\ 
+\Rightarrow ED95 & = (\text{logit}0.95 - \beta_0)/\beta_1 + \bar x
+\end{aligned}
+$$
+
+```
+# logistic regression model with centred covariate 
+# and added statements
+model{
+  for(i in 1:N){# loop through experiments
+              y[i] ~ dbin(theta[i], n[i])
+   logit(theta[i]) <- beta0 + beta1 * (x[i] - mean(x[]))
+  }
+  # priors 
+  beta0 ~ dunif(-100, 100)
+  beta1 ~ dunif(-100, 100)
+  OR <- exp(beta1) # odds ratio of positive response per 1 mg increase in dose
+  ED95 <- (logit(0.95) - beta0)/beta1 + mean(x[]) # dose that gives 95% of maximal response
+  logit(P35) <- beta0 + beta1 * (35 - mean(x[]))
+}
+```
+
+
+```{r OpenBUGSPractical0424, message=TRUE, warning=FALSE, echo=TRUE}
+
+# Step 1 check model
+modelCheck("backupfiles/logistic-reg-model-centred-stat.txt") 
+# Load the data 
+modelData("backupfiles/logistic-reg-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(beta0=-45, beta1=38)
+modelInits(bugsData(initlist))
+initlist1 <- list(beta0=60, beta1=-40)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("ED95", "OR", "P35", "beta0", "beta1")
+samplesSet(parameters)
+
+# Generate 10000 iterations
+modelUpdate(20000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(ED95   = samplesSample("ED95"),
+                    OR     = samplesSample("OR"),
+                    P35    = samplesSample("P35"),
+                    beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"))
+sample.statistics <- samplesStats("*", beg = 7501)
+print(sample.statistics)
+```
+
+所以，藥物每增加劑量1mg，有療效的比值比是OR = 1.46 (95%CrI: 1.31, 1.63)。能夠達到95%患者都有療效的劑量是 45.05 mg (95% CrI: 42.8, 48.1 mg)。如果給予患者藥物劑量爲 35 mg，患者的疼痛能夠得到緩解(有療效)的概率是 32.3% (95% CrI: 22.8%, 42.2%)。跟着看到這裏的你是不是也覺得貝葉斯的結果和過程能夠更加豐富地回答我們想知道的問題呢？ 
+
+```{r R-OpenBUGSPractical0425, cache=TRUE, fig.width=3.5, fig.height=3, fig.cap='Posterior density plots of ED95, OR, and P35.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+
+plot(density(chain$ED95[7501:20000]), main = "ED95 sample 25000", 
+     ylab = "P(ED95)", xlab = "y", col = "red")
+plot(density(chain$OR[7501:20000]), main = "OR sample 25000", 
+     ylab = "P(OR)", xlab = "y", col = "red")
+plot(density(chain$P35[7501:20000]), main = "OR sample 25000", 
+     ylab = "P(OR)", xlab = "y", col = "red")
+```
+
 
 
 # 建模和模型的檢查
