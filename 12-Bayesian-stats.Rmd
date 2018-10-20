@@ -2691,6 +2691,121 @@ plot(density(chain$P35[7501:20000]), main = "OR sample 25000",
 
 # 建模和模型的檢查
 
+對所有想要嘗試貝葉斯統計學的人來說，這個過程需要你有能力建立一個可以被用於MCMC採樣的貝葉斯模型，並且懂得怎樣獲取收斂合理，樣本量大小合適的事後概率分布樣本。下圖 \@ref(fig:BayesianChapter0501) 中總結了建立貝葉斯統計模型並運行MCMC計算的大致過程：
+
+```{r BayesianChapter0501, cache=TRUE, echo=FALSE, fig.width=6, fig.cap='Input files, steps for generating a posterior sample and checks required for successfully running a Bayesian analysis using BUGS.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/MCMC_procedure.png")
+```
+
+
+虛線最上端，意爲我們需要準備三種最重要的文件：
+
+1. BUGS語言描述下的貝葉斯統計學模型；
+2. 包含模型中使用到的觀察變量的數據文件（可以是一個，也可是多個組合）；
+3. 每個未知參數的MCMC採樣鏈的起始值 (initial values, 1 set for each chain)。
+
+兩條虛線的中間部分是產生事後概率分布的重要步驟及其先後順序。虛線最下面則是三個重要的模型檢查，你需要在運行貝葉斯模型MCMC採集樣本的過程中反復使用這三個檢查模型的方案以確保過程的準確，以獲得合理的結果。
+
+下面我們通過使用貝葉斯統計學框架來進行一個簡單線性回歸模型的計算和MCMC採集樣本的過程，詳細地解釋圖\@ref(fig:BayesianChapter0501)中的每一個步驟及其含義。
+
+先思考，一個只有概率論知識的統計學者，他/她是如何進行簡單線性回歸模型的擬合過程的？
+
+1. 確認觀察數據的概率分布(似然/likelihood)；
+2. 確認結果變量和預測變量之間的合適表達式(線性回歸方程)。
+
+
+這兩個步驟在貝葉斯統計學中也是不可缺少的，此外，貝葉斯統計學模型的建立和MCMC採樣還需要統計師給出回歸系數的先驗概率分布(prior distributions for the regression coefficients)，以及其他未知（可能是令人感到麻煩的 nuisance）參數的先驗概率分布。
+
+## 簡單線性回歸模型
+
+如果簡單線性回歸模型的結果變量是一個服從正態分布的單一變量 $y_i$，我們想要拿來預測這個結果變量的預測變量是從每個試驗個體 $i, i = 1, \dots, n$ 上收集到的一系列共變量 (covariates) 的向量 $x_{1i}, \dots, x_{pi}$。概率論統計學者會把這樣的模型用數學表達式寫成：
+
+$$
+\begin{aligned}
+y_i & = \beta_0 + \sum_{k = 1}^p\beta_k x_{ki} + \epsilon_i \\ 
+\epsilon_i & \sim \text{Normal}(0, \sigma^2)
+\end{aligned}
+$$
+
+或者也有人習慣於把誤差項拿掉，用結果變量的期望值（也就是均值） $E(y_i) = \mu_i$ 來寫這個模型：
+
+$$
+\begin{aligned}
+y_i    & \sim \text{Normal}(\mu_i, \sigma^2) \\ 
+\mu_i  & = \beta_0 +  \sum_{k = 1}^p\beta_k x_{ki}
+\end{aligned}
+$$
+
+在貝葉斯框架下，這個模型的參數$(\beta_0, \beta_1, \dots, \beta_p, \sigma^2)$，還需要給出它們各自的先驗概率分布。所以貝葉斯框架下的簡單線性回歸模型的標記法是：
+
+$$
+\begin{aligned}
+y_i   & \sim \text{Normal}(\mu_i, \sigma^2) \\ 
+\mu_i & = \beta_0+  \sum_{k = 1}^p\beta_k x_{ki} \\
+(\beta_0, \beta_1, \dots, \beta_p, \sigma^2) & \sim \text{ Prior Distributions}
+\end{aligned}
+$$
+
+如果想要獲得和概率論的簡單線性回歸模型的算法(OLS, ordinary least squares / MLE, maximum likelihood estimates)獲得的結果接近的參數估計，那麼先驗概率分布可以指定爲：
+
+$$
+\begin{aligned}
+\beta_k & \sim \text{Uniform}(-\infty, +\infty), k = 0, \dots, p \\
+\log\sigma^2 & \sim \text{Uniform}(-\infty, +\infty)
+\end{aligned}
+$$
+
+我們以後還會仔細再討論先驗概率分布的選擇問題。
+
+## Children in the Gambia
+
+這個數據實例我們在簡單線性回歸的課程中(Chapter \@ref(growgam))也用過，它收集的是岡比亞農村兒童的身高體重年齡等信息。你可以有空和當時的模型擬合過程進行一個對比。這裏用到的變量是190名兒童的體重，年齡，和性別。圖 \@ref(fig:BayesianChapter0502)示意的是這些兒童的體重和年齡及性別的關系。
+
+```{r BayesianChapter0502, cache=TRUE, echo=FALSE, fig.height=3.5, fig.width=7, fig.cap='Children in the Gambian cross-sectional survey', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+growgam1 <- read_dta("backupfiles/growgam1.dta")
+head(growgam1)
+
+par(mfrow=c(1,2))
+plot(growgam1$age,growgam1$wt, 
+     xlab = "age (months)", ylab = "weight (kg)",
+     main = "weight and age",
+     ylim = c(0, 18), pch=c(4))
+boxplot(growgam1$wt ~ growgam1$sex, ylim = c(0, 18),
+        main = "weight and gender",
+        col = "green", names = c("Male", "Female"))
+```
+
+
+在這項橫斷面研究中，我們關心的主要是：
+
+1. 年齡每增加一個月，體重的變化是多少 kg？
+2. 男孩女孩之間的體重差別是多少 kg？
+
+### 岡比亞兒童數據模型
+
+我們給出的模型是：
+
+- 結果變量 (outcome/response)：體重(kg), weight in kg；
+- 預測變量 (predictors)：年齡(age in months)，性別(1=男孩，2=女孩)。
+
+一開始我們的假設是，體重和年齡之間有線性關系(linear relationship)，且誤差項服從正態分布。這一句話用貝葉斯統計學標記來表達就是：
+
+
+$$
+\begin{aligned}
+\text{wt}_i & \sim \text{Normal}(\mu_i, \sigma^2) \;\; i = 1, \dots, 190 \\
+\mu_i       & = \alpha + \beta \times \text{age}_i + \gamma \times \text{sex}_i \\
+\log\sigma^2 & \sim \text{Uniform}(-100, 100) \\ 
+\alpha       & \sim \text{Uniform}(-1000, 1000) \\
+\beta        & \sim \text{Uniform}(-1000, 1000) \\ 
+\gamma       & \sim \text{Uniform}(-1000, 1000) \\ 
+\end{aligned}
+$$
+
+
+```{r BayesianChapter0503, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for Gambia Regression Model', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/DAGgambia.png")
+```
 
 
 # 貝葉斯統計學框架下的實驗設計
