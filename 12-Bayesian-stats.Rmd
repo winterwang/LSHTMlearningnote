@@ -2888,7 +2888,47 @@ list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
 ```
 
 
+### 給岡比亞兒童體重數據的貝葉斯模型檢查收斂 (MCMC check 1)
 
+一開始我們先採集1000個事後概率分布樣本。
+
+
+```{r OpenBUGSPractical0420, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+# Step 1 check model
+modelCheck("backupfiles/logistic-reg-model-centred.txt") 
+# Load the data 
+modelData("backupfiles/logistic-reg-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(beta0=-45, beta1=38)
+modelInits(bugsData(initlist))
+initlist1 <- list(beta0=60, beta1=-40)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("beta0", "beta1", "theta[6]")
+samplesSet(parameters)
+
+# Generate 10000 iterations
+modelUpdate(20000)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(beta0  = samplesSample("beta0"),
+                    beta1  = samplesSample("beta1"),
+                    theta6 = samplesSample("theta[6]"))
+sample.statistics <- samplesStats("*", beg = 7501)
+print(sample.statistics)
+```
+
+
+```{r OpenBUGSPractical0421, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 7501,
+             ask = FALSE, main = "", lag.max = 100)
+samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 7501,
+             ask = FALSE, main = "", lag.max = 100)
+```
 
 # 貝葉斯統計學框架下的實驗設計
 
