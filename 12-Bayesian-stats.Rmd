@@ -1942,7 +1942,7 @@ JAGS的全稱是 **J**ust **A**nother **G**ibbs **S**ampler，開發者是 [Mart
 例如一個描述吸煙，肥胖和心髒病發病可能的關系的的有向無環圖如下圖 \@ref(fig:DAGS-bayesian)。途中帶方向的連線（箭頭）表示預測變量和結果變量之間的依賴關系。
 
 
-```{r DAGS-bayesian, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for heart disease example', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r DAGS-bayesian, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for heart disease example', fig.align='center', out.width='60%', message=FALSE, warning=FALSE}
 knitr::include_graphics("img/heartDAG.png")
 ```
 
@@ -1963,7 +1963,7 @@ $$
 條件獨立的關系可以用下面的有向無環圖 \@ref(fig:DAGS-condind) 來表示：
 
 
-```{r DAGS-condind, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for conditional independence', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r DAGS-condind, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for conditional independence', fig.align='center', out.width='60%', message=FALSE, warning=FALSE}
 knitr::include_graphics("img/conditionalindependence.png")
 ```
 
@@ -2761,7 +2761,7 @@ $$
 
 這個數據實例我們在簡單線性回歸的課程中(Chapter \@ref(growgam))也用過，它收集的是岡比亞農村兒童的身高體重年齡等信息。你可以有空和當時的模型擬合過程進行一個對比。這裏用到的變量是190名兒童的體重，年齡，和性別。圖 \@ref(fig:BayesianChapter0502)示意的是這些兒童的體重和年齡及性別的關系。
 
-```{r BayesianChapter0502, cache=TRUE, echo=FALSE, fig.height=3.5, fig.width=7, fig.cap='Children in the Gambian cross-sectional survey', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r BayesianChapter0502, cache=TRUE, echo=FALSE, fig.height=3.5, fig.width=7, fig.cap='Children in the Gambian cross-sectional survey', fig.align='center', out.width='90%', message=FALSE, warning=FALSE}
 growgam1 <- read_dta("backupfiles/growgam1.dta")
 head(growgam1)
 
@@ -2788,7 +2788,7 @@ boxplot(growgam1$wt ~ growgam1$sex, ylim = c(0, 18),
 - 結果變量 (outcome/response)：體重(kg), weight in kg；
 - 預測變量 (predictors)：年齡(age in months)，性別(1=男孩，2=女孩)。
 
-一開始我們的假設是，體重和年齡之間有線性關系(linear relationship)，且誤差項服從正態分布。這一句話用貝葉斯統計學標記來表達就是：
+一開始，我們的假設是，體重和年齡之間有線性關系(linear relationship)，且誤差項服從正態分布。這一句話用貝葉斯統計學標記來表達就是：
 
 
 $$
@@ -2800,12 +2800,94 @@ $$
 \beta        & \sim \text{Uniform}(-1000, 1000) \\ 
 \gamma       & \sim \text{Uniform}(-1000, 1000) \\ 
 \end{aligned}
+(\#eq:gambiamodel)
 $$
 
+如果想用有向無環圖(DAG)來表示這個模型的話，可以用圖 \@ref(fig:BayesianChapter0503) 來表示這個線性回歸模型。圖中每一個元素都用圓形或者方形來表示，各個成分之間的關系則用帶方向箭頭的直線或虛線來連接。大的方形標注着 Child $i$ 的部分把該模型中被循環重復的部分。這個方形又被叫做盤(plates)，盤內標記的名稱和下標表示每一個被循環重復的最小個體單位。在這個岡比亞兒童數據中，兩個共變量/預測變量($age_i, sex_i$)，和一個結果變量($wt_i$)是從每一名兒童身上測量獲得的，所以每一名兒童是模型循環重復的最小單位。未知參數 $\alpha, \beta, \gamma, \sigma^2$ 都放在了盤以外的位置表示這些變量並不會隨着循環重復而改變。
 
-```{r BayesianChapter0503, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for Gambia Regression Model', fig.align='center', out.width='50%', message=FALSE, warning=FALSE}
+值得注意的是，這個DAG圖 \@ref(fig:BayesianChapter0503) 中有兩種不同類型的直線。如果在你寫下的模型\@ref(eq:eq:gambiamodel)中兩個變量之間使用的是 $\sim$ 連接的，那麼它們之間的連線就是實線，如果變量之間的關系使用的是等號 $=$ 建立的關系，那麼它們之間的連線是虛線。因爲 $\sim$ 表示的是隨機的不確定的關系(如服從某個先驗概率分布, stochastic links to a probability relationship)，而等號 $=$ 代表的關系是確定的 (deteministic relationships)。習慣上，圓形變量表示未知參數/隨機變量(random variables)，方形變量表示觀測到的值(fully observed covariates)。盡管結果變量 $(wt_i)$ 是我們觀測收集的數據之一，但是在模型中它是隨機變量，因此在DAG繪圖法中也用圓形來標記。
+
+```{r BayesianChapter0503, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAG for Gambia Regression Model', fig.align='center', out.width='45%', message=FALSE, warning=FALSE}
 knitr::include_graphics("img/DAGgambia.png")
 ```
+
+
+### BUGS model for Gambia example
+
+模型的數學標記(表達式 \@ref(eq:gambiamodel))確定了以後，把它翻譯成BUGS語言就是下一步的工作了。本例中，我們並不想給模型加入任何有意義的先驗概率分布信息，所以給每個未知參數的先驗概率分布都是沒有信息的扁平的分布 (flat priors)。翻譯成BUGS語言以後的模型寫作：
+
+```
+model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta*age[i] + gamma*sex[i]
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma^2 ~ dunif(-100, 100)
+  sigma2 <- exp(logsigma2)
+  tau    <- 1/sigma2
+}
+```
+
+### Data file for the Gambia example 
+
+準備數據時，有兩種格式是適用的：
+
+#### 方形數據格式 rectangular format
+
+```
+sex[] age[] wt[]
+2    23  8.40  
+2    22 10.9   
+2     6  7.20  
+1    24 10.3   
+1    14 10.5   
+2    18  9.60  
+...
+1    30 12.1 
+END
+
+```
+
+#### R/S-plus 格式數據
+
+這種格式的數據較爲靈活，你可以在其中放入長度不一樣的向量，假如我們在模型的第一行不給出兒童的人數 $190$ 而是寫作：
+
+```
+    for(i in 1:N){ # loop through the 190 children
+```
+
+的話，那麼在數據文件中我們需要給出這個 `N` 的大小：　
+
+```
+list(
+  N = 190, 
+ wt = c(8.4, 10.9, , 7.2, 10.3, 10.5, ..., 12.1), 
+age = c(23, 22, 6, 24, 14, 18, ... , 30), 
+sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
+)
+```
+
+### 初始值文件 initial value files 
+
+前一章節我們探討過如何確認事後概率分布的MCMC採樣達到收斂，其中一個要點是使用兩個或更多的起始值，前提是你給模型的未知參數起始值需要是在合理範圍內，且差異較大的起始值。同樣使用 `list` 命令。
+
+MCMC採樣鏈1的起始值：
+
+```
+list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
+```
+
+MCMC採樣鏈2的起始值：
+
+```
+list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
+```
+
+
 
 
 # 貝葉斯統計學框架下的實驗設計

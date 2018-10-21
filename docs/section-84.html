@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-10-20">
+<meta name="date" content="2018-10-21">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1076,6 +1076,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="84.1" data-path="section-84.html"><a href="section-84.html#section-84.1"><i class="fa fa-check"></i><b>84.1</b> 簡單線性回歸模型</a></li>
 <li class="chapter" data-level="84.2" data-path="section-84.html"><a href="section-84.html#children-in-the-gambia"><i class="fa fa-check"></i><b>84.2</b> Children in the Gambia</a><ul>
 <li class="chapter" data-level="84.2.1" data-path="section-84.html"><a href="section-84.html#section-84.2.1"><i class="fa fa-check"></i><b>84.2.1</b> 岡比亞兒童數據模型</a></li>
+<li class="chapter" data-level="84.2.2" data-path="section-84.html"><a href="section-84.html#bugs-model-for-gambia-example"><i class="fa fa-check"></i><b>84.2.2</b> BUGS model for Gambia example</a></li>
+<li class="chapter" data-level="84.2.3" data-path="section-84.html"><a href="section-84.html#data-file-for-the-gambia-example"><i class="fa fa-check"></i><b>84.2.3</b> Data file for the Gambia example</a></li>
+<li class="chapter" data-level="84.2.4" data-path="section-84.html"><a href="section-84.html#-initial-value-files"><i class="fa fa-check"></i><b>84.2.4</b> 初始值文件 initial value files</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a></li>
@@ -1262,7 +1265,7 @@ y_i   &amp; \sim \text{Normal}(\mu_i, \sigma^2) \\
 ## 5     1    14 10.5   79.2
 ## 6     2    18  9.60  75.8</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0502"></span>
-<img src="bookdown_files/figure-html/BayesianChapter0502-1.png" alt="Children in the Gambian cross-sectional survey" width="80%" />
+<img src="bookdown_files/figure-html/BayesianChapter0502-1.png" alt="Children in the Gambian cross-sectional survey" width="90%" />
 <p class="caption">
 圖 84.2: Children in the Gambian cross-sectional survey
 </p>
@@ -1279,8 +1282,8 @@ y_i   &amp; \sim \text{Normal}(\mu_i, \sigma^2) \\
 <li>結果變量 (outcome/response)：體重(kg), weight in kg；</li>
 <li>預測變量 (predictors)：年齡(age in months)，性別(1=男孩，2=女孩)。</li>
 </ul>
-<p>一開始我們的假設是，體重和年齡之間有線性關系(linear relationship)，且誤差項服從正態分布。這一句話用貝葉斯統計學標記來表達就是：</p>
-<p><span class="math display">\[
+<p>一開始，我們的假設是，體重和年齡之間有線性關系(linear relationship)，且誤差項服從正態分布。這一句話用貝葉斯統計學標記來表達就是：</p>
+<p><span class="math display" id="eq:gambiamodel">\[
 \begin{aligned}
 \text{wt}_i &amp; \sim \text{Normal}(\mu_i, \sigma^2) \;\; i = 1, \dots, 190 \\
 \mu_i       &amp; = \alpha + \beta \times \text{age}_i + \gamma \times \text{sex}_i \\
@@ -1289,13 +1292,71 @@ y_i   &amp; \sim \text{Normal}(\mu_i, \sigma^2) \\
 \beta        &amp; \sim \text{Uniform}(-1000, 1000) \\ 
 \gamma       &amp; \sim \text{Uniform}(-1000, 1000) \\ 
 \end{aligned}
+\tag{84.1}
 \]</span></p>
+<p>如果想用有向無環圖(DAG)來表示這個模型的話，可以用圖 <a href="section-84.html#fig:BayesianChapter0503">84.3</a> 來表示這個線性回歸模型。圖中每一個元素都用圓形或者方形來表示，各個成分之間的關系則用帶方向箭頭的直線或虛線來連接。大的方形標注着 Child <span class="math inline">\(i\)</span> 的部分把該模型中被循環重復的部分。這個方形又被叫做盤(plates)，盤內標記的名稱和下標表示每一個被循環重復的最小個體單位。在這個岡比亞兒童數據中，兩個共變量/預測變量(<span class="math inline">\(age_i, sex_i\)</span>)，和一個結果變量(<span class="math inline">\(wt_i\)</span>)是從每一名兒童身上測量獲得的，所以每一名兒童是模型循環重復的最小單位。未知參數 <span class="math inline">\(\alpha, \beta, \gamma, \sigma^2\)</span> 都放在了盤以外的位置表示這些變量並不會隨着循環重復而改變。</p>
+<p>值得注意的是，這個DAG圖 <a href="section-84.html#fig:BayesianChapter0503">84.3</a> 中有兩種不同類型的直線。如果在你寫下的模型<a href="#eq:eq:gambiamodel">(<strong>??</strong>)</a>中兩個變量之間使用的是 <span class="math inline">\(\sim\)</span> 連接的，那麼它們之間的連線就是實線，如果變量之間的關系使用的是等號 <span class="math inline">\(=\)</span> 建立的關系，那麼它們之間的連線是虛線。因爲 <span class="math inline">\(\sim\)</span> 表示的是隨機的不確定的關系(如服從某個先驗概率分布, stochastic links to a probability relationship)，而等號 <span class="math inline">\(=\)</span> 代表的關系是確定的 (deteministic relationships)。習慣上，圓形變量表示未知參數/隨機變量(random variables)，方形變量表示觀測到的值(fully observed covariates)。盡管結果變量 <span class="math inline">\((wt_i)\)</span> 是我們觀測收集的數據之一，但是在模型中它是隨機變量，因此在DAG繪圖法中也用圓形來標記。</p>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0503"></span>
-<img src="img/DAGgambia.png" alt="DAG for Gambia Regression Model" width="50%" />
+<img src="img/DAGgambia.png" alt="DAG for Gambia Regression Model" width="45%" />
 <p class="caption">
 圖 84.3: DAG for Gambia Regression Model
 </p>
 </div>
+</div>
+<div id="bugs-model-for-gambia-example" class="section level3">
+<h3><span class="header-section-number">84.2.2</span> BUGS model for Gambia example</h3>
+<p>模型的數學標記(表達式 <a href="section-84.html#eq:gambiamodel">(84.1)</a>)確定了以後，把它翻譯成BUGS語言就是下一步的工作了。本例中，我們並不想給模型加入任何有意義的先驗概率分布信息，所以給每個未知參數的先驗概率分布都是沒有信息的扁平的分布 (flat priors)。翻譯成BUGS語言以後的模型寫作：</p>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*age[i] + gamma*sex[i]
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma^2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+</div>
+<div id="data-file-for-the-gambia-example" class="section level3">
+<h3><span class="header-section-number">84.2.3</span> Data file for the Gambia example</h3>
+<p>準備數據時，有兩種格式是適用的：</p>
+<div id="-rectangular-format" class="section level4">
+<h4><span class="header-section-number">84.2.3.1</span> 方形數據格式 rectangular format</h4>
+<pre><code>sex[] age[] wt[]
+2    23  8.40  
+2    22 10.9   
+2     6  7.20  
+1    24 10.3   
+1    14 10.5   
+2    18  9.60  
+...
+1    30 12.1 
+END
+</code></pre>
+</div>
+<div id="rs-plus-" class="section level4">
+<h4><span class="header-section-number">84.2.3.2</span> R/S-plus 格式數據</h4>
+<p>這種格式的數據較爲靈活，你可以在其中放入長度不一樣的向量，假如我們在模型的第一行不給出兒童的人數 <span class="math inline">\(190\)</span> 而是寫作：</p>
+<pre><code>    for(i in 1:N){ # loop through the 190 children</code></pre>
+<p>的話，那麼在數據文件中我們需要給出這個 <code>N</code> 的大小：　</p>
+<pre><code>list(
+  N = 190, 
+ wt = c(8.4, 10.9, , 7.2, 10.3, 10.5, ..., 12.1), 
+age = c(23, 22, 6, 24, 14, 18, ... , 30), 
+sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
+)</code></pre>
+</div>
+</div>
+<div id="-initial-value-files" class="section level3">
+<h3><span class="header-section-number">84.2.4</span> 初始值文件 initial value files</h3>
+<p>前一章節我們探討過如何確認事後概率分布的MCMC採樣達到收斂，其中一個要點是使用兩個或更多的起始值，前提是你給模型的未知參數起始值需要是在合理範圍內，且差異較大的起始值。同樣使用 <code>list</code> 命令。</p>
+<p>MCMC採樣鏈1的起始值：</p>
+<pre><code>list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)</code></pre>
+<p>MCMC採樣鏈2的起始值：</p>
+<pre><code>list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)</code></pre>
 </div>
 </div>
 </div>
