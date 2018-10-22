@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-10-21">
+<meta name="date" content="2018-10-22">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1080,6 +1080,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="84.2.3" data-path="section-84.html"><a href="section-84.html#data-file-for-the-gambia-example"><i class="fa fa-check"></i><b>84.2.3</b> Data file for the Gambia example</a></li>
 <li class="chapter" data-level="84.2.4" data-path="section-84.html"><a href="section-84.html#-initial-value-files"><i class="fa fa-check"></i><b>84.2.4</b> 初始值文件 initial value files</a></li>
 <li class="chapter" data-level="84.2.5" data-path="section-84.html"><a href="section-84.html#-mcmc-check-1"><i class="fa fa-check"></i><b>84.2.5</b> 給岡比亞兒童體重數據的貝葉斯模型檢查收斂 (MCMC check 1)</a></li>
+<li class="chapter" data-level="84.2.6" data-path="section-84.html"><a href="section-84.html#section-84.2.6"><i class="fa fa-check"></i><b>84.2.6</b> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a></li>
@@ -1361,7 +1362,131 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 </div>
 <div id="-mcmc-check-1" class="section level3">
 <h3><span class="header-section-number">84.2.5</span> 給岡比亞兒童體重數據的貝葉斯模型檢查收斂 (MCMC check 1)</h3>
-<p>一開始我們先採集1000個事後概率分布樣本。</p>
+<p>一開始我們先採集1000個事後概率分布樣本。模型中的四個未知參數<span class="math inline">\(\alpha, \beta, \gamma, \sigma^2\)</span>的1000次事後MCMC採樣的歷史痕跡圖繪制如圖 <a href="section-84.html#fig:BayesianChapter0505">84.4</a>。我們可以看到模型收斂的速度很快。刨除前50次採樣的圖 (Fig. <a href="section-84.html#fig:BayesianChapter0506">84.5</a>)，可以對採樣過程看得更加清楚。像圖 <a href="section-84.html#fig:BayesianChapter0506">84.5</a> 這樣的又粗又像毛毛蟲一樣的歷史痕跡圖通常象徵已經達到理想的收斂。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/gambia-model.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/gambia-data.txt&quot;</span>)     </code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="op">-</span><span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;gamma&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;sigma2&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;, beg = 1001)</span>
+<span class="co"># print(sample.statistics)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0505"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0505-1.png" alt="History plots for iterations 1-1000 for the Gambia example." width="80%" />
+<p class="caption">
+圖 84.4: History plots for iterations 1-1000 for the Gambia example.
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0506"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0506-1.png" alt="History plots for iterations 51-1000 for the Gambia example." width="80%" />
+<p class="caption">
+圖 84.5: History plots for iterations 51-1000 for the Gambia example.
+</p>
+</div>
+<p>再看這1000次MCMC抽樣獲得的 Gelman-Rubin 統計量，差不多鏈內鏈間差異的比值在1000次左右可以認爲等於1，所以我們把這前1000次MCMC採樣作爲 burn-in 從事後樣本中刨除。確定了 burn-in 之後我們再對每一條MCMC鏈重復採樣25000次。</p>
+<pre><code>## Potential scale reduction factors:
+## 
+##        Point est. Upper C.I.
+## alpha        1.01       1.04
+## beta         1.01       1.05
+## gamma        1.00       1.00
+## sigma2       1.00       1.00
+## 
+## Multivariate psrf
+## 
+## 1.01</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0507"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0507-1.png" alt="Gelman-Rubin convergence statistic for the Gambia example." width="80%" />
+<p class="caption">
+圖 84.6: Gelman-Rubin convergence statistic for the Gambia example.
+</p>
+</div>
+</div>
+<div id="section-84.2.6" class="section level3">
+<h3><span class="header-section-number">84.2.6</span> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate another 25000 iterations for each chain</span>
+<span class="kw">modelUpdate</span>(<span class="dv">25000</span>)</code></pre></div>
+<pre><code>## 25000 updates took 21 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##           mean      sd  MC_error val2.5pc  median val97.5pc start sample
+## alpha   7.1490 0.23490 0.0034690   6.6900  7.1500    7.6120  1001  50000
+## beta    0.1642 0.01093 0.0001514   0.1428  0.1642    0.1855  1001  50000
+## gamma  -0.5199 0.18460 0.0017070  -0.8812 -0.5199   -0.1570  1001  50000
+## sigma2  1.5810 0.16570 0.0007710   1.2880  1.5700    1.9340  1001  50000</code></pre>
+<p>由於我們給每個未知參數的先驗概率分布都是沒有實際信息的，我們預期貝葉斯模型給出的結果將會十分接近概率論模型給出的分析結果，事實也證明的確是如此：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Gambia.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(sex), <span class="dt">data =</span> growgam1)
+<span class="kw">summary</span>(Gambia.lm)</code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = wt ~ age + factor(sex), data = growgam1)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -4.19236 -0.76268 -0.00696  0.75675  3.79163 
+## 
+## Coefficients:
+##               Estimate Std. Error t value  Pr(&gt;|t|)    
+## (Intercept)   7.152414   0.234254 30.5327 &lt; 2.2e-16 ***
+## age           0.163998   0.010919 15.0189 &lt; 2.2e-16 ***
+## factor(sex)2 -0.518854   0.183053 -2.8344  0.005095 ** 
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 1.2503 on 187 degrees of freedom
+## Multiple R-squared:  0.5597, Adjusted R-squared:  0.55499 
+## F-statistic: 118.85 on 2 and 187 DF,  p-value: &lt; 2.22e-16</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">regress.display</span>(Gambia.lm)</code></pre></div>
+<pre><code>##  
+##                    Coeff  lower095ci  upper095ci        Pr&gt;|t|
+## (Intercept)   7.15241353  6.69029297  7.61453409 1.4039052e-74
+## age           0.16399839  0.14245724  0.18553954 5.7949167e-34
+## factor(sex)2 -0.51885399 -0.87996857 -0.15773941 5.0951539e-03</code></pre>
+<p>即使用 Stata 獲得的也是一樣的結果，差異十分微小。</p>
+<pre><code>## 
+## . use &quot;backupfiles/growgam1.dta&quot;
+## 
+## . regress wt age i.sex
+## 
+##       Source |       SS           df       MS      Number of obs   =       190
+## -------------+----------------------------------   F(2, 187)       =    118.85
+##        Model |  371.623281         2   185.81164   Prob &gt; F        =    0.0000
+##     Residual |  292.346478       187  1.56335015   R-squared       =    0.5597
+## -------------+----------------------------------   Adj R-squared   =    0.5550
+##        Total |  663.969759       189  3.51306751   Root MSE        =    1.2503
+## 
+## ------------------------------------------------------------------------------
+##           wt |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##          age |   .1639984   .0109195    15.02   0.000     .1424572    .1855395
+##              |
+##          sex |
+##      female  |   -.518854   .1830531    -2.83   0.005    -.8799686   -.1577394
+##        _cons |   7.152414   .2342542    30.53   0.000     6.690293    7.614534
+## ------------------------------------------------------------------------------</code></pre>
 </div>
 </div>
 </div>

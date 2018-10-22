@@ -2890,45 +2890,89 @@ list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
 
 ### 給岡比亞兒童體重數據的貝葉斯模型檢查收斂 (MCMC check 1)
 
-一開始我們先採集1000個事後概率分布樣本。
+一開始我們先採集1000個事後概率分布樣本。模型中的四個未知參數$\alpha, \beta, \gamma, \sigma^2$的1000次事後MCMC採樣的歷史痕跡圖繪制如圖 \@ref(fig:BayesianChapter0505)。我們可以看到模型收斂的速度很快。刨除前50次採樣的圖 (Fig. \@ref(fig:BayesianChapter0506))，可以對採樣過程看得更加清楚。像圖 \@ref(fig:BayesianChapter0506) 這樣的又粗又像毛毛蟲一樣的歷史痕跡圖通常象徵已經達到理想的收斂。
 
 
-```{r OpenBUGSPractical0420, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+```{r BayesianChapter0504, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE}
 
 # Step 1 check model
-modelCheck("backupfiles/logistic-reg-model-centred.txt") 
+modelCheck("backupfiles/gambia-model.txt") 
 # Load the data 
-modelData("backupfiles/logistic-reg-data.txt")     
+modelData("backupfiles/gambia-data.txt")     
 # compile the model with two separate chains
 modelCompile(numChains = 2) 
 # generate initial values 
 # the choice is arbitrary
-initlist <- list(beta0=-45, beta1=38)
+initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
 modelInits(bugsData(initlist))
-initlist1 <- list(beta0=60, beta1=-40)
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
 modelInits(bugsData(initlist1))
 
 # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("beta0", "beta1", "theta[6]")
+parameters <- c("alpha", "beta", "gamma", "sigma2")
 samplesSet(parameters)
 
-# Generate 10000 iterations
-modelUpdate(20000)
+# Generate 1000 iterations
+modelUpdate(1000)
+
+# sample.statistics <- samplesStats("*", beg = 1001)
+# print(sample.statistics)
+```
+
+
+```{r BayesianChapter0505, cache=TRUE, fig.width=7, fig.height=8, fig.cap='History plots for iterations 1-1000 for the Gambia example.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
-sample.statistics <- samplesStats("*", beg = 7501)
+chain <- data.frame(alpha  = samplesSample("alpha"),
+                    beta  = samplesSample("beta"),
+                    gamma = samplesSample("gamma"),
+                    sigma2 = samplesSample("sigma2"))
+
+samplesHistory("*", mfrow = c(4,1), ask = FALSE)
+```
+
+
+```{r BayesianChapter0506, cache=TRUE, fig.width=7, fig.height=8, fig.cap='History plots for iterations 51-1000 for the Gambia example.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+samplesHistory("*", mfrow = c(4,1), ask = FALSE, beg = 51)
+```
+
+再看這1000次MCMC抽樣獲得的 Gelman-Rubin 統計量，差不多鏈內鏈間差異的比值在1000次左右可以認爲等於1，所以我們把這前1000次MCMC採樣作爲 burn-in 從事後樣本中刨除。確定了 burn-in 之後我們再對每一條MCMC鏈重復採樣25000次。
+
+
+```{r BayesianChapter0507, cache=TRUE, fig.width=5, fig.height=5, fig.cap='Gelman-Rubin convergence statistic for the Gambia example.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+postsamples <- buildMCMC("*")
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+
+```
+
+
+
+### 岡比亞兒童體重數據的貝葉斯統計學推斷結果
+
+```{r BayesianChapter0508, message=TRUE, warning=FALSE, echo=TRUE}
+# Generate another 25000 iterations for each chain
+modelUpdate(25000)
+sample.statistics <- samplesStats("*", beg = 1001)
 print(sample.statistics)
 ```
 
+由於我們給每個未知參數的先驗概率分布都是沒有實際信息的，我們預期貝葉斯模型給出的結果將會十分接近概率論模型給出的分析結果，事實也證明的確是如此：
 
-```{r OpenBUGSPractical0421, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 7501,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 7501,
-             ask = FALSE, main = "", lag.max = 100)
+```{r BayesianChapter0509, message=TRUE, warning=FALSE, echo=TRUE}
+Gambia.lm <- lm(wt ~ age + factor(sex), data = growgam1)
+summary(Gambia.lm)
+regress.display(Gambia.lm)
 ```
+
+
+即使用 Stata 獲得的也是一樣的結果，差異十分微小。
+
+```{r  Gambia-stata-example, engine='stata', echo=FALSE}
+use "backupfiles/growgam1.dta"
+regress wt age i.sex
+```
+
+
 
 # 貝葉斯統計學框架下的實驗設計
 
