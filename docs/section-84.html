@@ -1081,6 +1081,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="84.2.4" data-path="section-84.html"><a href="section-84.html#-initial-value-files"><i class="fa fa-check"></i><b>84.2.4</b> 初始值文件 initial value files</a></li>
 <li class="chapter" data-level="84.2.5" data-path="section-84.html"><a href="section-84.html#-mcmc-check-1"><i class="fa fa-check"></i><b>84.2.5</b> 給岡比亞兒童體重數據的貝葉斯模型檢查收斂 (MCMC check 1)</a></li>
 <li class="chapter" data-level="84.2.6" data-path="section-84.html"><a href="section-84.html#section-84.2.6"><i class="fa fa-check"></i><b>84.2.6</b> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</a></li>
+<li class="chapter" data-level="84.2.7" data-path="section-84.html"><a href="section-84.html#-effective-sample-size-mcmc-check-2"><i class="fa fa-check"></i><b>84.2.7</b> 檢查岡比亞兒童體重數據貝葉斯模型的有效樣本量 effective sample size (MCMC check 2)</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a></li>
@@ -1429,14 +1430,15 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <h3><span class="header-section-number">84.2.6</span> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</h3>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate another 25000 iterations for each chain</span>
 <span class="kw">modelUpdate</span>(<span class="dv">25000</span>)</code></pre></div>
-<pre><code>## 25000 updates took 21 s</code></pre>
+<pre><code>## 25000 updates took 0 s</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
 <span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##           mean      sd  MC_error val2.5pc  median val97.5pc start sample
-## alpha   7.1490 0.23490 0.0034690   6.6900  7.1500    7.6120  1001  50000
-## beta    0.1642 0.01093 0.0001514   0.1428  0.1642    0.1855  1001  50000
-## gamma  -0.5199 0.18460 0.0017070  -0.8812 -0.5199   -0.1570  1001  50000
-## sigma2  1.5810 0.16570 0.0007710   1.2880  1.5700    1.9340  1001  50000</code></pre>
+<pre><code>##             mean        sd  MC_error   val2.5pc   median val97.5pc start sample
+## ED95   4.452e+01 2.290e+00 8.908e-02  3.796e+01 44.77000   48.0500  1001  88000
+## OR     3.344e+14 1.623e+16 2.366e+14  4.287e-36  1.44500    1.6410  1001  88000
+## P35    3.668e-01 1.783e-01 8.343e-03  2.247e-01  0.32620    1.0000  1001  88000
+## beta0  4.699e+00 1.892e+01 9.224e-01 -4.122e-01  0.01656   81.6000  1001  88000
+## beta1 -4.335e+00 1.896e+01 9.243e-01 -8.144e+01  0.36840    0.4953  1001  88000</code></pre>
 <p>由於我們給每個未知參數的先驗概率分布都是沒有實際信息的，我們預期貝葉斯模型給出的結果將會十分接近概率論模型給出的分析結果，事實也證明的確是如此：</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Gambia.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(sex), <span class="dt">data =</span> growgam1)
 <span class="kw">summary</span>(Gambia.lm)</code></pre></div>
@@ -1487,6 +1489,30 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 ##      female  |   -.518854   .1830531    -2.83   0.005    -.8799686   -.1577394
 ##        _cons |   7.152414   .2342542    30.53   0.000     6.690293    7.614534
 ## ------------------------------------------------------------------------------</code></pre>
+</div>
+<div id="-effective-sample-size-mcmc-check-2" class="section level3">
+<h3><span class="header-section-number">84.2.7</span> 檢查岡比亞兒童體重數據貝葉斯模型的有效樣本量 effective sample size (MCMC check 2)</h3>
+<p>盡管我們獲取了50000個事後MCMC樣本，但是關於 <span class="math inline">\(\text{MC_error} \approx 2 \text{ orders of magnitude smaller than the posterior SD}\)</span> 的經驗法則 (rule of thumb)，其實並沒有得到滿足。實際用於估計事後 <span class="math inline">\(\alpha, \beta\)</span> 的有效樣本量是小於 10000的。繪制每個參數的自回歸 (autocorrelation) 圖也證實了這些事後樣本有許多有強的自相關：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))
+<span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">1</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,
+             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">100</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0510"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0510-1.png" alt="Autocorrelation plot for the Gambia example (uncentered model, chain 1)" width="80%" />
+<p class="caption">
+圖 84.7: Autocorrelation plot for the Gambia example (uncentered model, chain 1)
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># acf(chain$beta0, main=&quot;beta0&quot;,lwd=4,col=&quot;red&quot;, lag.max = 50)</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))
+<span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">2</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,
+             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">100</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0511"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0511-1.png" alt="Autocorrelation plot for the Gambia example (uncentered model, chain 2)" width="80%" />
+<p class="caption">
+圖 84.8: Autocorrelation plot for the Gambia example (uncentered model, chain 2)
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># acf(chain$beta0, main=&quot;beta0&quot;,lwd=4,col=&quot;red&quot;, lag.max = 50)</span></code></pre></div>
 </div>
 </div>
 </div>
