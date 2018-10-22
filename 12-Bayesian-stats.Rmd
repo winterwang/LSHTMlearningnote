@@ -2948,9 +2948,28 @@ gelman.plot(postsamples)
 
 ### 岡比亞兒童體重數據的貝葉斯統計學推斷結果
 
+
 ```{r BayesianChapter0508, message=TRUE, warning=FALSE, echo=TRUE}
-# Generate another 25000 iterations for each chain
-modelUpdate(25000)
+
+# Step 1 check model
+modelCheck("backupfiles/gambia-model.txt") 
+# Load the data 
+modelData("backupfiles/gambia-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("alpha", "beta", "gamma", "sigma2")
+samplesSet(parameters)
+
+# Generate 52000 iterations
+modelUpdate(26000)
 sample.statistics <- samplesStats("*", beg = 1001)
 print(sample.statistics)
 ```
@@ -2975,18 +2994,142 @@ regress wt age i.sex
 
 盡管我們獲取了50000個事後MCMC樣本，但是關於 $\text{MC_error} \approx 2 \text{ orders of magnitude smaller than the posterior SD}$ 的經驗法則 (rule of thumb)，其實並沒有得到滿足。實際用於估計事後 $\alpha, \beta$ 的有效樣本量是小於 10000的。繪制每個參數的自回歸 (autocorrelation) 圖也證實了這些事後樣本有許多有強的自相關：
 
-```{r BayesianChapter0510, cache=TRUE, fig.width=7, fig.height=5, fig.cap='Autocorrelation plot for the Gambia example (uncentered model, chain 1)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+```{r BayesianChapter0510, cache=TRUE, fig.width=7, fig.height=5, fig.cap='Autocorrelation plot for the Gambia example (uncentered model, chain 1)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+# Step 1 check model
+modelCheck("backupfiles/gambia-model.txt") 
+# Load the data 
+modelData("backupfiles/gambia-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("alpha", "beta", "gamma", "sigma2")
+samplesSet(parameters)
+
+# Generate 1000 iterations
+modelUpdate(26000)
 par(mar = c(3,2,3,1))
 samplesAutoC("*", mfrow = c(2, 2), chain = 1, beg = 1001,
-             ask = FALSE, lag.max = 100)
+             ask = FALSE, lag.max = 50)
 ```
 
 
 ```{r BayesianChapter0511, cache=TRUE, fig.width=7, fig.height=5, fig.cap='Autocorrelation plot for the Gambia example (uncentered model, chain 2)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/gambia-model.txt") 
+# Load the data 
+modelData("backupfiles/gambia-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("alpha", "beta", "gamma", "sigma2")
+samplesSet(parameters)
+
+# Generate 1000 iterations
+modelUpdate(26000)
 par(mar = c(3,2,3,1))
 samplesAutoC("*", mfrow = c(2, 2), chain = 2, beg = 1001,
-             ask = FALSE, lag.max = 100)
+             ask = FALSE, lag.max = 50)
 ```
+
+這些 MCMC 樣本的自相關程度之所以如此之高，其最主要的原因是我們沒有把連續變量年齡給中心化。解決這個問題的辦法是把原先模型中的線性回歸模型的年齡中心化：
+
+```
+mu[i] <- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]
+```
+
+這一次我們獲得的50000個MCMC事後樣本的參數估計結果如下：
+
+
+```{r BayesianChapter0512, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/gambia-model-agecen.txt") 
+# Load the data 
+modelData("backupfiles/gambia-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("alpha", "beta", "gamma", "sigma2")
+samplesSet(parameters)
+
+# Generate 51000 iterations
+modelUpdate(26000)
+
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+```
+注意到這時候事後參數估計給出的 `alpha` 結果發生了微妙的變化，然而其他的幾個變量的事後估計結果幾乎沒有改變。且此時 `MC_error` 也變得小了很多，達到了我們的經驗法則所要求的。這時候的事後MCMC採樣鏈的自相關圖也提供較爲了理想的結果：
+
+
+```{r BayesianChapter0513, cache=TRUE, fig.width=7, fig.height=5, fig.cap='Autocorrelation plot for the Gambia example (centered model, chain 1)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+par(mar = c(3,2,3,1))
+samplesAutoC("*", mfrow = c(2, 2), chain = 1, beg = 1001,
+             ask = FALSE, lag.max = 50)
+```
+
+```{r BayesianChapter0514, cache=TRUE, fig.width=7, fig.height=5, fig.cap='Autocorrelation plot for the Gambia example (centered model, chain 2)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+par(mar = c(3,2,3,1))
+samplesAutoC("*", mfrow = c(2, 2), chain = 2, beg = 1001,
+             ask = FALSE, lag.max = 50)
+```
+
+
+共變量年齡，和性別的回歸系數的事後概率分布圖繪制如下：
+
+
+```{r BayesianChapter0515, cache=TRUE, fig.width=7, fig.height=5, fig.cap='Change in weight per month increase in age (posterior mean: 0.164 kg, 95% credible interval (0.142, 0.185)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(alpha  = samplesSample("alpha"),
+                    beta  = samplesSample("beta"),
+                    gamma = samplesSample("gamma"),
+                    sigma2 = samplesSample("sigma2"))
+
+#### PLOT THE DENSITY OF THE SAMPLED VALUES
+
+plot(density(chain$beta[1001:52000]), main = "beta chains 1:2 sample: 50000", 
+     ylab = "", xlab = "", col = "red", ylim = c(0, 45), xlim = c(0.1, 0.23))
+```
+
+
+```{r BayesianChapter0516, cache=TRUE, fig.width=7, fig.height=5, fig.cap='Change in weight for girls compared to boys (posterior mean: -0.516 kg, 95% credible interval (-0.877, -0.156)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+#### PLOT THE DENSITY OF THE SAMPLED VALUES
+plot(density(chain$gamma[1001:52000]), main = "gamma chains 1:2 sample: 50000", 
+     ylab = "", xlab = "", col = "red", ylim = c(0, 3), xlim = c(-1.5, 0.5))
+```
+
+
+```{r BayesianChapter0517, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='Fitted regression line versus covariate (age)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/fitted_regression_line.png")
+```
+
+BUGS軟件也能提供類似圖 \@ref(fig:BayesianChapter0517) 這樣的擬合值和共變量年齡之間的關系的圖。其中紅色線代表體重的擬合值，藍色線代表95%可信區間的範圍。
+
+經過這些步驟的分析，相信你也意識到，給貝葉斯模型中的共變量中心化(centering covariates)，是提高模型分析採樣效率的好方法。它把事後未知參數的位置中心化，同時減少事後MCMC採樣的自相關。之前沒有把年齡中心化的模型結果也提示我們如果共變量未被中心化，其事後概率分布的MCMC樣本的有效樣本量是會被打了折扣的，採樣的收斂速度也較長。
+
+
+
 
 
 # 貝葉斯統計學框架下的實驗設計

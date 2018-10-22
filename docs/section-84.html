@@ -1428,17 +1428,42 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 </div>
 <div id="section-84.2.6" class="section level3">
 <h3><span class="header-section-number">84.2.6</span> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</h3>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate another 25000 iterations for each chain</span>
-<span class="kw">modelUpdate</span>(<span class="dv">25000</span>)</code></pre></div>
-<pre><code>## 25000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/gambia-model.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/gambia-data.txt&quot;</span>)     </code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="op">-</span><span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;gamma&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;sigma2&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 52000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">26000</span>)</code></pre></div>
+<pre><code>## 26000 updates took 22 s</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
 <span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##             mean        sd  MC_error   val2.5pc   median val97.5pc start sample
-## ED95   4.452e+01 2.290e+00 8.908e-02  3.796e+01 44.77000   48.0500  1001  88000
-## OR     3.344e+14 1.623e+16 2.366e+14  4.287e-36  1.44500    1.6410  1001  88000
-## P35    3.668e-01 1.783e-01 8.343e-03  2.247e-01  0.32620    1.0000  1001  88000
-## beta0  4.699e+00 1.892e+01 9.224e-01 -4.122e-01  0.01656   81.6000  1001  88000
-## beta1 -4.335e+00 1.896e+01 9.243e-01 -8.144e+01  0.36840    0.4953  1001  88000</code></pre>
+<pre><code>##           mean      sd  MC_error val2.5pc  median val97.5pc start sample
+## alpha   7.1490 0.23490 0.0034690   6.6900  7.1500    7.6120  1001  50000
+## beta    0.1642 0.01093 0.0001514   0.1428  0.1642    0.1855  1001  50000
+## gamma  -0.5199 0.18460 0.0017070  -0.8812 -0.5199   -0.1570  1001  50000
+## sigma2  1.5810 0.16570 0.0007710   1.2880  1.5700    1.9340  1001  50000</code></pre>
 <p>由於我們給每個未知參數的先驗概率分布都是沒有實際信息的，我們預期貝葉斯模型給出的結果將會十分接近概率論模型給出的分析結果，事實也證明的確是如此：</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Gambia.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(sex), <span class="dt">data =</span> growgam1)
 <span class="kw">summary</span>(Gambia.lm)</code></pre></div>
@@ -1493,26 +1518,119 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <div id="-effective-sample-size-mcmc-check-2" class="section level3">
 <h3><span class="header-section-number">84.2.7</span> 檢查岡比亞兒童體重數據貝葉斯模型的有效樣本量 effective sample size (MCMC check 2)</h3>
 <p>盡管我們獲取了50000個事後MCMC樣本，但是關於 <span class="math inline">\(\text{MC_error} \approx 2 \text{ orders of magnitude smaller than the posterior SD}\)</span> 的經驗法則 (rule of thumb)，其實並沒有得到滿足。實際用於估計事後 <span class="math inline">\(\alpha, \beta\)</span> 的有效樣本量是小於 10000的。繪制每個參數的自回歸 (autocorrelation) 圖也證實了這些事後樣本有許多有強的自相關：</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))
-<span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">1</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,
-             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">100</span>)</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0510"></span>
 <img src="bookdown_files/figure-html/BayesianChapter0510-1.png" alt="Autocorrelation plot for the Gambia example (uncentered model, chain 1)" width="80%" />
 <p class="caption">
 圖 84.7: Autocorrelation plot for the Gambia example (uncentered model, chain 1)
 </p>
 </div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># acf(chain$beta0, main=&quot;beta0&quot;,lwd=4,col=&quot;red&quot;, lag.max = 50)</span></code></pre></div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/gambia-model.txt&quot;</span>) 
+<span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/gambia-data.txt&quot;</span>)     
+<span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) 
+<span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))
+initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="op">-</span><span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))
+
+<span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)
+
+<span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">26000</span>)
+<span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))
 <span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">2</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,
-             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">100</span>)</code></pre></div>
+             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">50</span>)</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0511"></span>
 <img src="bookdown_files/figure-html/BayesianChapter0511-1.png" alt="Autocorrelation plot for the Gambia example (uncentered model, chain 2)" width="80%" />
 <p class="caption">
 圖 84.8: Autocorrelation plot for the Gambia example (uncentered model, chain 2)
 </p>
 </div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># acf(chain$beta0, main=&quot;beta0&quot;,lwd=4,col=&quot;red&quot;, lag.max = 50)</span></code></pre></div>
+<p>這些 MCMC 樣本的自相關程度之所以如此之高，其最主要的原因是我們沒有把連續變量年齡給中心化。解決這個問題的辦法是把原先模型中的線性回歸模型的年齡中心化：</p>
+<pre><code>mu[i] &lt;- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]</code></pre>
+<p>這一次我們獲得的50000個MCMC事後樣本的參數估計結果如下：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/gambia-model-agecen.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/gambia-data.txt&quot;</span>)     </code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="op">-</span><span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;gamma&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;sigma2&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 51000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">26000</span>)</code></pre></div>
+<pre><code>## 26000 updates took 26 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##           mean     sd   MC_error val2.5pc  median val97.5pc start sample
+## alpha   9.9360 0.1376 0.00111200   9.6660  9.9360   10.2000  1001  50000
+## beta    0.1640 0.0110 0.00005164   0.1424  0.1640    0.1855  1001  50000
+## gamma  -0.5178 0.1845 0.00151300  -0.8788 -0.5178   -0.1564  1001  50000
+## sigma2  1.5800 0.1661 0.00076440   1.2910  1.5690    1.9360  1001  50000</code></pre>
+<p>注意到這時候事後參數估計給出的 <code>alpha</code> 結果發生了微妙的變化，然而其他的幾個變量的事後估計結果幾乎沒有改變。且此時 <code>MC_error</code> 也變得小了很多，達到了我們的經驗法則所要求的。這時候的事後MCMC採樣鏈的自相關圖也提供較爲了理想的結果：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))
+<span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">1</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,
+             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">50</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0513"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0513-1.png" alt="Autocorrelation plot for the Gambia example (centered model, chain 1)" width="80%" />
+<p class="caption">
+圖 84.9: Autocorrelation plot for the Gambia example (centered model, chain 1)
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))
+<span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">2</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,
+             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">50</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0514"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0514-1.png" alt="Autocorrelation plot for the Gambia example (centered model, chain 2)" width="80%" />
+<p class="caption">
+圖 84.10: Autocorrelation plot for the Gambia example (centered model, chain 2)
+</p>
+</div>
+<p>共變量年齡，和性別的回歸系數的事後概率分布圖繪制如下：</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0515"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0515-1.png" alt="Change in weight per month increase in age (posterior mean: 0.164 kg, 95% credible interval (0.142, 0.185)" width="80%" />
+<p class="caption">
+圖 84.11: Change in weight per month increase in age (posterior mean: 0.164 kg, 95% credible interval (0.142, 0.185)
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0516"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0516-1.png" alt="Change in weight for girls compared to boys (posterior mean: -0.516 kg, 95% credible interval (-0.877, -0.156)" width="80%" />
+<p class="caption">
+圖 84.12: Change in weight for girls compared to boys (posterior mean: -0.516 kg, 95% credible interval (-0.877, -0.156)
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0517"></span>
+<img src="img/fitted_regression_line.png" alt="Fitted regression line versus covariate (age)" width="80%" />
+<p class="caption">
+圖 84.13: Fitted regression line versus covariate (age)
+</p>
+</div>
+<p>BUGS軟件也能提供類似圖 <a href="section-84.html#fig:BayesianChapter0517">84.13</a> 這樣的擬合值和共變量年齡之間的關系的圖。其中紅色線代表體重的擬合值，藍色線代表95%可信區間的範圍。</p>
+<p>經過這些步驟的分析，相信你也意識到，給貝葉斯模型中的共變量中心化(centering covariates)，是提高模型分析採樣效率的好方法。它把事後未知參數的位置中心化，同時減少事後MCMC採樣的自相關。之前沒有把年齡中心化的模型結果也提示我們如果共變量未被中心化，其事後概率分布的MCMC樣本的有效樣本量是會被打了折扣的，採樣的收斂速度也較長。</p>
 </div>
 </div>
 </div>
