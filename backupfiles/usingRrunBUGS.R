@@ -2,28 +2,33 @@ library(BRugs)
 # Step 1 check model
 modelCheck("backupfiles/gambia-model-res.txt") 
 modelCheck("backupfiles/gambia-model-agecen-t.txt")
+modelCheck("backupfiles/gambia-model-agesq.txt")
+modelCheck("backupfiles/gambia-model-interaction.txt")
 # Load the data 
 modelData("backupfiles/gambia-data.txt")     
 # compile the model with two separate chains
 modelCompile(numChains = 2) 
 # generate initial values 
 # the choice is arbitrary
-initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
+# initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
+initlist <- list(alpha = 0, beta = 1, gamma = 5, delta = -5, logsigma2 = 1)
 modelInits(bugsData(initlist))
-initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
+# initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, delta = 5, logsigma2 = 5)
 modelInits(bugsData(initlist1))
 modelGenInits()
 # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("alpha", "beta", "gamma", "sigma2", "res", "wt.pred", "p.pred")
-parameters <- c("alpha", "beta", "gamma", "sigma2")
+parameters <- c("alpha", "beta", "delta", "gamma", "sigma2")
+# parameters <- c("alpha", "beta", "gamma", "sigma2")
 
 samplesSet(parameters)
 dicSet()
 # Generate 51000 iterations
-modelUpdate(25000)
-dicStats()
+modelUpdate(26000)
 sample.statistics <- samplesStats("*", beg = 1001)
 print(sample.statistics)
+dicStats()
+
 # postsamples <- buildMCMC("*")
 
 # Use R2Openbugs ----------------------------------------------------------

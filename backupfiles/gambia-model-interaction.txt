@@ -1,0 +1,22 @@
+model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta*cage[i] + gamma*sex[i] + delta*cage[i]*sex[i]
+    cage[i] <- age[i] - mean(age[]) # centered age
+
+    # standardised residuals 
+    res[i] <- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] <- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  delta ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 <- exp(logsigma2)
+  tau    <- 1/sigma2
+}

@@ -3296,8 +3296,145 @@ total 622.1  618 626.2 4.114
 1. 增加年齡的二次方項 $age^2$；
 2. 增加年齡和性別的交互作用項 $age \times sex$。
 
+在思考貝葉斯模型怎樣增加上面兩個變量的語法的同時，請思考這樣幾個問題：
+
+1. 要怎樣修改模型的BUGS代碼才能正確表達想要增加的模型變量？特別是模型應該怎麼寫才能把年齡的平方中心化？
+2. 如何寫MCMC鏈的起始值？
+3. 跑完模型以後，給模型的擬合實施常規的檢查。
+4. 簡單線性迴歸模型中增加了這些部分後的結果，要如何回答我們一開始提出的問題？（年齡每增加一個月，體重的變化是多少kg？男孩和女孩之間的體重差別是多少kg？）
+
+### 增加年齡二次方項 adding age squared 
+
+```
+model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta*cage[i] + gamma*sex[i] + delta*cagesq[i]
+    cage[i] <- age[i] - mean(age[]) # centered age
+    agesq[i] <- pow(age[i], 2)
+    cagesq[i] <- agesq[i] - mean(agesq[]) # centered age squared
+    
+    # standardised residuals 
+    res[i] <- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] <- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  delta ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 <- exp(logsigma2)
+  tau    <- 1/sigma2
+}
+```
+
+使用的兩個MCMC鏈的起始值分別是：
+
+```
+initlist <- list(alpha = 0, beta = 1, gamma = 5, delta = -1, logsigma2 = 1)
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, delta = 1, logsigma2 = 5)
+```
+
+獲得的50000個事後概率分佈樣本的統計描述是：
+
+```
+            mean       sd  MC_error  val2.5pc    median  val97.5pc start sample
+alpha   9.945000 0.136100 1.166e-03  9.677000  9.945000 10.2100000  1001  50000
+beta    0.256600 0.053360 1.452e-03  0.151600  0.256500  0.3621000  1001  50000
+delta  -0.002429 0.001372 3.731e-05 -0.005133 -0.002422  0.0002715  1001  50000
+gamma  -0.535000 0.181100 1.526e-03 -0.887300 -0.534900 -0.1815000  1001  50000
+sigma2  1.563000 0.164300 8.325e-04  1.275000  1.551000  1.9190000  1001  50000
+```
+
+模型的 DIC 是：
+
+```
+      Dbar Dhat DIC    pD
+wt     623  618 628 5.008
+total  623  618 628 5.008
+```
+
+和之前沒有增加年齡平方的模型相比較DIC減少了大概只有1。因此，基本沒有差別的情況下，我們選擇沒有年齡平方的一開始的模型。從 `delta` 的事後概率分佈結果也知道它的95%可信區間是包括0的。也說明了增加年齡平方項的部分無太多意義。
+
+### 增加年齡和性別的交互作用項 adding an interaction term
+
+```
+model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] <- alpha + beta*cage[i] + gamma*sex[i] + delta*cage[i]*sex[i]
+    cage[i] <- age[i] - mean(age[]) # centered age
+
+    # standardised residuals 
+    res[i] <- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] <- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  delta ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 <- exp(logsigma2)
+  tau    <- 1/sigma2
+}
+```
+
+使用的起始值分別是：
+
+```
+initlist <- list(alpha = 0, beta = 1, gamma = 5, delta = -5, logsigma2 = 1)
+initlist1 <- list(alpha = 10, beta = 0, gamma = -5, delta = 5, logsigma2 = 5)
+```
+
+事後概率分佈樣本的統計學描述是：
+
+```
+            mean      sd  MC_error val2.5pc    median val97.5pc start sample
+alpha   9.937000 0.13730 0.0011460  9.66900  9.936000  10.21000  1001  50000
+beta    0.165500 0.01609 0.0001244  0.13380  0.165500   0.19710  1001  50000
+delta  -0.002979 0.02223 0.0001703 -0.04668 -0.003053   0.04065  1001  50000
+gamma  -0.519900 0.18380 0.0015730 -0.88040 -0.518800  -0.16250  1001  50000
+sigma2  1.590000 0.16700 0.0007803  1.29800  1.578000   1.94800  1001  50000
+```
+
+DIC是：
+
+```
+       Dbar  Dhat   DIC    pD
+wt    626.1 621.1 631.1 5.003
+total 626.1 621.1 631.1 5.003
+```
+
+增加了性別年齡交互項的模型給出的DIC比原先的模型大了2個單位左右，所以，我們還是會選擇沒有交互作用項的一開始的簡單線性迴歸模型。
+
+
+
 
 # 貝葉斯統計學框架下的實驗設計
+
+本章節我們將要學習和探索如何給不同的實驗設計方法寫相對應的 BUGS 貝葉斯模型，用於比較不同組之間的差異。根據不同的試驗設計，模型也會跟着發生變化。例如病例對照研究的數據和模型結構，一定和隊列研究，或者是簡單的橫斷面研究的模型和數據結構差別甚遠。
+
+爲不同的實驗設計寫下正確的貝葉斯模型的關鍵是，要深刻理解不同實驗設計時的樣本採集過程：實驗對象的哪些特徵，哪些變量是確定的，哪些被認爲是隨機變量。我們要爲那些被認爲是隨機變量的部分採集事後概率分佈樣本。
+
+貫穿本章節，我們默認：
+
+1. $Y$ 是要研究的疾病，$X$ 是要研究的暴露因素；
+2. 給概率 (probabilities)，和患病率 (prevalences)提供均一先驗概率分佈 (uniform priors)。給作用效果的評價指標例如危險度比 (risk ratios, RR)，危險度差 (risk difference, RD)，或者是比值比 (odds ratios, OR)提供中性的，圍繞着無效爲中心的先驗概率分佈 ("neutral" priors centred on no effect)。
+
+
+## 隊列研究的實驗設計
+
+假如我們徵集兩組觀察對象，一組爲2000名非吸菸者，另一組爲1000名吸菸者。他們年齡均爲30歲，之後我們隨訪這兩組研究對象20年，觀察到非吸菸者癌症發病人數爲100人，吸菸者癌症發病人數爲150人。這個實驗設計的目的是比較兩組觀察對象的20年癌症發病危險度。在這個實驗設計條件下，癌症發病是隨機變量，但是暴露組（吸菸）和非暴露組（非吸菸）的人數，是一開始已經定下來不會改變的數值。
+
+
 
 # 貝葉斯廣義線性回歸
 
