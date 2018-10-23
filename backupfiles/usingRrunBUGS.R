@@ -1,6 +1,7 @@
 library(BRugs)
 # Step 1 check model
 modelCheck("backupfiles/gambia-model-res.txt") 
+modelCheck("backupfiles/gambia-model-agecen-t.txt")
 # Load the data 
 modelData("backupfiles/gambia-data.txt")     
 # compile the model with two separate chains
@@ -14,14 +15,16 @@ modelInits(bugsData(initlist1))
 modelGenInits()
 # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
 parameters <- c("alpha", "beta", "gamma", "sigma2", "res", "wt.pred", "p.pred")
+parameters <- c("alpha", "beta", "gamma", "sigma2")
+
 samplesSet(parameters)
-
+dicSet()
 # Generate 51000 iterations
-modelUpdate(5000)
-
+modelUpdate(25000)
+dicStats()
 sample.statistics <- samplesStats("*", beg = 1001)
 print(sample.statistics)
-postsamples <- buildMCMC("*")
+# postsamples <- buildMCMC("*")
 
 # Use R2Openbugs ----------------------------------------------------------
 
@@ -35,7 +38,7 @@ drug.odir <- paste(dire.dir, output.dir, "gambiamodel/", sep = "")
  # modelInits(bugsData(initlist))
  initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
  # modelInits(bugsData(initlist1))
- modelGenInits()
+ # modelGenInits()
 
 library(R2OpenBUGS)
 drug.log.sim <- bugs(data = paste(dire.dir, "backupfiles/gambia-data.txt", sep = ""), parameters.to.save = pars,
@@ -45,7 +48,23 @@ drug.log.sim <- bugs(data = paste(dire.dir, "backupfiles/gambia-data.txt", sep =
                      codaPkg = TRUE)
 drug.log.sim
 
-postsamples <- read.bugs(drug.log.sim)
+postsamples_N <- read.bugs(drug.log.sim)
+
+Gambia_t.odir <- paste(dire.dir, output.dir, "gambia_t_model/", sep = "")
+
+drug.t.sim <- bugs(data = paste(dire.dir, "backupfiles/gambia-data.txt", sep = ""), parameters.to.save = pars,
+                     model.file = paste(dire.dir, "backupfiles/gambia-model-agecen-t.txt", sep = ""), inits = list(initlist, initlist1),
+                     n.chains = 2, n.iter = 26000,
+                     n.burnin = 1000, DIC = T, working.directory = drug.odir,
+                     codaPkg = TRUE)
+drug.t.sim
+postsamples_t <- read.bugs(drug.t.sim)
+
+
+effectiveSize(postsamples_N)
+effectiveSize(postsamples_t)
+
+summary(postsamples_N)
 
 library(mcmcplots)
 denplot(postsamples, "beta")

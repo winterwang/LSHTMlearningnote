@@ -1083,6 +1083,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="84.2.6" data-path="section-84.html"><a href="section-84.html#section-84.2.6"><i class="fa fa-check"></i><b>84.2.6</b> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</a></li>
 <li class="chapter" data-level="84.2.7" data-path="section-84.html"><a href="section-84.html#-effective-sample-size-mcmc-check-2"><i class="fa fa-check"></i><b>84.2.7</b> 檢查岡比亞兒童體重數據貝葉斯模型的有效樣本量 effective sample size (MCMC check 2)</a></li>
 <li class="chapter" data-level="84.2.8" data-path="section-84.html"><a href="section-84.html#-checking-model-fit-for-the-gambia-example"><i class="fa fa-check"></i><b>84.2.8</b> 檢查模型擬合程度 checking model fit for the Gambia example</a></li>
+<li class="chapter" data-level="84.2.9" data-path="section-84.html"><a href="section-84.html#-alternative-model-with-t-errors"><i class="fa fa-check"></i><b>84.2.9</b> 其他的替代模型 alternative model with t-errors</a></li>
+</ul></li>
+<li class="chapter" data-level="84.3" data-path="section-84.html"><a href="section-84.html#-bayesian-model-comparison"><i class="fa fa-check"></i><b>84.3</b> 貝葉斯統計模型的比較 Bayesian model comparison</a><ul>
+<li class="chapter" data-level="84.3.1" data-path="section-84.html"><a href="section-84.html#deviance-information-criterion-dic"><i class="fa fa-check"></i><b>84.3.1</b> Deviance Information Criterion (DIC)</a></li>
+<li class="chapter" data-level="84.3.2" data-path="section-84.html"><a href="section-84.html#section-84.3.2"><i class="fa fa-check"></i><b>84.3.2</b> 岡比亞兒童體重數據模型比較</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a></li>
@@ -1455,7 +1460,7 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <pre><code>## monitor set for variable &#39;sigma2&#39;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 52000 iterations</span>
 <span class="kw">modelUpdate</span>(<span class="dv">26000</span>)</code></pre></div>
-<pre><code>## 26000 updates took 21 s</code></pre>
+<pre><code>## 26000 updates took 22 s</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
 <span class="kw">print</span>(sample.statistics)</code></pre></div>
 <pre><code>##           mean      sd  MC_error val2.5pc  median val97.5pc start sample
@@ -1654,14 +1659,104 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
   sigma2 &lt;- exp(logsigma2)
   tau    &lt;- 1/sigma2
 }</code></pre>
-<p>所以我們只要增加對新增的三個變量 <code>res, wt.pred, p.pred</code> 的事後樣本採集的監控就可以了。</p>
+<p>所以我們只要增加對新增的三個變量 <code>res, wt.pred, p.pred</code> 的事後樣本採集的監控就可以了。圖 <a href="section-84.html#fig:BayesianChapter0519">84.15</a> 展示了BUGS軟件提供的殘差分析圖(caterpillar/毛蟲 plot)。它其實十分接近箱式圖 (box-plot)，唯一的區別是不顯示四分位數間距 (inter-quartile range)。毛蟲圖的最大優點在於，便於比較有很多事後概率分布的情況，像本例中190名兒童的體重都有各自的事後概率分布，他們每人的殘差也有各自的分布。圖 <a href="section-84.html#fig:BayesianChapter0520">84.16</a> 則是BUGS軟件繪制的岡比亞兒童體重的95%預測區間，後面的黑色散點圖是觀察值。</p>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0519"></span>
 <img src="img/caterpillarplot.png" alt="Caterpillar plot of the posterior distribution of standardised residuals vs. child ID" width="70%" />
 <p class="caption">
 圖 84.15: Caterpillar plot of the posterior distribution of standardised residuals vs. child ID
 </p>
 </div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0520"></span>
+<img src="img/PredictionbandsGambia.png" alt="Prediction bands for replicate data." width="70%" />
+<p class="caption">
+圖 84.16: Prediction bands for replicate data.
+</p>
 </div>
+</div>
+<div id="-alternative-model-with-t-errors" class="section level3">
+<h3><span class="header-section-number">84.2.9</span> 其他的替代模型 alternative model with t-errors</h3>
+<p>檢查一個模型意爲着我們可能需要替代模型。例如，我們可以使模型中的體重不是服從正態分布，而是服從 t 分布，因爲 t 分布將會給模型提供更高的穩健性。（t分布的兩端面積比起正態分布要大一些，也就是允許模型考慮更多的離羣值outliers）：</p>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dt(mu[i], tau, 4) # robust likelihood t distribution on 4 df
+    mu[i] &lt;- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]
+}
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+</div>
+</div>
+<div id="-bayesian-model-comparison" class="section level2">
+<h2><span class="header-section-number">84.3</span> 貝葉斯統計模型的比較 Bayesian model comparison</h2>
+<p>在使用統計學模型時，我們自然而然地想用模型對數據的擬合度來輔助進行模型的篩選及比較。常用的指標有 Akaike Information Criterion (AIC)：</p>
+<p><span class="math display">\[
+\text{AIC} = -2\log p(y | \hat \theta) + 2k
+\]</span> 其中， <span class="math inline">\(p(y|\hat\theta)\)</span> 就是模型的似然(likelihood)用來代表模型對數據的擬合度，<span class="math inline">\(k\)</span> 是模型中的未知參數個數，用來表示模型的復雜程度。</p>
+<div id="deviance-information-criterion-dic" class="section level3">
+<h3><span class="header-section-number">84.3.1</span> Deviance Information Criterion (DIC)</h3>
+<p><span class="citation">(Spiegelhalter et al. <a href="#ref-Spiegelhalter2002">2002</a>)</span>提出用 DIC 來比較貝葉斯模型。它也是利用和 AIC 類似的思想，使用DIC來綜合表示模型的擬合度，及模型的復雜程度：</p>
+<p><span class="math display">\[
+\text{DIC} = \text{goodness of fit} + \text{complexity}
+\]</span></p>
+<p>其中模型的擬合程度部分用的是模型偏差值：<span class="math inline">\(D(\theta) = -2\log L(data | \theta)\)</span>；</p>
+<p>模型復雜程度使用的則是，模型中有效的未知參數的個數：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p_D &amp; = E_{\theta | y}[D] - D(E_{\theta | y}[\theta]) \\ 
+    &amp; = \bar D - D(\bar\theta)
+\end{aligned}
+\]</span></p>
+<p>i.e. the posterior mean deviance minus the deviance evaluated at the posterior mean of the parameters.</p>
+<p>然後 DIC 的定義也模仿 AIC：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{DIC} &amp; = D(\bar\theta) + 2 p_D \\ 
+           &amp; = \bar D + p_D
+\end{aligned}
+\]</span></p>
+<p>比較的方法是DIC越小的模型，越優，數據越支持。</p>
+<ul>
+<li>如果兩個模型的 DIC 相差大於 10，說明DIC較小的模型更好；</li>
+<li>如果兩個模型的 DIC 相差小於 5，說明兩個模型無太大差別。</li>
+</ul>
+<p>在BUGS軟件中你需要像追蹤監測其他隨機變量一樣監測模型的DIC，特別是要在確定模型已經達到收斂之後，採集收斂之後的 DIC 數值用於比較。</p>
+</div>
+<div id="section-84.3.2" class="section level3">
+<h3><span class="header-section-number">84.3.2</span> 岡比亞兒童體重數據模型比較</h3>
+<p>當設定體重服從正態分布時，我們獲得模型的 DIC 是</p>
+<pre><code>       Dbar  Dhat   DIC    pD
+wt    625.1 621.1 629.1 3.983
+total 625.1 621.1 629.1 3.983</code></pre>
+<p>當設定體重服從自由度爲4的t分布時，我們獲得模型的 DIC 是</p>
+<pre><code>       Dbar Dhat   DIC    pD
+wt    622.1  618 626.2 4.114
+total 622.1  618 626.2 4.114</code></pre>
+<p>兩個模型的DIC差別在3左右，也就是說用正態分布，或者t分布，對結果影響不大。</p>
+<p>這兩個模型給出的我們的問題的答案也不會有本質上的差別：</p>
+<ul>
+<li>年齡每增加1個月，體重的變化：
+<ul>
+<li>正態分布：<span class="math inline">\(\beta\)</span> 的事後均值爲 0.164 kg，95% 可信區間 (0.142, 0.185)；</li>
+<li>t 分布：<span class="math inline">\(\beta\)</span> 的事後均值爲 0.167 kg, 95% 可信區間 (0.146, 0.187)。</li>
+</ul></li>
+<li>男孩和女孩的體重差別：
+<ul>
+<li>正態分布：<span class="math inline">\(\gamma\)</span> 的事後均值爲 -0.519 kg，95% 可信區間 (-0.877, -0.156)；</li>
+<li>t 分布：<span class="math inline">\(\gamma\)</span> 的事後均值爲 -0.574 kg，95% 可信區間 (-0.915, -0.232)。</li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-Spiegelhalter2002">
+<p>Spiegelhalter, David J, Nicola G Best, Bradley P Carlin, and Angelika Van Der Linde. 2002. “Bayesian Measures of Model Complexity and Fit.” <em>Journal of the Royal Statistical Society: Series B (Statistical Methodology)</em> 64 (4). Wiley Online Library: 583–639.</p>
 </div>
 </div>
             </section>

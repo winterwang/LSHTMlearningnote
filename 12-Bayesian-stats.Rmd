@@ -3177,7 +3177,7 @@ model{
 }
 ```
 
-所以我們只要增加對新增的三個變量 `res, wt.pred, p.pred` 的事後樣本採集的監控就可以了。
+所以我們只要增加對新增的三個變量 `res, wt.pred, p.pred` 的事後樣本採集的監控就可以了。圖 \@ref(fig:BayesianChapter0519) 展示了BUGS軟件提供的殘差分析圖(caterpillar/毛蟲 plot)。它其實十分接近箱式圖 (box-plot)，唯一的區別是不顯示四分位數間距 (inter-quartile range)。毛蟲圖的最大優點在於，便於比較有很多事後概率分布的情況，像本例中190名兒童的體重都有各自的事後概率分布，他們每人的殘差也有各自的分布。圖 \@ref(fig:BayesianChapter0520) 則是BUGS軟件繪制的岡比亞兒童體重的95%預測區間，後面的黑色散點圖是觀察值。
 
 
 ```{r BayesianChapter0519, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='Caterpillar plot of the posterior distribution of standardised residuals vs. child ID', fig.align='center', out.width='70%', message=FALSE, warning=FALSE}
@@ -3185,6 +3185,107 @@ knitr::include_graphics("img/caterpillarplot.png")
 ```
 
 
+```{r BayesianChapter0520, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='Prediction bands for replicate data.', fig.align='center', out.width='70%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/PredictionbandsGambia.png")
+```
+
+
+### 其他的替代模型 alternative model with t-errors
+
+檢查一個模型意爲着我們可能需要替代模型。例如，我們可以使模型中的體重不是服從正態分布，而是服從 t 分布，因爲 t 分布將會給模型提供更高的穩健性。（t分布的兩端面積比起正態分布要大一些，也就是允許模型考慮更多的離羣值outliers）：
+
+
+```
+model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dt(mu[i], tau, 4) # robust likelihood t distribution on 4 df
+    mu[i] <- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]
+}
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 <- exp(logsigma2)
+  tau    <- 1/sigma2
+}
+```
+
+## 貝葉斯統計模型的比較 Bayesian model comparison
+
+
+在使用統計學模型時，我們自然而然地想用模型對數據的擬合度來輔助進行模型的篩選及比較。常用的指標有 Akaike Information Criterion (AIC)：
+
+$$
+\text{AIC} = -2\log p(y | \hat \theta) + 2k
+$$
+其中， $p(y|\hat\theta)$ 就是模型的似然(likelihood)用來代表模型對數據的擬合度，$k$ 是模型中的未知參數個數，用來表示模型的復雜程度。
+
+### Deviance Information Criterion (DIC)
+
+[@Spiegelhalter2002]提出用 DIC 來比較貝葉斯模型。它也是利用和 AIC 類似的思想，使用DIC來綜合表示模型的擬合度，及模型的復雜程度：
+
+$$
+\text{DIC} = \text{goodness of fit} + \text{complexity}
+$$
+
+其中模型的擬合程度部分用的是模型偏差值：$D(\theta) = -2\log L(data | \theta)$；
+
+模型復雜程度使用的則是，模型中有效的未知參數的個數：
+
+$$
+\begin{aligned}
+p_D & = E_{\theta | y}[D] - D(E_{\theta | y}[\theta]) \\ 
+    & = \bar D - D(\bar\theta)
+\end{aligned}
+$$
+
+i.e. the posterior mean deviance minus the deviance evaluated at the posterior mean of the parameters. 
+
+然後 DIC 的定義也模仿 AIC：
+
+$$
+\begin{aligned}
+\text{DIC} & = D(\bar\theta) + 2 p_D \\ 
+           & = \bar D + p_D
+\end{aligned}
+$$
+
+比較的方法是DIC越小的模型，越優，數據越支持。
+
+- 如果兩個模型的 DIC 相差大於 10，說明DIC較小的模型更好；
+- 如果兩個模型的 DIC 相差小於 5，說明兩個模型無太大差別。
+
+在BUGS軟件中你需要像追蹤監測其他隨機變量一樣監測模型的DIC，特別是要在確定模型已經達到收斂之後，採集收斂之後的 DIC 數值用於比較。
+
+### 岡比亞兒童體重數據模型比較
+
+當設定體重服從正態分布時，我們獲得模型的 DIC 是
+
+```
+       Dbar  Dhat   DIC    pD
+wt    625.1 621.1 629.1 3.983
+total 625.1 621.1 629.1 3.983
+```
+
+當設定體重服從自由度爲4的t分布時，我們獲得模型的 DIC 是
+
+```
+       Dbar Dhat   DIC    pD
+wt    622.1  618 626.2 4.114
+total 622.1  618 626.2 4.114
+```
+
+兩個模型的DIC差別在3左右，也就是說用正態分布，或者t分布，對結果影響不大。
+
+這兩個模型給出的我們的問題的答案也不會有本質上的差別：
+
+- 年齡每增加1個月，體重的變化：
+    - 正態分布：`beta` 的事後均值爲 0.164 kg，95% 可信區間 (0.142, 0.185)；
+    - t 分布：`beta` 的事後均值爲 0.167 kg, 95% 可信區間 (0.146, 0.187)。
+- 男孩和女孩的體重差別：
+    - 正態分布：`gamma` 的事後均值爲 -0.519 kg，95% 可信區間 (-0.877, -0.156)；
+    - t 分布：`gamma` 的事後均值爲 -0.574 kg，95% 可信區間 (-0.915, -0.232)。
 
 # 貝葉斯統計學框架下的實驗設計
 
