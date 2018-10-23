@@ -1319,7 +1319,7 @@ y_i   &amp; \sim \text{Normal}(\mu_i, \sigma^2) \\
   alpha ~ dunif(-1000, 1000)
   beta  ~ dunif(-1000, 1000)
   gamma ~ dunif(-1000, 1000)
-  logsigma^2 ~ dunif(-100, 100)
+  logsigma2 ~ dunif(-100, 100)
   sigma2 &lt;- exp(logsigma2)
   tau    &lt;- 1/sigma2
 }</code></pre>
@@ -1621,12 +1621,46 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <li>檢查先驗概率分布和實際觀察數據之間是否有衝突 check for conflict between prior and data；</li>
 <li>檢查貝葉斯模型是否會對不同的先驗概率分布較爲敏感 check for unintended sensitivity to the prior。</li>
 </ul>
-<p>標準化殘差 (standardised residuals) 的計算公式是 <span class="math inline">\(r = \frac{y - \mu}{\sigma}\)</span>，其中 <span class="math inline">\(\mu = E[y], \sigma^2 = V[y]\)</span>。在貝葉斯模型中獲得的殘差也是隨機變量 (random quantities)，有自己的分布。如果你願意，你可以把殘差的事後概率分布密度圖給繪制出來，或者選擇檢驗分布的形狀參數 (testing distributional shape)等等方法來檢驗殘差：</p>
+<p>標準化殘差 (standardised residuals) 的計算公式是 <span class="math inline">\(r = \frac{y - \mu}{\sigma}\)</span>，其中 <span class="math inline">\(\mu = E[y], \sigma^2 = V[y]\)</span>。在貝葉斯模型中獲得的殘差也是隨機變量 (random quantities)，有自己的分布。如果你願意，你可以把殘差的事後概率分布密度圖給繪制出來，或者選擇檢驗分布的形狀參數 (testing distributional shape)等等方法來檢驗殘差，但是如果你只要給每個對象提取一個模型殘差值，你的選擇可以有：</p>
 <ul>
 <li>標準化殘差的事後概率分布均值 posterior mean of the standardised residuals <span class="math inline">\(E(r)\)</span>；</li>
-<li>或者把參數的事後均值<span class="math inline">\(\mu\)</span>及其標準差<span class="math inline">\(\sigma\)</span>的均值放到計算式裏面: <span class="math inline">\(r = \frac{y - E(\mu)}{E(\sigma)}\)</span>。</li>
+<li>(plug-in posterior mean) 或者把參數的事後均值<span class="math inline">\(\mu\)</span>及其標準差<span class="math inline">\(\sigma\)</span>的均值放到計算式裏面: <span class="math inline">\(r = \frac{y - E(\mu)}{E(\sigma)}\)</span>。</li>
 </ul>
 <p>使用MCMC計算機模擬試驗的算法優勢，我們擁有了重復計算大量參數的能力。所以對於每一個觀察對象(岡比亞兒童)，我們可以用這個線性回歸模型計算他/她的體重的事後預測分布(predictive distribution) <span class="math inline">\(y_i^{pred}\)</span>，然後把他/她的體重觀察值<span class="math inline">\((y_i^{obs})\)</span>和他/她的體重事後概率分布做比較。利用 <code>step</code> 命令來計算每個孩子身上用模型計算的預測體重分布中，小於觀察的體重數據的面積 <span class="math inline">\(p(y_i^{pred} &lt; y_i^{obs})\)</span>。如果有許多觀測值，位於它各自事後概率分布的兩極（即預測體重遠小於，或者遠大於觀測體重），那麼可以認爲該模型擬合度較差。</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0518"></span>
+<img src="img/predictive-check.png" alt="Predictive check" width="70%" />
+<p class="caption">
+圖 84.14: Predictive check
+</p>
+</div>
+<p>用岡比亞兒童體重的貝葉斯模型來說，我們利用MCMC強大的事後樣本採集能力，在模型中增加並監測三個新的變量 <code>res, wt.pred, p.pred</code>：</p>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]
+    
+    # standardised residuals 
+    res[i] &lt;- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] &lt;- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+<p>所以我們只要增加對新增的三個變量 <code>res, wt.pred, p.pred</code> 的事後樣本採集的監控就可以了。</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0519"></span>
+<img src="img/caterpillarplot.png" alt="Caterpillar plot of the posterior distribution of standardised residuals vs. child ID" width="70%" />
+<p class="caption">
+圖 84.15: Caterpillar plot of the posterior distribution of standardised residuals vs. child ID
+</p>
+</div>
 </div>
 </div>
 </div>
