@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-10-23">
+<meta name="date" content="2018-10-24">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1089,8 +1089,14 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="84.3.1" data-path="section-84.html"><a href="section-84.html#deviance-information-criterion-dic"><i class="fa fa-check"></i><b>84.3.1</b> Deviance Information Criterion (DIC)</a></li>
 <li class="chapter" data-level="84.3.2" data-path="section-84.html"><a href="section-84.html#section-84.3.2"><i class="fa fa-check"></i><b>84.3.2</b> 岡比亞兒童體重數據模型比較</a></li>
 </ul></li>
+<li class="chapter" data-level="84.4" data-path="section-84.html"><a href="section-84.html#practical-bayesian-statistics-05"><i class="fa fa-check"></i><b>84.4</b> Practical Bayesian Statistics 05</a><ul>
+<li class="chapter" data-level="84.4.1" data-path="section-84.html"><a href="section-84.html#-adding-age-squared"><i class="fa fa-check"></i><b>84.4.1</b> 增加年齡二次方項 adding age squared</a></li>
+<li class="chapter" data-level="84.4.2" data-path="section-84.html"><a href="section-84.html#-adding-an-interaction-term"><i class="fa fa-check"></i><b>84.4.2</b> 增加年齡和性別的交互作用項 adding an interaction term</a></li>
 </ul></li>
-<li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a></li>
+</ul></li>
+<li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a><ul>
+<li class="chapter" data-level="85.1" data-path="section-85.html"><a href="section-85.html#section-85.1"><i class="fa fa-check"></i><b>85.1</b> 隊列研究的實驗設計</a></li>
+</ul></li>
 <li class="chapter" data-level="86" data-path="section-86.html"><a href="section-86.html"><i class="fa fa-check"></i><b>86</b> 貝葉斯廣義線性回歸</a></li>
 <li class="chapter" data-level="87" data-path="section-87.html"><a href="section-87.html"><i class="fa fa-check"></i><b>87</b> 貝葉斯等級回歸模型</a></li>
 <li class="chapter" data-level="88" data-path="-mcmc.html"><a href="-mcmc.html"><i class="fa fa-check"></i><b>88</b> 再訪 MCMC</a></li>
@@ -1750,6 +1756,104 @@ total 622.1  618 626.2 4.114</code></pre>
 <li>t 分布：<span class="math inline">\(\gamma\)</span> 的事後均值爲 -0.574 kg，95% 可信區間 (-0.915, -0.232)。</li>
 </ul></li>
 </ul>
+</div>
+</div>
+<div id="practical-bayesian-statistics-05" class="section level2">
+<h2><span class="header-section-number">84.4</span> Practical Bayesian Statistics 05</h2>
+<p>本次練習我們來比較多個貝葉斯線性回歸模型。看看在模型中增加其他的變量是否能改善模型的擬合度，最終你會選哪個線性回歸模型來回答一開始我們提出的問題。</p>
+<p>除了本章實例中使用的線性回歸模型，另外可以拿來比較的模型分別是：</p>
+<ol style="list-style-type: decimal">
+<li>增加年齡的二次方項 <span class="math inline">\(age^2\)</span>；</li>
+<li>增加年齡和性別的交互作用項 <span class="math inline">\(age \times sex\)</span>。</li>
+</ol>
+<p>在思考貝葉斯模型怎樣增加上面兩個變量的語法的同時，請思考這樣幾個問題：</p>
+<ol style="list-style-type: decimal">
+<li>要怎樣修改模型的BUGS代碼才能正確表達想要增加的模型變量？特別是模型應該怎麼寫才能把年齡的平方中心化？</li>
+<li>如何寫MCMC鏈的起始值？</li>
+<li>跑完模型以後，給模型的擬合實施常規的檢查。</li>
+<li>簡單線性迴歸模型中增加了這些部分後的結果，要如何回答我們一開始提出的問題？（年齡每增加一個月，體重的變化是多少kg？男孩和女孩之間的體重差別是多少kg？）</li>
+</ol>
+<div id="-adding-age-squared" class="section level3">
+<h3><span class="header-section-number">84.4.1</span> 增加年齡二次方項 adding age squared</h3>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*cage[i] + gamma*sex[i] + delta*cagesq[i]
+    cage[i] &lt;- age[i] - mean(age[]) # centered age
+    agesq[i] &lt;- pow(age[i], 2)
+    cagesq[i] &lt;- agesq[i] - mean(agesq[]) # centered age squared
+    
+    # standardised residuals 
+    res[i] &lt;- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] &lt;- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  delta ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+<p>使用的兩個MCMC鏈的起始值分別是：</p>
+<pre><code>initlist &lt;- list(alpha = 0, beta = 1, gamma = 5, delta = -1, logsigma2 = 1)
+initlist1 &lt;- list(alpha = 10, beta = 0, gamma = -5, delta = 1, logsigma2 = 5)</code></pre>
+<p>獲得的50000個事後概率分佈樣本的統計描述是：</p>
+<pre><code>            mean       sd  MC_error  val2.5pc    median  val97.5pc start sample
+alpha   9.945000 0.136100 1.166e-03  9.677000  9.945000 10.2100000  1001  50000
+beta    0.256600 0.053360 1.452e-03  0.151600  0.256500  0.3621000  1001  50000
+delta  -0.002429 0.001372 3.731e-05 -0.005133 -0.002422  0.0002715  1001  50000
+gamma  -0.535000 0.181100 1.526e-03 -0.887300 -0.534900 -0.1815000  1001  50000
+sigma2  1.563000 0.164300 8.325e-04  1.275000  1.551000  1.9190000  1001  50000</code></pre>
+<p>模型的 DIC 是：</p>
+<pre><code>      Dbar Dhat DIC    pD
+wt     623  618 628 5.008
+total  623  618 628 5.008</code></pre>
+<p>和之前沒有增加年齡平方的模型相比較DIC減少了大概只有1。因此，基本沒有差別的情況下，我們選擇沒有年齡平方的一開始的模型。從 <code>delta</code> 的事後概率分佈結果也知道它的95%可信區間是包括0的。也說明了增加年齡平方項的部分無太多意義。</p>
+</div>
+<div id="-adding-an-interaction-term" class="section level3">
+<h3><span class="header-section-number">84.4.2</span> 增加年齡和性別的交互作用項 adding an interaction term</h3>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*cage[i] + gamma*sex[i] + delta*cage[i]*sex[i]
+    cage[i] &lt;- age[i] - mean(age[]) # centered age
+
+    # standardised residuals 
+    res[i] &lt;- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] &lt;- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  delta ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+<p>使用的起始值分別是：</p>
+<pre><code>initlist &lt;- list(alpha = 0, beta = 1, gamma = 5, delta = -5, logsigma2 = 1)
+initlist1 &lt;- list(alpha = 10, beta = 0, gamma = -5, delta = 5, logsigma2 = 5)</code></pre>
+<p>事後概率分佈樣本的統計學描述是：</p>
+<pre><code>            mean      sd  MC_error val2.5pc    median val97.5pc start sample
+alpha   9.937000 0.13730 0.0011460  9.66900  9.936000  10.21000  1001  50000
+beta    0.165500 0.01609 0.0001244  0.13380  0.165500   0.19710  1001  50000
+delta  -0.002979 0.02223 0.0001703 -0.04668 -0.003053   0.04065  1001  50000
+gamma  -0.519900 0.18380 0.0015730 -0.88040 -0.518800  -0.16250  1001  50000
+sigma2  1.590000 0.16700 0.0007803  1.29800  1.578000   1.94800  1001  50000</code></pre>
+<p>DIC是：</p>
+<pre><code>       Dbar  Dhat   DIC    pD
+wt    626.1 621.1 631.1 5.003
+total 626.1 621.1 631.1 5.003</code></pre>
+<p>增加了性別年齡交互項的模型給出的DIC比原先的模型大了2個單位左右，所以，我們還是會選擇沒有交互作用項的一開始的簡單線性迴歸模型。</p>
 </div>
 </div>
 </div>
