@@ -1095,7 +1095,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="85" data-path="section-85.html"><a href="section-85.html"><i class="fa fa-check"></i><b>85</b> 貝葉斯統計學框架下的實驗設計</a><ul>
-<li class="chapter" data-level="85.1" data-path="section-85.html"><a href="section-85.html#section-85.1"><i class="fa fa-check"></i><b>85.1</b> 隊列研究的實驗設計</a></li>
+<li class="chapter" data-level="85.1" data-path="section-85.html"><a href="section-85.html#section-85.1"><i class="fa fa-check"></i><b>85.1</b> 隊列研究設計時的貝葉斯模型</a></li>
+<li class="chapter" data-level="85.2" data-path="section-85.html"><a href="section-85.html#section-85.2"><i class="fa fa-check"></i><b>85.2</b> 病例對照研究設計時的貝葉斯模型</a></li>
+<li class="chapter" data-level="85.3" data-path="section-85.html"><a href="section-85.html#section-85.3"><i class="fa fa-check"></i><b>85.3</b> 橫斷面研究設計時的貝葉斯模型</a></li>
 </ul></li>
 <li class="chapter" data-level="86" data-path="section-86.html"><a href="section-86.html"><i class="fa fa-check"></i><b>86</b> 貝葉斯廣義線性回歸</a></li>
 <li class="chapter" data-level="87" data-path="section-87.html"><a href="section-87.html"><i class="fa fa-check"></i><b>87</b> 貝葉斯等級回歸模型</a></li>
@@ -1221,7 +1223,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li>給概率 (probabilities)，和患病率 (prevalences)提供均一先驗概率分佈 (uniform priors)。給作用效果的評價指標例如危險度比 (risk ratios, RR)，危險度差 (risk difference, RD)，或者是比值比 (odds ratios, OR)提供中性的，圍繞着無效爲中心的先驗概率分佈 (“neutral” priors centred on no effect)。</li>
 </ol>
 <div id="section-85.1" class="section level2">
-<h2><span class="header-section-number">85.1</span> 隊列研究的實驗設計</h2>
+<h2><span class="header-section-number">85.1</span> 隊列研究設計時的貝葉斯模型</h2>
 <p>假如我們徵集兩組觀察對象，一組爲2000名非吸菸者，另一組爲1000名吸菸者。他們年齡均爲30歲，之後我們隨訪這兩組研究對象20年，觀察到非吸菸者癌症發病人數爲100人，吸菸者癌症發病人數爲150人。這個實驗設計的目的是比較兩組觀察對象的20年癌症發病危險度。在這個實驗設計條件下，癌症發病是隨機變量，但是暴露組（吸菸）和非暴露組（非吸菸）的人數，是一開始已經定下來不會改變的數值。</p>
 <p>需要強調的是，BUGS語言十分靈活，同一個模型，不同的人寫可能會給出完全不同，結果卻十分相近的代碼。給模型中的未知參數指定先驗概率分布時的方法也不盡相同。本隊列研究的實例中，比較癌症發病危險度 (risk) 的模型之一，可以寫作：</p>
 <pre><code>model{
@@ -1290,6 +1292,125 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
      <span class="dt">Y1 =</span> <span class="dv">150</span>, 
      <span class="dt">mean.lr0 =</span> <span class="dv">0</span>, <span class="dt">pr.lr0 =</span> <span class="fl">0.3</span>, 
      <span class="dt">mean.lor =</span> <span class="dv">0</span>, <span class="dt">pr.lor =</span> <span class="fl">0.33</span>)</code></pre></div>
+</div>
+<div id="section-85.2" class="section level2">
+<h2><span class="header-section-number">85.2</span> 病例對照研究設計時的貝葉斯模型</h2>
+<p>假設試驗設計改成了病例對照研究，我們找到了1000名癌症患者，2000名無癌症的研究對象作爲對照。之後我們讓這兩羣研究對象回憶自己過去20年的吸煙史。假設數據收集到的是，在癌症患者組，有100名是吸煙者，在無癌症的對照組中吸煙人數有800人。在這個實驗設計的條件下，隨機會發生變化的就再也不是癌症的發病概率，或者危險度，而是吸煙於非吸煙的暴露，非暴露的變量 (smokers, non-smokers)。這時候我們來把模型中的變量用 <code>logit</code> 刻度(scale)來表示就是：</p>
+<pre><code>model{
+    X0 ~ dbin(p0, Y0) # data model for CONTROLS 
+    logit(p0) &lt;- lp0  # define the logit of p0
+    X1 ~ dbin(p1, Y1) # data model for CASES
+    logit(p1) &lt;- lp1  # define the logit of p1
+    
+    # define lp1 as the unexposed logit(exposure) plus log(OR)
+    lp1 &lt;- lp0 + lor
+    
+    # Priors for logit of exposure and of log(OR)
+    lp0 ~ dnorm(mean.lp0, pr.lp0)
+    lor ~ dnorm(mean.lor, pr.lor)
+    
+    # Computation of comparison statistics
+    or &lt;- exp(lor)    # For Odds Ratio
+}</code></pre>
+<p>這時候合適的數據文件，及先驗概率分布的超參數的指定可以寫作：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">list</span>(<span class="dt">Y0 =</span> <span class="dv">2000</span>, 
+     <span class="dt">Y1 =</span> <span class="dv">1000</span>, 
+     <span class="dt">X0 =</span> <span class="dv">800</span>, 
+     <span class="dt">X1 =</span> <span class="dv">600</span>, 
+     <span class="dt">mean.lp0 =</span> <span class="dv">0</span>, <span class="dt">pr.lp0 =</span> <span class="fl">0.3</span>, 
+     <span class="dt">mean.lor =</span> <span class="dv">0</span>, <span class="dt">pr.lor =</span> <span class="fl">0.33</span>)</code></pre></div>
+<p>從這裏的代碼也可以看出，此時我們能獲得的評價指標只能是比值比 OR，它直接從對數比值比<span class="math inline">\(\log \text{OR}\)</span>獲得。在病例對照研究的實驗設計下，我們無法計算危險度差(risk difference)，或者危險度比(risk ratio)，因爲我們獲得的只有在病例組，和對照組中暴露和非暴露的百分比 (we only have probabilities of exposure in disease categories)。</p>
+</div>
+<div id="section-85.3" class="section level2">
+<h2><span class="header-section-number">85.3</span> 橫斷面研究設計時的貝葉斯模型</h2>
+<p>思考橫斷面研究時，我們的數據是怎樣構成的？</p>
+<p>此時我們採集400名實驗對象作爲橫斷面研究的樣本，然後在這個樣本中我們觀察他們的癌症患病與否，及吸煙習慣。假設數據是這樣的：</p>
+<ul>
+<li>25名吸煙者患有癌症；</li>
+<li>15名非吸煙者患有癌症；</li>
+<li>150名吸煙者無癌症；</li>
+<li>剩餘210名非吸煙者無癌症。</li>
+</ul>
+<p>此時，這四個數據全部都是隨機變量。唯一一個固定不變的數字是總的樣本量 400 名研究對象。我們用 <span class="math inline">\(N_{ij}\)</span> 來標記疾病狀態爲 <span class="math inline">\(i\)</span>，吸煙習慣爲 <span class="math inline">\(j\)</span> 的實驗對象人數。其中 <span class="math inline">\(i, j = 0 \text{(absent) or } 1\text{(present)}\)</span>，那麼此時我們的數據就是 <span class="math inline">\(N=[N_{11}, N_{10}, N_{01}, N_{00}] = [25, 15, 150, 210]\)</span>。</p>
+<p>這四個數字是隨機，但不獨立的，因爲它們的總和400是已知的。這時可以想象這四個數字是按照一定的比例，從總體爲 1 的樣本中抽取，其參數分別是 <span class="math inline">\(\theta_{ij}, i, j = 0, 1\)</span>，且滿足 <span class="math inline">\(\sum_{ij}\theta_{ij} = 1\)</span>。滿足這樣實驗設計的數學模型叫做多項式分布 (multinomial distribution)：</p>
+<p><span class="math display">\[
+N \sim \text{Multinomial}([\theta_{11}, \theta_{10}, \theta_{01}, \theta_{00}], 400)
+\]</span></p>
+<p>這樣的多項式分布中，我們感興趣的是其多個參數組成的一個互相有關系的向量 <span class="math inline">\(\mathbf{\theta}\)</span>。由於這個向量中的參數之間並非相互獨立，所以我們無法分別一一給予先驗概率分布。（這很容易理解，因爲當某些參數很高時，其餘參數取值就必須是低的）這時候我們需要給整個向量 <span class="math inline">\(\mathbf{\theta}\)</span> 提供一個綜合的先驗概率分布。</p>
+<p>能給一個元素都是百分比的向量提供合適先驗概率的合理分布叫做<a href="https://en.wikipedia.org/wiki/Dirichlet_distribution"><strong>狄利克雷 (Dirichlet) 分布</strong></a>。狄利克雷分布可以被認爲是 Beta 分布的多維擴展分布(multi-dimensional generalization of the beta distribution)。它是易於參數化(parameterize)的一個很靈活的分布，其組成元素就是一個由正數組成的向量 (a positive numbers)：</p>
+<p><span class="math display">\[
+\mathbf{\theta} \sim \text{Dirichlet}(\alpha_1, \alpha_2, \dots. \alpha_k) \text{ where } \alpha_i &gt;0, \text{ and we denote } \sum_{i = 1}^k \alpha_i = \alpha
+\]</span></p>
+<p>一個滿足狄利克雷分布的向量，它有如下的特徵：</p>
+<ol style="list-style-type: decimal">
+<li>狄利克雷分布中的任意一個分類的(category)邊際先驗概率分布(marginal prior distribution)是一個Beta分布：<span class="math inline">\(\theta_i \sim \text{Beta}(\alpha_i, \alpha - \alpha_i)\)</span>；</li>
+<li>狄利克雷分布中的任意一個分類的參數 <span class="math inline">\(\theta_i\)</span> 的均值（期望）是：<span class="math inline">\(E(\theta_i) = \frac{\alpha_i}{\alpha}\)</span>；</li>
+<li>狄利克雷分布中的任意一個分類的參數 <span class="math inline">\(\theta_i\)</span> 的方差是：<span class="math inline">\(V(\theta_i) = \frac{E(\theta_i)(1-E(\theta_i))}{\alpha + 1}\)</span></li>
+</ol>
+<p>另外有意思的一個特點是，當一個狄利克雷分布的所有元素 <span class="math inline">\(\alpha_i\)</span> 同時乘以一個正數 <span class="math inline">\(w\)</span> (positive number)，產生的新的狄利克雷分布中的每個元素的參數均值（期望）與之前的狄利克雷分布均值相同，但是方差約等於之前狄利克雷分布元素的參數方差除以 <span class="math inline">\(w\)</span>。利用這個性質，我們可以認爲 <span class="math inline">\(\alpha\)</span> 相當於樣本量大小：</p>
+<ul>
+<li>狄利克雷分布<span class="math inline">\(\text{Dirichlet}(1,2,1)\)</span>，其實是樣本量爲<span class="math inline">\(\alpha = 4\)</span>，均值是 <span class="math inline">\(\text{Means}[0.25, 0.5, 0.25]\)</span>的分布；</li>
+<li>狄利克雷分布<span class="math inline">\(\text{Dirichlet}(1,2,1)\)</span>，其實是樣本量爲<span class="math inline">\(\alpha = 40\)</span>，均值也是<span class="math inline">\(\text{Means}[0.25, 0.5, 0.25]\)</span>的分布。</li>
+</ul>
+<p>利用狄利克雷分布作爲橫斷面研究設計的先驗概率分布，我們把本節的實驗設計用BUGS語言總結出它的合適的模型：</p>
+<pre><code>model{
+    N[1:4] ~ dmulti(p[], S)  # data model for sample
+    p[1:4] ~ ddirch(alpha[]) # Dirichlet prior for vector of probabilities
+    
+    # Computation of comparison statistics: 
+    px0 &lt;- p[2] + p[4]       # proportion of non-exposed
+    px1 &lt;- 1 - px0           # proportion of exposed 
+    r0 &lt;- p[2] / px0         # risk in the non-exposed
+    r1 &lt;- p[1] / px1         # risk in the exposed
+    rr &lt;- r1 / r0            # risk ratio, RR
+    rd &lt;- r1 - r0            # risk difference, RD
+    or &lt;- (p[1]*p[4]) / (p[2]*p[3])   # odds ratio, OR
+    p.crit &lt;- step(or - 1)   # =1 if or &gt;= 1, 0 otherwise
+    
+    # calculate the total sample size
+    S &lt;- sum(N[])
+}</code></pre>
+<p>這個模型的數據文件則應該寫作：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">list</span>(<span class="dt">N =</span> <span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">15</span>, <span class="dv">150</span>, <span class="dv">210</span>), 
+     <span class="dt">alpha =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)) <span class="co"># uniform prior for p_ij</span></code></pre></div>
+<p>模型的最後一行我們定義了總樣本量，且我們在橫斷面研究的實驗設計下，可以同時計算危險度差，危險度比，以及比值比等指標。另外我們還利用方便的<code>step</code>命令計算比值比大於1的概率。和其他任何一個貝葉斯模型一樣，我們需要給模型中的未知參數 <code>p[1:4]</code> 合理且分散的起始值 (initial values)。</p>
+<p>這個模型的結果展示如下：</p>
+<pre><code>Iterations = 1001:26000
+Thinning interval = 1 
+Number of chains = 2 
+Sample size per chain = 25000 
+
+1. Empirical mean and standard deviation for each variable,
+   plus standard error of the mean:
+
+             Mean       SD  Naive SE Time-series SE
+deviance 18.81623 2.453005 1.097e-02      1.105e-02
+or        2.43862 0.861082 3.851e-03      3.886e-03
+p[1]      0.06436 0.012207 5.459e-05      5.459e-05
+p[2]      0.03959 0.009694 4.335e-05      4.335e-05
+p[3]      0.37378 0.024005 1.074e-04      1.078e-04
+p[4]      0.52227 0.024829 1.110e-04      1.110e-04
+p.crit    0.99372 0.078998 3.533e-04      3.630e-04
+r0        0.07046 0.016980 7.594e-05      7.593e-05
+r1        0.14689 0.026570 1.188e-04      1.188e-04
+rd        0.07643 0.031454 1.407e-04      1.407e-04
+rr        2.21362 0.703480 3.146e-03      3.172e-03
+
+2. Quantiles for each variable:
+
+             2.5%      25%      50%      75%    97.5%
+deviance 16.04000 17.02000 18.19000 19.92000 25.11000
+or        1.18700  1.83300  2.29700  2.88600  4.52103
+p[1]      0.04272  0.05571  0.06368  0.07215  0.09039
+p[2]      0.02285  0.03268  0.03880  0.04563  0.06050
+p[3]      0.32720  0.35750  0.37360  0.38980  0.42150
+p[4]      0.47350  0.50560  0.52240  0.53890  0.57060
+p.crit    1.00000  1.00000  1.00000  1.00000  1.00000
+r0        0.04094  0.05839  0.06914  0.08114  0.10730
+r1        0.09882  0.12820  0.14570  0.16410  0.20270
+rd        0.01569  0.05514  0.07586  0.09718  0.13970
+rr        1.16700  1.71900  2.10500  2.58700  3.90200</code></pre>
+<p>可以看到，所有的監測指標的95%可信區間的下限都超過了零 (null value)。且 OR 大於1的概率超過99%，由於我們使用的是無實際信息的先驗概率分布，所以這個分析結果是十分接近概率論模型的結果的。</p>
 </div>
 </div>
             </section>
