@@ -3434,7 +3434,98 @@ total 626.1 621.1 631.1 5.003
 
 假如我們徵集兩組觀察對象，一組爲2000名非吸菸者，另一組爲1000名吸菸者。他們年齡均爲30歲，之後我們隨訪這兩組研究對象20年，觀察到非吸菸者癌症發病人數爲100人，吸菸者癌症發病人數爲150人。這個實驗設計的目的是比較兩組觀察對象的20年癌症發病危險度。在這個實驗設計條件下，癌症發病是隨機變量，但是暴露組（吸菸）和非暴露組（非吸菸）的人數，是一開始已經定下來不會改變的數值。
 
+需要強調的是，BUGS語言十分靈活，同一個模型，不同的人寫可能會給出完全不同，結果卻十分相近的代碼。給模型中的未知參數指定先驗概率分布時的方法也不盡相同。本隊列研究的實例中，比較癌症發病危險度 (risk) 的模型之一，可以寫作：
 
+```
+model{
+    Y0 ~ dbin(r0, X0) # Data model for unexposed
+    Y1 ~ dbin(r1, X1) # Data model for exposed
+    
+    # Priors for risks of exposed and unexposed
+    r0 ~ dbeta(a.unexp, b.unexp)
+    r1 ~ dbeta(a.exp, b.exp)
+    
+    # Computation of comparison statistics
+    rd <-  r1 - r0   # for Risk Difference 
+    rr <- r1 / r0    # for Risk Ratio
+}
+```
+
+數據文件可以寫作：
+
+```{r eval=FALSE}
+list(X0 = 2000, 
+     X1 = 1000, 
+     Y0 = 100, 
+     Y1 = 150, 
+     a.unexp = 1, b.unexp = 1, 
+     a.exp   = 1, b.exp   = 1)
+```
+
+在上面的BUGS模型代碼中，我們需要給暴露組和非暴露組的發病危險度 (risks) 指定先驗概率分布。但是更常見的是直接給出危險度差，或者危險度比本身的先驗概率分布。這時候你可以把上面的 BUGS 模型加以修改：
+
+```
+model{
+    Y0 ~ dbin(r0, X0) # Data model for unexposed
+    Y1 ~ dbin(r1, X1) # Data model for exposed
+    
+    # define r1 as the unexposed risk plus an effect "rd"
+    r1 <- r0 + rd
+    
+    # Priors for risks of exposed and unexposed
+    r0 ~ dbeta(a.unexp, b.unexp)
+    rd ~ dunif(min.rd, max.rd)
+    
+    # Computation of comparison statistics
+    rr <- r1 / r0    # for Risk Ratio
+}
+```
+
+對於這個模型代碼來說，你需要給出的數據文件中，對於 `r1` 的部分可以省去，但是需要給出 `rd` 的先驗概率分布中均一分布的兩個超參數 (hyper parameters)：
+
+```{r eval=FALSE}
+list(X0 = 2000, 
+     X1 = 1000, 
+     Y0 = 100, 
+     Y1 = 150, 
+     a.unexp = 1, b.unexp = 1, 
+     min.rd = -30, max.rd = 30)
+```
+
+
+如果你又改變主意，對相對危險度比 (risk ratio, RR) 的模型更加感興趣，建議你使用 `logit` 來把百分比放入模型中，因爲 $\log \text{OR}$ 通常更加符合正態分布，便於給出先驗概率分布。這時候模型又可以變形成爲：　
+
+```
+model{
+    Y0 ~ dbin(r0, X0)   # Data model for unexposed
+    logit(r0) <- lr0    # define the logit of r0
+    Y1 ~ dbin(r1, X1)   # Data model for exposed
+    logit(r1) <- lr1    # define the logit of r1
+    
+    # define lr1 as the unexposed logit(risk) plus log(OR):
+    lr1 <- lr0 + lor
+    
+    # priors for the logit of risk of unexposed and of log(OR): 
+    lr0 ~ dnorm(mean.lr0, pr.lr0) 
+    lor ~ dnorm(mean.lor, pr.lor)
+    
+    # computations of comparison statistics: 
+    rd <- r1 - r0      # For risk difference
+    rr <- r1 / r0      # For risk ratio
+}
+```
+
+這個模型中要給 `r0` 一個均一分布的先驗概率，又希望給 `or` 指定一個95%可信區間在 (1/30, 30) 範圍內的先驗概率。那麼合適的數據文件可以寫作：
+
+
+```{r eval=FALSE}
+list(X0 = 2000, 
+     X1 = 1000, 
+     Y0 = 100, 
+     Y1 = 150, 
+     mean.lr0 = 0, pr.lr0 = 0.3, 
+     mean.lor = 0, pr.lor = 0.33)
+```
 
 # 貝葉斯廣義線性回歸
 

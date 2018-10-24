@@ -1223,6 +1223,73 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="section-85.1" class="section level2">
 <h2><span class="header-section-number">85.1</span> 隊列研究的實驗設計</h2>
 <p>假如我們徵集兩組觀察對象，一組爲2000名非吸菸者，另一組爲1000名吸菸者。他們年齡均爲30歲，之後我們隨訪這兩組研究對象20年，觀察到非吸菸者癌症發病人數爲100人，吸菸者癌症發病人數爲150人。這個實驗設計的目的是比較兩組觀察對象的20年癌症發病危險度。在這個實驗設計條件下，癌症發病是隨機變量，但是暴露組（吸菸）和非暴露組（非吸菸）的人數，是一開始已經定下來不會改變的數值。</p>
+<p>需要強調的是，BUGS語言十分靈活，同一個模型，不同的人寫可能會給出完全不同，結果卻十分相近的代碼。給模型中的未知參數指定先驗概率分布時的方法也不盡相同。本隊列研究的實例中，比較癌症發病危險度 (risk) 的模型之一，可以寫作：</p>
+<pre><code>model{
+    Y0 ~ dbin(r0, X0) # Data model for unexposed
+    Y1 ~ dbin(r1, X1) # Data model for exposed
+    
+    # Priors for risks of exposed and unexposed
+    r0 ~ dbeta(a.unexp, b.unexp)
+    r1 ~ dbeta(a.exp, b.exp)
+    
+    # Computation of comparison statistics
+    rd &lt;-  r1 - r0   # for Risk Difference 
+    rr &lt;- r1 / r0    # for Risk Ratio
+}</code></pre>
+<p>數據文件可以寫作：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">list</span>(<span class="dt">X0 =</span> <span class="dv">2000</span>, 
+     <span class="dt">X1 =</span> <span class="dv">1000</span>, 
+     <span class="dt">Y0 =</span> <span class="dv">100</span>, 
+     <span class="dt">Y1 =</span> <span class="dv">150</span>, 
+     <span class="dt">a.unexp =</span> <span class="dv">1</span>, <span class="dt">b.unexp =</span> <span class="dv">1</span>, 
+     <span class="dt">a.exp   =</span> <span class="dv">1</span>, <span class="dt">b.exp   =</span> <span class="dv">1</span>)</code></pre></div>
+<p>在上面的BUGS模型代碼中，我們需要給暴露組和非暴露組的發病危險度 (risks) 指定先驗概率分布。但是更常見的是直接給出危險度差，或者危險度比本身的先驗概率分布。這時候你可以把上面的 BUGS 模型加以修改：</p>
+<pre><code>model{
+    Y0 ~ dbin(r0, X0) # Data model for unexposed
+    Y1 ~ dbin(r1, X1) # Data model for exposed
+    
+    # define r1 as the unexposed risk plus an effect &quot;rd&quot;
+    r1 &lt;- r0 + rd
+    
+    # Priors for risks of exposed and unexposed
+    r0 ~ dbeta(a.unexp, b.unexp)
+    rd ~ dunif(min.rd, max.rd)
+    
+    # Computation of comparison statistics
+    rr &lt;- r1 / r0    # for Risk Ratio
+}</code></pre>
+<p>對於這個模型代碼來說，你需要給出的數據文件中，對於 <code>r1</code> 的部分可以省去，但是需要給出 <code>rd</code> 的先驗概率分布中均一分布的兩個超參數 (hyper parameters)：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">list</span>(<span class="dt">X0 =</span> <span class="dv">2000</span>, 
+     <span class="dt">X1 =</span> <span class="dv">1000</span>, 
+     <span class="dt">Y0 =</span> <span class="dv">100</span>, 
+     <span class="dt">Y1 =</span> <span class="dv">150</span>, 
+     <span class="dt">a.unexp =</span> <span class="dv">1</span>, <span class="dt">b.unexp =</span> <span class="dv">1</span>, 
+     <span class="dt">min.rd =</span> <span class="op">-</span><span class="dv">30</span>, <span class="dt">max.rd =</span> <span class="dv">30</span>)</code></pre></div>
+<p>如果你又改變主意，對相對危險度比 (risk ratio, RR) 的模型更加感興趣，建議你使用 <code>logit</code> 來把百分比放入模型中，因爲 <span class="math inline">\(\log \text{OR}\)</span> 通常更加符合正態分布，便於給出先驗概率分布。這時候模型又可以變形成爲：　</p>
+<pre><code>model{
+    Y0 ~ dbin(r0, X0)   # Data model for unexposed
+    logit(r0) &lt;- lr0    # define the logit of r0
+    Y1 ~ dbin(r1, X1)   # Data model for exposed
+    logit(r1) &lt;- lr1    # define the logit of r1
+    
+    # define lr1 as the unexposed logit(risk) plus log(OR):
+    lr1 &lt;- lr0 + lor
+    
+    # priors for the logit of risk of unexposed and of log(OR): 
+    lr0 ~ dnorm(mean.lr0, pr.lr0) 
+    lor ~ dnorm(mean.lor, pr.lor)
+    
+    # computations of comparison statistics: 
+    rd &lt;- r1 - r0      # For risk difference
+    rr &lt;- r1 / r0      # For risk ratio
+}</code></pre>
+<p>這個模型中要給 <code>r0</code> 一個均一分布的先驗概率，又希望給 <code>or</code> 指定一個95%可信區間在 (1/30, 30) 範圍內的先驗概率。那麼合適的數據文件可以寫作：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">list</span>(<span class="dt">X0 =</span> <span class="dv">2000</span>, 
+     <span class="dt">X1 =</span> <span class="dv">1000</span>, 
+     <span class="dt">Y0 =</span> <span class="dv">100</span>, 
+     <span class="dt">Y1 =</span> <span class="dv">150</span>, 
+     <span class="dt">mean.lr0 =</span> <span class="dv">0</span>, <span class="dt">pr.lr0 =</span> <span class="fl">0.3</span>, 
+     <span class="dt">mean.lor =</span> <span class="dv">0</span>, <span class="dt">pr.lor =</span> <span class="fl">0.33</span>)</code></pre></div>
 </div>
 </div>
             </section>
