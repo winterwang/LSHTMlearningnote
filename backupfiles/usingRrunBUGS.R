@@ -14,8 +14,10 @@ modelCompile(numChains = 2)
 # the choice is arbitrary
 # initlist <- list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)
 initlist <- list(alpha = 0, beta = 1, gamma = 5, delta = -5, logsigma2 = 1)
- # initlist <- list(p = c(0.4, 0.4, 0.1, 0.1))
+initlist <- list(p = c(0.4, 0.4, 0.1, 0.1))
 modelInits("backupfiles/cross-sectional-inits1.txt", 1)
+modelInits(bugsData(initlist))
+
 # initlist1 <- list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)
 initlist1 <- list(alpha = 10, beta = 0, gamma = -5, delta = 5, logsigma2 = 5)
 modelInits(bugsData(initlist1))
