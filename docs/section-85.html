@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-10-25">
+<meta name="date" content="2018-10-27">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1098,7 +1098,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="85.1" data-path="section-85.html"><a href="section-85.html#section-85.1"><i class="fa fa-check"></i><b>85.1</b> 隊列研究設計時的貝葉斯模型</a></li>
 <li class="chapter" data-level="85.2" data-path="section-85.html"><a href="section-85.html#section-85.2"><i class="fa fa-check"></i><b>85.2</b> 病例對照研究設計時的貝葉斯模型</a></li>
 <li class="chapter" data-level="85.3" data-path="section-85.html"><a href="section-85.html#section-85.3"><i class="fa fa-check"></i><b>85.3</b> 橫斷面研究設計時的貝葉斯模型</a></li>
-<li class="chapter" data-level="85.4" data-path="section-85.html"><a href="section-85.html#section-85.4"><i class="fa fa-check"></i><b>85.4</b> 把不同實驗設計的數據用貝葉斯模型連接起來</a></li>
+<li class="chapter" data-level="85.4" data-path="section-85.html"><a href="section-85.html#section-85.4"><i class="fa fa-check"></i><b>85.4</b> 把不同實驗設計的數據用貝葉斯模型連接起來</a><ul>
+<li class="chapter" data-level="85.4.1" data-path="section-85.html"><a href="section-85.html#linking-sub-models-throug-common-parameters"><i class="fa fa-check"></i><b>85.4.1</b> Linking sub-models throug common parameters</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="86" data-path="section-86.html"><a href="section-86.html"><i class="fa fa-check"></i><b>86</b> 貝葉斯廣義線性回歸</a></li>
 <li class="chapter" data-level="87" data-path="section-87.html"><a href="section-87.html"><i class="fa fa-check"></i><b>87</b> 貝葉斯等級回歸模型</a></li>
@@ -1453,7 +1455,103 @@ rr        0.71649  1.07400  1.32400  1.6360   2.5040</code></pre>
 </div>
 <div id="section-85.4" class="section level2">
 <h2><span class="header-section-number">85.4</span> 把不同實驗設計的數據用貝葉斯模型連接起來</h2>
-<p>通過使用不同的先驗概率分布，我們可以有效地利用實驗數據收集之前已經有的關於相似，或者相同實驗的重要結果（而不是僅僅做相互比較和討論）。</p>
+<p>通過使用不同的先驗概率分布，我們可以有效地利用實驗數據收集之前已經有的關於相似，或者相同實驗的重要結果（而不是僅僅做相互比較和討論）。比方說，我們計算獲得的某個模型某次實驗數據之後獲得的參數的事後概率分佈可以用作下一次類似研究時需要使用的先驗概率分佈信息。另外一種提高數據利用率的方法是，我們通過兩個試驗(可以是設計相同也可以是設計不同，但是討論相同研究問題的試驗)的共同參數把兩次甚至多次試驗的模型連接起來，如此既能提高事後概率分佈估計的精確度，也提高了數據的合理利用率。</p>
+<div id="linking-sub-models-throug-common-parameters" class="section level3">
+<h3><span class="header-section-number">85.4.1</span> Linking sub-models throug common parameters</h3>
+<p>在本章節的語境下，我們假設對一個相同的疾病結果<span class="math inline">\((Y)\)</span>，和相同的暴露因素<span class="math inline">\((X)\)</span>之間的關係做了兩次不同的研究。數據分別收集自一個隊列研究，和一個病例對照研究。</p>
+<p>對於隊列研究來說，我們用 <span class="math inline">\(X0c, X1c\)</span> 分別標記非暴露組，及暴露組的總觀察人數；用 <span class="math inline">\(Y0c, Y1c\)</span> 分別標記非暴露組和暴露組的新發病例人數。那麼和這個隊列研究數據分析相匹配的貝葉斯模型的 BUGS 代碼是：</p>
+<pre><code>model{
+    # Data model for unexposed group 
+    Y0c ~ dbin(r0, X0c) 
+    logit(r0) &lt;- lr0 
+    
+    # Data model for exposed group 
+    Y1c ~ dbin(r1, X1c)
+    logit(r1) &lt;- lr1 
+    
+    # lor is log(OR)
+    lr1 &lt;- lr0 + lor
+    
+    # Prior for logit of unexposed risk 
+    lr0 ~ dnorm(0, 0.3) 
+    # Prior for log(OR) 
+    lor ~ dnorm(0, 0.33)
+}</code></pre>
+<p>該模型也可以用 DAG 有向無環圖 (<a href="section-85.html#fig:DAG0601">85.1</a>) 來表示：</p>
+<div class="figure" style="text-align: center"><span id="fig:DAG0601"></span>
+<img src="img/DAG6-1.png" alt="DAG for model for data from the cohort study" width="80%" />
+<p class="caption">
+圖 85.1: DAG for model for data from the cohort study
+</p>
+</div>
+<p>至於病例對照設計的研究數據，用 <span class="math inline">\(Y0cc\)</span> 來標記收集到的病例組人數，<span class="math inline">\(Y1cc\)</span> 來標記收集到的對照組人數。用 <span class="math inline">\(X0cc, X1cc\)</span> 分別標記對照組和病例組中有暴露的人數。那麼此時，該病例對照研究的實驗設計對應的BUGS語言描述的貝葉斯統計學模型可以寫作：</p>
+<pre><code>model{
+    # Data model for controls 
+    X0cc ~ dbin(p0, Y0cc)
+    logit(p0) &lt;- lp0 
+    
+    # Data model for cases 
+    X1cc ~ dbin(p1, Y1cc)
+    logit(p1) &lt;- lp1 
+    
+    # lor is log(OR)
+    lp1 &lt;- lp0 + lor
+    
+    # Prior for logit of probability of exposure for controls 
+    lp0 ~ dnorm(0, 0.3)
+    # Prior for log(OR)
+    lor ~ dnorm(0, 0.33)
+}</code></pre>
+<p>這個病例對照模型的 DAG 圖可以表示爲：</p>
+<div class="figure" style="text-align: center"><span id="fig:DAG0602"></span>
+<img src="img/DAG0602.png" alt="DAG for model for data from the case-control study" width="80%" />
+<p class="caption">
+圖 85.2: DAG for model for data from the case-control study
+</p>
+</div>
+<p>從這兩個DAG圖我們也能一眼看出，這兩個模型裏面有一個共同的未知參數 <code>lor</code>。就是這個共同的參數可以讓我們把兩個模型連在一起，提高數據的利用效率。現在，我們把這兩個模型通過共同參數連起來的模型的DAG圖繪製出來：</p>
+<div class="figure" style="text-align: center"><span id="fig:DAG0603"></span>
+<img src="img/DAG0603.png" alt="DAG for JOINT model for data from the cohort study and the case-control study combined through log(OR)" width="80%" />
+<p class="caption">
+圖 85.3: DAG for JOINT model for data from the cohort study and the case-control study combined through log(OR)
+</p>
+</div>
+<p>此時，對應 DAG 圖 <a href="section-85.html#fig:DAG0603">85.3</a> 的合併模型的聯合模型，其BUGS語言描述的貝葉斯模型如下：</p>
+<pre><code>model{
+# Cohort sub-model
+   # Data model for unexposed group 
+    Y0c ~ dbin(r0, X0c) 
+    logit(r0) &lt;- lr0 
+    
+    # Data model for exposed group 
+    Y1c ~ dbin(r1, X1c)
+    logit(r1) &lt;- lr1 
+    
+    # lor is log(OR)
+    lr1 &lt;- lr0 + lor
+    
+    # Prior for logit of unexposed risk 
+    lr0 ~ dnorm(0, 0.3) 
+# Case-control sub-model     
+   # Data model for controls 
+    X0cc ~ dbin(p0, Y0cc)
+    logit(p0) &lt;- lp0 
+    
+    # Data model for cases 
+    X1cc ~ dbin(p1, Y1cc)
+    logit(p1) &lt;- lp1 
+    
+    # lor is log(OR)
+    lp1 &lt;- lp0 + lor
+    
+    # Prior for logit of probability of exposure for controls 
+    lp0 ~ dnorm(0, 0.3)
+    
+# Prior for common log(OR)
+    lor ~ dnorm(0, 0.33)
+}</code></pre>
+<p>其實，通過類似的辦法，你可以把無數多個研究，無論它們是相似的或者不同的實驗設計，只要你能找到它們有共同的未知參數，就可以通過貝葉斯模型連接起來，稱爲一個首尾相接，聯通數據的大模型。這真是一件在概率論模型下永遠也無法做到的神奇的事情！</p>
+</div>
 </div>
 </div>
             </section>
