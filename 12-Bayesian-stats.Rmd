@@ -3840,6 +3840,246 @@ model{
 
 ## Practical Bayesian Statistics 06
 
+1. The GREAT Trial
+
+在第一個章節，貝葉斯入門和回顧基礎知識的時候，我們介紹過GREAT臨牀試驗，這是一個雙盲對照試驗。比較阿尼普酶，一種血栓溶解藥物的兩種治療方案：
+
+- 治療組：當患者被家庭醫生 (General Practitioners) 發現心肌梗塞時(myocardial infarctin, MI)，在家中立刻給予阿尼普酶藥物，等到患者被救護車帶到醫院以後給患者服用安慰劑。
+- 對照組：同樣情況下，家庭醫生在家中發現患者有心肌梗塞時先不給予藥物治療，而是先讓患者服用安慰劑，等救護車帶患者抵達醫院之後再讓患者服用真正的阿尼普酶藥物。
+
+這項試驗的主要觀察結果 (primary outcome) 是30天死亡率。
+
+該項試驗獲得的觀察數據如下：
+
+- 治療組163人，13例死亡；
+- 對照組148人，23例死亡。
+
+利用這個簡單的臨牀試驗設定，我們來實際的體驗一下，不同的先驗概率分佈對貝葉斯分析結果的影響。
+
+
+我們用BUGS語言先描述一下這個模型的設定：
+
+```
+model {
+	for (i in 1:2) {
+		deaths[i] ~ dbin(p[i],n[i])
+		logit(p[i]) <- alpha + beta*treat[i]
+	}
+	alpha ~ dunif(-100,100)
+	beta ~ dunif(-100,100)
+	OR <- exp(beta)
+}
+```
+
+其中，
+
+```
+treat[i] 是一個指示变量 (indicator variable)，i = 1 時表示對照組，i = 0 時表示治療組；
+death[i] 是第 i 組對象的死亡病例數；
+n[i]     是第 i 組對象的總人數；
+p[i]     是第 i 組試驗組患者死亡的概率。
+```
+
+- 解釋上面模型語句中 `alpha, beta` 的含義是什麼。
+
+ `alpha` 是治療組的對數比值 (log odds for the treatment arm) <br>
+ `beta`  是對照組和治療組相比較的死亡比值比 (log odds ratio of death in the control arm compared to the treatment arm)，當 `beta` 大於1時，說明對照組死亡比值高，結果對治療組有利。
+
+- 用兩組起始值文件來跑這個貝葉斯模型。
+
+
+
+```{r BayesianPractical0601, cache=TRUE, message=TRUE, echo=TRUE, }
+# Step 1 check model
+modelCheck("backupfiles/great-model1.txt") 
+# Load the data 
+modelData("backupfiles/great-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 1, beta = -1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = -1, beta = 1)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR", "alpha", "beta", "p")
+samplesSet(parameters)
+
+
+# Generate 1000 iterations
+modelUpdate(1000)
+```
+
+```{r BayesianPractical0602, cache=TRUE, fig.width=7, fig.height=9, fig.cap='History plots for iterations 1-1000 for the GREAT trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+# Check trace history for the first 1000 run 
+samplesHistory("*", mfrow = c(5,1), ask = FALSE)
+
+```
+
+
+```{r BayesianPractical0603, cache=TRUE, fig.width=7, fig.height=9, fig.cap='Gelman-Rubin convergence statistic for the GREAT trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+postsamples <- buildMCMC("*")
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+```
+
+
+
+
+
+你會發現這個模型很快就能達到收斂，所以，我們選擇刨除前1000次採樣能夠滿足要求，我們另外再進行每條 MCMC 鏈各 25000 次樣本採集：
+
+- 記錄這時候我們獲得的比值比 OR，迴歸係數，及兩組實驗組的事後死亡概率。
+
+
+```{r BayesianPractical0604, cache=TRUE, message=TRUE, echo=TRUE}
+
+# Generate 50000 iterations
+modelUpdate(25000)
+
+# Summary Statistics
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+```
+
+
+- 現在我們把先驗概率分佈修改成：
+
+$$
+\begin{aligned}
+\alpha & \sim \text{Logistic}(0,1) \\
+\beta  & \sim \text{Normal}(0, 0.33)\; 0.33 \text{ is the precision}\\ 
+\end{aligned}
+$$
+
+其中，邏輯分佈方程的BUGS語言是 `dlogis`；這個先驗概率給予 `beta` 的指定信息是基於想要給它一個沒有太多信息量的先驗概率分佈，其中對數比值比(log odds ratio)服從均值爲 0, 方差爲 0.33 的正態分佈時，其對應的比值比 (odds ratio) 的95%則分佈在 1/30 至 30 之間。$(\text{sd} = \frac{\log30 - \log(1/30)}{2*1.96}) = 1.735 \rightarrow \tau^2 = (1/1.735)^2 \approx 0.33$。
+
+用相似的過程試着跑完這個貝葉斯模型：
+
+
+```{r BayesianPractical0605, cache=TRUE, message=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/great-model1_alt.txt") 
+# Load the data 
+modelData("backupfiles/great-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 1, beta = -1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = -1, beta = 1)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR", "alpha", "beta", "p")
+samplesSet(parameters)
+
+
+# Generate 1000 iterations
+modelUpdate(1000)
+```
+
+
+```{r BayesianPractical0606, cache=TRUE, fig.width=7, fig.height=9, fig.cap='History plots for iterations 1-1000 for the GREAT trial with alternative priors for alpha and beta.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+
+# Check trace history for the first 1000 run 
+samplesHistory("*", mfrow = c(5,1), ask = FALSE)
+
+```
+
+
+
+
+```{r BayesianPractical0607, cache=TRUE, fig.width=7, fig.height=9, fig.cap='Gelman-Rubin convergence statistic for the GREAT trial with alternative priors for alpha and beta.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+postsamples <- buildMCMC("*")
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+```
+
+
+```{r BayesianPractical0608, cache=TRUE, message=TRUE, echo=TRUE}
+
+# Generate 50000 iterations
+modelUpdate(25000)
+
+# Summary Statistics
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+```
+
+- 對改變了先驗概率前後的貝葉斯分析結果，你有什麼看法？
+
+我們發現改變先驗概率前的模型得到的事後比值比的結果有更大的均值，及更不穩定的估計(較高的事後樣本標準差，及較寬的事後樣本95%可信區間)。
+
+- 爲了分析改變先驗概率分佈前後到底哪種給予了模型更多的信息，我們可以把兩個模型改寫成不含數據，只有預測模型的語句，從而可以看到只有先驗概率分佈時的結果是怎樣的。這時候我們把數據加載這一步省略掉，然後對 `alpha, beta, p` 進行軌跡檢測，繪製他們的預測分佈密度曲線。
+
+
+
+
+```{r BayesianPractical0609, cache=TRUE, fig.width=7, fig.height=9, fig.cap='Density plots for parameters prediction in GREAT trial first prior.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/great-model1_forward.txt") 
+# Load the data 
+modelData("backupfiles/great-forward.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 1, beta = -1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = -1, beta = 1)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("alpha", "beta", "p")
+samplesSet(parameters)
+
+
+# Generate 10000 iterations
+modelUpdate(26000)
+
+
+# Check trace history for the first 1000 run 
+samplesDensity("*", mfrow = c(2,2), ask = FALSE)
+```
+
+對於這個模型來說，儘管我們給兩個邏輯迴歸的參數 `alpha, beta` 兩個"沒有信息"的均一分佈 (uniform distribution) 作爲先驗概率分佈，但是事實上，從 `p[1], p[2]` 的預測概率密度分佈圖來看，其實我們不經意竟然告訴模型另外的信息：就是我們認爲這兩組患者中死亡率要麼很高，接近1，要麼很低很低，接近於0。所以，我們自認爲給了模型無信息的先驗概率分佈，但是事實上卻給了模型大量的信息。
+
+
+```{r BayesianPractical0610, cache=TRUE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in GREAT trial second prior.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/great-model1_altforward.txt") 
+# Load the data 
+modelData("backupfiles/great-forward.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = 1, beta = -1)
+modelInits(bugsData(initlist))
+initlist1 <- list(alpha = -1, beta = 1)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("alpha", "beta", "p")
+samplesSet(parameters)
+
+
+# Generate 10000 iterations
+modelUpdate(26000)
+
+
+# Check trace history for the first 1000 run 
+samplesDensity("*", mfrow = c(2,2), ask = FALSE)
+```
+
+第二次修改過後的先驗概率明顯就安全得多了。因爲我們看到兩組的死亡概率基本可以認爲不再像前一個模型那樣含有太多不實際的信息。
+
+
 # 貝葉斯廣義線性回歸
 
 # 貝葉斯等級回歸模型 
