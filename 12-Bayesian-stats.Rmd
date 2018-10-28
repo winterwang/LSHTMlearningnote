@@ -3912,7 +3912,7 @@ samplesSet(parameters)
 modelUpdate(1000)
 ```
 
-```{r BayesianPractical0602, cache=TRUE, fig.width=7, fig.height=9, fig.cap='History plots for iterations 1-1000 for the GREAT trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+```{r BayesianPractical0602, cache=TRUE, fig.width=7, fig.height=10, fig.cap='History plots for iterations 1-1000 for the GREAT trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
 
 # Check trace history for the first 1000 run 
 samplesHistory("*", mfrow = c(5,1), ask = FALSE)
@@ -4020,7 +4020,7 @@ print(sample.statistics)
 
 
 
-```{r BayesianPractical0609, cache=TRUE, fig.width=7, fig.height=9, fig.cap='Density plots for parameters prediction in GREAT trial first prior.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+```{r BayesianPractical0609, cache=TRUE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in GREAT trial first prior.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
 # Step 1 check model
 modelCheck("backupfiles/great-model1_forward.txt") 
 # Load the data 
@@ -4078,6 +4078,102 @@ samplesDensity("*", mfrow = c(2,2), ask = FALSE)
 ```
 
 第二次修改過後的先驗概率明顯就安全得多了。因爲我們看到兩組的死亡概率基本可以認爲不再像前一個模型那樣含有太多不實際的信息。
+
+2. 作爲替代方案，我們可以把上述模型重新用對數比值比(Log odds ratio, LOR)作爲未知參數來重新建模：
+
+$$
+LOR = \log(\frac{p[1]/(1 - p[1])}{p[2]/(1 - p[2])}) = \text{logit}(p[1]) - \text{logit}(p[2]) 
+$$
+
+這時候我們需要給 `p[2], LOR` 賦予先驗概率分布：
+
+```
+model {
+	for (i in 1:2) {
+		deaths[i] ~ dbin(p[i],n[i])		
+	}
+	logit(p[1]) <- logit(p[2]) + LOR
+	p[2] ~ dbeta(1,1) 
+	LOR ~ dnorm(0,0.33) 
+	OR <- exp(LOR)
+}
+```
+
+
+- 再看一遍上面寫好的模型，確定你能夠理解其含義，請確認先驗概率分布的實際意義。
+
+注意我們用beta 分布來描述 `p[2]` 的先驗概率分布。
+
+
+```{r BayesianPractical0611, cache=TRUE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in GREAT trial second prior.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/great-model2.txt") 
+# Load the data 
+modelData("backupfiles/great-data-alt.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(LOR = 0.5, p = c(NA, 0.2))
+modelInits(bugsData(initlist))
+initlist1 <- list(LOR = 5, p = c(NA, 0.8))
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR", "p")
+samplesSet(parameters)
+
+
+# Generate 10000 iterations
+modelUpdate(26000)
+
+# Summary Statistics
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+```
+
+- 修改模型的代碼使之用於向前採集樣本用於預測：
+
+```
+model {
+#	for (i in 1:2) {
+#		deaths[i] ~ dbin(p[i],n[i])		
+#	}
+	logit(p[1]) <- logit(p[2]) + LOR
+	p[2] ~ dbeta(1,1) 
+	LOR ~ dnorm(0,0.33) 
+	OR <- exp(LOR)
+}
+```
+
+```{r BayesianPractical0612, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Density plots for parameters prediction in GREAT trial second prior.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/great-model2_forward.txt") 
+# Load the data 
+# modelData("backupfiles/great-forward.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(LOR = 0.5, p = c(NA, 0.2))
+modelInits(bugsData(initlist))
+initlist1 <- list(LOR = 5, p = c(NA, 0.8))
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR", "p")
+samplesSet(parameters)
+
+
+# Generate 10000 iterations
+modelUpdate(26000)
+
+
+# Check trace history for the first 1000 run 
+samplesDensity("p", mfrow = c(1,2), ask = FALSE)
+```
+這時候先驗概率分布給出的兩組死亡率的密度分布和之前提出的第二個模型沒有什麼兩樣。
+
 
 
 # 貝葉斯廣義線性回歸
