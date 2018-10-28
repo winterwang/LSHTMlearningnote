@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-10-27">
+<meta name="date" content="2018-10-28">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1101,6 +1101,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="85.4" data-path="section-85.html"><a href="section-85.html#section-85.4"><i class="fa fa-check"></i><b>85.4</b> 把不同實驗設計的數據用貝葉斯模型連接起來</a><ul>
 <li class="chapter" data-level="85.4.1" data-path="section-85.html"><a href="section-85.html#linking-sub-models-throug-common-parameters"><i class="fa fa-check"></i><b>85.4.1</b> Linking sub-models throug common parameters</a></li>
 </ul></li>
+<li class="chapter" data-level="85.5" data-path="section-85.html"><a href="section-85.html#practical-bayesian-statistics-06"><i class="fa fa-check"></i><b>85.5</b> Practical Bayesian Statistics 06</a></li>
 </ul></li>
 <li class="chapter" data-level="86" data-path="section-86.html"><a href="section-86.html"><i class="fa fa-check"></i><b>86</b> 貝葉斯廣義線性回歸</a></li>
 <li class="chapter" data-level="87" data-path="section-87.html"><a href="section-87.html"><i class="fa fa-check"></i><b>87</b> 貝葉斯等級回歸模型</a></li>
@@ -1550,8 +1551,267 @@ rr        0.71649  1.07400  1.32400  1.6360   2.5040</code></pre>
 # Prior for common log(OR)
     lor ~ dnorm(0, 0.33)
 }</code></pre>
-<p>其實，通過類似的辦法，你可以把無數多個研究，無論它們是相似的或者不同的實驗設計，只要你能找到它們有共同的未知參數，就可以通過貝葉斯模型連接起來，稱爲一個首尾相接，聯通數據的大模型。這真是一件在概率論模型下永遠也無法做到的神奇的事情！</p>
+<p>其實，通過類似的辦法，你可以把無數多個研究，無論它們是相似的或者不同的實驗設計，只要你能找到它們有共同的未知參數，就可以通過貝葉斯模型連接起來，成爲一個首尾相接，數據聯通的大模型。這真是一件在概率論模型下永遠也無法做到的神奇的事情！</p>
 </div>
+</div>
+<div id="practical-bayesian-statistics-06" class="section level2">
+<h2><span class="header-section-number">85.5</span> Practical Bayesian Statistics 06</h2>
+<ol style="list-style-type: decimal">
+<li>The GREAT Trial</li>
+</ol>
+<p>在第一個章節，貝葉斯入門和回顧基礎知識的時候，我們介紹過GREAT臨牀試驗，這是一個雙盲對照試驗。比較阿尼普酶，一種血栓溶解藥物的兩種治療方案：</p>
+<ul>
+<li>治療組：當患者被家庭醫生 (General Practitioners) 發現心肌梗塞時(myocardial infarctin, MI)，在家中立刻給予阿尼普酶藥物，等到患者被救護車帶到醫院以後給患者服用安慰劑。</li>
+<li>對照組：同樣情況下，家庭醫生在家中發現患者有心肌梗塞時先不給予藥物治療，而是先讓患者服用安慰劑，等救護車帶患者抵達醫院之後再讓患者服用真正的阿尼普酶藥物。</li>
+</ul>
+<p>這項試驗的主要觀察結果 (primary outcome) 是30天死亡率。</p>
+<p>該項試驗獲得的觀察數據如下：</p>
+<ul>
+<li>治療組163人，13例死亡；</li>
+<li>對照組148人，23例死亡。</li>
+</ul>
+<p>利用這個簡單的臨牀試驗設定，我們來實際的體驗一下，不同的先驗概率分佈對貝葉斯分析結果的影響。</p>
+<p>我們用BUGS語言先描述一下這個模型的設定：</p>
+<pre><code>model {
+    for (i in 1:2) {
+        deaths[i] ~ dbin(p[i],n[i])
+        logit(p[i]) &lt;- alpha + beta*treat[i]
+    }
+    alpha ~ dunif(-100,100)
+    beta ~ dunif(-100,100)
+    OR &lt;- exp(beta)
+}</code></pre>
+<p>其中，</p>
+<pre><code>treat[i] 是一個指示变量 (indicator variable)，i = 1 時表示對照組，i = 0 時表示治療組；
+death[i] 是第 i 組對象的死亡病例數；
+n[i]     是第 i 組對象的總人數；
+p[i]     是第 i 組試驗組患者死亡的概率。</code></pre>
+<ul>
+<li>解釋上面模型語句中 <code>alpha, beta</code> 的含義是什麼。</li>
+</ul>
+<p><code>alpha</code> 是治療組的對數比值 (log odds for the treatment arm) <br> <code>beta</code> 是對照組和治療組相比較的死亡比值比 (log odds ratio of death in the control arm compared to the treatment arm)，當 <code>beta</code> 大於1時，說明對照組死亡比值高，結果對治療組有利。</p>
+<ul>
+<li>用兩組起始值文件來跑這個貝葉斯模型。</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/great-model1.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/great-data.txt&quot;</span>)     </code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">1</span>, <span class="dt">beta =</span> <span class="op">-</span><span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="op">-</span><span class="dv">1</span>, <span class="dt">beta =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;OR&quot;</span>, <span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;p&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;OR&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;p&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Check trace history for the first 1000 run </span>
+<span class="kw">samplesHistory</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">5</span>,<span class="dv">1</span>), <span class="dt">ask =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0602"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0602-1.png" alt="History plots for iterations 1-1000 for the GREAT trial." width="80%" />
+<p class="caption">
+圖 85.4: History plots for iterations 1-1000 for the GREAT trial.
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">postsamples &lt;-<span class="st"> </span><span class="kw">buildMCMC</span>(<span class="st">&quot;*&quot;</span>)
+<span class="kw">gelman.diag</span>(postsamples)</code></pre></div>
+<pre><code>## Potential scale reduction factors:
+## 
+##       Point est. Upper C.I.
+## OR          1.01       1.03
+## alpha       1.01       1.06
+## beta        1.01       1.04
+## p[1]        1.02       1.08
+## p[2]        1.00       1.00
+## 
+## Multivariate psrf
+## 
+## 1.01</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">gelman.plot</span>(postsamples)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0603"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0603-1.png" alt="Gelman-Rubin convergence statistic for the GREAT trial." width="80%" />
+<p class="caption">
+圖 85.5: Gelman-Rubin convergence statistic for the GREAT trial.
+</p>
+</div>
+<p>你會發現這個模型很快就能達到收斂，所以，我們選擇刨除前1000次採樣能夠滿足要求，我們另外再進行每條 MCMC 鏈各 25000 次樣本採集：</p>
+<ul>
+<li>記錄這時候我們獲得的比值比 OR，迴歸係數，及兩組實驗組的事後死亡概率。</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 50000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">25000</span>)</code></pre></div>
+<pre><code>## 25000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Summary Statistics</span>
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##           mean      sd  MC_error val2.5pc   median val97.5pc start sample
+## OR     2.31600 0.92180 0.0089740  1.06100  2.14400    4.5740  1001  50000
+## alpha -2.48000 0.29400 0.0028080 -3.09800 -2.46500   -1.9410  1001  50000
+## beta   0.76930 0.37200 0.0035940  0.05961  0.76250    1.5200  1001  50000
+## p[1]   0.07982 0.02104 0.0001969  0.04321  0.07837    0.1255  1001  50000
+## p[2]   0.15540 0.02958 0.0001403  0.10200  0.15370    0.2182  1001  50000</code></pre>
+<ul>
+<li>現在我們把先驗概率分佈修改成：</li>
+</ul>
+<p><span class="math display">\[
+\begin{aligned}
+\alpha &amp; \sim \text{Logistic}(0,1) \\
+\beta  &amp; \sim \text{Normal}(0, 0.33)\; 0.33 \text{ is the precision}\\ 
+\end{aligned}
+\]</span></p>
+<p>其中，邏輯分佈方程的BUGS語言是 <code>dlogis</code>；這個先驗概率給予 <code>beta</code> 的指定信息是基於想要給它一個沒有太多信息量的先驗概率分佈，其中對數比值比(log odds ratio)服從均值爲 0, 方差爲 0.33 的正態分佈時，其對應的比值比 (odds ratio) 的95%則分佈在 1/30 至 30 之間。<span class="math inline">\((\text{sd} = \frac{\log30 - \log(1/30)}{2*1.96}) = 1.735 \rightarrow \tau^2 = (1/1.735)^2 \approx 0.33\)</span>。</p>
+<p>用相似的過程試着跑完這個貝葉斯模型：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/great-model1_alt.txt&quot;</span>) </code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/great-data.txt&quot;</span>)     </code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">1</span>, <span class="dt">beta =</span> <span class="op">-</span><span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="op">-</span><span class="dv">1</span>, <span class="dt">beta =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;OR&quot;</span>, <span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;p&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)</code></pre></div>
+<pre><code>## monitor set for variable &#39;OR&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;p&#39;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0606"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0606-1.png" alt="History plots for iterations 1-1000 for the GREAT trial with alternative priors for alpha and beta." width="80%" />
+<p class="caption">
+圖 85.6: History plots for iterations 1-1000 for the GREAT trial with alternative priors for alpha and beta.
+</p>
+</div>
+<pre><code>## Potential scale reduction factors:
+## 
+##       Point est. Upper C.I.
+## OR         1.002      1.005
+## alpha      1.005      1.008
+## beta       1.000      1.003
+## p[1]       1.016      1.023
+## p[2]       0.999      0.999
+## 
+## Multivariate psrf
+## 
+## 1.01</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0607"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0607-1.png" alt="Gelman-Rubin convergence statistic for the GREAT trial with alternative priors for alpha and beta." width="80%" />
+<p class="caption">
+圖 85.7: Gelman-Rubin convergence statistic for the GREAT trial with alternative priors for alpha and beta.
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 50000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">25000</span>)</code></pre></div>
+<pre><code>## 25000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Summary Statistics</span>
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##          mean      sd  MC_error val2.5pc   median val97.5pc start sample
+## OR     2.0710 0.77560 0.0102800  0.97510  1.93600    3.9790  1001  50000
+## alpha -2.3860 0.27890 0.0043500 -2.96700 -2.37600   -1.8720  1001  50000
+## beta   0.6639 0.35670 0.0047540 -0.02521  0.66040    1.3810  1001  50000
+## p[1]   0.0867 0.02167 0.0003371  0.04892  0.08504    0.1333  1001  50000
+## p[2]   0.1539 0.02925 0.0001229  0.10130  0.15250    0.2151  1001  50000</code></pre>
+<ul>
+<li>對改變了先驗概率前後的貝葉斯分析結果，你有什麼看法？</li>
+</ul>
+<p>我們發現改變先驗概率前的模型得到的事後比值比的結果有更大的均值，及更不穩定的估計(較高的事後樣本標準差，及較寬的事後樣本95%可信區間)。</p>
+<ul>
+<li>爲了分析改變先驗概率分佈前後到底哪種給予了模型更多的信息，我們可以把兩個模型改寫成不含數據，只有預測模型的語句，從而可以看到只有先驗概率分佈時的結果是怎樣的。這時候我們把數據加載這一步省略掉，然後對 <code>alpha, beta, p</code> 進行軌跡檢測，繪製他們的預測分佈密度曲線。</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/great-model1_forward.txt&quot;</span>) 
+<span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/great-forward.txt&quot;</span>)     
+<span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) 
+<span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">1</span>, <span class="dt">beta =</span> <span class="op">-</span><span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))
+initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="op">-</span><span class="dv">1</span>, <span class="dt">beta =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))
+
+<span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;p&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)
+
+
+<span class="co"># Generate 10000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">26000</span>)
+
+
+<span class="co"># Check trace history for the first 1000 run </span>
+<span class="kw">samplesDensity</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>), <span class="dt">ask =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0609"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0609-1.png" alt="Density plots for parameters prediction in GREAT trial first prior." width="80%" />
+<p class="caption">
+圖 85.8: Density plots for parameters prediction in GREAT trial first prior.
+</p>
+</div>
+<p>對於這個模型來說，儘管我們給兩個邏輯迴歸的參數 <code>alpha, beta</code> 兩個“沒有信息”的均一分佈 (uniform distribution) 作爲先驗概率分佈，但是事實上，從 <code>p[1], p[2]</code> 的預測概率密度分佈圖來看，其實我們不經意竟然告訴模型另外的信息：就是我們認爲這兩組患者中死亡率要麼很高，接近1，要麼很低很低，接近於0。所以，我們自認爲給了模型無信息的先驗概率分佈，但是事實上卻給了模型大量的信息。</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/great-model1_altforward.txt&quot;</span>) 
+<span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/great-forward.txt&quot;</span>)     
+<span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) 
+<span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">1</span>, <span class="dt">beta =</span> <span class="op">-</span><span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))
+initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="op">-</span><span class="dv">1</span>, <span class="dt">beta =</span> <span class="dv">1</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))
+
+<span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;p&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)
+
+
+<span class="co"># Generate 10000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">26000</span>)
+
+
+<span class="co"># Check trace history for the first 1000 run </span>
+<span class="kw">samplesDensity</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>), <span class="dt">ask =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0610"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0610-1.png" alt="Density plots for parameters prediction in GREAT trial second prior." width="80%" />
+<p class="caption">
+圖 85.9: Density plots for parameters prediction in GREAT trial second prior.
+</p>
+</div>
+<p>第二次修改過後的先驗概率明顯就安全得多了。因爲我們看到兩組的死亡概率基本可以認爲不再像前一個模型那樣含有太多不實際的信息。</p>
 </div>
 </div>
             </section>
