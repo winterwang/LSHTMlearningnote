@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-10-29">
+<meta name="date" content="2018-10-30">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1772,7 +1772,7 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <span class="kw">modelUpdate</span>(<span class="dv">26000</span>)
 
 
-<span class="co"># Check trace history for the first 1000 run </span>
+<span class="co"># Density plot </span>
 <span class="kw">samplesDensity</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>), <span class="dt">ask =</span> <span class="ot">FALSE</span>)</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianPractical0609"></span>
 <img src="bookdown_files/figure-html/BayesianPractical0609-1.png" alt="Density plots for parameters prediction in GREAT trial first prior." width="80%" />
@@ -1803,7 +1803,7 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <span class="kw">modelUpdate</span>(<span class="dv">26000</span>)
 
 
-<span class="co"># Check trace history for the first 1000 run </span>
+<span class="co"># Density plot </span>
 <span class="kw">samplesDensity</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>), <span class="dt">ask =</span> <span class="ot">FALSE</span>)</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianPractical0610"></span>
 <img src="bookdown_files/figure-html/BayesianPractical0610-1.png" alt="Density plots for parameters prediction in GREAT trial second prior." width="80%" />
@@ -1904,7 +1904,7 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 10000 iterations</span>
 <span class="kw">modelUpdate</span>(<span class="dv">26000</span>)</code></pre></div>
 <pre><code>## 26000 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Check trace history for the first 1000 run </span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Density plot the first 1000 run </span>
 <span class="kw">samplesDensity</span>(<span class="st">&quot;p&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>), <span class="dt">ask =</span> <span class="ot">FALSE</span>)</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianPractical0612"></span>
 <img src="bookdown_files/figure-html/BayesianPractical0612-1.png" alt="Density plots for parameters prediction in GREAT trial second prior." width="80%" />
@@ -1913,6 +1913,97 @@ parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 </p>
 </div>
 <p>這時候先驗概率分布給出的兩組死亡率的密度分布和之前提出的第二個模型沒有什麼兩樣。</p>
+<p>B. 吸煙與癌症</p>
+<p>在這道題中，你將練習自己使用和描述一個隊列研究設計，及一個病例對照研究設計的貝葉斯模型，同時學習如何把兩個試驗的數據和模型通過共同的未知參數連接起來。在整道題目中，癌症作爲發病結果 (disease of interest)，吸煙作爲暴露因素 (exposure of interest)。</p>
+<ol style="list-style-type: decimal">
+<li>隊列研究設計</li>
+</ol>
+<p>在一個隊列研究中，2000名非吸煙者，和1000名吸煙者被跟蹤隨訪20年。在非吸煙者中和非吸煙者中分別觀察到100例，及150新發生的癌症患者。我們關心的是和非吸煙者相比，吸煙者患癌症的比值比是多少。這個實驗的貝葉斯模型可以寫作：</p>
+<pre><code>model{ 
+    # Data model for non-smokers   
+    Y0c ~ dbin(r0, X0c) 
+    logit(r0) &lt;- lr0
+            
+     # Data model for smokers
+     Y1c ~ dbin(r1, X1c) 
+     logit(r1) &lt;- lr1  
+            
+    lr1 &lt;- lr0 + lor   # lor is log(OR)
+    OR &lt;- exp(lor)  # comparison statistic
+            
+    # Priors
+    lr0 ~ dnorm(0, 0.3)  # priors for logit of non-smokers  
+    lor ~ dnorm(0, 0.33)  # prior for log(OR)
+}
+
+
+# Y0c number of non-smokers developed cancer  
+# X0c number of nonpsmokers 
+# Y1c number of smokers developed cancer 
+# X1c number of smokers </code></pre>
+<p>數據文件可以寫作：</p>
+<pre><code>list(X0c = 2000, 
+     Y0c = 100,
+     X1c = 1000, 
+     Y1c = 150) </code></pre>
+<p>未知參數 <code>lor, lr0</code> 的起始值可以選定爲：</p>
+<pre><code>list(lr0 = -1, lor = 0)
+list(lr0 = -5, lor = 5)</code></pre>
+<p>對這麼模型進行50000次事後樣本採集，獲取比值比 OR 的事後概率分布描述：</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
+<span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/cohort-model.txt&quot;</span>) 
+<span class="co"># Load the data </span>
+<span class="kw">modelData</span>(<span class="st">&quot;backupfiles/dataforcohort.txt&quot;</span>)     
+<span class="co"># compile the model with two separate chains</span>
+<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) 
+<span class="co"># generate initial values </span>
+<span class="co"># the choice is arbitrary</span>
+initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">lr0 =</span> <span class="op">-</span><span class="dv">1</span>, <span class="dt">lor =</span> <span class="dv">0</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))
+initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">lr0 =</span> <span class="op">-</span><span class="dv">5</span>, <span class="dt">lor =</span> <span class="dv">5</span>)
+<span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))
+
+<span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;OR&quot;</span>, <span class="st">&quot;lor&quot;</span>)
+<span class="kw">samplesSet</span>(parameters)
+
+
+<span class="co"># Generate 1000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">1000</span>)
+
+
+<span class="co"># Check trace history for the first 1000 run </span>
+<span class="kw">samplesHistory</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">1</span>), <span class="dt">ask =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0613"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0613-1.png" alt="Density plots for parameters prediction in smoking and cancer cohort study." width="80%" />
+<p class="caption">
+圖 85.11: Density plots for parameters prediction in smoking and cancer cohort study.
+</p>
+</div>
+<pre><code>## Potential scale reduction factors:
+## 
+##     Point est. Upper C.I.
+## OR       0.999      0.999
+## lor      0.999      0.999
+## 
+## Multivariate psrf
+## 
+## 1</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0614"></span>
+<img src="bookdown_files/figure-html/BayesianPractical0614-1.png" alt="Gelman-Rubin convergence statistic for smoking and cancer cohort study." width="80%" />
+<p class="caption">
+圖 85.12: Gelman-Rubin convergence statistic for smoking and cancer cohort study.
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 50000 iterations</span>
+<span class="kw">modelUpdate</span>(<span class="dv">25000</span>)</code></pre></div>
+<pre><code>## 25000 updates took 0 s</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Summary Statistics</span>
+sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)
+<span class="kw">print</span>(sample.statistics)</code></pre></div>
+<pre><code>##      mean     sd MC_error val2.5pc median val97.5pc start sample
+## OR  3.335 0.4513 0.003901   2.5360  3.304     4.302  1001  50000
+## lor 1.195 0.1347 0.001163   0.9306  1.195     1.459  1001  50000</code></pre>
 </div>
 </div>
             </section>
