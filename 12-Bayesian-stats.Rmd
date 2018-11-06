@@ -3840,7 +3840,7 @@ model{
 
 ## Practical Bayesian Statistics 06
 
-1. The GREAT Trial
+### The GREAT Trial
 
 在第一個章節，貝葉斯入門和回顧基礎知識的時候，我們介紹過GREAT臨牀試驗，這是一個雙盲對照試驗。比較阿尼普酶，一種血栓溶解藥物的兩種治療方案：
 
@@ -3957,7 +3957,7 @@ $$
 \end{aligned}
 $$
 
-其中，邏輯分佈方程的BUGS語言是 `dlogis`；這個先驗概率給予 `beta` 的指定信息是基於想要給它一個沒有太多信息量的先驗概率分佈，其中對數比值比(log odds ratio)服從均值爲 0, 方差爲 0.33 的正態分佈時，其對應的比值比 (odds ratio) 的95%則分佈在 1/30 至 30 之間。$(\text{sd} = \frac{\log30 - \log(1/30)}{2*1.96}) = 1.735 \rightarrow \tau^2 = (1/1.735)^2 \approx 0.33$。
+其中，邏輯分佈方程的BUGS語言是 `dlogis`；這個先驗概率給予 `beta` 的指定信息是基於想要給它一個沒有太多信息量的先驗概率分佈，其中對數比值比(log odds ratio)服從均值爲 0, 精確度(precision)爲 0.33 的正態分佈時，其對應的比值比 (odds ratio) 的95%則分佈在 1/30 至 30 之間。$(\text{sd} = \frac{\log30 - \log(1/30)}{2*1.96}) = 1.735 \rightarrow \tau^2 = (1/1.735)^2 \approx 0.33$。
 
 用相似的過程試着跑完這個貝葉斯模型：
 
@@ -4176,13 +4176,13 @@ samplesDensity("p", mfrow = c(1,2), ask = FALSE)
 ```
 這時候先驗概率分布給出的兩組死亡率的密度分布和之前提出的第二個模型沒有什麼兩樣。
 
-B. 吸煙與癌症
+### 吸煙與癌症
 
 在這道題中，你將練習自己使用和描述一個隊列研究設計，及一個病例對照研究設計的貝葉斯模型，同時學習如何把兩個試驗的數據和模型通過共同的未知參數連接起來。在整道題目中，癌症作爲發病結果 (disease of interest)，吸煙作爲暴露因素 (exposure of interest)。
 
-1. 隊列研究設計
+#### 隊列研究設計
 
-在一個隊列研究中，2000名非吸煙者，和1000名吸煙者被跟蹤隨訪20年。在非吸煙者中和非吸煙者中分別觀察到100例，及150新發生的癌症患者。我們關心的是和非吸煙者相比，吸煙者患癌症的比值比是多少。這個實驗的貝葉斯模型可以寫作：
+在一個隊列研究中，2000名非吸煙者，和1000名吸煙者被跟蹤隨訪20年。在非吸煙者中和非吸煙者中分別觀察到100例，及150例新發生的癌症患者。我們關心的是和非吸煙者相比，吸煙者患癌症的比值比是多少。這個實驗的貝葉斯模型可以寫作：
 
 ```
 model{ 
@@ -4273,6 +4273,260 @@ modelUpdate(25000)
 sample.statistics <- samplesStats("*", beg = 1001)
 print(sample.statistics)
 ```
+
+
+
+#### 病例對照研究設計下的模型
+
+在病例對照研究設計下，研究者收集了1000名癌症患者(病例組)，和2000名對照組志願者。研究者對這兩組研究對象分別調查了他們各自過去20年的吸煙史，發現：
+
+- 病例組中600人過去20年中有過吸煙史；
+- 對照組中800人過去20年中有過吸煙史。
+
+同樣地，我們關心的是兩組之間吸煙習慣的比值比 (Odds ratio)。這個實驗設計的模型可以用BUGS語言寫作(保存爲`case-control-model.txt`)：
+
+```
+model{ 
+	# Data model for non-cancer controls   
+	X0cc ~ dbin(p0, Y0cc) 
+	logit(p0) <- lp0
+			
+	# Data model for cancer cases   
+	 X1cc ~ dbin(p1, Y1cc) 
+	logit(p1) <- lp1  
+	
+	lp1 <- lp0 + lor # lor is log(OR)
+	OR <- exp(lor)  # comparison statistic
+			
+	 # Priors
+	 lp0 ~ dnorm(0, 0.3)  # prior for logit of probability of exposure for controls 	 			
+	 lor ~ dnorm(0, 0.33) # prior for log(OR)
+	}
+	
+	
+	# X0cc indicates number of smokers among controls (without cancer)
+	# Y0cc indicates number of controls 
+	# X1cc is the number of smokers among cancer cases 
+	# Y1cc is the number of cancer cases 
+```
+
+其中，
+
+- `X0cc` 表示對照組中有吸煙史的人數；
+- `Y0cc` 表示對照組的總人數；
+- `X1cc` 表示癌症患者組中有吸煙史的人數；
+- `Y1cc` 表示癌症患者組的總人數。
+
+
+數據文件可以描述爲（保存爲`dataforcasecontrol.txt`）：
+
+```
+list(X0cc = 800, 
+     Y0cc = 2000, 
+     X1cc = 600, 
+     Y1cc = 1000)
+```
+
+模型擬合過程和結果分別羅列如下：
+
+
+
+
+```{r BayesianPractical0616, cache=TRUE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in smoking and cancer case-control study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/case-control-model.txt") 
+# Load the data 
+modelData("backupfiles/dataforcasecontrol.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(lp0 = -2, lor = 0)
+modelInits(bugsData(initlist))
+initlist1 <- list(lp0 = 2, lor = 5)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR", "lor")
+samplesSet(parameters)
+
+
+# Generate 1000 iterations
+modelUpdate(1000)
+
+
+# Check trace history for the first 1000 run 
+samplesHistory("*", mfrow = c(2,1), ask = FALSE)
+```
+
+
+```{r BayesianPractical0617, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Gelman-Rubin convergence statistic for smoking and cancer cohort study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+postsamples <- buildMCMC("*")
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+```
+
+
+
+```{r BayesianPractical0618, cache=TRUE, message=TRUE, echo=TRUE}
+
+# Generate 50000 iterations
+modelUpdate(25000)
+
+# Summary Statistics
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+```
+
+#### 聯合模型 joint model
+
+把兩個甚至多個不同的研究獲得的數據聯合起來的方法主要有兩種，一是使用其中一個或者多個的研究結果作爲有信息的先驗概率分布，放到之後的研究模型中去，二是把多個不同的研究用共同的位置變量聯通起來 (link sub-models for different data sources through common parameter(s))。在這個吸煙和癌症的研究話題中，我們發現隊列研究，和病例對照研究兩者之間有共同的未知變量-比值比 (OR)，如果這個比值比有這相同的含義，那麼我們可以通過它把兩個獨立的研究連接起來。
+
+我們提供一個聯合模型的例子如下（保存爲`jointmodel.txt`）：
+
+```
+# Joint model
+
+model{
+		# cohort sub-model
+		Y0c ~ dbin(r0, X0c) # data model for non-smokers
+		logit(r0) <- lr0 
+		Y1c ~ dbin(r1, X1c) # data model for smokers 
+		logit(r1) <- lr1 
+		lr1 <- lr0 + lor # lor is log(OR)
+		# prior for cohort sub-model
+		lr0 ~ dnorm(0, 0.3) # prior for logOdds of nonsmokers 
+		
+		# case-control sub-model 
+		X0cc ~ dbin(p0, Y0cc) # data model for non-cancer controls
+		logit(p0) <- lp0
+		X1cc ~ dbin(p1, Y1cc) # data model for cancer cases 
+		logit(p1) <- lp1
+		lp1 <- lp0 + lor # lor is log(OR)
+		# prior for case-control sub-model 
+		lp0 ~ dnorm(0, 0.3) # prior for logOdds of exposure for controls 
+		
+		# Common code 
+		lor ~ dnorm(0, 0.33) # prior for common log(OR)
+		OR <- exp(lor) # comparison statistic
+}
+```
+
+把兩個獨立研究的數據合並成爲一個（保存成爲`dataforjoint.txt`）：
+
+
+```
+list(X0c  = 2000, 
+		 Y0c  = 100, 
+		 X1c  = 1000, 
+		 Y1c  = 150,
+		 X0cc = 800, 
+		 Y0cc = 2000, 
+		 X1cc = 600,
+		 Y1cc = 1000
+)
+```
+
+接下來是對聯合模型的擬合及對OR值事後樣本的採集過程：
+
+
+
+
+```{r BayesianPractical0619, cache=TRUE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in smoking and cancer joint model.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/jointmodel.txt") 
+# Load the data 
+modelData("backupfiles/dataforjoint.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(lr0 = -1, lp0 = -2, lor = 0)
+modelInits(bugsData(initlist))
+initlist1 <- list(lr0 = -5, lp0 = 2, lor = 5)
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR", "lor")
+samplesSet(parameters)
+
+
+# Generate 1000 iterations
+modelUpdate(1000)
+
+
+# Check trace history for the first 1000 run 
+samplesHistory("*", mfrow = c(2,1), ask = FALSE)
+```
+
+
+```{r BayesianPractical0620, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Gelman-Rubin convergence statistic for smoking and cancer cohort study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+postsamples <- buildMCMC("*")
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+```
+
+
+
+```{r BayesianPractical0621, cache=TRUE, message=TRUE, echo=TRUE}
+
+# Generate 50000 iterations
+modelUpdate(25000)
+
+# Summary Statistics
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+```
+
+可以看到，聯合模型給出的事後OR均值(2.493)是位於兩個獨立研究給出的OR均值(3.335, 2.253)的中間。但是它明顯更加靠近病例對照研究的結果，暗示我們兩個研究中病例對照研究給出的信息量相對權重較大。另外，事後OR分布的標準差本身比兩個獨立研究估計的事後OR分布標準差都要小，說明充分利用兩個研究的數據時，事後估計的精確度得到了提升。精確度提升的原因很容易理解，因爲聯合模型把二者獲得的數據都包含了進來，信息量比兩個獨立研究都要大。
+
+#### 你是否能證明兩個研究的比值比是相同的？
+
+
+對於隊列研究來說，我們估計其比值比所用的表格可以寫作：
+
+|         	|   	| Cancer 	|    	|    	|
+|---------	|---	|--------	|----	|----	|
+|         	|   	| Y      	| N  	|    	|
+| Smoking 	| Y 	|        	|    	| S  	|
+|         	| N 	|        	|    	| NS 	|
+|         	|   	| C      	| NC 	|    	|
+
+那麼這個研究中的比值比計算式就是：
+
+$$
+\text{OR}_{\text{cohort}} = \frac{\text{Pr}(C|S)\times\text{Pr}(NC|NS)}{\text{Pr}(C|NS)\times\text{Pr}(NC|S)}
+$$
+
+對於病例對照研究來說，其比值比估計時使用的表格是：
+
+|        	|   	| Smoking 	|    	|    	|
+|--------	|---	|---------	|----	|----	|
+|        	|   	| Y       	| N  	|    	|
+| Cancer 	| Y 	|         	|    	| C  	|
+|        	| N 	|         	|    	| NC 	|
+|        	|   	| S       	| NS 	|    	|
+
+
+其比值比的計算式可以寫作：
+
+
+$$
+\text{OR}_{\text{case-control}} = \frac{\text{Pr}(S|C)\times\text{Pr}(NS|NC)}{\text{Pr}(S|NC)\times\text{Pr}(NS|C)}
+$$
+
+可以證明兩者相同（反復使用貝葉斯定理）：
+
+$$
+\begin{aligned}
+\text{OR}_{\text{cohort}} & = \frac{\text{Pr}(C|S)\times\text{Pr}(NC|NS)}{\text{Pr}(C|NS)\times\text{Pr}(NC|S)} \\ 
+                          & = \frac{\frac{\text{Pr}(S|C)\text{Pr}(C)}{\text{Pr}(S)}\times\frac{\text{Pr}(NS|NC)\text{Pr}(NC)}{\text{Pr}(NS)}}{\frac{\text{Pr}(NS|C)\text{Pr}(C)}{\text{Pr}(NS)}\times\frac{\text{Pr}(S|NC)\text{Pr}(NC)}{\text{Pr}(S)}} \\
+                          & = \frac{\text{Pr}(S|C)\times\text{Pr}(NS|NC)}{\text{Pr}(S|NC)\times\text{Pr}(NS|C)} \\
+                          & = \text{OR}_{\text{case-control}} 
+\end{aligned}
+$$
+
+
 
 
 # 貝葉斯廣義線性回歸
