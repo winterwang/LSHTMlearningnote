@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-11-06">
+<meta name="date" content="2018-11-07">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1106,7 +1106,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="85.5.2" data-path="section-85.html"><a href="section-85.html#section-85.5.2"><i class="fa fa-check"></i><b>85.5.2</b> 吸煙與癌症</a></li>
 </ul></li>
 </ul></li>
-<li class="chapter" data-level="86" data-path="section-86.html"><a href="section-86.html"><i class="fa fa-check"></i><b>86</b> 貝葉斯廣義線性回歸</a></li>
+<li class="chapter" data-level="86" data-path="section-86.html"><a href="section-86.html"><i class="fa fa-check"></i><b>86</b> 貝葉斯廣義線性回歸</a><ul>
+<li class="chapter" data-level="86.1" data-path="section-86.html"><a href="section-86.html#bugs"><i class="fa fa-check"></i><b>86.1</b> 如何在BUGS語言中描述分類型變量</a><ul>
+<li class="chapter" data-level="86.1.1" data-path="section-86.html"><a href="section-86.html#section-86.1.1"><i class="fa fa-check"></i><b>86.1.1</b> 啞變量的數據矩陣</a></li>
+<li class="chapter" data-level="86.1.2" data-path="section-86.html"><a href="section-86.html#bugs"><i class="fa fa-check"></i><b>86.1.2</b> 雙重索引BUGS語言標記法</a></li>
+</ul></li>
+</ul></li>
 <li class="chapter" data-level="87" data-path="section-87.html"><a href="section-87.html"><i class="fa fa-check"></i><b>87</b> 貝葉斯等級回歸模型</a></li>
 <li class="chapter" data-level="88" data-path="-mcmc.html"><a href="-mcmc.html"><i class="fa fa-check"></i><b>88</b> 再訪 MCMC</a></li>
 <li class="chapter" data-level="89" data-path="section-89.html"><a href="section-89.html"><i class="fa fa-check"></i><b>89</b> 貝葉斯和概率論的比較</a></li>
@@ -1222,13 +1227,13 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
             <section class="normal" id="section-">
 <div id="section-86" class="section level1">
 <h1><span class="header-section-number">第 86 章</span> 貝葉斯廣義線性回歸</h1>
-<p>第五章(Chapter @ref{BayesianLM})中我們已經展示過如何在貝葉斯統計學語境下如何描述和運算簡單線性回歸模型的過程：</p>
+<p>第五章(Chapter <a href="section-84.html#BayesianLM">84.1</a>)中我們已經展示過如何在貝葉斯統計學語境下如何描述和運算簡單線性回歸模型的過程：</p>
 <ul>
 <li>描述預測變量和結果變量之間應有的關係；</li>
 <li>描述結果變量的概率分佈假設 (probability assumptions)：也就是在前一步指定的方程式描述的預測變量和相應的參數的條件下，結果變量的分佈。</li>
 <li>給每個回歸係數，以及其他未知的參數提供先驗概率分佈的信息。</li>
 </ul>
-<p>對於一個結果變量 <span class="math inline">\(y_i\)</span> 來說，如果有一個預測變量的向量 <span class="math inline">\(x_1, \dots, x_p\)</span>，來描述它 <span class="math inline">\(i = ,\dots, n\)</span> 個個體的話，標準的貝葉斯版本的線性回歸模型要寫作：</p>
+<p>對於一個結果變量 <span class="math inline">\(y_i\)</span> 來說，如果有一個預測變量的向量 <span class="math inline">\(x_1, \dots, x_p\)</span>，來描述它 <span class="math inline">\(i = 1,\dots, n\)</span> 個個體的話，標準的貝葉斯版本的線性回歸模型要寫作：</p>
 <p><span class="math display" id="eq:Bayesianchapter7eq01">\[
 \begin{aligned}
 y_i &amp; \sim N(\mu_i, \sigma^2) \\ 
@@ -1243,6 +1248,54 @@ y_i &amp; \sim N(\mu_i, \sigma^2) \\
 y_i \sim t_4(\mu_i, \sigma^2)
 \]</span></p>
 <p>使用t分佈作為模型似然的話，相比高斯模型(正態分佈)可以調低(downweight)離群值(outliers)的權重。(詳見 Chapter <a href="section-84.html#tdreplacegaussian">84.2.9</a>)</p>
+<p>實際上，貝葉斯廣義線性回歸模型(Bayesian GLM)直觀地可以被認為是貝葉斯線性回歸模型的擴展模型。記得在基礎的廣義線性回歸模型章節，我們學習過如何用一個<strong>鏈接方程(link function)</strong>把結果變量(outcome)，和解釋變量用數學表達式連接起來。廣義線性回歸模型中最常見的莫過於邏輯回歸模型，接下來我們就來看看如何在貝葉斯統計學框架下擬合我們想要的邏輯回歸模型。在這之前，我們先要學習如何在BUGS語言下描述一個分類型變量(categorical variable)。</p>
+<div id="bugs" class="section level2">
+<h2><span class="header-section-number">86.1</span> 如何在BUGS語言中描述分類型變量</h2>
+<p>雖然 BUGS 語言風格和 R 語言十分接近，但是二者並不完全通用。BUGS並無像R語言一樣有Factor因子型變量的概念來表述分類型數據。相似的概念在BUGS語言中可以有兩種方法來表達：</p>
+<ul>
+<li>人工把分類型變量編輯成為啞變量的方式，然後把啞變量輸入數據框中；</li>
+<li>利用BUGS語言方便的索引功能 (indexing facilities)。</li>
+</ul>
+<p>下面我們用簡單線性回歸模型來解釋這兩種方法的異同，其中一個分類型解釋變量 <span class="math inline">\(x_i\)</span>，它有 <span class="math inline">\(A,B,C\)</span> 三種分型(例如ABO血型只有三種分類時的情況)，其中 A 是三個分類中的參照組(reference group)。</p>
+<div id="section-86.1.1" class="section level3">
+<h3><span class="header-section-number">86.1.1</span> 啞變量的數據矩陣</h3>
+<p>用啞變量矩陣的方式表達分類型變量是常用的手段，為一個有三個分類的變量生成啞變量我們需要給出兩個指示變量(indicator variable)，其中 <span class="math inline">\(x2=1\)</span> 時表示 <span class="math inline">\(x_i = B\)</span>，<span class="math inline">\(x2=0\)</span>時表示 <span class="math inline">\(x_i\neq B\)</span>，<span class="math inline">\(x3=1\)</span> 時表示<span class="math inline">\(x_i = C\)</span>，<span class="math inline">\(x3=0\)</span> 時表示 <span class="math inline">\(x_i\neq C\)</span>：</p>
+<pre><code>y[]    x2[]    x3[]
+32     0       0        # x_i=A
+21     0       0
+...
+6      0       0
+15     1       0        # x_i=B
+24     1       0     
+...
+12     1       0
+7      0       1        # x_i=C
+26     0       1
+...
+19     0       1
+END
+</code></pre>
+<p>此時，這個模型的BUGS表達式可以寫作：</p>
+<pre><code>for (i in 1:n) {
+      y[i]  ~ dnorm(mu[i], tau) 
+      mu[i] &lt;- alpha + beta2*x2[i] + beta3*x3[i]
+}
+
+alpha ~ dunif(-1000, 1000)
+beta2 ~ dunif(-1000, 1000)
+beta3 ~ dunif(-1000, 1000)
+tau   ~ dgamma(0.001, 0.001)</code></pre>
+<p>其中，</p>
+<ul>
+<li><code>alpha</code> 是參照組 <span class="math inline">\(x_i = A\)</span> 的結果變量的均值；</li>
+<li><code>beta2</code> 是和參照組相比，<span class="math inline">\(x_i = B\)</span> 的結果變量的均值和參照組之間結果變量均值的差；</li>
+<li><code>beta3</code> 是和參照組相比，<span class="math inline">\(x_i = C\)</span> 的結果變量的均值和參照組之間結果變量均值的差。</li>
+</ul>
+</div>
+<div id="bugs" class="section level3">
+<h3><span class="header-section-number">86.1.2</span> 雙重索引BUGS語言標記法</h3>
+</div>
+</div>
 </div>
             </section>
 
