@@ -1111,6 +1111,9 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="86.1.1" data-path="section-86.html"><a href="section-86.html#section-86.1.1"><i class="fa fa-check"></i><b>86.1.1</b> 啞變量的數據矩陣</a></li>
 <li class="chapter" data-level="86.1.2" data-path="section-86.html"><a href="section-86.html#bugs"><i class="fa fa-check"></i><b>86.1.2</b> 雙重索引BUGS語言標記法</a></li>
 </ul></li>
+<li class="chapter" data-level="86.2" data-path="section-86.html"><a href="section-86.html#section-86.2"><i class="fa fa-check"></i><b>86.2</b> 邏輯回歸</a><ul>
+<li class="chapter" data-level="86.2.1" data-path="section-86.html"><a href="section-86.html#section-86.2.1"><i class="fa fa-check"></i><b>86.2.1</b> 　邏輯回歸模型中回歸系數的含義</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="87" data-path="section-87.html"><a href="section-87.html"><i class="fa fa-check"></i><b>87</b> 貝葉斯等級回歸模型</a></li>
 <li class="chapter" data-level="88" data-path="-mcmc.html"><a href="-mcmc.html"><i class="fa fa-check"></i><b>88</b> 再訪 MCMC</a></li>
@@ -1294,6 +1297,54 @@ tau   ~ dgamma(0.001, 0.001)</code></pre>
 </div>
 <div id="bugs" class="section level3">
 <h3><span class="header-section-number">86.1.2</span> 雙重索引BUGS語言標記法</h3>
+<p>與前面的啞變量矩陣描述相異的，我們可以利用BUGS語言中便捷的索引方法來描述一個分類型變量，例如用 <span class="math inline">\(x = 1\)</span> 表示 <span class="math inline">\(x_i = A\)</span>，用 <span class="math inline">\(x = 2\)</span> 表示 <span class="math inline">\(x_i = B\)</span>，用 <span class="math inline">\(x = 3\)</span> 表示 <span class="math inline">\(x_i = C\)</span>：</p>
+<pre><code>y[]      x[]
+32       1               # x = A
+21       1 
+... 
+6        1
+15       2               # x = B
+24       2 
+...
+12       2
+7        3               # x = C
+26       3
+...
+19       3
+END
+</code></pre>
+<p>此時，相同的模型則需要被表達成爲：</p>
+<pre><code>for(i in 1:n) {
+    y[i] ~ dnorm(m[i], tau)
+    mu[i] &lt;- alpha + beta[x[i]]
+}
+alpha ~ dunif(-1000, 1000)
+beta[1] &lt;- 0   # fixed as baseline class
+beta[2] ~ dunif(-1000, 1000)
+beta[3] ~ dunif(-1000, 1000)
+tau ~ dgamma(0.001, 0.001)</code></pre>
+<p>可以注意到我們在這個模型中把參考組的回歸系數篤定在了 0。這時候，我們給起始值數據時，就不需要給 <code>beta[1]</code> 指定起始值了：</p>
+<pre><code>list(alpha = 10, beta = c(NA, -2, 4), tau = 1)</code></pre>
+</div>
+</div>
+<div id="section-86.2" class="section level2">
+<h2><span class="header-section-number">86.2</span> 邏輯回歸</h2>
+<p>對於一個二分類的結果變量 (binary outcome variable) 來說，最自然的模型是使用邏輯回歸模型。</p>
+<p>假如每個個體都有一個二分類結果變量 <span class="math inline">\(y_i = 0 \text{ or } 1\)</span>。那麼每個個體 <span class="math inline">\(i\)</span> 的結果 <span class="math inline">\(y_i\)</span> 可以用伯努利分布 (Chapter <a href="bernoulli.html#bernoulli">4</a>) 來描述它：</p>
+<p><span class="math display">\[
+y_i \sim Bern(p_i)
+\]</span></p>
+<p>其中，<span class="math inline">\(p_i\)</span>是第<span class="math inline">\(i\)</span>個個體的結果變量取1時<span class="math inline">\((y_i = 1)\)</span>的概率。此時 <span class="math inline">\(P(p_i = 1)\)</span> 是我們想要知道的需要用貝葉斯模型來擬合的未知參數。邏輯回歸模型中我們使用的鏈接方程是 <span class="math inline">\(\mathbf{logit}\)</span>：</p>
+<p><span class="math display">\[
+\theta_i = \text{logit}(p_i) = \log(\frac{p_i}{1-p_i})
+\]</span></p>
+<p><span class="math inline">\(\mathbf{logit}\)</span>鏈接方程允許我們把一個只能在 <span class="math inline">\((0,1)\)</span> 之間取值的概率數據，映射到可以在 <span class="math inline">\((-\infty, +\infty)\)</span> 之間取值的變量，之後我們再把這個變量和預測變量使用線性方程連接起來：</p>
+<p><span class="math display">\[
+\text{logit}(p_i)  = \alpha + \sum_k\beta_kx_{ki}
+\]</span></p>
+<p>這個模型的似然方程，它的事後概率分布是無法獲得閉合解的 (closed form)，但是但是，MCMC強大的計算機模擬過程幫我們解決了這個棘手的問題。</p>
+<div id="section-86.2.1" class="section level3">
+<h3><span class="header-section-number">86.2.1</span> 　邏輯回歸模型中回歸系數的含義</h3>
 </div>
 </div>
 </div>
