@@ -3260,7 +3260,7 @@ Variable  |  Description      |
 `sbp`     | Systolic blood pressure $(\text{mmHg})$
 `ALQ130`  | Reported average number of drinks per day
 
-```{r cache=TRUE}
+```{r 09-GLM-1, cache=TRUE}
 NHANES <- read_dta("backupfiles/nhanesglm.dta")
 NHANES <- NHANES %>%
   mutate(Gender = ifelse(gender == 1, "Male", "Female")) %>%
@@ -3274,7 +3274,7 @@ logistic.display(Model_NH);summary(Model_NH)
 當用邏輯迴歸模型擬合數據，線性迴歸方程加入年齡和性別時，數據給出了極強的證據證明性別和年齡和是否爲重度飲酒者都有很大的關係。但是，擬合完這樣一個邏輯迴歸模型之後，我們最大的擔心是，模型中的年齡變量和 $\text{logit}(\text{P}(Y=1))$ 之間的關係，用簡單線性是不是恰當？要檢驗這樣的擔憂，最好的方法是追加一個非線性轉換後的年齡值，去看看模型的擬合程度是否得到改善：
 
 
-```{r cache=TRUE}
+```{r 09-GLM-2, cache=TRUE}
 NHANES <- mutate(NHANES, age2 = ageyrs^2)
 Model_NH2 <- glm(Heavydrinker ~ gender + ageyrs + age2, data = NHANES, family = binomial(link = "logit"))
 logistic.display(Model_NH2) ; summary(Model_NH2)
@@ -3305,7 +3305,7 @@ ggplot(NHANES, aes(x=ageyrs, y=stresPearson)) +
 
 下一步，我們再來考慮，模型中加入 `bmi` 是否合理 (能改善模型的擬合度)：
 
-```{r cache=TRUE}
+```{r 09-GLM-3, cache=TRUE}
 Model_NH3 <- glm(Heavydrinker ~ gender + ageyrs + bmi, data = NHANES, family = binomial(link = "logit"))
 logistic.display(Model_NH3) ; summary(Model_NH3)
 ```
@@ -3333,7 +3333,7 @@ ggplot(NHANES, aes(x=bmi, y=stresPearson_bmi)) +
 此殘差圖 \@ref(fig:stPearsonBMI) 的 LOWESS 平滑曲線卻提示我們，BMI 和殘差之間不完全是毫無關係的 (應該是非線性的，拋物線關係？)。如果我們把 BMI 取平方放入模型中再看其結果：
 
 
-```{r cache=TRUE}
+```{r 09-GLM-4, cache=TRUE}
 NHANES <- mutate(NHANES, bmi2 = bmi^2)
 Model_NH4 <- glm(Heavydrinker ~ gender + ageyrs + bmi + bmi2, data = NHANES, family = binomial(link = "logit"))
 summary(Model_NH4)
@@ -3551,7 +3551,7 @@ logistic.display(Model_perf)
 
 完成這個模型之後，在 STATA 裏可以用簡便的 `estat gof, table` 命令獲取模型擬合的觀測值和期待值表格，然而 R 裏面需要用到 [`LogisticDx`](https://cran.r-project.org/web/packages/LogisticDx/index.html) 包裏的診斷命令 `dx` 獲取 ~~(我花了好幾個小時才找到這個命令，不得不說 STATA 對於流行病的傳統計算真的是比較方便)~~：
 
-```{r, warning=FALSE, cache=TRUE}
+```{r 09-GLM-5, warning=FALSE, cache=TRUE}
 LogisticDx::dx(Model_perf)[, 2:6]
 # obtain Pearson's test statistics
 chi2 <- sum((LogisticDx::dx(Model_perf)$sPr)^2)
@@ -3563,7 +3563,7 @@ chi2 <- sum((LogisticDx::dx(Model_perf)$sPr)^2)
 在這個只有性別作預測變量的邏輯迴歸模型裏，當然只有男，女，兩種共變量模式 (covariate patterns)。此時，模型的精準度100% (`y` 是觀測值， `yhat` 是期待值)。接下來，再在模型中加入一個是否體重超重的二分類變量。再獲取其觀測值和期待值表格如下：
 
 
-```{r, warning=FALSE, cache=TRUE}
+```{r 09-GLM-6, warning=FALSE, cache=TRUE}
 NHANES <- mutate(NHANES, highbmi = bmi > 25)
 Model_perf <- glm(Heavydrinker ~ Gender + highbmi, data = NHANES, family = binomial)
 logistic.display(Model_perf)
@@ -3597,7 +3597,7 @@ $$
 
 在 R 裏，擬合了邏輯迴歸以後通常也不會報告假決定係數值的大小。所以想要獲得它，需要 `DescTools::PseudoR2()` 命令來獲取：
 
-```{r}
+```{r 09-GLM-7}
 PseudoR2(Model_perf)
 ```
 
@@ -3730,7 +3730,7 @@ $$
 
 例：17名實驗對象同時給予抗高血壓治療，數據記錄了實驗前後收縮壓的測量值：
 
-```{r warning=FALSE}
+```{r 09-GLM-8, warning=FALSE}
 library(haven)
 sbp <- read_dta("backupfiles/sbp.dta")
 sbp
@@ -3964,7 +3964,7 @@ $$
 此時既可以選用精確的二項分佈檢驗，也可以用正態分佈近似法進行假設檢驗。用表格 \@ref(tab:matchedGLM12-1b) 的數據進行的檢驗結果如下：
 
 
-```{r}
+```{r 09-GLM-9}
 binom.test(28, 32, 0.5)
 ```
 
@@ -4040,7 +4040,7 @@ $n_{10} = 4 \sim \text{Binomial}(32, \pi = 4/32 = 0.125)$
 
 所以 $\pi$ 的 95% 信賴區間爲：
 
-```{r}
+```{r 09-GLM-10}
 FSA::binCI(4, 32)
 ```
 
@@ -4056,7 +4056,7 @@ $$
 
 精確計算的結果和 R 裏獲得的結果一致：
 
-```{r message=FALSE}
+```{r 09-GLM-11, message=FALSE}
 library(exact2x2)
 mcnemar.exact(matrix(c(39, 28, 4, 6),2,2))
 ```

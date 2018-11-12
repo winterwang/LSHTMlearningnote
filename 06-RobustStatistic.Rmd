@@ -12,7 +12,7 @@
 
 我們以下列一組空腹血糖測量值的數據爲例：
 
-```{r echo=FALSE, cache=TRUE}
+```{r 06-RobustStatistic-1, echo=FALSE, cache=TRUE}
 dt <- read.csv("backupfiles/FBG.csv", header = F)
 kable(dt, "html", col.names = c("","",""), align = "c",caption = "Fasting Glucose Level (mmol/L)") %>%
   kable_styling(bootstrap_options = c("striped", "bordered")) %>%
@@ -45,12 +45,12 @@ $$2\times P(X\leqslant x|\pi=0.5)$$
 在本例中， $X=11$。如果（像在考試的時候沒有電腦輔助）要用查表的方式判斷 $p$ 值大小。可以先[下載](http://onlinelibrary.wiley.com/doi/10.1002/9780470776124.app1/pdf) 一份統計數據的表格。下載好了找到 "Statistical Table 7.1 Critical one- and two-tailed values of x for a Sign test" 在第185頁：(下面只是截圖)
 
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='80%'}
+```{r 06-RobustStatistic-2, echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_088.png")
 ```
 $$\cdots\cdots\cdots$$
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Sign test', fig.align='center', out.width='80%'}
+```{r 06-RobustStatistic-3, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Sign test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_089.png")
 ```
 
@@ -58,19 +58,19 @@ knitr::include_graphics("img/Selection_089.png")
 
 如果你很幸運沒有在考場上，那麼可以找出自己的電腦下載好 [R](https://www.r-project.org/) 之後執行下面的命令：
 
-```{r}
+```{r 06-RobustStatistic-4}
 2*pbinom(11,24, 0.5)
 ```
 或者可以使用命令 `binom.test` 來做一個二項分佈的概率檢驗：
 
-```{r}
+```{r 06-RobustStatistic-5}
 options(scipen = 1, digits = 8) # just to show the p values are exactly the same
 binom.test(11,24,0.5)
 ```
 
 或者你也可以使用 [`BSDA`](https://alanarnholt.github.io/BSDA/) 中的 `SIGN.test` 命令來進行一場轟轟烈烈的符號檢驗：
 
-```{r}
+```{r 06-RobustStatistic-6}
 options(scipen = 1, digits = 8)
 # input the data
 dt <- c(10.3,9.5,12.2,15.1,10.8,19.0,16.1, 8.1, 8.8, 6.7,12.5, 4.2,15.3, 7.2, 9.3, 8.6, 5.3,6.7 ,5.2,13.3, 7.5, 4.9,19.5,11.1)
@@ -79,7 +79,7 @@ BSDA::SIGN.test(dt, md=10, alternative="two.sided", conf.level=0.95)
 
 “據說”如果你用 [`Stata`](https://www.stata.com/) 的話還會給你一個絢麗的表格：
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='The Stata output of a Sign Test', fig.align='center', out.width='80%'}
+```{r 06-RobustStatistic-7, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='The Stata output of a Sign Test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_090.png")
 ```
 
@@ -99,7 +99,7 @@ $$z=\lvert\frac{2\times11}{\sqrt{24}}-\sqrt{24}\rvert-\frac{1}{\sqrt{24}}=0.204$
 
 標準正態分佈的 $z$ 爲 $0.204$ 時的雙側 $p$ 值爲：
 
-```{r}
+```{r 06-RobustStatistic-8}
 (1-pnorm(0.204))*2
 ```
 
@@ -129,7 +129,7 @@ Wilcoxon 符號秩和檢驗的前提可以被認爲是介於符號檢驗和單�
 
 首先，先計算每個數據和 $15$ 之間的差值：
 
-```{r}
+```{r 06-RobustStatistic-9}
 data <- c(-2, -5, 12, 4, 16, 17, 8, 3, 20, 25, 1, 9)
 newdata <- data-15
 newdata
@@ -137,7 +137,7 @@ newdata
 
 下一步，計算這些差值的絕對值：
 
-```{r}
+```{r 06-RobustStatistic-10}
 abs_newdata <- abs(newdata)
 abs_newdata
 Dt <- data.frame(data, newdata, abs_newdata)
@@ -147,14 +147,14 @@ Dt
 
 之後，給絕對值排序：
 
-```{r}
+```{r 06-RobustStatistic-11}
 Dt$ranks <- rank(Dt$abs_newdata)
 Dt
 ```
 
 接下來，給小於 $15$ 的數據的排序加上負號：
 
-```{r}
+```{r 06-RobustStatistic-12}
 Dt$signed_ranks <- ifelse(Dt$newdata < 0, Dt$ranks*(-1), Dt$ranks)
 Dt <- Dt[order(Dt$ranks),]
 Dt
@@ -163,17 +163,17 @@ Dt
 對正的負的 `signed_ranks` 分別求和，絕對值較小的那個就是 Wilcoxon 檢驗的統計量。本例中：$S^+=$ `r sum(Dt$signed_ranks[Dt$signed_ranks>0])`，$S^-=$ `r sum(Dt$signed_ranks[Dt$signed_ranks<0])`，所以本例中的檢驗統計量等於 $14$。如果要繼續查表的話，可以找到 $0.05<p<0.1$：
 
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='80%'}
+```{r 06-RobustStatistic-13, echo=FALSE, fig.asp=.7, fig.width=4, fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_091.png")
 ```
 $$\cdots\cdots\cdots$$
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Wilcoxon Signed-Ranks test', fig.align='center', out.width='80%'}
+```{r 06-RobustStatistic-14, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values for a Wilcoxon Signed-Ranks test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_092.png")
 ```
 精確的 Wilcoxon 符號秩和檢驗可以通過下列代碼在 [R](https://www.r-project.org/) 裏完成：
 
-```{r}
+```{r 06-RobustStatistic-15}
 wilcox.test(Dt$data, mu=15, paired = FALSE)
 ```
 
@@ -181,7 +181,7 @@ wilcox.test(Dt$data, mu=15, paired = FALSE)
 
 另外，下面的代碼可以計算正態分佈近似的 Wilcoxon 秩和檢驗，結果十分接近：
 
-```{r}
+```{r 06-RobustStatistic-16}
 wilcox.test(Dt$data, mu=15, paired = FALSE, exact = FALSE, correct = FALSE)
 ```
 
@@ -219,7 +219,7 @@ $$U_1=W_1+\frac{n(n+1)}{2}$$
 這裏使用下面的例子來解釋如何操作 WMW 檢驗：
 採集16名甲亢兒童的血清甲狀腺素濃度值列表如下，
 
-```{r echo=FALSE, cache=TRUE}
+```{r 06-RobustStatistic-17, echo=FALSE, cache=TRUE}
 dt <- read.csv("backupfiles/thyroid.csv", header = T)
 kable(dt, "html", align = "c",caption = "Serum thyroxine levels") %>%
   kable_styling(bootstrap_options = c("striped", "bordered")) %>%
@@ -232,7 +232,7 @@ kable(dt, "html", align = "c",caption = "Serum thyroxine levels") %>%
 
 首先，我們要給兩組合併後的濃度排序：
 
-```{r}
+```{r 06-RobustStatistic-18}
 dt$rank <- rank(dt$thyr)
 dt <- dt[order(dt$rank),]
 dt
@@ -248,13 +248,13 @@ $$U_1=W_1-\frac{n(n+1)}{2}=51.5-\frac{7\times(7+1)}{2}=23.5$$
 
 所以 $n\times m-U_1=7\times9-23.5=39.5$，顯然這兩個數值中小的 $23.5$ 就是我們尋找的 WMW 統計量。繼續查水錶：
 
-```{r echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values of U for a Wilcoxon-Mann-Whitney test', fig.align='center', out.width='80%'}
+```{r 06-RobustStatistic-19, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap='Critical Values of U for a Wilcoxon-Mann-Whitney test', fig.align='center', out.width='80%'}
 knitr::include_graphics("img/Selection_093.png")
 ```
 可知 $n_1=7, n_2=9$ 時，統計量要低於 $15$ $p$ 值才會小於 $0.01$。所以數據給出的 $p>0.1$。
 
 在 [R](https://www.r-project.org/) 裏面用下面的代碼進行 WHW 檢驗：
-```{r warning=FALSE}
+```{r 06-RobustStatistic-20, warning=FALSE}
 wilcox.test(dt$thyr~dt$group, correct=FALSE) # without continuity correction
 wilcox.test(dt$thyr~dt$group) # with continuity correction i.e. normal appriximation
 ```
@@ -270,7 +270,7 @@ $$\hat\tau=\frac{\hat\rho}{\sqrt{(1-\hat\rho^2)/(n-2)}}$$
 在零假設條件下 $H_0: \rho=0$，上面的近似法秩相關服從 $t_{n-2}$ 分佈。
 下面用某血友病患者調查數據獲得的血液 $T_4, T_8$ 淋巴球計數 $(\times10^9/\ell)$ 來詳細解釋計算過程：
 
-```{r echo=FALSE, cache=TRUE}
+```{r 06-RobustStatistic-21, echo=FALSE, cache=TRUE}
 dt <- read.csv("backupfiles/t4t8.csv", header = T)
 kable(dt, "html", align = "c",caption = "Lymphocyte counts") %>%
   kable_styling(bootstrap_options = c("striped", "bordered")) %>%
@@ -283,7 +283,7 @@ kable(dt, "html", align = "c",caption = "Lymphocyte counts") %>%
 
 給這組數據繪製散點圖：
 
-```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Scatter plot of T4 and T8 counts', out.width='80%'}
+```{r 06-RobustStatistic-22, echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Scatter plot of T4 and T8 counts', out.width='80%'}
 ggplot(dt, aes(x=th4, y=th8)) + geom_point(shape=20) + #geom_rug(position = "jitter", size=0.2)+
  theme(plot.subtitle = element_text(vjust = 1),
     plot.caption = element_text(vjust = 1),
@@ -301,7 +301,7 @@ ggplot(dt, aes(x=th4, y=th8)) + geom_point(shape=20) + #geom_rug(position = "jit
 可以看見圖中右上角的兩個點幾乎可以認爲是異常值 (outliers)。
 分別給 `th4, th8` 求各自的排序：
 
-```{r}
+```{r 06-RobustStatistic-23}
 dt$rank4 <- rank(dt$th4)
 dt$rank8 <- rank(dt$th8)
 kable(dt, "html", align = "c",caption = "Lymphocyte counts") %>%
@@ -313,7 +313,7 @@ kable(dt, "html", align = "c",caption = "Lymphocyte counts") %>%
 
 接下來再給 `th4, th8` 的排序做散點圖：
 
-```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Scatter plot of T4 and T8 ranks', out.width='80%'}
+```{r 06-RobustStatistic-24, echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Scatter plot of T4 and T8 ranks', out.width='80%'}
 ggplot(dt, aes(x=rank4, y=rank8)) + geom_point(shape=20) + #geom_rug(position = "jitter", size=0.2)+
  theme(plot.subtitle = element_text(vjust = 1),
     plot.caption = element_text(vjust = 1),
@@ -331,7 +331,7 @@ ggplot(dt, aes(x=rank4, y=rank8)) + geom_point(shape=20) + #geom_rug(position = 
 
 此時也就沒有了異常值的存在。對二者的排序計算相關係數：
 
-```{r}
+```{r 06-RobustStatistic-25}
 cor.test(dt$rank4, dt$rank8)
 cor.test(dt$th4, dt$th8)
 ```
@@ -370,7 +370,7 @@ Good[@good2006permutation] 曾經提出假設檢驗構建的步驟，這裡引�
 
 之前用過的甲亢數據：
 
-```{r echo=FALSE, cache=TRUE}
+```{r 06-RobustStatistic-26, echo=FALSE, cache=TRUE}
 dt <- read.csv("backupfiles/thyroid.csv", header = T)
 kable(dt, "html", align = "c",caption = "Serum thyroxine levels") %>%
   kable_styling(bootstrap_options = c("striped", "bordered")) %>%
@@ -382,7 +382,7 @@ kable(dt, "html", align = "c",caption = "Serum thyroxine levels") %>%
 
 我們來計算這個數據中不同組的甲狀腺素的平均值，標準差，中位數等特徵描述量；
 
-```{r}
+```{r 06-RobustStatistic-27}
 epiDisplay::summ(dt$thyr, by=dt$group, graph=FALSE)
 ```
 
@@ -403,7 +403,7 @@ $$
 
 這裡使用 R 進行組別的隨機分配：
 
-```{r warning=FALSE}
+```{r 06-RobustStatistic-28, warning=FALSE}
 #用 -sample- 對組別信息重新隨機排列
 set.seed(1234)
 g1 <- sample(dt$group, length(dt$group), FALSE) # FALSE means replace = FALSE
@@ -421,7 +421,7 @@ kable(dt, "html", align = "c",caption = "Serum thyroxine levels with permuted gr
 
 接下來我們就可以計算當觀察對象的組別信息不同時，檢驗統計量 $T$ 的分佈：
 
-```{r}
+```{r 06-RobustStatistic-29}
 mean(dt$thyr[dt$group=="Slight or no symptoms"]) - mean(dt$thyr[dt$group=="Marked symptoms"])
 mean(dt$thyr[dt$g1=="Slight or no symptoms"]) - mean(dt$thyr[dt$g1=="Marked symptoms"])
 mean(dt$thyr[dt$g2=="Slight or no symptoms"]) - mean(dt$thyr[dt$g2=="Marked symptoms"])
@@ -432,7 +432,7 @@ mean(dt$thyr[dt$g5=="Slight or no symptoms"]) - mean(dt$thyr[dt$g5=="Marked symp
 
 所以理論上，我們可以把16人中任意7人陪分配到“輕微或無症狀”組的所有排列組合窮舉出來 (有 $\binom{16}{7} = 11,440$ 不同的分組法)，計算出所有情況下的均值差，組成我們感興趣的統計量的樣本分佈。所以你會看到，當我們的樣本量只有16個人的時候，兩組分配已經達到上萬種之多，樣本量增加之後，計算量是成幾何級倍數在增加的。例如20人中兩組各10人的分組種類有：$\binom{20}{10} = 184,756$ 種，30人中兩組個15人的分組種類有：$\binom{30}{15} = 1.55\times10^8$ 種之多。所以實際情況下，我們通常的解決辦法是，隨機從所有可能的分組法中抽出足夠多的配列組合。下面以這個甲狀腺數據為例，我們對11,440種可能的排列組合隨機抽出10000種排列計算這10000個不同的均值差：
 
-```{r eval=FALSE, cache=TRUE}
+```{r 06-RobustStatistic-30, eval=FALSE, cache=TRUE}
 set.seed(1)
 dist <- replicate(10000, t.test(sample(dt$thyr, length(dt$thyr), FALSE) ~ dt$group, var.equal = TRUE)$statistic)
 ```
@@ -440,7 +440,7 @@ dist <- replicate(10000, t.test(sample(dt$thyr, length(dt$thyr), FALSE) ~ dt$gro
 上面的代碼的涵義是從樣本對觀察值進行10000次排列組合，對每個組合進行 $t$ 檢驗，獲取 $t$ 檢驗的統計量。下面把觀察值原本的統計量的位置標記在所有10000次組合給出的統計量的柱狀圖中。
 
 
-```{r echo=FALSE, fig.asp=.7, fig.width=5, fig.cap='The sampling distribution of the difference', fig.align='center', out.width='70%'}
+```{r 06-RobustStatistic-31, echo=FALSE, fig.asp=.7, fig.width=5, fig.cap='The sampling distribution of the difference', fig.align='center', out.width='70%'}
 dist <- read.csv("backupfiles/dist.csv")
 #summary(dist)
 hist(dist$x)
@@ -451,14 +451,14 @@ dist <- dist$x
 
 可以看出來，觀察值的統計量在這10000個新樣本中，並不那麼“極端”。觀察數據的排列置換法 $p$ 值為：
 
-```{r}
+```{r 06-RobustStatistic-32}
 #Use the distribution to obtain a p-value for the mean-difference by counting how many permuted mean-differences are more extreme than the one we observed in our actual data:
 sum(abs(dist) > abs(t.test(dt$thyr ~ dt$group, var.equal = TRUE)$statistic))/10000
 ```
 
 跟下面用參數檢驗法的 $p$ 值結果做一下對比，就會發現，其實二者的 $p$ 值結果十分接近。
 
-```{r}
+```{r 06-RobustStatistic-33}
 t.test(dt$thyr ~ dt$group, var.equal = TRUE)
 ```
 
