@@ -1,0 +1,77 @@
+# script for running malaria analyses
+# logistic regression model
+
+modelDisplay('log')
+
+# Set path - you will need to change this as appropriate
+modelSetWD("H:/Teaching/LSHTM/2017-18/Bayes/Practicals/Practical7/OpenBUGS") 
+
+# Check model syntax
+modelCheck('malaria-model.txt')
+
+# Load data 
+modelData('malaria-data.txt')
+
+# Compile with two chains
+modelCompile(2)
+
+# Load inital values for first chain
+modelInits('malaria-inits1.txt',1)
+
+# Load inital values for second chain
+modelInits('malaria-inits2.txt',2)
+
+# Set monitors on nodes of interest - edit the names of the nodes as required
+samplesSet('OR.age')
+samplesSet('OR.bednet')
+samplesSet('OR.green')
+samplesSet('OR.phc')
+samplesSet('baseline.prev')
+samplesSet('PP.untreated')
+samplesSet('PP.treated')
+
+# Run 1,000 updates
+modelUpdate(1000)
+
+# Look at history plots
+samplesHistory('OR.age')
+samplesHistory('OR.bednet')
+samplesHistory('OR.green')
+samplesHistory('OR.phc')
+
+# Look at BGR convergence diagnostic
+samplesBgr('OR.age')
+samplesBgr('OR.bednet')
+samplesBgr('OR.green')
+samplesBgr('OR.phc')
+
+##############################################################
+# You should find that the simulations converge pretty quickly, so 1000 
+# burn-in should be sufficient, but if you are not happy with convergence
+# then run some further updates at this point.
+##############################################################
+
+# Discard burn-in
+samplesBeg(1001)       # change `begin' iteration if more burn-in needs to be discarded
+
+# Set DIC
+dicSet()
+
+# Run 25,000 updates
+modelUpdate(25000)
+
+##############################################################
+# Now check MC error and autocorrelation. If you are happy that the effective
+# posterior sample size is big enough, then continue with producing summary
+# statistics and plots, otherwise run some more updates and re-check
+##############################################################
+
+# Look at sample statistics
+samplesStats('*')
+
+# Look at posterior density plots
+samplesDensity('*')
+
+# Produce DIC summary
+dicStats()
+
