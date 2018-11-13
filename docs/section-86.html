@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-11-12">
+<meta name="date" content="2018-11-13">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1367,7 +1367,65 @@ y_i \sim Bern(p_i)
 <ul>
 <li><code>lbw</code> 是該新生兒出生時體重是否爲低體重的二分類變量。</li>
 <li><code>thm</code> 是一個指示變量，當它爲0時表示暴露的THM爲低水平，當它爲1時表示暴露的THM爲高水平。</li>
+<li><code>age</code> 是一個關於母親們年齡的分類型變量 (1 = $$25歲，2 = 25-29歲，3 = 30-34 歲，4 = <span class="math inline">\(\geqslant\)</span> 35歲)。</li>
+<li><code>male</code> 表示新生兒的性別 (0 是女孩，1 是男孩)。</li>
+<li><code>car</code> 是一個表示貧困程度的指數。</li>
+<li><code>smoke</code> 是表示母親在懷孕期間是否有吸煙習慣的變量 (0 = 無吸煙習慣，1 = 有吸煙習慣)。</li>
 </ul>
+<p>要回答我們關心的研究問題，那麼這個數據中，</p>
+<ul>
+<li><code>lbw</code> 是結果變量；</li>
+<li><code>thm</code> 是暴露變量；</li>
+<li><code>age, male, car, smoke</code> 是可能影響暴露變量和結果之間關係的混雜因子 (confounders)。</li>
+</ul>
+<p>這時候，本例中的貝葉斯模型的數學表達式可以寫作：</p>
+<p><span class="math display">\[
+\begin{aligned}
+lbw_i &amp; \sim Bernoulli(p_i) \;\; [\text{equivalent to } Binomial(p_i, 1)] \\ 
+\text{logit}(p_i) &amp; \sim  = \alpha + \beta_{thm}thm_i + \beta^T_C\mathbf{C}_i \\
+\alpha, \beta_{thm}, \dots, &amp; \sim \text{Normal}(0, 10000^2) \\
+e^{\beta_{thm}}&amp; = \text{odds ratio of low birth weight for high v low thm exposure}
+\end{aligned}
+\]</span></p>
+<p>其中 <span class="math inline">\(\mathbf{C}\)</span> 是混雜因子組成的向量。也就是母親的年齡，新生兒的性別，貧困指數，以及母親孕期吸煙史。</p>
+<p>利用OpenBUGS的雙重索引功能來標記分類型變量的話，這個低體重數據可以被整理為：</p>
+<pre><code>lbw[] thm[] age[] male[] car[] smoke[]
+0     0     1     1      0.156   1
+0     0     3     0     -2.165   1
+0     1     1     0     -1.391   1
+1     1     4     0      0.156   1
+......
+0     1     3     1      0.930   0
+END
+</code></pre>
+<p>其對應的BUGS模型代碼為：</p>
+<pre><code>model{
+    ### MODEL ###
+    for (i in 1:931) { # loop through 931 individuals
+       y[i] ~ dbern(p[i])
+       logit(p[i]) &lt;-  alpha+beta.thm*thm[i]+beta.age[age[i]]+beta.male*male[i]+
+       beta.car*car[i]+beta.smoke*smoke[i]
+    }
+    ### PRIORS ###
+    alpha ~ dnorm(0,0.00000001)
+    beta.thm ~ dnorm(0,0.00000001)
+    beta.age[1] ~ dnorm(0,0.00000001)
+    beta.age[2] &lt;- 0 # alias second level of maternal age beta
+    beta.age[3] ~ dnorm(0,0.00000001)
+    beta.age[4] ~ dnorm(0,0.00000001)
+    beta.male ~ dnorm(0,0.00000001)
+    beta.car ~ dnorm(0,0.00000001)
+    beta.smoke ~ dnorm(0,0.00000001)
+    ### CALCULATE THE ODDS RATIOS ###
+    OR.thm &lt;- exp(beta.thm)
+    OR.age1 &lt;- exp(beta.age[1])
+}</code></pre>
+<p>OpenBUGS中刨除前5000次樣本採集之後，獲取30000個位置參數的事後樣本，我們獲得了如下的結果：</p>
+<pre><code>         mean   sd     MC_error val2.5pc median val97.5pc
+beta.thm 0.7587 0.4181 0.008799 -0.02731 0.7453 1.631
+OR.thm   2.337  1.074  0.02403  0.9731   2.107  5.107</code></pre>
+<p>所以，我們獲得事後比值比2.337的含義就是，孕期暴露高劑量THM和低劑量的THM相比，新生兒出生體重為低出生體重的比值是2.3 (95% 可信區間 credible intervals: 0.97, 5.11)。</p>
+<p>值得注意的是，我們上面獲得的事後<code>beta.thm</code>均值，並不等於<code>OR.thm</code>均值取對數：<span class="math inline">\(0.7587 \neq log(2.337)\)</span>。</p>
 </div>
 </div>
 </div>
