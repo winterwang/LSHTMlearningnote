@@ -4812,7 +4812,147 @@ $$
 
 數據來自研究 [@diggle2002childhood]，該研究設計是爲了評價 National Impregnated Bednet Programme 是否能減少岡比亞兒童瘧疾發病率，及由於瘧疾導致的死亡。當時研究者從2035名岡比亞兒童身上採集了血樣，用於化驗是否有瘧原蟲感染。同時收集的變量包括，兒童的年齡，兒童是否有規律地使用蚊帳，以及使用的蚊帳是否是經過 (permethrin insecticide) 殺蟲。另外還收集的兩個村莊水平 (village level) 的變量分別是，兒童生活的村莊是否受 Primary Health Care System 管轄，以及村莊環境中的植被情況 (greenness of the village environment)。
 
+該試驗數據除了對使用蚊帳和罹患瘧疾之間的關係進行評估之外，還希望能通過收集到的數據分析是否存在超二項變異 (extra-binomial variation)的證據。這裏，超二項變異的含義是，在調整了已測量的全部觀察變量以後，仍然存在其他未知或者是未測量的潛在因子，導致殘留的差異(residual differences)無法被解釋。
 
+原始數據是個人級別的 (1 record per child)。這裏爲了練習的需要，我們對數據進行了整理彙總，這樣的數據其實使用 MCMC 採集事後樣本效率也比較高。且我們的練習題用的數據只是研究地區西部25個村莊構成的局部數據。這樣，在聯繫的數據庫就只有805名兒童的數據，他們的彙總後的數據有149個二項變量 (binomial categories)。
+
+數據保存在 `malaria-data.txt` 文件中，使用的是方形格式 (rectangular format)，它有如下的幾個變量:
+
+
+```
+POP[] MALARIA[] AGE[] BEDNET[] GREEN[] PHC[] VILLAGE[] 
+3     2         2     1        40.85   1      1
+1     1         3     1        40.85   1      1
+2     2         4     1        40.85   1      1
+7     3         1     2        40.85   1      1
+5     1         2     2        40.85   1      1
+6     3         3     2        40.85   1      1
+... 
+END
+
+```
+
+- `POP` 是所有變量組合下兒童的人數；
+- `MALARIA` 是所有變量組合下兒童感染虐原蟲兒童的人數；
+- `AGE` 表示年齡分組 (1 = 0-2 歲，2 = 2-3 歲，3 = 3-4 歲，4 = 4-5 歲)；
+- `BEDNET` 表示使用蚊帳的情況分類 (1 = 不使用蚊帳，2 = 使用未經殺蟲劑處理過的蚊帳，3 = 使用經過殺蟲劑處理過的蚊帳)；
+- `GREEN` 是表示村莊植被環境的一個連續型指標；
+- `PHC` 是一個二分類數據，1/0 = 該村莊是/不是受到 Primary Health Care System 管轄。
+- `VILLAGE` 是村莊的代碼。
+
+1. 使用貝葉斯邏輯迴歸模型估計使用蚊帳與否和虐原蟲感染之間的關係。嘗試寫下這個貝葉斯模型的BUGS表達文件，並且注意計算:
+
+- 參照組(也就是未使用蚊帳組)兒童的瘧疾感染率 (百分比)
+- 每一個可能的共變量的比值比
+- 使用蚊帳和不使用蚊帳相比，能夠降低兒童患瘧疾的比值(odds)的概率；<br> 使用殺蟲劑處理過的蚊帳和使用未處理過的蚊帳相比，能夠降低兒童患瘧疾的比值的概率； <br>
+
+模型可以寫作:
+
+```
+# Logistic regression model for malaria data
+	
+model {
+   for(i in 1:149) {
+      MALARIA[i] ~ dbin(p[i], POP[i])
+      logit(p[i]) <- alpha + beta.age[AGE[i]] + beta.bednet[BEDNET[i]] +
+                                   beta.green*(GREEN[i] - mean(GREEN[])) + beta.phc*PHC[i]  
+   }
+  
+   # vague priors on regression coefficients
+   alpha ~ dnorm(0, 0.00001)
+   beta.age[1] <- 0          # set coefficient for baseline age group to zero (corner point constraint)
+   beta.age[2] ~ dnorm(0, 0.00001)     
+   beta.age[3] ~ dnorm(0, 0.00001)     
+   beta.age[4] ~ dnorm(0, 0.00001)     
+   beta.bednet[1] <- 0     # set coefficient for baseline bednet group to zero (corner point constraint)
+   beta.bednet[2] ~ dnorm(0, 0.00001)     
+   beta.bednet[3] ~ dnorm(0, 0.00001)     
+   beta.green ~ dnorm(0, 0.00001)     
+   beta.phc ~ dnorm(0, 0.00001)     
+ 
+   # calculate odds ratios of interest
+   OR.age[2] <- exp(beta.age[2]) # OR of malaria for age group 2 vs. age group 1
+   OR.age[3] <- exp(beta.age[3]) # OR of malaria for age group 3 vs. age group 1
+   OR.age[4] <- exp(beta.age[4]) # OR of malaria for age group 4 vs. age group 1
+   
+   OR.bednet[2] <- exp(beta.bednet[2]) # OR of malaria for children using untreated bednets vs. not using bednets
+   OR.bednet[3] <- exp(beta.bednet[3]) # OR of malaria for children using treated bednets vs. not using bednets
+   OR.bednet[4] <- exp(beta.bednet[3] - beta.bednet[2]) # OR of malaria for children using treated bednets vs. using untreated bednets 
+   OR.green <- exp(beta.green)  # OR of malaria per unit increase in greenness index of village
+   OR.phc <- exp(beta.phc)      # OR of malaria sfor children living in villages belonging to the primary health care system versus children living in villages not in the health care system 
+   logit(baseline.prev) <- alpha # baseline prevalence of malaria in baseline group (i.e. child in age group 1, sleeps without bednet, and lives in a village with average greenness index and not in the health care system) 
+   
+   PP.untreated <- step(1 - OR.bednet[2]) # probability that using untreated bed net vs. no bed net reduces odds of malaria
+   PP.treated <- step(1- OR.bednet[4]) # probability that using treated vs. untreated bednet reduces odds of malaria
+}
+```
+
+
+```{r BayesianPractical0701, cache=TRUE, fig.width=7, fig.height=20, fig.cap='Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/malaria-model-editted.txt") 
+# Load the data 
+modelData("backupfiles/malaria-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = -0.51, 
+                 beta.age = c(NA, 0.83,  0.28, -1.68), 
+                 beta.bednet = c(NA, -2.41,  0.68), 
+                 beta.green = -0.23, 
+                 beta.phc = 1.82)
+modelInits(bugsData(initlist))
+
+initlist1 <- list(alpha = 1.29, 
+                  beta.age = c(NA, 0.49, -0.38, -0.04),  
+                  beta.bednet = c(NA, 6.85,  0.09), 
+                  beta.green = 2.66, 
+                  beta.phc = -0.31)
+
+modelInits(bugsData(initlist1))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR.age", "OR.bednet", "OR.green", "OR.phc", "PP.treated", "PP.untreated", "baseline.prev")
+samplesSet(parameters)
+
+# monitor the DIC as well
+dicSet()
+
+
+# Generate 1000 iterations
+modelUpdate(1000)
+
+
+# Check trace history for the first 1000 run 
+samplesHistory("*", mfrow = c(11,1), ask = FALSE)
+```
+
+```{r BayesianPractical0702, cache=TRUE, fig.width=10, fig.height=8, fig.cap='Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+postsamples <- buildMCMC("*")
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+```
+
+
+基本可以認爲刨除前1000次取樣 (burn-in) 可以達到收斂。
+
+
+
+```{r BayesianPractical0703, cache=TRUE, message=TRUE, echo=TRUE}
+
+# Generate 50000 iterations
+modelUpdate(25000)
+
+# Summary Statistics
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+
+dicStats()
+```
+
+
+參照組 (年齡小於2歲，不使用蚊帳，生活的村莊植被水平爲全部的平均值，且不在 PHC 管轄範圍內) 患瘧疾的百分比估計在 28.8% 左右 (`baseline.prev`)。極強的證據表明隨着年齡的增加，患瘧疾的危險度（比值）也升高。使用蚊帳可能可以降低一些些換瘧疾的危險度（比值），(`OR.bednet[2] = 0.88`) 但是其95%可信區間範圍是包括了1的 (0.604, 1.241)。使用未經殺蟲劑處理的蚊帳，也有79%的概率能夠降低兒童患瘧疾。和使用未經殺蟲劑處理的蚊帳相比，經過殺蟲劑處理的蚊帳也可能(有87.4%的概率)可以進一步降低兒童患瘧疾的危險 (`OR.bednet[4]` = 0.8003, 95% 可信區間 0.51, 1.19)。和不在PHC管轄內的村莊相比，在PHC管轄的村莊可能可以降低兒童患瘧疾的危險 (`OR.phc` = 0.7112，95% 可信區間 0.49, 0.99)。
 
 # 貝葉斯等級回歸模型 
 
