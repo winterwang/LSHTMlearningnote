@@ -5097,11 +5097,73 @@ dicStats()
 3. 某疾病在不同地區，年齡組，時間段的相對危險度；
 3. 在某些生長曲線模型 (growth curves models) 中的個體效應 (subject effect)。
 
-綜上所述，我們可以發現，雖然多層回歸模型可能可以克服個體之間存在依賴性的問題，但是模型中的參數需要滿足這樣的三個模型前提條件：
+綜上所述，我們可以發現，雖然多層回歸模型可能可以克服個體之間存在依賴性的問題，但是模型中的參數符合的前提條件可以有三種類別之分：
 
-- （每次使用相同模型時，對應的）參數是相同的 (identical parameters)；
-- （每個模型內，各個）參數是獨立的 (independent parameters)；
-- （每個模型內，各個）參數是可置換 (exchangeable parameters)。
+- 參數是相同的 (identical parameters)；
+- 參數是獨立的 (independent parameters)；
+- 參數是可交換的 (exchangeable parameters)。
+
+下圖 \@ref(fig:Bayesian0801) 展示了個體從屬於家庭醫生，家庭醫生又接着從屬於 Primary Care Trusts (PCTs) 的數據結構示意圖。
+
+```{r Bayesian0801, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='GP example of multi-level structure: individuals within GPs within PCTs', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/Fig8_1P78Bayesian.png")
+```
+
+### 參數是相同的 (identical parameters)
+
+如果說參數相同的前提被認爲可以接受，那麼什麼 GP 什麼 PCT 的數據結構都可以被忽略，也就是每個個體都可以被視爲相互獨立的：
+
+
+
+```{r Bayesian0802, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='GP example assuming identical parameters', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/Fig8_2P78Bayesian.png")
+```
+
+但是，這意味着
+- 一個參數可以產生全部的觀察對象 (one parameter generates all the observations)；
+- 參數$\theta$的估計會很容易，因爲全部觀察對象都被用來估計一個未知參數；
+- 不能體現實際數據的層級結構情況 (it does not take into account differences in the PCT, GPs, etc.)
+
+### 參數是獨立的 (independent parameters)
+
+每一個參數如果要被認爲是全部沒有關聯（獨立）的話，如示意圖 \@ref(fig:Bayesian0803) 所展現的那樣，每個GP都被單獨對待，即使同處在一個 PCT 的 GP 之間也被認爲是沒有任何相關聯信息的。
+
+
+```{r Bayesian0803, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='GP example assuming independent parameters', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/Fig8_3P79Bayesian.png")
+```
+
+
+### 參數是可交換的 (exchangeable parameters)
+
+如果認爲參數是可置換的，那麼如圖 \@ref(fig:Bayesian0804) 所示，這樣需要我們
+
+- 對不同層級進行相應的分析；
+- 認爲從屬於一個 PCT 的 GP 們更加彼此相似/接近，且他們的參數 $\theta$ 通過共同的 $\mu$ 來產生；
+- 允許不同層級之間的參數信息可以相互交換，因爲他們通過數據結構互相鏈接。
+
+```{r Bayesian0804, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='GP example assuming exchangeable parameters', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/Fig8_4P79Bayesian.png")
+```
+
+在較爲廣義的條件下(broacd conditions)，參數的可交換定義在數學上等價於認爲 $\theta_1, \dots, \theta_J$ 來自於一個共同的先驗概率分佈 (common prior distribution)，只是它的參數是**未知的** (with **unkown** parameters)。
+
+多層迴歸模型允許未知參數之間相互借鑑，取長補短 (borrowing of strength across units)。$\theta_i$的事後概率分佈事實上從全部的未知參數構成的似然中借取能量 (borrows stength from the likelihood function contributions for all the units, via their joint influence on the posterior estimates of the unknown hyper-parameters)。通過 MCMC 計算機模擬試驗的方法，加上多層迴歸模型對真實世界的模擬，統計估計的效率被大大提升了。別忘了, MCMC的靈活性同時讓我們可以放鬆對隨機效應要服從正態分佈這一前提條件。
+
+可見，這第三種情形，參數的可交換性是進行多層模型分析的基石，而不是認爲未知參數是相互獨立或者完全相同。
+
+構建多層迴歸模型本身提供了廣闊的視野，讓我們通過統計學工具一窺真實世界數據的複雜結構：
+
+- 我們可以在模型中加入2層甚至更多層的數據結構；
+- 允許加入非嵌套變量，交叉變量 (non-nexted/cross-classified)，例如不同GP的病人，他們參加治療的醫院或許各不相同。
+- 同一對象的重複觀察值 (repeated observations)，可以出現在一部分未知參數，或者全部未知參數中，然後我們通過線性或者非線性（廣義線性）隨機效應模型來表達其關係。
+- 數據中的時間前後關係，甚至於是空間上的關係也可以通過多層迴歸模型來表達。
+- 當然，你也可以在不同層級水平上增加需要考慮的共變量。
+
+當我們在學習和建立複雜數據結構的模型時，貝葉斯統計學提供的強有力工具再一次印證了其高效且強大的分析效能。這裏我們僅有機會使用一個簡單的例子來展示如何在貝葉斯框架下構建擬合縱向研究數據的多層迴歸模型。
+
+## 抗抑鬱臨牀試驗實例
+
 
 
 # 再訪 MCMC
