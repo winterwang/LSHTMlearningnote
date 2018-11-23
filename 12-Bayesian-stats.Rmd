@@ -567,7 +567,7 @@ model{
 
 下面的代碼展示了如何在R裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：
 
-```{r　R-OpenBUGS00 12-Bayesian-stats-1, cache=TRUE, fig.width=4, fig.cap='History of the iterations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r　R-OpenBUGS00, 12-Bayesian-stats-1, cache=TRUE, fig.width=9, fig.cap='History of the iterations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
 library(BRugs)
 # Step 1 check model
 modelCheck("backupfiles/coinmodel.txt") 
@@ -898,7 +898,7 @@ plot(density(chain$ycubed), main = "ycubed sample 100000",
 
 所以，一個隨機變量如果它來自一個均值爲1，標準差爲2的正態分布，那麼它的三次方的期望值是13，注意`ycubed`右側的尾巴很長。
 
-#共軛先驗概率 Conjugate priors
+# 共軛先驗概率 Conjugate priors
 
 本章節我們重溫一下最早在貝葉斯統計學入門部分(Chapter \@ref(intro-Bayes))介紹過的一些基本原則。特別是關於共軛先驗概率的概念，並提供一些使用BUGS模型的例子來展示如何運算這些模型。
 
@@ -5156,7 +5156,7 @@ knitr::include_graphics("img/Fig8_4P79Bayesian.png")
 構建多層迴歸模型本身提供了廣闊的視野，讓我們通過統計學工具一窺真實世界數據的複雜結構：
 
 - 我們可以在模型中加入2層甚至更多層的數據結構；
-- 允許加入非嵌套變量，交叉變量 (non-nexted/cross-classified)，例如不同GP的病人，他們參加治療的醫院或許各不相同。
+- 允許加入非嵌套變量，交叉變量 (non-nested/cross-classified)，例如不同GP的病人，他們參加治療的醫院或許各不相同。
 - 同一對象的重複觀察值 (repeated observations)，可以出現在一部分未知參數，或者全部未知參數中，然後我們通過線性或者非線性（廣義線性）隨機效應模型來表達其關係。
 - 數據中的時間前後關係，甚至於是空間上的關係也可以通過多層迴歸模型來表達。
 - 當然，你也可以在不同層級水平上增加需要考慮的共變量。
@@ -5165,7 +5165,69 @@ knitr::include_graphics("img/Fig8_4P79Bayesian.png")
 
 ## 抗抑鬱臨牀試驗實例
 
+### 縱向數據
 
+縱向數據常見於對同一(單元的)樣本個體經過不同的時間點重複多次收集獲得的數據。一般來說，從同一個體收集的觀察數據相互之間存在依存關係。分析縱向數據可以有很多方法，但是不論哪種方法，都必須考慮到這個存在依存關係的數據結構。其中兩種最常見的手段分別是隨機效應線性迴歸模型 (random effects/hierarchical linear model) 和自迴歸模型 (autoregressive model)。這裏的實例我們使用隨機效應模型。
+
+### HAMD example
+
+抗抑鬱臨牀試驗是一個有6個不同試驗中心，367名患者被隨機分配到3種治療方案。每名參加試驗的患者每週都會被使用 Hamilton depression score (HAMD) 評估打分，持續5周時間。其中 HAMD 分數範圍是 0-50 之間，分數越高，抑鬱症狀越嚴重。5周連續的HAMD打分過程是這樣的，第一次評分 (Week 0) 是在治療前，之後的4次打分是在治療開始之後 (Week 1-4)。這個數據之前曾經發表於文獻 [@diggle1994informative] 中。
+
+實際上該試驗中從第二週開始就有患者退出治療 (dropout)。我們在這裏暫且忽略掉有患者中途退出這件事，先分析246名從頭至尾都完成了試驗的患者的數據。圖 \@ref(fig:Bayesian0805) 展示的是完成全部試驗評分的患者中隨機選取50人的5次評分結果，按照時間的先後順序繪製的不同治療方案下每個人的分數變化軌跡，和每組治療方案的患者平均治療成績的軌跡。
+
+```{r Bayesian0805, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='HAMD data for complete cases', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/HAMD.png")
+```
+
+
+這個實驗中，我們關心的問題是**三種治療方案對抑鬱症患者 HAMD 分數的變化的影像是否存在不同？**
+
+此時數據中的變量有：
+
+- $y$ HAMD 分數
+- $t$ 治療組
+- $w$ 治療周
+
+這裏我們先暫且忽略掉試驗中心可能造成的不同療效，且假設HAMD評分隨着時間呈線性變化。那麼我們來思考或許可行的三個模型：
+
+- 標準的簡單線性迴歸，非多層迴歸模型 (standard linear regression)；
+- 多層線性迴歸模型，且允許有隨機截距 (hierarchical model with random intercepts)；
+- 多層線性迴歸模型，且允許同時有隨機截距和隨機斜率兩種模型 (hierarchical mdoel with random intercepts and random slopes)。
+
+### 貝葉斯簡單線性迴歸模型
+
+爲此 HAMD 數據設定簡單線性迴歸模型如下：
+
+- 患者的評分服從的概率分佈: $y_{iw} \sim \text{Normal}(\mu_{iw}, \sigma^2)$，其中，$y_{iw}$ 是第 $i$ 名患者
+在第 $w, w \in \{0, 1, 2, 3, 4\}$ 周時的 HAMD 評分。
+- 線性預測變量: $\mu_{iw} = \alpha + \beta_{\text{treat}(i)}w$，其中，$\text{treat}(i)$ 是第 $i$ 名患者的治療組編號，可以取值 $1,2,3$，$w$則是周數，治療前爲第 $w = 0$ 周，治療開始之後取 $w = 1,2,3,4$ 周。
+
+在簡單線性迴歸模型中，重複測量數據嵌套於 (nested) 每個患者個體這一事實被忽略了，我們爲每個未知參數加以無信息的先驗概率分佈：
+
+$$
+\begin{aligned}
+\alpha, \beta_1, \beta_2, \beta_2 & \sim \text{Normal}(0, 10000)  \\
+\frac{1}{\sigma^2} & \sim \text{Gamma}(0.001, 0.001)
+\end{aligned}
+$$
+
+這個簡單線性迴歸模型對應的 BUGS 模型可以寫作：
+
+```
+for (i in 1:N){ # N individuals 
+    for (w in 1:W) { # W weeks
+        hamd[i, w] ~ dnorm(mu[i, w], tau)
+        mu[i, w] <- alpha + beta[treat[i]]*(w-1)
+    }
+# specification of priors
+  alpha ~ dnorm(0, 0.00001) 
+  for (i in 1:T){ # T treatments
+    beta[t]~dnorm(0, 0.00001)
+  }
+  tau ~ dgamma(0.001, 0.001)
+  sigma.sq<-1/tau # normal errors
+}
+```
 
 # 再訪 MCMC
 
