@@ -1,5 +1,5 @@
 # (PART) 貝葉斯統計學 Bayesian Statistics {-}
-
+	
 
 
 
@@ -5256,6 +5256,103 @@ $$
 \sigma_\alpha & \sim \text{Uniform}(0, 100) 
 \end{aligned}
 $$
+
+這是一個典型的多層線性回歸模型 (Hierarchical LM or Linear Mixed Model, LMM)，或者又叫做隨機截距模型(Random Intercepts model)。
+
+這個模型可以使用BUGS語言描述如下：
+
+
+```
+for (i in 1:N) { # N individuals 
+	for (w in 1:W) { # W weeks 
+		hamd[i, w] ~ dnorm(mu[i,w], tau)
+		mu[i,w] <- alpha[i] + beta[treat[i]]*(w-1)
+	}
+	alpha[i] ~ dnorm(alpha.mu, alpha.tau) # random intercepts
+}
+   # Specification of priors
+alpha ~ dnorm(0, 0.00001)
+alpha.mu ~ dnorm(0, 0.00001)
+alpha.sigma ~ dunif(0, 100)
+alpha.sigma.sq <- pow(alpha.sigma, 2)
+alpha.tau <- 1/alpha.sigma.sq
+
+for (t in 1:T){ # T treatments
+	beta[t] ~ dnorm(0, 0.00001)
+}
+tau ~ dgamma(0.001, 0.001)
+sigma.sq <- 1/tau  # Normal errors
+```
+
+無隨機截距的簡單線性回歸模型，和包括了隨機截距模型的多層線性回歸模型之間的差別，用 DAG 圖來表示可以直觀的展示如下：
+
+```{r Bayesian0806, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='DAGs for models for the HAMD example', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/DAGsHAMD.png")
+```
+
+### 貝葉斯等級線性回歸模型--隨機截距和隨機斜率模型
+
+與隨機截距模型相類似地，我們可以把該模型從隨機截距的基礎上再擴展到隨機斜率模型，也就是可以認爲每名患者的HAMD分數變化的直線的斜率可以因人而異。
+
+$$
+\begin{aligned}
+y_{iw}   & \sim \text{Normal}(\mu_{iw}, \sigma^2) \\ 
+\mu_{iw} & =    \alpha_i + \beta_{treat(i), i}w
+\end{aligned}
+$$
+
+模型中的隨機截距$\{\beta_{(1,i)}\}, \{\beta_{(2,i)}\}, \{\beta_{(3,i)}\}$, 同隨機截距 $\{\alpha_i\}$ 一樣我們都賦予其相同的且模糊的無有效信息的先驗概率分佈：
+
+這個隨機效應模型的BUGS模型代碼寫作如下：
+
+```
+for (i in 1:N) { # N individuals
+	for (w in 1:W) { # W weeks 
+		hamd[i, w] ~ dnorm(mu[i, w], tau)
+		mu[i, w] <- alpha[i] + beta[treat[i], i] * (w - 1)
+	}
+	alpha[i] ~ dnorm(alpha.mu, alpha.tau)
+	for(t in 1:T) {beta[t, i] ~ dnorm(beta.mu[t], beta.tau[t])}
+}
+
+# Priors
+for (t in 1:T) { # T treatments
+	beta.mu[t] ~ dnorm(0, 0.0001)
+	beta.sigma[t] ~ dunif(0, 100)
+	beta.sigma.sq[t] <- pow(beta.sigma[t], 2)
+	beta.tau[t] <- 1/beta.sigma.sq[t]
+}
+
+# specification of other priors as before in the random intercept model
+alpha ~ dnorm(0, 0.00001)
+alpha.mu ~ dnorm(0, 0.00001)
+alpha.sigma ~ dunif(0, 100)
+alpha.sigma.sq <- pow(alpha.sigma, 2)
+alpha.tau <- 1/alpha.sigma.sq
+
+for (t in 1:T){ # T treatments
+	beta[t] ~ dnorm(0, 0.00001)
+}
+tau ~ dgamma(0.001, 0.001)
+sigma.sq <- 1/tau  # Normal errors
+```
+
+### HAMD 數據不同模型結果的比較
+
+- 在非隨機效應模型（即簡單線性回歸模型）中，
+	- 一共有3條回歸直線被統計模型擬合，其中每個治療方案爲一條回歸直線；
+	- 每個治療方案獲得的回歸直線本身，具有相同的截距；
+	- 每個治療方案的回歸直線具有不同的斜率。
+
+- 在隨機截距模型中，
+	- 每名參加實驗的患者有自己的回歸直線；
+	- 每名患者的回歸直線只有自己的隨機截距，也就是HAMD的起始值被允許取不同的值。
+	
+- 再隨機截距隨機斜率模型中，
+	- 每名患者的回歸直線被允許擁有不同的斜率，和不同的截距。
+	
+
+
 
 
 

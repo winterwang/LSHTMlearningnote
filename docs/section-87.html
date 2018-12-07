@@ -25,7 +25,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang">
 
 
-<meta name="date" content="2018-12-07">
+<meta name="date" content="2018-12-08">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1129,6 +1129,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li class="chapter" data-level="87.3.2" data-path="section-87.html"><a href="section-87.html#hamd-example"><i class="fa fa-check"></i><b>87.3.2</b> HAMD example</a></li>
 <li class="chapter" data-level="87.3.3" data-path="section-87.html"><a href="section-87.html#section-87.3.3"><i class="fa fa-check"></i><b>87.3.3</b> 貝葉斯簡單線性迴歸模型</a></li>
 <li class="chapter" data-level="87.3.4" data-path="section-87.html"><a href="section-87.html#section-87.3.4"><i class="fa fa-check"></i><b>87.3.4</b> 貝葉斯等級線性回歸–隨機截距模型</a></li>
+<li class="chapter" data-level="87.3.5" data-path="section-87.html"><a href="section-87.html#section-87.3.5"><i class="fa fa-check"></i><b>87.3.5</b> 貝葉斯等級線性回歸模型–隨機截距和隨機斜率模型</a></li>
+<li class="chapter" data-level="87.3.6" data-path="section-87.html"><a href="section-87.html#hamd-"><i class="fa fa-check"></i><b>87.3.6</b> HAMD 數據不同模型結果的比較</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="88" data-path="-mcmc.html"><a href="-mcmc.html"><i class="fa fa-check"></i><b>88</b> 再訪 MCMC</a></li>
@@ -1428,6 +1430,95 @@ y_{iw}   &amp; \sim \text{Normal}(\mu_{iw}, \sigma^2) \\
 \sigma_\alpha &amp; \sim \text{Uniform}(0, 100) 
 \end{aligned}
 \]</span></p>
+<p>這是一個典型的多層線性回歸模型 (Hierarchical LM or Linear Mixed Model, LMM)，或者又叫做隨機截距模型(Random Intercepts model)。</p>
+<p>這個模型可以使用BUGS語言描述如下：</p>
+<pre><code>for (i in 1:N) { # N individuals 
+    for (w in 1:W) { # W weeks 
+        hamd[i, w] ~ dnorm(mu[i,w], tau)
+        mu[i,w] &lt;- alpha[i] + beta[treat[i]]*(w-1)
+    }
+    alpha[i] ~ dnorm(alpha.mu, alpha.tau) # random intercepts
+}
+   # Specification of priors
+alpha ~ dnorm(0, 0.00001)
+alpha.mu ~ dnorm(0, 0.00001)
+alpha.sigma ~ dunif(0, 100)
+alpha.sigma.sq &lt;- pow(alpha.sigma, 2)
+alpha.tau &lt;- 1/alpha.sigma.sq
+
+for (t in 1:T){ # T treatments
+    beta[t] ~ dnorm(0, 0.00001)
+}
+tau ~ dgamma(0.001, 0.001)
+sigma.sq &lt;- 1/tau  # Normal errors</code></pre>
+<p>無隨機截距的簡單線性回歸模型，和包括了隨機截距模型的多層線性回歸模型之間的差別，用 DAG 圖來表示可以直觀的展示如下：</p>
+<div class="figure" style="text-align: center"><span id="fig:Bayesian0806"></span>
+<img src="img/DAGsHAMD.png" alt="DAGs for models for the HAMD example" width="80%" />
+<p class="caption">
+圖 87.6: DAGs for models for the HAMD example
+</p>
+</div>
+</div>
+<div id="section-87.3.5" class="section level3">
+<h3><span class="header-section-number">87.3.5</span> 貝葉斯等級線性回歸模型–隨機截距和隨機斜率模型</h3>
+<p>與隨機截距模型相類似地，我們可以把該模型從隨機截距的基礎上再擴展到隨機斜率模型，也就是可以認爲每名患者的HAMD分數變化的直線的斜率可以因人而異。</p>
+<p><span class="math display">\[
+\begin{aligned}
+y_{iw}   &amp; \sim \text{Normal}(\mu_{iw}, \sigma^2) \\ 
+\mu_{iw} &amp; =    \alpha_i + \beta_{treat(i), i}w
+\end{aligned}
+\]</span></p>
+<p>模型中的隨機截距<span class="math inline">\(\{\beta_{(1,i)}\}, \{\beta_{(2,i)}\}, \{\beta_{(3,i)}\}\)</span>, 同隨機截距 <span class="math inline">\(\{\alpha_i\}\)</span> 一樣我們都賦予其相同的且模糊的無有效信息的先驗概率分佈：</p>
+<p>這個隨機效應模型的BUGS模型代碼寫作如下：</p>
+<pre><code>for (i in 1:N) { # N individuals
+    for (w in 1:W) { # W weeks 
+        hamd[i, w] ~ dnorm(mu[i, w], tau)
+        mu[i, w] &lt;- alpha[i] + beta[treat[i], i] * (w - 1)
+    }
+    alpha[i] ~ dnorm(alpha.mu, alpha.tau)
+    for(t in 1:T) {beta[t, i] ~ dnorm(beta.mu[t], beta.tau[t])}
+}
+
+# Priors
+for (t in 1:T) { # T treatments
+    beta.mu[t] ~ dnorm(0, 0.0001)
+    beta.sigma[t] ~ dunif(0, 100)
+    beta.sigma.sq[t] &lt;- pow(beta.sigma[t], 2)
+    beta.tau[t] &lt;- 1/beta.sigma.sq[t]
+}
+
+# specification of other priors as before in the random intercept model
+alpha ~ dnorm(0, 0.00001)
+alpha.mu ~ dnorm(0, 0.00001)
+alpha.sigma ~ dunif(0, 100)
+alpha.sigma.sq &lt;- pow(alpha.sigma, 2)
+alpha.tau &lt;- 1/alpha.sigma.sq
+
+for (t in 1:T){ # T treatments
+    beta[t] ~ dnorm(0, 0.00001)
+}
+tau ~ dgamma(0.001, 0.001)
+sigma.sq &lt;- 1/tau  # Normal errors</code></pre>
+</div>
+<div id="hamd-" class="section level3">
+<h3><span class="header-section-number">87.3.6</span> HAMD 數據不同模型結果的比較</h3>
+<ul>
+<li>在非隨機效應模型（即簡單線性回歸模型）中，
+<ul>
+<li>一共有3條回歸直線被統計模型擬合，其中每個治療方案爲一條回歸直線；</li>
+<li>每個治療方案獲得的回歸直線本身，具有相同的截距；</li>
+<li>每個治療方案的回歸直線具有不同的斜率。</li>
+</ul></li>
+<li>在隨機截距模型中，
+<ul>
+<li>每名參加實驗的患者有自己的回歸直線；</li>
+<li>每名患者的回歸直線只有自己的隨機截距，也就是HAMD的起始值被允許取不同的值。</li>
+</ul></li>
+<li>再隨機截距隨機斜率模型中，
+<ul>
+<li>每名患者的回歸直線被允許擁有不同的斜率，和不同的截距。</li>
+</ul></li>
+</ul>
 </div>
 </div>
 </div>
