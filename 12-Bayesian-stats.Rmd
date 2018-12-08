@@ -5369,12 +5369,43 @@ knitr::include_graphics("img/DAGsHAMDhierresults.png")
 
 ### HAMD 數據實例結果的解釋
 
-值得注意的是，在 HAMD 數據中，我們關心的實驗問題其實是，
+值得注意的是，在 HAMD 數據中，我們關心的實驗問題其實是，"三種不同治療方案，對於HAMD分析得分的**變化（也就是回歸線的斜率）**，是否起到不同的作用。(whether there are any difference in the effects of the 3 treatments on the change in HAMD score over time)"。也就是說我們特別對斜率的不同感興趣。
+
+- $\beta_1 - \beta_2, \beta_1 - \beta_3, \beta_2 - \beta_3$；
+- 以及隨機斜率模型中的：$\mu_{\beta_1} - \mu_{\beta_2}, \mu_{\beta_1} - \mu_{\beta_3}, \mu_{\beta_2} - \mu_{\beta_3}$
+
+這些斜率差值其實可以通過 BUGS 代碼簡單方便的計算出來，便於我們進行樣本採集和統計推斷：
+
+```
+# calculate contrasts
+contrasts[1] <- beta[1] - beta[2]
+contrasts[2] <- beta[1] - beta[3]
+contrasts[3] <- beta[2] - beta[3]
+```
+
+或者寫成：
+
+```
+contrasts[1] <- beta.mu[1] - beta.mu[2]
+...
+```
+
+三個不同模型的斜率比較結果總結如下圖（表）\@ref(fig:Bayesian0808)，其中隨機即截距隨機斜率模型的三個斜率比較的事後概率分佈圖繪製如圖\@ref(fig:Bayesian0809)。由於 HAMD 得分越低表示抑鬱症症狀越輕，所以表格中的斜率差如果是負的，表示斜率比較中前者的療效更好（下降效果更顯著），如果斜率差是正的，那麼就是反過來證明斜率比較中後者的療效更好。所以很顯然，療法2比起療法1對於 HAMD 分數的下降更加有顯著效果。這個結果和之前對數據的粗略均值繪製圖\@ref(fig:Bayesian0805)提示的結果相一致。當然一個更加完整的貝葉斯統計學分析還要包括對模型進行擬合診斷，以及對模型進行更加仔細的推敲（例如對線性變量中心化，或者增加實驗設施這個層級的隨機效應，或者允許增加非線性的結果）。另外值得注意的是，我們之前介紹過的所有對於非多層回歸模型的擬合檢查在混合效應模型中都會變得更加複雜。還有值得提醒的一點在於，DIC在大部分模型擬合中都可以用於比較不同的模型，但是有時候也會出現 BUGS 軟件無法計算 DIC 的情況。先驗概率分佈的選擇也是混合效應模型擬合時需要慎重考慮的一點，這些內容這裏由於篇幅限制無法一一詳細介紹。
 
 
 
 
-	
+```{r Bayesian0808, cache=TRUE, echo=FALSE, fig.width=5, fig.cap='Posterior mean (95% credible interval) for the contrasts (treatment comparisons) from models fitted to the HAMD data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/DAGsHAMDhiercontrast.png")
+```
+
+```{r Bayesian0809, cache=TRUE, echo=FALSE, fig.width=7, fig.cap='Density plots for the hierarchical model with random intercepts and random slopes.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/DAGsHAMDhierfig.png")
+```
+
+## Practical Bayesian Statistics 08 
+
+
 # 再訪 MCMC
 
 # 貝葉斯和概率論的比較 
