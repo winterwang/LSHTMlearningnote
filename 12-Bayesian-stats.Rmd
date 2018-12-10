@@ -4802,7 +4802,7 @@ $$
 - 因爲我們用 MCMC 方法對各個未知參數的事後概率分布進行樣本採集，我們有極其靈活的先驗概率分布描述手段。回歸系數的先驗概率分布通常可以使用高斯分布(正態分布)，一般來說會設定均值爲0，方差合適的正態分布作爲先驗概率分布。
 - 使用貝葉斯統計學框架，廣義線性回歸模型的右邊，可以被擴展至任何非線性回歸模型。強大的計算機模擬過程幫我們解決了無法獲得閉合解這一大難題。
 
-## Practical Bayesian Statistics 07
+## Practical Bayesian Statistics 07  {#Bayesian-practical07}
 
 要點：
 
@@ -5405,6 +5405,132 @@ knitr::include_graphics("img/DAGsHAMDhierfig.png")
 
 ## Practical Bayesian Statistics 08 
 
+本章練習題會延續使用前一個章節 (Chapter \@ref(Bayesian-practical07)) 中使用的練習題數據，岡比亞兒童使用蚊帳睡眠是否能夠降低或者減輕瘧疾。
+
+1. 把前章練習中的貝葉斯邏輯回歸模型改造成爲一個包含村莊級別隨機效應的多層邏輯回歸模型。
+
+
+```
+# Logistic regression model for malaria data
+	
+model {
+   for(i in 1:149) {
+      MALARIA[i] ~ dbin(p[i], POP[i])
+      logit(p[i]) <- alpha + beta.age[AGE[i]] +
+		                    beta.bednet[BEDNET[i]] + 
+						    beta.green*(GREEN[i] - mean(GREEN[])) +
+						    beta.phc*PHC[i] + 
+							theta[VILLAGE[i]]
+   }
+   # village-level randome effect 
+   for (j in 1:25) {
+ 	   theta[j] ~ dnorm(0, tau)
+	   OR.village[j]  <- exp(theta[j])
+	   # Odds ratio of malaria in village j relative to the average
+   }
+  
+  
+   # vague priors on regression coefficients
+   alpha ~ dnorm(0, 0.00001)
+   sigma ~ dunif(0, 100)
+   tau <- 1/pow(sigma, 2)
+   beta.age[1] <- 0        
+	   # set coefficient for baseline age group to zero (corner point constraint)
+   beta.age[2] ~ dnorm(0, 0.00001)     
+   beta.age[3] ~ dnorm(0, 0.00001)     
+   beta.age[4] ~ dnorm(0, 0.00001)     
+   beta.bednet[1] <- 0    
+	   # set coefficient for baseline bednet group to zero (corner point constraint)
+   beta.bednet[2] ~ dnorm(0, 0.00001)     
+   beta.bednet[3] ~ dnorm(0, 0.00001)     
+   beta.green ~ dnorm(0, 0.00001)     
+   beta.phc ~ dnorm(0, 0.00001)     
+ 
+   # calculate odds ratios of interest
+   OR.age[2] <- exp(beta.age[2]) # OR of malaria for age group 2 vs. age group 1
+   OR.age[3] <- exp(beta.age[3]) # OR of malaria for age group 3 vs. age group 1
+   OR.age[4] <- exp(beta.age[4]) # OR of malaria for age group 4 vs. age group 1
+   
+   OR.bednet[2] <- exp(beta.bednet[2]) # OR of malaria for children using untreated bednets vs. not using bednets
+   OR.bednet[3] <- exp(beta.bednet[3]) # OR of malaria for children using treated bednets vs. not using bednets
+   OR.bednet[4] <- exp(beta.bednet[3] - beta.bednet[2]) # OR of malaria for children using treated bednets vs. using untreated bednets 
+   OR.green <- exp(beta.green)  # OR of malaria per unit increase in greenness index of village
+   OR.phc <- exp(beta.phc)      # OR of malaria sfor children living in villages belonging to the primary health care system versus children living in villages not in the health care system 
+   logit(baseline.prev) <- alpha # baseline prevalence of malaria in baseline group (i.e. child in age group 1, sleeps without bednet, and lives in a village with average greenness index and not in the health care system) 
+   
+   PP.untreated <- step(1 - OR.bednet[2]) # probability that using untreated bed net vs. no bed net reduces odds of malaria
+   PP.treated <- step(1- OR.bednet[4]) # probability that using treated vs. untreated bednet reduces odds of malaria
+}
+```
+
+```{r BayesianPractical0801, cache=TRUE, fig.width=8, fig.height=50, fig.cap='Density plots for parameters for hierarchical GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+# Step 1 check model
+modelCheck("backupfiles/malaria-model-hierarchical.txt") 
+# Load the data 
+modelData("backupfiles/malaria-data.txt")     
+# compile the model with two separate chains
+modelCompile(numChains = 2) 
+# generate initial values 
+# the choice is arbitrary
+initlist <- list(alpha = -0.51, 
+                 beta.age = c(NA, 0.83,  0.28, -1.68), 
+                 beta.bednet = c(NA, -2.41,  0.68), 
+                 beta.green = -0.23, 
+                 beta.phc = 1.82,
+                 sigma = 3)
+modelInits(bugsData(initlist))
+
+initlist1 <- list(alpha = 1.29, 
+                  beta.age = c(NA, 0.49, -0.38, -0.04),  
+                  beta.bednet = c(NA, 6.85,  0.09), 
+                  beta.green = 2.66, 
+                  beta.phc = -0.31,
+                  sigma = 1)
+
+modelInits(bugsData(initlist1))
+
+modelGenInits()  # same with click on the gen inits to generate initial values (for the random effects (theta))
+
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("OR.age", "OR.bednet", "OR.green", "OR.phc", "PP.treated", "PP.untreated", "baseline.prev", "sigma", "OR.village")
+samplesSet(parameters)
+
+# monitor the DIC as well
+dicSet()
+
+
+# Generate 1000 iterations
+modelUpdate(1000)
+
+
+# Check trace history for the first 1000 run 
+samplesHistory("*", mfrow = c(38,1), ask = FALSE)
+```
+
+```{r BayesianPractical0802, cache=TRUE, fig.width=15, fig.height=8, fig.cap='Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+postsamples <- buildMCMC("*")
+gelman.diag(postsamples)
+gelman.plot(postsamples)
+```
+
+
+基本可以認爲刨除前1000次取樣 (burn-in) 可以達到收斂。
+
+
+
+```{r BayesianPractical0803, cache=TRUE, message=TRUE, echo=TRUE}
+
+# Generate 50000 iterations
+modelUpdate(25000)
+
+# Summary Statistics
+sample.statistics <- samplesStats("*", beg = 1001)
+print(sample.statistics)
+
+dicStats()
+```
+
+從多層邏輯回歸分析的結果來看，每個變量的事後概率分佈的標準差都比無考慮村莊這一隨機效應時要大一些。這主要時因爲，多層回歸模型考慮了數據中村莊這個層面的過度離散效應(overdispersion)。但是整體的來說，每個比值比的含義並沒有發生太多改變。另外，村莊層級的隨機效應，其方差的事後均值爲 `0.9168`，這是相對高的過度離散效應的表現。DIC結果也比無隨機效應的邏輯回歸模型提升顯著 `469.3->393.6`。這也是村莊層級隨機效應十分顯著的證據之一。
 
 # 再訪 MCMC
 
