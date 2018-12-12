@@ -1824,7 +1824,7 @@ $$
 
 一連串的隨機變量 $\theta^{(0)},\theta^{(1)},\theta^{(2)},\cdots$ 形成的[馬爾可夫鏈](https://en.wikipedia.org/wiki/Markov_chain)，其重點在於 $\theta^{(i + 1)} \sim p(\theta|\theta^{(i)}$，也就是在 $\theta^{(i)}$ 的條件下 $\theta^{(i+1)}$ 和它之前的樣本 $\theta^{(i - 1)},\cdots,\theta^{(0)}$是獨立的。這樣的馬爾科夫鏈式採樣，需要特殊的方法來進行。[美特羅波利斯-海斯廷斯(Metroplis-Hastings)算法(algorithm)](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm)是其中的一種。而[吉布斯(Gibbs)採樣法](https://en.wikipedia.org/wiki/Gibbs_sampling)是 Metropolis-Hastings 算法的一種特殊形態。吉布斯採樣法是從**全條件分布(full conditional distributions)**中產生一串馬爾科夫鏈的算法。我們下面來看看吉布斯採樣法的特徵和使用方法，其詳細的算法我們過後再來討論。
 
-### 吉布斯採樣
+### 吉布斯採樣 {#Gibbs-sampling}
 
 假設，現在我們在給定了數據 $x$ 之後，我們需要在關於它的一個未知參數的向量中$\mathbf{\theta} = (\theta_1, \theta_2, \dots,\theta_k)$採集事後概率分布樣本。那麼吉布斯採樣法的具體過程描述如下：
 
@@ -5534,6 +5534,57 @@ dicStats()
 
 # 再訪 MCMC
 
-和我們之前在介紹MCMC(Markov Chain Monte Carlo)時 (Chapter \@ref(MCMC-methods))介紹過的那樣，
+和我們之前在介紹MCMC(Markov Chain Monte Carlo)時 (Chapter \@ref(MCMC-methods))介紹過的那樣，大部分的統計模型其事後概率分佈的直接樣本 $p(\theta|x)$ 採集是十分困難的。但是我們可以使用間接的算法實施採樣過程。吉布斯樣本採集 (Chapter \@ref(Gibbs-sampling)) 是[美特羅波利斯-海斯廷斯(Metroplis-Hastings)算法(algorithm)](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm)的特殊形態。本章我們來深入探討Metropolis-Hastings算法具體的實施過程是怎樣的。
+
+## Metropolis-Hastings algorithm
+
+美特羅波利斯-海斯廷斯算法在歷史上爲統計學打開了一扇嶄新的大門。因爲它的發明，我們現在可以從幾乎任何一種分佈中實施樣本採集，而繞過複雜的微積分計算過程。這一種要算法的發明，不僅僅對於貝葉斯統計學來說是一個重大突破，同時也爲傳統的概率論統計學提供了強有力的算法。
+
+具體的算法過程較爲複雜，我們可以不用完全掌握其所有細節，但是我們應該明白它的大致採集樣本的原理。理解了它的採樣原理，有助於我們實際操作時選取合適的參數(parameters)，從目標分佈中獲取品質優良的隨機樣本。它的基本原理框架是這樣的：
+
+1. 先從變量可能的取值樣本中，爲$X_0$選取一個起始值 (starting value)，我們稱之爲"現在值 current" $(X_{t-1} = X_0)$；
+2. 以第一步選取的預測變量現在值爲條件 $g(Y|X_{t-1})$，隨機設定一個候選變量(candidate $Y_t$)的**分佈**，例如可以是典型的高斯（正態）分佈：$Y_t \sim N(X_{t-1}, \sigma)$；
+3. 隨機從第二步設定的分佈中選取 $Y_t$ 作爲樣本 $(X_t)$ 的第二個元素，同時滿足下面的概率關係：
+$$
+P(X_t = Y_t) = min(1, \frac{P(Y_t|data)/g(Y_t|X_{t-1})}{P(X_{t-1}|data)/g(X_{t-1}|Y_t)}) 
+$$
+4. 假設你沒有選擇 $Y_t$ 那麼 $X_{t-1}$ 會被重複選取作爲樣本的元素，$X_t = X_{t-1}$；
+5. 回到第二步，然後進行下一個樣本(increase $t$ by 1)的採集。
 
 # 貝葉斯和概率論的比較 
+
+
+## 兩種方法的不同點總覽
+
+嚴格來說，每個研究問題，都可以通過兩種統計學方法，要麼概率論手段，要麼貝葉斯思想，來描述及進行推斷。它們之間的不同，通過前面幾個章節的描述應該能夠切身體會得到：
+
+1. 貝葉斯思想利用的是事後概率分佈 $p(\theta|y) \propto p(y|\theta)p(\theta)$；而傳統概率論統計學只需要使用其中的似然(likelihood)部分。
+2. 貝葉斯思想需要使用者把進行實驗之前，已經有的知識和背景總結成爲先驗概率分佈 (prior distribution, $p(\theta)$)；而傳統概率論並無數學或者統計學的方案來考慮這些實驗進行之前已經有的背景知識，有的只是做完實驗之後，事後的討論，及對實驗結果的解讀，演繹時進行的描述。
+3. 貝葉斯思想一般是對噪音參數 (nuisance parameters) 進行取均值的做法；而傳統概率論是把這些參數也極大化 (maximise)。
+4. 貝葉斯統計學方法相對來說對計算能力要求較高，但是 MCMC 計算機模擬採樣過程使得現實中特別複雜的統計學模型也能變得直觀且易於獲得結果。
+
+下面我們來討論一下上面提到的這些不同點在常見的臨牀實驗，以及流行病學研究的統計學案例中如何啓示分析者作出選擇。
+
+## 亞組分析 subgroup analysis 
+
+很常見的一種現象是，一些藥物的治療效果，在總體中被發現具有顯著性的療效，但是當分析人員把研究對象根據一些特徵進行曾別分析之後，卻發現這種顯著療效只存在與一部分亞組對象中，（如男性中有療效，但是女性中沒有療效等類似的現象）。同時，交互作用分析的結果又提示說分層變量和療效之間並沒有有意義的交互作用 (while an interaction analysis reveals that the effect is not significantly different for men and women)。
+
+例如，我們看這樣一個實際的例子，有一個臨牀實驗比較的是 sinvastatin 和安慰劑對患者血清膽固醇水平下降能力上的異同。實驗對象有男性也有女性，它們的共同點是(曾經)患有心絞痛，或者心肌梗塞。實驗組和對照組的五年死亡人數等數據總結如下：
+
+
+
+```{r Bayesian1001, cache=TRUE, echo=FALSE, fig.width=7, fig.cap='Five-year mortality for simvastatin vs. placebo trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("img/table10-1.png")
+```
+
+根據這個結果，就有人會提出尖銳的問題，到底女性患者是否應該使用該藥物來降低膽固醇？
+
+- 是。理由是總體（男女共同的）治療是有效果的，且交互作用並無提示療效有男女差異。
+- 否。理由是分層分析結果現實女性中療效是無顯著意義的，並且還甚至可能有害 (RR > 1)。
+
+如果使用貝葉斯思想來進行接下來的分析的話，貝葉斯統計學會要求給療效$\times$性別這一代表交互作用的變量的回歸係數加上有信息的先驗概率分佈 (informative prior)，但是給其他的回歸係數以不含信息的先驗概率分佈 (non-informative priors on all the other parameters.)。這樣的一種方法，可以從男性結果中借來 (borrowing information from men) 一些療效信息，因爲顯然上面這個實驗中女性患者的數量很少，只有男性患者的不到三分之一人數。同時把模型中男性相對女性患者的信息量比重下調 (down-weighting information from men compared with information from women)。
+
+## 多重比較問題 multiple comparisons
+
+臨牀實驗和流行病學研究同時都面對多重比較的問題。貝葉斯統計學方法提供了
+
