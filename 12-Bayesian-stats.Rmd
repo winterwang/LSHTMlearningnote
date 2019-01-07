@@ -5534,11 +5534,11 @@ dicStats()
 
 # 再訪 MCMC
 
-和我們之前在介紹MCMC(Markov Chain Monte Carlo)時 (Chapter \@ref(MCMC-methods))介紹過的那樣，大部分的統計模型其事後概率分佈的直接樣本 $p(\theta|x)$ 採集是十分困難的。但是我們可以使用間接的算法實施採樣過程。吉布斯樣本採集 (Chapter \@ref(Gibbs-sampling)) 是[美特羅波利斯-海斯廷斯(Metroplis-Hastings)算法(algorithm)](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm)的特殊形態。本章我們來深入探討Metropolis-Hastings算法具體的實施過程是怎樣的。
+和我們之前在介紹MCMC(Markov Chain Monte Carlo)時 (Chapter \@ref(MCMC-methods))介紹過的那樣，大部分的統計模型其事後概率分佈的直接樣本 $p(\theta|x)$ 採集是十分困難的。但是我們可以使用間接的算法實施採樣過程。吉布斯樣本採集 (Chapter \@ref(Gibbs-sampling)) 是[美特羅波利斯-海斯廷斯(Metroplis-Hastings)算法(algorithm)](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm)的特殊形態。本章我們來深入探討Metropolis-Hastings算法具體的實施過程是怎樣進行的。
 
 ## Metropolis-Hastings algorithm
 
-美特羅波利斯-海斯廷斯算法在歷史上爲統計學打開了一扇嶄新的大門。因爲它的發明，我們現在可以從幾乎任何一種分佈中實施樣本採集，而繞過複雜的微積分計算過程。這一種要算法的發明，不僅僅對於貝葉斯統計學來說是一個重大突破，同時也爲傳統的概率論統計學提供了強有力的算法。
+美特羅波利斯-海斯廷斯算法在歷史上爲統計學打開了一扇嶄新的大門。因爲它的發明，我們現在可以繞過複雜的微積分計算過程，對幾乎任何一種分佈實施樣本採集。這一種要算法的發明，不僅僅對於貝葉斯統計學來說是一個重大突破，同時也爲傳統的概率論統計學提供了強有力的算法。
 
 具體的算法過程較爲複雜，我們可以不用完全掌握其所有細節，但是我們應該明白它的大致採集樣本的原理。理解了它的採樣原理，有助於我們實際操作時選取合適的參數(parameters)，從目標分佈中獲取品質優良的隨機樣本。它的基本原理框架是這樣的：
 
@@ -5550,6 +5550,13 @@ P(X_t = Y_t) = min(1, \frac{P(Y_t|data)/g(Y_t|X_{t-1})}{P(X_{t-1}|data)/g(X_{t-1
 $$
 4. 假設你沒有選擇 $Y_t$ 那麼 $X_{t-1}$ 會被重複選取作爲樣本的元素，$X_t = X_{t-1}$；
 5. 回到第二步，然後進行下一個樣本(increase $t$ by 1)的採集。
+
+在上面的公式中， $P(Y_t|data)$是利用指定（的先驗概率）分佈的概率密度方程(probability density function, pdf)中隨機選取的 $Y_t$ 計算獲得的概率。這個方程包含了一個很大概率我們人類無法計算的積分分母：$\int P(data|\theta)P(\theta)$。(however, the method also works if we substitute any function proportional to the posterior because the proportionality constant will cancel out)但是在計算過程中如果我們用與該事後概率密度分佈成比例的方程將之替代掉，那麼這部分複雜的積分方程會由於成比例性最終同時在分子分母中被抹去（其實我也不是太明白這個原理是怎樣的。。。）。例如常用的是事後概率分佈密度方程的分子部分： $f(Y_t) = P(data|Y_t)\times P(Y_t) \propto P(Y_t|data)$。
+
+## 適應階段 adaptive phase
+
+
+
 
 # 貝葉斯和概率論的比較 
 
@@ -5567,7 +5574,7 @@ $$
 
 ## 亞組分析 subgroup analysis 
 
-很常見的一種現象是，一些藥物的治療效果，在總體中被發現具有顯著性的療效，但是當分析人員把研究對象根據一些特徵進行曾別分析之後，卻發現這種顯著療效只存在與一部分亞組對象中，（如男性中有療效，但是女性中沒有療效等類似的現象）。同時，交互作用分析的結果又提示說分層變量和療效之間並沒有有意義的交互作用 (while an interaction analysis reveals that the effect is not significantly different for men and women)。
+很常見的一種現象是，一些藥物的治療效果，在總體中被發現具有顯著性的療效，但是當分析人員把研究對象根據一些特徵進行分層分析之後，卻發現這種顯著療效只存在與一部分亞組對象中，（如男性中有療效，但是女性中沒有療效等類似的現象）。同時，交互作用分析的結果又提示說分層變量和療效之間並沒有有意義的交互作用 (while an interaction analysis reveals that the effect is not significantly different for men and women)。
 
 例如，我們看這樣一個實際的例子，有一個臨牀實驗比較的是 sinvastatin 和安慰劑對患者血清膽固醇水平下降能力上的異同。實驗對象有男性也有女性，它們的共同點是(曾經)患有心絞痛，或者心肌梗塞。實驗組和對照組的五年死亡人數等數據總結如下：
 
