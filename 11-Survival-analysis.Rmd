@@ -1917,21 +1917,22 @@ $$
 
 這兩種類型的時間依存變量在進行數據分析的時候，常常不需要加以刻意的區分，但是在結果的解讀和解釋的時候就需要考慮這兩種不同類型的時間依存性質給分析結果帶來的影響。
 
-在正式進入時間依存變量的數學模型之前，我們需要引入時間依存變量的數學標記方法。一般地，$x$被用於表示預測變量，它可以是一個單一的變量，也可以是一個由許多預測變量組成的向量。在處理時間依存型變量的時候，我們通常使用 $x(t)$ 來表示。
+在正式進入時間依存變量的數學模型之前，我們需要引入時間依存變量的數學標記方法。一般地，$x$被用於表示預測變量，它可以是一個單一的變量，也可以是一個由許多預測變量組成的向量。在處理時間依存型變量的時候，我們通常使用 $x(t)$ 來表示。其含義就是在時間點 $t$ 時預測變量的值。如果 $x(t)$ 是一個向量，它可以同時表示時間依存型變量和其他的不隨時間變化而變化的變量。如果用 $x(t)$ 表示一個非時間依存型變量的話，它就表示無論時間 $t$ 是多少，$x$ 值的大小都始終保持不變。
 
 
-## Extended Cox model
 
-Cox proportional hazards model has been extended to accommodate time-dependent explanatory variables, and in this situation takes the form:
+
+## Extended Cox model 把Cox模型擴展開去
+
+Cox比例風險模型是很容易被擴展，用來加入時間依存型預測變量。當Cox比例風險模型中加入了時間依存型變量，它的數學模型被寫作：
 
 $$
 h(t|x(t)) = h_0(t) e^{\beta^Tx(t)}
 $$
 
-This formulation is assumed that we are interested in the explanatory variable at the time of the event of interest. In other words, it means that only the current value of the covariates (i.e. at time t) affects the hazard. Here, the baseline hazard function is interpreted as the hazard function for an individual for whom all the variables are zero (from the time origin and during all the follow-up).
+這一數學模型其實是在說我們對該預測變量感興趣的是在時間點 $t$ 時的測量值是否和發生相關事件的風險(hazard)有關係。也就是在這個模型裏，時間依存變量的最新值，是我們關心的最主要預測變量。這裏的基線風險(baseline hazard, $h_0(t)$)應該被解釋爲是一個所有的預測變量從起始直至所有追蹤結束時均爲零的觀察對象。[This formulation is assumed that we are interested in the explanatory variable at the time of the event of interest. In other words, it means that only the current value of the covariates (i.e. at time t) affects the hazard. Here, the baseline hazard function is interpreted as the hazard function for an individual for whom all the variables are zero (from the time origin and during all the follow-up).]
 
-The hazard ratio for individuals r and s is
-
+那麼這個模型的對數風險度比(log hazard ratios)又該怎麼理解呢？爲了便於解釋，先考慮只有一個時間依存型變量的模型 $x_1(t)$。那麼對象編號爲 $r$ 和對象編號爲 $s$ 的兩人，他們之間的風險度比 (hazard ratio)：
 
 $$
 \begin{aligned}
@@ -1940,8 +1941,38 @@ $$
 \end{aligned}
 $$
 
-Therefore, $\beta_1$ is the log hazard ratio for two individuals whose explanatory variable at (any) time t differs by 1 unit. Notice here that the effect of 1-unit change of TD variable is assumed to be constant overtime. However, the quantity $x_1(t) - x_2(t)$ varies with time, and therefore, this model is no longer a proportional hazard model. This is called extended Cox model.
+所以，簡單地解釋就是，$\beta_1$ 比較的是$r,s$兩個觀察對象的預測變量 $x_1$ 在任意一個時間點時相差一個單位時的風險度。值得指出的是，這裏回歸係數的解釋暗示了 **時間依存變量$x_1$在任意一個時間點時，改變一個單位的風險度比是固定不變的。**但是，由於 $x_{1r}(t) - x_{1s}(t)$ 是會隨時間 $t$ 變化的（也就是風險度比不再是成固定比例的，而是允許它隨時間變化而發生改變）。這個Cox風險模型就不能再被叫做**“比例”**風險模型，它被叫做**Cox擴展模型(extended Cox Model)**。
 
+### 練習題 exercise 8.1 
+
+假設我們使用下面這樣的Cox擴展模型來研究關於肺部臟器移植與否的時間依存變量和死亡之間的關係：
+
+$$
+h(t|x) = h_0(t)\text{exp}(\beta x(t))
+$$
+
+如果患者$r$在時間點5時進行了肺部的臟器移植，患者$s$則整個隨訪中都沒有接受臟器移植。請試着計算下列時間點時兩名患者之間的死亡風險度比：
+
+(1) 時間點4；
+(2) 時間點6。
+
+
+（我們假設兩名患者在這兩個時間點時都依然還是存活着的）
+
+### 解答
+
+(1) 在時間點4時，兩名患者都沒有接受臟器移植，此時，他們的死亡風險度都是基線風險：$h(t|x) = h_0(t)$，故在時間點4時，他們的死亡風險度比是 1。
+(2) 在時間點6時，患者$r$的風險度是：$h(t|x) = h_0(t)\text{exp}(\beta)$。患者 $s$ 的風險度是：$h(t|x) = h_0(t)$。所以，在時間點6時，患者$r,s$之間的死亡風險度比就是 $\text{exp}(\beta)$。
+
+-------------
+
+在Cox擴展模型下，加入了時間依存變量之後，模型所使用的偏似然(partial likelihood)是：
+
+$$
+L_p = \prod_j\frac{\text{exp}\beta^Tx_{i_j}(t_j)}{\sum_{k\in R_j}\text{exp}\beta^Tx_k(t_j)}
+$$
+
+在這個偏似然中，我們實際比較了在時間 $t_j$
 
 ## Frailty Models (脆弱模型?)
 
