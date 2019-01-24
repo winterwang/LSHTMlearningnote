@@ -2008,7 +2008,51 @@ kable(dt, "html", align = "c",caption = "Example data for individuals with time-
     scroll_box(width = "700px", height = "500px", extra_css="margin-left: auto; margin-right: auto;")
 ```
 
-	
+表格 \@ref(tab:08-surv8-1) 中時間區間其實是左開右閉的。所以2號實驗對象在時間段 $(0, 5]$ 的 $x(t) = 0$，但是在時間段 $(5, 20]$ 時 $x(t) = 1$。
+
+
+實際研究數據的例子：
+
+```{r  08-surv8-2,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/stanford.dta"
+list in 1/10
+```
+
+其中
+
+- `datein` 是該名患者加入實驗的日期；
+- `datetr` 是該名患者接受心臟移植手術的日期（如果沒有接受手術則爲缺失值）；
+- `dateout` 是患者離開實驗追蹤的日期（因爲死亡或者刪失）；
+- `dead` 是實驗追蹤截止時患者的生存狀態（死亡１，刪失0）。
+
+爲了讓這個數據能夠進行 Cox 比例風險模型的擬合，在 Stata 中需要使用到 `stsplot` 命令，當患者在隨訪中曾經接受過心臟移植手術，那麼他/她的數據將被分成兩行，前一行是移植手術前，後一行則是移植手術後的數據。患者如果沒有接受心臟移植手術，她/他的數據就只有一行。
+
+
+```{r  08-surv8-3,  engine='stata', cache=TRUE, echo=FALSE}
+use "backupfiles/stanford.dta"
+replace datetr = mdy(01, 01, 2001) if datetr == .
+
+stset dateout, id(id) origin(datein) scale(365.25) f(dead)
+
+stsplit post = datetr, at(0)
+
+replace post = post+1
+
+list in 1/20
+
+stcox post
+```
+
+
+
+請問，經過Stata調整過後的數據中，`_t0, t, post, _d` 分別是什麼意義的數字？
+
+- `_t0` 是追蹤的時間起點，對於有接受心臟移植的患者來說，第二行的 `_t0` 是接受完移植手術後的時間起點；
+- `t` 是生存時間，或者刪失值發生之前的時間；
+- `_d` 是事件指示變量(event indicator)，對於有接受心臟移植的患者來說，她/他有兩行數據，第一行是手術前，第二行是手術後。當患者死亡(event = 1)，那麼那一行的 `_d = 1`，之前的每一行都是`0`。每名患者最多只有一行發生死亡事件；
+- `post` 則是指示該行患者數據是處於心臟移植手術之前(`post = 0`)，還是之後(`post = 1`)
+
+
 ## Frailty Models (脆弱模型?)
 
 脆弱模型是時間事件數據的隨機效應模型。
