@@ -5,11 +5,11 @@
 
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>第 64 章 縱向研究數據 longitudinal data 3 | 醫學統計學</title>
+  <title>第 66 章 Cluster analysis/unsupervised learning | 醫學統計學</title>
   <meta name="description" content="在LSHTM的學習筆記">
   <meta name="generator" content="bookdown  and GitBook 2.6.7">
 
-  <meta property="og:title" content="第 64 章 縱向研究數據 longitudinal data 3 | 醫學統計學" />
+  <meta property="og:title" content="第 66 章 Cluster analysis/unsupervised learning | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -17,7 +17,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 64 章 縱向研究數據 longitudinal data 3 | 醫學統計學" />
+  <meta name="twitter:title" content="第 66 章 Cluster analysis/unsupervised learning | 醫學統計學" />
   
   <meta name="twitter:description" content="在LSHTM的學習筆記" />
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="-longitudinal-data-2.html">
-<link rel="next" href="generalized-estimating-equation.html">
+<link rel="prev" href="generalized-estimating-equation.html">
+<link rel="next" href="missing-data-1.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-table.css" rel="stylesheet" />
@@ -1285,169 +1285,17 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="-longitudinal-data-3" class="section level1">
-<h1><span class="header-section-number">第 64 章</span> 縱向研究數據 longitudinal data 3</h1>
-<div id="-level-1-heterogeneity" class="section level2">
-<h2><span class="header-section-number">64.1</span> 第一層級的異質性 level 1 heterogeneity</h2>
-<p>目前爲止，我們使用討論過的模型，其實還默認另一個前提條件: 第一層級和第二層級的隨機誤差的方差是固定不變的 (level 1 and level 2 error variance are constant)。但是實際上我們可以把這個條件放寬，讓模型允許第一層級隨機誤差的方差根據某個解釋變量而不同，使得模型更加接近數據，這種模型被命名爲 <strong>復雜第一層級方差模型 (complex level 1 variation)</strong>。下面繼續使用 Asian growth data 來做說明。該數據測量了幾百名亞洲兒童在0-3歲之間幾個時間點的體重。現在我們來允許其第一層級 (每一個兒童在不同時間點測量的體重) 誤差方差隨着性別的不同而變化: <span class="math inline">\(\sigma_e = f(\text{gender})\)</span>。這裏的方程爲了防止標準差變成負的而使用對數函數:</p>
-<p><span class="math display">\[
-\text{log} (\sigma_e) = \delta_1I_{\text{gender = boy}} + \delta_2I_{\text{gender=girl}}
-\]</span></p>
-<p>這個加入了第一層級方差隨機性的模型在 R 裏可以這樣擬合:</p>
-<pre class="sourceCode r"><code class="sourceCode r">M_growth_l1 &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age <span class="op">|</span><span class="st"> </span>id, <span class="dt">weights =</span> <span class="kw">varIdent</span>(<span class="dt">form=</span><span class="op">~</span><span class="dv">1</span><span class="op">|</span>gender), <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)
-<span class="kw">summary</span>(M_growth_l1)</code></pre>
-<pre><code>## Linear mixed-effects model fit by REML
-##  Data: growth 
-##         AIC       BIC     logLik
-##   533.06033 562.47105 -257.53016
-## 
-## Random effects:
-##  Formula: ~age | id
-##  Structure: General positive-definite, Log-Cholesky parametrization
-##             StdDev     Corr  
-## (Intercept) 0.64492252 (Intr)
-## age         0.49336369 0.129 
-## Residual    0.64221188       
-## 
-## Variance function:
-##  Structure: Different standard deviations per stratum
-##  Formula: ~1 | gender 
-##  Parameter estimates:
-##       Boys      Girls 
-## 1.00000000 0.77212879 
-## Fixed effects: weight ~ age + age2 + gender 
-##                  Value   Std.Error  DF    t-value p-value
-## (Intercept)  3.8294125 0.175581146 128  21.809930  0.0000
-## age          7.6297282 0.234375558 128  32.553429  0.0000
-## age2        -1.6350689 0.086535221 128 -18.894837  0.0000
-## genderGirls -0.6043805 0.204516567  66  -2.955166  0.0043
-##  Correlation: 
-##             (Intr) age    age2  
-## age         -0.523              
-## age2         0.471 -0.930       
-## genderGirls -0.630  0.011  0.008
-## 
-## Standardized Within-Group Residuals:
-##          Min           Q1          Med           Q3          Max 
-## -1.972411175 -0.451503129 -0.063192138  0.468697082  2.959946133 
-## 
-## Number of Observations: 198
-## Number of Groups: 68</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 和之間默認男女兒童的誤差方差相等時的模型做比較</span>
-<span class="co"># 沒有顯著差異 (p = 0.09)</span>
-<span class="kw">anova</span>(M_growth_l1, M_growth_mix)</code></pre>
-<pre><code>##              Model df       AIC       BIC     logLik   Test   L.Ratio p-value
-## M_growth_l1      1  9 533.06033 562.47105 -257.53017                         
-## M_growth_mix     2  8 533.95003 560.09290 -258.97501 1 vs 2 2.8897013  0.0891</code></pre>
-</div>
-<div id="-level-2-heterogeneity" class="section level2">
-<h2><span class="header-section-number">64.2</span> 第二層級異質性 level 2 heterogeneity</h2>
-<p>我們還可以在模型中允許第二層級的結構不一樣，這等同於認爲這是一個三個層級的模型，其中第二層級分裂成男孩和女孩。</p>
-<pre class="sourceCode r"><code class="sourceCode r">M_growth_l2 &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, 
-                   <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age<span class="op">*</span>gender <span class="op">|</span><span class="st"> </span>id,
-                   <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)
-<span class="kw">summary</span>(M_growth_l2)</code></pre>
-<pre><code>## Linear mixed-effects model fit by REML
-##  Data: growth 
-##         AIC       BIC     logLik
-##   539.92465 588.94252 -254.96233
-## 
-## Random effects:
-##  Formula: ~age * gender | id
-##  Structure: General positive-definite, Log-Cholesky parametrization
-##                 StdDev     Corr                
-## (Intercept)     0.55670428 (Intr) age    gndrGr
-## age             0.69451364  0.037              
-## genderGirls     0.85251496 -0.550 -0.002       
-## age:genderGirls 0.72515660 -0.095 -0.948  0.130
-## Residual        0.56947533                     
-## 
-## Fixed effects: weight ~ age + age2 + gender 
-##                  Value   Std.Error  DF    t-value p-value
-## (Intercept)  3.8204364 0.160115147 128  23.860556  0.0000
-## age          7.6149745 0.235176590 128  32.379815  0.0000
-## age2        -1.6464243 0.087451604 128 -18.826691  0.0000
-## genderGirls -0.6088237 0.203186658  66  -2.996376  0.0038
-##  Correlation: 
-##             (Intr) age    age2  
-## age         -0.543              
-## age2         0.520 -0.945       
-## genderGirls -0.531 -0.048  0.011
-## 
-## Standardized Within-Group Residuals:
-##           Min            Q1           Med            Q3           Max 
-## -2.0240475847 -0.4399956915 -0.0095445893  0.4564973203  2.7439585026 
-## 
-## Number of Observations: 198
-## Number of Groups: 68</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">growth &lt;-<span class="st"> </span>growth <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boy =</span> <span class="kw">as.numeric</span>(gender <span class="op">==</span><span class="st"> &quot;Boys&quot;</span>), 
-         <span class="dt">girl =</span> <span class="kw">as.numeric</span>(gender <span class="op">==</span><span class="st"> &quot;Girls&quot;</span>)) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">age_boy =</span> age<span class="op">*</span>boy, 
-         <span class="dt">age_girl =</span> age<span class="op">*</span>girl)         
-
-<span class="co">#M &lt;- lmer(weight ~ age + age2 + girl + (age_boy |id) + (age_girl| id), data = growth, REML = TRUE)</span>
-
-<span class="co">#growth &lt;- growth %&gt;%</span>
-<span class="co">#  mutate(boy = ifelse(gender == &quot;Boys&quot;, 1, 0), </span>
-<span class="co">#         girl = ifelse(gender == &quot;Girls&quot;, 1, 0), </span>
-<span class="co">#         age_boy = age*boy, </span>
-<span class="co">#         age_girl = age*girl)</span>
-<span class="co">#M_growth_l22 &lt;- lme(fixed = weight ~ age + age2 + girl, </span>
-<span class="co">#                    random = list( ~ girl + age_girl | id, </span>
-<span class="co">#                                   ~ boy + age_boy | id),</span>
-<span class="co">#                   data = growth, method = &quot;REML&quot;, na.action = na.omit)</span>
-<span class="co">#summary(M_growth_l22)</span>
-M_growth &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age<span class="op">|</span>id, <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>,<span class="dt">na.action =</span> na.omit) 
-<span class="kw">anova</span>(M_growth_l2, M_growth)</code></pre>
-<pre><code>##             Model df       AIC       BIC     logLik   Test   L.Ratio p-value
-## M_growth_l2     1 15 539.92465 588.94252 -254.96233                         
-## M_growth        2  8 533.95003 560.09290 -258.97501 1 vs 2 8.0253784  0.3304</code></pre>
-</div>
-<div id="-1" class="section level2">
-<h2><span class="header-section-number">64.3</span> 分析策略</h2>
-<p>進行統計建模之前，請思考你想從數據中探尋什麼問題的答案?</p>
-<ol style="list-style-type: decimal">
-<li>是想了解某一個共變量在層內 (同一個體不同時間，或者統一學校不同學生之間) 的條件效應 (conditional effect)?</li>
-<li>是想探索層內和層間數據的變化程度?</li>
-<li>是想了解一個共變量的邊際效應 (marginal effect) 嗎?</li>
-</ol>
-<p>如果是 1 或 2 兩個問題的話，請使用混合效應模型。如果是 1，但是那個共變量卻不是定義於層水平的，那就只好放棄回到簡單的固定效應模型。如果是 3，需要考慮使用 GEE。</p>
-<div id="section-64.3.1" class="section level3">
-<h3><span class="header-section-number">64.3.1</span> 模型選擇和建模步驟</h3>
-<p>詳細請參考 <span class="citation">(Verbeke <a href="#ref-Verbeke1997">1997</a>)</span>。</p>
-<p>當擬合一個混合效應模型時，意味着均值的結構和協方差的結構可以被確定 (an appropriate mean structure as well as covariance structure is specified)。協方差結構，解釋了均值結構無法解釋的數據隨機變化，所以二者之間彼此高度互相依賴。另外，適當的協方差模型對於用數據進行人羣參數的有效統計推斷過程是必不可少的。</p>
-<ul>
-<li>第一步:</li>
-</ul>
-<p>由於固定效應部分不能完美解釋數據的變異，所以協方差結構就是用來輔助解釋這部分數據變異的輔助工具。建模的起點就應該是，先建立一個飽和 (甚至是過飽和 overelaborated) 的模型給均值結構 (固定效應部分)，從而確保之後要增加的隨機效應部分不受固定效應部分的擬合錯誤影響。所以，開始建模時，要先把所有可能考慮到的固定效應全部加入模型中去 (包括連續變量的二次方形式/或其他非線性關系，包括所有變量之間的交互作用)。這樣做其實是使用過度飽和的參數使得均值結構在模型中盡量在後面加入隨機效應之前保持不變。在可選的那些數據結構中，我們也應當考慮到數據中不同層級結構可能存在的異質性。要注意的是，隨機效應部分，不能也不應該在沒有把所有可能的一次方程結構都考慮進去之後 (a random effect for the linear effect of time)，就上馬二次方程/或更高次方程的隨機效應(a random effect for the quadratic effect of time)。
-然後我們把飽和模型的殘差 (residuals)，異常值 (outliers)，擬合值 (fitted values)，和可能的 (potential) 隨機效應模型作出的這些殘差，異常值，擬合值之間進行比較。</p>
-<ul>
-<li>第二步:</li>
-</ul>
-<p>一旦你在飽和模型的條件下，確認好了隨機效應應該有的形式，接下來就是逐步精簡模型固定效應部分的過程:</p>
-<ol style="list-style-type: decimal">
-<li>用 Wald 檢驗 (當使用 REML 時)，或者 LRT (使用 ML 時) 來精簡化固定效應部分。</li>
-<li>反復檢查殘差，異常值，以及擬合值跟觀測值</li>
-<li>使用模型的預測軌跡和觀測值的點做視覺比較</li>
-<li>用人話把你的模型解釋給老奶奶聽懂</li>
-</ol>
-</div>
-</div>
-</div>
-<h3>References</h3>
-<div id="refs" class="references">
-<div id="ref-Verbeke1997">
-<p>Verbeke, Geert. 1997. <em>Linear Mixed Models for Longitudinal Data</em>. Springer.</p>
-</div>
+<div id="cluster-analysisunsupervised-learning" class="section level1">
+<h1><span class="header-section-number">第 66 章</span> Cluster analysis/unsupervised learning</h1>
+<p>目前爲止，在等級回歸模型部分中，我們接觸到的回歸模型和可能存在相互依賴性的數據，都是建立在我們能夠觀察到或者實驗設計上已知的數據層級結構的前提下的。這樣的層級可以是空間上的，或者時間上的。處在相同層級的研究對象之間存在相關性，換句話說就是：層級內部的對象之間，比起層級之間的對象具有更多的相似性。</p>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="-longitudinal-data-2.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="generalized-estimating-equation.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="generalized-estimating-equation.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="missing-data-1.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
