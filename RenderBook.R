@@ -1,3 +1,3 @@
-library(rmarkdownlinux 遠程桌面)
+library(rmarkdown)
 library(bookdown)
 render_book("index.Rmd")
