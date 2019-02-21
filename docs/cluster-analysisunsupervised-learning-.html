@@ -49,6 +49,13 @@
 
 
 <script src="libs/kePrint/kePrint.js"></script>
+<script src="libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="libs/plotly-binding/plotly.js"></script>
+<script src="libs/typedarray/typedarray.min.js"></script>
+<link href="libs/crosstalk/css/crosstalk.css" rel="stylesheet" />
+<script src="libs/crosstalk/js/crosstalk.min.js"></script>
+<link href="libs/plotly-htmlwidgets-css/plotly-htmlwidgets.css" rel="stylesheet" />
+<script src="libs/plotly-main/plotly-latest.min.js"></script>
 
 
 <style type="text/css">
@@ -931,7 +938,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="65" data-path="generalized-estimating-equation.html"><a href="generalized-estimating-equation.html"><i class="fa fa-check"></i><b>65</b> Generalized Estimating Equation</a></li>
 <li class="chapter" data-level="66" data-path="cluster-analysisunsupervised-learning-.html"><a href="cluster-analysisunsupervised-learning-.html"><i class="fa fa-check"></i><b>66</b> Cluster analysis/unsupervised learning 聚類分析</a><ul>
 <li class="chapter" data-level="66.1" data-path="cluster-analysisunsupervised-learning-.html"><a href="cluster-analysisunsupervised-learning-.html#section-66.1"><i class="fa fa-check"></i><b>66.1</b> 聚類分析過程</a><ul>
-<li class="chapter" data-level="66.1.1" data-path="section-7.html"><a href="section-7.html#-1"><i class="fa fa-check"></i><b>66.1.1</b> 連續型變量</a></li>
+<li class="chapter" data-level="66.1.1" data-path="cluster-analysisunsupervised-learning-.html"><a href="cluster-analysisunsupervised-learning-.html#-continuous-variables-in-cluster-analysis"><i class="fa fa-check"></i><b>66.1.1</b> 連續型變量 continuous variables in cluster analysis</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="67" data-path="missing-data-1.html"><a href="missing-data-1.html"><i class="fa fa-check"></i><b>67</b> Missing data 1</a></li>
@@ -1307,9 +1314,25 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>聚類分析法是一種分析不同統計測量值之間相似/差異程度的描述性分析過程。</p>
 <p>爲什麼我們總是想對具有相似性質的事物進行分類？其實，對事物進行區分，或者打上一些標籤，是人類文明在學習並且理解周圍的世界，從而促進科學發展的核心問題之一。在原始社會，對相似事物進行歸類有時候甚至事關生死。例如人類最初需要判定某些食物的共同特徵，區分哪些是含有毒性的，哪類動物可能是兇猛殘忍的。我們從嬰兒時期開始學習語言，學習事物/事件/人物的名稱，這其實也是一個學習對周圍的世界進行區分的學習過程。古代希臘文明的先賢哲學家亞里士多德曾經主張，人類的本能之一，就是不停地想對這個我們生活的世界發生的事情看到的事物進行類別的區分，尋找相似的特徵，區別不一樣的性質。在生物學中，甚至有由亞里士多德的學生<a href="https://zh.wikipedia.org/wiki/%E6%B3%B0%E5%A5%A7%E5%BC%97%E6%8B%89%E6%96%AF%E6%89%98%E6%96%AF">泰奧夫拉斯托斯(Theophrastos)</a>創立的專門對生物進行分類的學科，生物分類學 (taxonomy)，後被瑞典人生物學家<a href="https://en.wikipedia.org/wiki/Carl_Linnaeus">卡爾林納斯 (Carl Linnaeus)</a>進一步發揚光大。18世紀末，<a href="https://en.wikipedia.org/wiki/Michel_Adanson">Michel Adanson</a>又爲人類引入了多元分析(polythetic)的分類系統概念，取代了之前使用單一因素(monothetic)對事物進行簡單分類的思想。很顯然，生物分類學在人類文明史中扮演了重要的角色。你應該很容易能想到達爾文提出的進化論，就是建立在前人對動植物進行了事無鉅細的分類和整理的基礎之上建立起來的重大理論突破。俄國科學家<a href="https://zh.wikipedia.org/wiki/%E5%BE%B7%E7%B1%B3%E7%89%B9%E9%87%8C%C2%B7%E4%BC%8A%E4%B8%87%E8%AF%BA%E7%BB%B4%E5%A5%87%C2%B7%E9%97%A8%E6%8D%B7%E5%88%97%E5%A4%AB">門捷列夫</a>發現化學元素週期性，並且製作出了世界上第一章元素週期表，也爲人類理解原子世界奠定了基石。</p>
 <p>在對事物進行分類這個任務上，聚類分析(cluster analysis)，和判別分析是相同的。有時候在已知對象的分類情況時我們仍然傾向於使用聚類分析的方法，用它來描述數據的一些特徵。同時也能有助於判定之後可能進行的判別分析是否準確。</p>
-<div id="-1" class="section level3">
-<h3><span class="header-section-number">66.1.1</span> 連續型變量</h3>
+<p>簡單歸納，對分類描述過程進行量化的主要步驟有以下幾個：</p>
+<ol style="list-style-type: decimal">
+<li><p>對於採集來的樣本數據 (statistical sample)，我們儘可能多的對它們的特徵變量進行測量。</p></li>
+<li><p>根據第一步獲得的變量信息，定義一個能夠幫助我們判定對象與對象之間相似點或者不同程度的測量指標。</p></li>
+<li><p>對這個測量指標制定一個區分的規則，或者叫做歸類的標準。</p></li>
+<li><p>對樣本進行分類。</p></li>
+<li><p>採集更多的樣本，對分類規則進行調整和完善。</p></li>
+</ol>
+<div id="-continuous-variables-in-cluster-analysis" class="section level3">
+<h3><span class="header-section-number">66.1.1</span> 連續型變量 continuous variables in cluster analysis</h3>
 <p>我們想象手裏的數據是一個矩陣 <span class="math inline">\(X\)</span>，它的維度是 <span class="math inline">\(n \times p\)</span>，用 <span class="math inline">\(x_{ik}\)</span>，來表示第 <span class="math inline">\(i\)</span> 名觀察對象 <span class="math inline">\((i = 1, \dots, n)\)</span> 的第 <span class="math inline">\(k\)</span> 個變量 <span class="math inline">\((k = 1, \dots, p)\)</span> 的值。如果這些被測量的變量全部都是連續型變量的話，每個變量可以被使用幾何學的形式表達的 <span class="math inline">\(p\)</span> 個維度的其中一個平面上。當然，當維度超過3時，人類的無知大腦常常就無法進行有效的想象和推理，我們這裏使用簡單的三個變量，也就是三維空間來表示三個測量獲得的連續型變量：</p>
+<p>例如我們測量了三名學生的身高，體重，以及前臂長。數據分別是：Angelo (190, 75, 30)；Dimitris (170, 75, 25)；Soren (170, 65, 30)。</p>
+<div class="figure" style="text-align: center"><span id="fig:cluster00"></span>
+<div id="htmlwidget-538e3feb88f88d90feda" style="width:80%;height:403.2px;" class="plotly html-widget"></div>
+<script type="application/json" data-for="htmlwidget-538e3feb88f88d90feda">{"x":{"visdat":{"563a69bab0be":["function () ","plotlyVisDat"]},"cur_data":"563a69bab0be","attrs":{"563a69bab0be":{"x":{},"y":{},"z":{},"color":{},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter3d","mode":"markers","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"range":[0,200]},"scene":{"xaxis":{"title":"Height (cm)"},"yaxis":{"title":"Weight (cm)"},"zaxis":{"title":"Forearm (cm)"}},"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":[{"name":"Collaborate","icon":{"width":1000,"ascent":500,"descent":-50,"path":"M487 375c7-10 9-23 5-36l-79-259c-3-12-11-23-22-31-11-8-22-12-35-12l-263 0c-15 0-29 5-43 15-13 10-23 23-28 37-5 13-5 25-1 37 0 0 0 3 1 7 1 5 1 8 1 11 0 2 0 4-1 6 0 3-1 5-1 6 1 2 2 4 3 6 1 2 2 4 4 6 2 3 4 5 5 7 5 7 9 16 13 26 4 10 7 19 9 26 0 2 0 5 0 9-1 4-1 6 0 8 0 2 2 5 4 8 3 3 5 5 5 7 4 6 8 15 12 26 4 11 7 19 7 26 1 1 0 4 0 9-1 4-1 7 0 8 1 2 3 5 6 8 4 4 6 6 6 7 4 5 8 13 13 24 4 11 7 20 7 28 1 1 0 4 0 7-1 3-1 6-1 7 0 2 1 4 3 6 1 1 3 4 5 6 2 3 3 5 5 6 1 2 3 5 4 9 2 3 3 7 5 10 1 3 2 6 4 10 2 4 4 7 6 9 2 3 4 5 7 7 3 2 7 3 11 3 3 0 8 0 13-1l0-1c7 2 12 2 14 2l218 0c14 0 25-5 32-16 8-10 10-23 6-37l-79-259c-7-22-13-37-20-43-7-7-19-10-37-10l-248 0c-5 0-9-2-11-5-2-3-2-7 0-12 4-13 18-20 41-20l264 0c5 0 10 2 16 5 5 3 8 6 10 11l85 282c2 5 2 10 2 17 7-3 13-7 17-13z m-304 0c-1-3-1-5 0-7 1-1 3-2 6-2l174 0c2 0 4 1 7 2 2 2 4 4 5 7l6 18c0 3 0 5-1 7-1 1-3 2-6 2l-173 0c-3 0-5-1-8-2-2-2-4-4-4-7z m-24-73c-1-3-1-5 0-7 2-2 3-2 6-2l174 0c2 0 5 0 7 2 3 2 4 4 5 7l6 18c1 2 0 5-1 6-1 2-3 3-5 3l-174 0c-3 0-5-1-7-3-3-1-4-4-5-6z"},"click":"function(gd) { \n        // is this being viewed in RStudio?\n        if (location.search == '?viewer_pane=1') {\n          alert('To learn about plotly for collaboration, visit:\\n https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html');\n        } else {\n          window.open('https://cpsievert.github.io/plotly_book/plot-ly-for-collaboration.html', '_blank');\n        }\n      }"}],"cloud":false},"data":[{"x":[190],"y":[75],"z":[30],"type":"scatter3d","mode":"markers","name":"Angelo","marker":{"color":"rgba(102,194,165,1)","line":{"color":"rgba(102,194,165,1)"}},"textfont":{"color":"rgba(102,194,165,1)"},"error_y":{"color":"rgba(102,194,165,1)"},"error_x":{"color":"rgba(102,194,165,1)"},"line":{"color":"rgba(102,194,165,1)"},"frame":null},{"x":[175],"y":[75],"z":[25],"type":"scatter3d","mode":"markers","name":"Dimitris","marker":{"color":"rgba(252,141,98,1)","line":{"color":"rgba(252,141,98,1)"}},"textfont":{"color":"rgba(252,141,98,1)"},"error_y":{"color":"rgba(252,141,98,1)"},"error_x":{"color":"rgba(252,141,98,1)"},"line":{"color":"rgba(252,141,98,1)"},"frame":null},{"x":[170],"y":[65],"z":[30],"type":"scatter3d","mode":"markers","name":"Soren","marker":{"color":"rgba(141,160,203,1)","line":{"color":"rgba(141,160,203,1)"}},"textfont":{"color":"rgba(141,160,203,1)"},"error_y":{"color":"rgba(141,160,203,1)"},"error_x":{"color":"rgba(141,160,203,1)"},"line":{"color":"rgba(141,160,203,1)"},"frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"base_url":"https://plot.ly"},"evals":["config.modeBarButtonsToAdd.0.click"],"jsHooks":[]}</script>
+<p class="caption">
+圖 66.1: A physical 3D space showing measurements of three variables.
+</p>
+</div>
 </div>
 </div>
 </div>
