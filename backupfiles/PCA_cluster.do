@@ -122,3 +122,11 @@ pca bm1 bm2 bm3 bm4, cov
 
 // 15. 
 
+scoreplot, mlabel(labtech)
+
+scoreplot, components(3) mlabel(labtech)
+
+
+pca bm1 bm2 bm3 bm4, cov vce(normal)
+
+log close
