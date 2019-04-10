@@ -945,7 +945,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul></li>
 <li class="chapter" data-level="67" data-path="missing-data-1.html"><a href="missing-data-1.html"><i class="fa fa-check"></i><b>67</b> Missing data 1</a></li>
 <li class="chapter" data-level="68" data-path="principal-component-analysis.html"><a href="principal-component-analysis.html"><i class="fa fa-check"></i><b>68</b> Principal Component Analysis</a><ul>
-<li class="chapter" data-level="68.1" data-path="principal-component-analysis.html"><a href="principal-component-analysis.html#cluster-analysispca-practical"><i class="fa fa-check"></i><b>68.1</b> Cluster analysis/PCA practical</a></li>
+<li class="chapter" data-level="68.1" data-path="principal-component-analysis.html"><a href="principal-component-analysis.html#cluster-analysispca-practical"><i class="fa fa-check"></i><b>68.1</b> Cluster analysis/PCA practical</a><ul>
+<li class="chapter" data-level="68.1.1" data-path="principal-component-analysis.html"><a href="principal-component-analysis.html#section-68.1.1"><i class="fa fa-check"></i><b>68.1.1</b> 使用的數據和簡單背景知識</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="69" data-path="missing-data-2.html"><a href="missing-data-2.html"><i class="fa fa-check"></i><b>69</b> Missing data 2</a></li>
 <li class="chapter" data-level="70" data-path="further-issues.html"><a href="further-issues.html"><i class="fa fa-check"></i><b>70</b> Further issues</a></li>
@@ -1304,6 +1306,48 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1><span class="header-section-number">第 68 章</span> Principal Component Analysis</h1>
 <div id="cluster-analysispca-practical" class="section level2">
 <h2><span class="header-section-number">68.1</span> Cluster analysis/PCA practical</h2>
+<p>本次練習完成時，你將學會：</p>
+<ol style="list-style-type: decimal">
+<li>如何使用聚類分析，和主成分分析法來探索一組多變量數據之間的關係；</li>
+<li>理解並懂得如何選取合適的距離測量尺度，和聚類分析方法；</li>
+<li>繪製並能夠解釋由多層聚類分析算法 (hierarchical clustering algorithm) 獲得的樹狀圖；</li>
+<li>使用主成分分析法對數據進行座標轉換，計算多個變量之間的方差，協方差矩陣，懂得如何判斷保留主成分的個數；</li>
+<li>通過把數據繪製在較低維度的主成分座標軸上來判斷數據中可能存在的潛在分層/分組。</li>
+</ol>
+<div id="section-68.1.1" class="section level3">
+<h3><span class="header-section-number">68.1.1</span> 使用的數據和簡單背景知識</h3>
+<p>假設你是一名生物測量技術公司的統計師，現在有這樣一組數據，包含了對某植物測量的4種生物標幟物(biomarkers)。據報道，這四種成分或許能減少你公司生產的某藥物引起的副作用。爲了嘗試分析該植物的生物特性，從該植物的50個不同樣本中，測量了這4中生物標幟物的濃度。你的任務之一是對數據進行初步分析，彙報任何你找到的可能存在的顯著特徵。</p>
+<ol style="list-style-type: decimal">
+<li>在R裏讀入你的數據，看看這4種生物標幟物的簡單統計量和分佈，它們用的是相同的測量單位嗎？</li>
+</ol>
+<pre class="sourceCode r"><code class="sourceCode r">plant &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/plant.dta&quot;</span>)
+plant &lt;-<span class="st"> </span>plant[, <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>]
+<span class="kw">head</span>(plant)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##       bm1     bm2     bm3     bm4
+##     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1  17.4    78.6   101.    109.   
+## 2  87      30.1    79.1     6.60 
+## 3   0.100   0.600   0.900   0.200
+## 4 106      10      44.6    57.6  
+## 5 141.    122     115.    123.   
+## 6   0.5     0.800   0.200   0.5</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summ</span>(plant)</code></pre>
+<pre><code>## 
+## No. of observations = 50
+## 
+##   Var. name obs. mean   median  s.d.   min.   max.  
+## 1 bm1       50   56.6   47.55   48.05  0      143   
+## 2 bm2       50   53.21  52.7    45.13  0      143.6 
+## 3 bm3       50   61.43  55.25   51.47  0.2    147.9 
+## 4 bm4       50   57.43  56.75   45.45  0.1    146.1</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">psych<span class="op">::</span><span class="kw">describe</span>(plant)</code></pre>
+<pre><code>##     vars  n  mean    sd median trimmed   mad min   max range skew kurtosis   se
+## bm1    1 50 56.60 48.05  47.55   53.36 66.05 0.0 143.0 143.0 0.27    -1.38 6.80
+## bm2    2 50 53.21 45.13  52.70   49.62 59.45 0.0 143.6 143.6 0.43    -1.07 6.38
+## bm3    3 50 61.43 51.47  55.25   58.86 69.76 0.2 147.9 147.7 0.27    -1.47 7.28
+## bm4    4 50 57.43 45.45  56.75   54.71 52.41 0.1 146.1 146.0 0.32    -1.12 6.43</code></pre>
+</div>
 </div>
 </div>
             </section>
