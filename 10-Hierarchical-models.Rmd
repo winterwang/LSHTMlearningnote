@@ -3653,7 +3653,7 @@ $$
 d_{ij} = \{ \sum_{k = 1}^p |x_{ik} - x_{jk}|^\ell \}^\frac{1}{\ell}
 $$
 
-閔科夫斯基度量衡試圖給差距較大的測量值之間增加權重用於區分彼此。不論是使用那種距離定義，這些測量距離的度量衡都由如下的性質：
+閔科夫斯基度量衡試圖給差距較大的測量值之間增加權重用於區分彼此。不論是使用那種距離定義，這些測量距離的度量衡都具有如下的數學性質 (mathematical properties)：
 
 1. 兩點之間的距離大於等於零, positivity <br> $d_{ij} \geqslant 0$，如果 $d_{ij} = 0$，那麼對於任何一個 $k = 1, \dots, p$，它們都是相等的 $x_{ik} = x_{jk}$。
 2. 對稱性, symmetry <br> $d_{ij} = d_{ji}$
@@ -3684,13 +3684,36 @@ $$
 
 [其中亞卡爾距離係數更適合用於測量一些表達某些特質存在/不存在時兩名對象之間的距離測量 (see the "Difference with the simple matching coefficient (SMC)" session in the Wikipedia)](https://en.wikipedia.org/wiki/Jaccard_index)。
 
-另外值得注意的是，在測量二分類變量距離的時候，三角形不等性的特質不一定會得到滿足。
+
+
+另外值得注意的是，在測量二分類變量距離的時候，三角形不等性的特質不一定會得到滿足。 (Please note that in general for dichotomous variables, the triangle inequality does not hold.)
 
 用來計算測量對象之間距離的方法，和度量衡其實層出不窮，這裏只是簡單介紹了幾種。其餘的還有比如說由 [@Gower1971] 提出的 [Gower Index](https://cran.r-project.org/web/packages/gower/vignettes/intro.html)，該指標可以同時把測量有連續型變量和分類型變量，二分類變量等都包含進來。值得提醒的是，如果是討論非連續型測量值的對象距離，我們常常用它們之間的相似性(similarities) $s_{ij}$，而不太關注異質性 (dissimilarities) $d_{ij}$，但其是它們之間的簡單轉換關係就是 $d_{ij} = 1 - s_{ij}$。
 
 ### 定義分類方法
 
-確定了距離測量的指標之後，我們就需要來定義分類的方法。
+確定了用於衡量異質性 (dissimilarity) 距離的指標之後，我們就需要來定義分類的方法。首先把這個事先定下來的距離指標應用到我們的多元變量數據矩陣 (multivariate data matrix $\mathbf{X}$) (dimension: $n\times p$, where n indicates number of people, p indicates number of observed variables). 獲得一個形狀爲 $n\times n$ 的距離矩陣 $\mathbf{D}$ (對應上面三條數學性質中的第二條，對稱性 $d_{ij} = d_{ji}$)。獲得觀察對象的距離矩陣 $\mathbf{D}$ 之後需要決定的就是如何給對象進行分組的策略。該分組策略需要能使觀察對象被分組後，組內的對象相對組外對象更加相似，或者組外對象相對組內對象更加不同 (a sensible strategy would be to look for sets of units such that all units in that set are relatively similar to each other but relatively different from all units outside that set)。所以，用於分組策略的算法要有一定的可行性，它還要能夠量化對象之間的相對相似性 (relative similarity) 從而能夠完成以下任務：
+
+1. 決定哪些人/對象被聚類到同一組中 (which pairs of units to join together into a cluster)
+
+2. 每次聚類過程完成以後，重複相同的策略和算法，也就是重新計算新組成的聚類和剩餘的對象之間的距離。
+
+3. 循環往復前兩個步驟直至全部的對象/個體都被分到各自的聚類 (cluster)。
+
+事實上重複上述步驟，最終會把每個個體都分配到一個單獨的聚類中，其實就是每個個體本身，那就跟沒有做聚類分析沒有區別，也沒有意義了。於是我們需要把聚類分析的過程通過圖形的方式展示出來。這樣的圖形被叫做樹狀圖 (dendrogram)，可以在視覺上輔助我們做出要給對象分成多少個聚類的決定。樹狀圖的形狀常見的如下圖 (\@ref(fig:cluster01)) 所示，座標軸之一是所有的觀測對象的編號，另一個座標軸則是度量每個聚類或者觀測對象個體之間的距離。
+
+```{r cluster01, cache=TRUE, fig.asp=.7, fig.width=7, fig.cap='Dendrogram for L2_avlink cluster analysis', fig.align='center', out.width='80%'}
+plant <- read_dta("backupfiles/plant.dta")
+plant <- plant[, 1:4]
+
+# prepare hierarchical cluster
+hc <-  hclust(dist(plant), "ave")
+
+
+plot(hc, cex = 0.8, hang = -1, 
+     main = "", ylab = "L2 dissimilarity measure", 
+     xlab = "No. of specimen")
+```
 
 # Missing data 1
 
@@ -3709,7 +3732,7 @@ $$
 
 ### 使用的數據和簡單背景知識
 
-假設你是一名生物測量技術公司的統計師，現在有這樣一組數據，包含了對某植物測量的4種生物標幟物(biomarkers)。據報道，這四種成分或許能減少你公司生產的某藥物引起的副作用。爲了嘗試分析該植物的生物特性，從該植物的50個不同樣本中，測量了這4中生物標幟物的濃度。你的任務之一是對數據進行初步分析，彙報任何你找到的可能存在的顯著特徵。
+假設你是一名生物測量技術公司的統計師，現在有這樣一組數據，包含了對某植物測量的4種生物標幟物(biomarkers)。據報道，這四種成分或許能減少你公司生產的某藥物引起的副作用。爲了嘗試分析該植物的生物特性，從該植物的50個不同樣本中，測量了這4種生物標幟物的濃度。你的任務之一是對數據進行初步分析，彙報任何你找到的可能存在的顯著特徵差異。
 
 1. 在R裏讀入你的數據，看看這4種生物標幟物的簡單統計量和分佈，它們用的是相同的測量單位嗎？
 
@@ -3777,6 +3800,7 @@ plot(cluster::agnes(plant, metric = "manhattan", stand = F), which.plots = 2, ha
 
 可以看出，當使用曼哈頓距離做度量衡時，聚類的過程和之前的沒有本質上的區別，但是圖形的樹狀分支上似乎不再左右對稱。
 
+6. 接下來使用歐幾里得距離做度量衡，與上面的嘗試不同，這裏我們嘗試用完全連接，和單連接
 
 
 # Missing data 2

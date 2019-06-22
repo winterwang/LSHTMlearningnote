@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2019-06-19" />
+<meta name="date" content="2019-06-23" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1367,7 +1367,7 @@ d_{ij} = \sum_{k = 1}^p |x_{ik} - x_{jk}|
 <p><span class="math display">\[
 d_{ij} = \{ \sum_{k = 1}^p |x_{ik} - x_{jk}|^\ell \}^\frac{1}{\ell}
 \]</span></p>
-<p>閔科夫斯基度量衡試圖給差距較大的測量值之間增加權重用於區分彼此。不論是使用那種距離定義，這些測量距離的度量衡都由如下的性質：</p>
+<p>閔科夫斯基度量衡試圖給差距較大的測量值之間增加權重用於區分彼此。不論是使用那種距離定義，這些測量距離的度量衡都具有如下的數學性質 (mathematical properties)：</p>
 <ol style="list-style-type: decimal">
 <li>兩點之間的距離大於等於零, positivity <br> <span class="math inline">\(d_{ij} \geqslant 0\)</span>，如果 <span class="math inline">\(d_{ij} = 0\)</span>，那麼對於任何一個 <span class="math inline">\(k = 1, \dots, p\)</span>，它們都是相等的 <span class="math inline">\(x_{ik} = x_{jk}\)</span>。</li>
 <li>對稱性, symmetry <br> <span class="math inline">\(d_{ij} = d_{ji}\)</span></li>
@@ -1411,12 +1411,34 @@ d_{ij} = \{ \sum_{k = 1}^p |x_{ik} - x_{jk}|^\ell \}^\frac{1}{\ell}
 <li><p>亞卡爾距離係數 (Jaccard coefficient)，則是把簡單匹配係數的分母中，d 的部分拿掉：<span class="math display">\[d_{ij} = \frac{b + c}{a + b + c}\]</span></p></li>
 </ol>
 <p><a href="https://en.wikipedia.org/wiki/Jaccard_index">其中亞卡爾距離係數更適合用於測量一些表達某些特質存在/不存在時兩名對象之間的距離測量 (see the “Difference with the simple matching coefficient (SMC)” session in the Wikipedia)</a>。</p>
-<p>另外值得注意的是，在測量二分類變量距離的時候，三角形不等性的特質不一定會得到滿足。</p>
+<p>另外值得注意的是，在測量二分類變量距離的時候，三角形不等性的特質不一定會得到滿足。 (Please note that in general for dichotomous variables, the triangle inequality does not hold.)</p>
 <p>用來計算測量對象之間距離的方法，和度量衡其實層出不窮，這裏只是簡單介紹了幾種。其餘的還有比如說由 <span class="citation">(Gower <a href="#ref-Gower1971">1971</a>)</span> 提出的 <a href="https://cran.r-project.org/web/packages/gower/vignettes/intro.html">Gower Index</a>，該指標可以同時把測量有連續型變量和分類型變量，二分類變量等都包含進來。值得提醒的是，如果是討論非連續型測量值的對象距離，我們常常用它們之間的相似性(similarities) <span class="math inline">\(s_{ij}\)</span>，而不太關注異質性 (dissimilarities) <span class="math inline">\(d_{ij}\)</span>，但其是它們之間的簡單轉換關係就是 <span class="math inline">\(d_{ij} = 1 - s_{ij}\)</span>。</p>
 </div>
 <div id="section-304" class="section level3">
 <h3><span class="header-section-number">66.1.3</span> 定義分類方法</h3>
-<p>確定了距離測量的指標之後，我們就需要來定義分類的方法。</p>
+<p>確定了用於衡量異質性 (dissimilarity) 距離的指標之後，我們就需要來定義分類的方法。首先把這個事先定下來的距離指標應用到我們的多元變量數據矩陣 (multivariate data matrix <span class="math inline">\(\mathbf{X}\)</span>) (dimension: <span class="math inline">\(n\times p\)</span>, where n indicates number of people, p indicates number of observed variables). 獲得一個形狀爲 <span class="math inline">\(n\times n\)</span> 的距離矩陣 <span class="math inline">\(\mathbf{D}\)</span> (對應上面三條數學性質中的第二條，對稱性 <span class="math inline">\(d_{ij} = d_{ji}\)</span>)。獲得觀察對象的距離矩陣 <span class="math inline">\(\mathbf{D}\)</span> 之後需要決定的就是如何給對象進行分組的策略。該分組策略需要能使觀察對象被分組後，組內的對象相對組外對象更加相似，或者組外對象相對組內對象更加不同 (a sensible strategy would be to look for sets of units such that all units in that set are relatively similar to each other but relatively different from all units outside that set)。所以，用於分組策略的算法要有一定的可行性，它還要能夠量化對象之間的相對相似性 (relative similarity) 從而能夠完成以下任務：</p>
+<ol style="list-style-type: decimal">
+<li><p>決定哪些人/對象被聚類到同一組中 (which pairs of units to join together into a cluster)</p></li>
+<li><p>每次聚類過程完成以後，重複相同的策略和算法，也就是重新計算新組成的聚類和剩餘的對象之間的距離。</p></li>
+<li><p>循環往復前兩個步驟直至全部的對象/個體都被分到各自的聚類 (cluster)。</p></li>
+</ol>
+<p>事實上重複上述步驟，最終會把每個個體都分配到一個單獨的聚類中，其實就是每個個體本身，那就跟沒有做聚類分析沒有區別，也沒有意義了。於是我們需要把聚類分析的過程通過圖形的方式展示出來。這樣的圖形被叫做樹狀圖 (dendrogram)，可以在視覺上輔助我們做出要給對象分成多少個聚類的決定。樹狀圖的形狀常見的如下圖 (<a href="cluster-analysisunsupervised-learning-.html#fig:cluster01">66.2</a>) 所示，座標軸之一是所有的觀測對象的編號，另一個座標軸則是度量每個聚類或者觀測對象個體之間的距離。</p>
+<pre class="sourceCode r"><code class="sourceCode r">plant &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/plant.dta&quot;</span>)
+plant &lt;-<span class="st"> </span>plant[, <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>]
+
+<span class="co"># prepare hierarchical cluster</span>
+hc &lt;-<span class="st">  </span><span class="kw">hclust</span>(<span class="kw">dist</span>(plant), <span class="st">&quot;ave&quot;</span>)
+
+
+<span class="kw">plot</span>(hc, <span class="dt">cex =</span> <span class="fl">0.8</span>, <span class="dt">hang =</span> <span class="dv">-1</span>, 
+     <span class="dt">main =</span> <span class="st">&quot;&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;L2 dissimilarity measure&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;No. of specimen&quot;</span>)</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:cluster01"></span>
+<img src="bookdown_files/figure-html/cluster01-1.png" alt="Dendrogram for L2_avlink cluster analysis" width="80%" />
+<p class="caption">
+圖 66.2: Dendrogram for L2_avlink cluster analysis
+</p>
+</div>
 </div>
 </div>
 </div>
