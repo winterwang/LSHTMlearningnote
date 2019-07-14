@@ -3964,12 +3964,12 @@ $$
 \end{aligned}
 $$
  
-所以，$\bf{\Sigma}^2 = \bf{\Lambda}$ ，也就是收在奇異值分解中獲得的中間矩陣 $\bf{\Sigma}_{n \times p}$，它對角線上的數值的平方，就是每個原始變量的方差，或者說它們本身是原始數據的標準差。奇異值分解矩陣的方法最常見被用於實施對應分析 (Correspondence Analysis)。
+所以，$\bf{\Sigma}^2 = \bf{\Lambda}$ ，也就是說在奇異值分解中獲得的中間矩陣 $\bf{\Sigma}_{n \times p}$，它對角線上的數值的平方，就是每個原始變量的方差，或者說它們本身是原始數據的標準差。奇異值分解矩陣的方法最常見被用於實施對應分析 (Correspondence Analysis)。
 
 
 ## 主成分分析數據實例
 
-[橙汁數據](http://factominer.free.fr/bookV2/orange.csv)，是邀請美食家對產自世界各地的不同品牌品種的橙汁進行一個一個的味道/品質描述，並給每個項目打分。你可以用下面的代碼下載這個數據並觀察每個描述的變量，且很容易觀察的到的是，這些變量之間並不完全獨立，有些變量可能和另一些變量相關：
+[橙汁數據](http://factominer.free.fr/bookV2/orange.csv)，是邀請美食家對產自世界各地的六種品牌的橙汁進行一個一個的味道/品質描述，並給每個項目打分後彙總獲得的評價數據。你可以用下面的代碼下載這個數據並觀察每個描述的變量，且很容易觀察的到的是，這些變量之間並不完全獨立，有些變量可能和另一些變量相關：
 
 ```{r PCAorange, message=FALSE, warning=FALSE, echo=FALSE}
 orange <- read.table("http://factominer.free.fr/bookV2/orange.csv", 
@@ -3981,6 +3981,8 @@ orange[, 1:7] %>%
    scroll_box(width = "100%", height = "300px")
 ```
 
+
+
 進行主成分分析在Stata只需要這樣一行代碼：
 
 ```
@@ -3989,6 +3991,7 @@ pca odour* pulp* intens* acid* bitter* sweetness, cor
 ```
 
 你就會獲得十分直觀的結果：
+
 ```
 
 Principal components/correlation                 Number of obs    =          6
@@ -4023,7 +4026,7 @@ Principal components (eigenvectors)
     ------------------------------------------------------------------------------
 ```
 
-根據方差協方差矩陣進行的主成分分析結果，我們發現主成分 6 和 7 可以忽略不計。
+根據方差協方差矩陣進行的主成分分析結果，我們發現主成分 6 和 7 可以忽略不計。相同的計算結果可以在R裏面通過方便的計算包 [`FactoMineR`](http://factominer.free.fr/) 來計算並用 [`factoextra`](http://www.sthda.com/english/wiki/factoextra-r-package-easy-multivariate-data-analyses-and-elegant-visualization) 來實現其分析圖形的美觀展示：
 
 
 
@@ -4033,17 +4036,33 @@ org.pca <- PCA(orange[, 1:7], ncp = 7, graph = FALSE)
 
 library(factoextra)
 eig.val <- get_eigenvalue(org.pca)
-eig.val
+eig.val # eigenvalue (variances of each principal components)
+
+# eigen vectors:
+org.pca$svd$V
 ```
+
+於是根據計算獲得的特徵值向量，我們可以寫下這5個主成分變量和原始變量之間的轉換關係方程：
+
+$$
+\begin{aligned}
+y_1 & = 0.2110x_1 + 0.4524x_2 + 0.3313x_3 - 0.2984x_4 - 0.4191x_5 - 0.4292x_6 + 0.4384x_7 \\
+y_2 & = 0.6534x_1 + 0.1162x_2 + 0.5340x_3 + 0.3714x_4 + 0.3017x_5 + 0.1628x_6 - 0.1374x_7 \\
+y_3 & =-0.5174x_1 - 0.0646x_2 + 0.3290x_3 + 0.6910x_4 - 0.0237x_5 - 0.3152x_6 + 0.2061x_7 \\
+y_4 & = 0.0286x_1 + 0.2668x_2 - 0.3327x_3 + 0.0189x_4 + 0.7065x_5 - 0.0974x_6 + 0.5553x_7 \\
+y_5 & = 0.0310x_1 + 0.2952x_2 - 0.2250x_3 + 0.3456x_4 - 0.4106x_5 + 0.6712x_6 + 0.3503x_7 \\
+\end{aligned}
+$$
+
 
 ```{r PCAorangeScreeplot,  cache=TRUE, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap="", fig.align='center', out.width='70%'}
 fviz_eig(org.pca, addlabels = TRUE, ylim = c(0, 70)) + 
-  theme(text = element_text(size = 15, face = "bold")
-  #   axis.text = element_text(size = 15, face = "bold"),
-  # axis.text.x = element_text(size = 15, face = "bold"),
-  # axis.text.y = element_text(size = 15, face = "bold"), 
-  # axis.title = element_text(size = 15, face = "bold"),
-  # plot.title = element_text(size = 15, face = "bold"), 
+  theme(
+    axis.text = element_text(size = 10, face = "bold"),
+  axis.text.x = element_text(size = 10, face = "bold"),
+  axis.text.y = element_text(size = 10, face = "bold"),
+  axis.title = element_text(size = 8, face = "bold"),
+  plot.title = element_text(size = 10, face = "bold"),
   )
 ```
 
