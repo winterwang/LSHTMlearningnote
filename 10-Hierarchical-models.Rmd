@@ -4054,6 +4054,8 @@ y_5 & = 0.0310x_1 + 0.2952x_2 - 0.2250x_3 + 0.3456x_4 - 0.4106x_5 + 0.6712x_6 + 
 \end{aligned}
 $$
 
+於是，解釋完了如何從原始數據變量根據計算獲得的特徵值向量轉換成爲新的變量之後，要面對的問題是，我們要保留多少主成分？
+我們通常會使用圖 \@ref(fig:PCAorangeScreeplot) 那樣的碎石圖 (Scree plot) 來輔助判斷。碎石圖通常縱軸是每個主成分能夠解釋的數據總體方差的百分比，然後橫軸是主成分的個數。所以我們會期待出現一個像手肘一樣的形狀提示應該在第幾個主成分的地方停下。通常在統計分析中，我們默認的準則是，至少保留的主成分個數要能夠解釋總體方差的 70%/80% 以上才較爲理想。[Kaiser 準則](https://en.wikipedia.org/wiki/Exploratory_factor_analysis#Kaiser's_(1960)_eigenvalue-greater-than-one_rule_(K1_or_Kaiser_criterion)) 建議的是，最好保留下特徵值大於等於1(也就是標準化數據之後獲得的主成分變量方差大於等於1)的主成分變量。在我們的橙汁數據實例中，顯然保留前兩個主成分就已經能夠解釋 86.81% 的總體方差，我們認爲這是理想的主成分個數。
 
 ```{r PCAorangeScreeplot,  cache=TRUE, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap="", fig.align='center', out.width='70%'}
 fviz_eig(org.pca, addlabels = TRUE, ylim = c(0, 70)) + 
@@ -4066,7 +4068,48 @@ fviz_eig(org.pca, addlabels = TRUE, ylim = c(0, 70)) +
   )
 ```
 
+另外一種輔助的圖形是叫做分數圖 (score plot)，又名個人圖 (graph of individuals)，如果個體的變量特徵相近，他們會在圖中聚在較爲靠近的地方：
 
+```{r PCAorangeScoreplot,  cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=4, fig.cap="", fig.align='center', out.width='70%'}
+fviz_pca_ind(org.pca, pointsize = "cos2", pointshape = 21, 
+             fill = "#E7B800", repel = TRUE, labelsize = 4) 
+```
+
+回到 R 幫忙分析的主成分結果報告來：
+
+```{r PCAorange2, message=FALSE, warning=FALSE}
+summary(org.pca)
+```
+
+可以看到第一部分是特徵值(eigenvalue)的結果描述，第二部分是個人 (individual) 的分析報告：
+
+```
+...{omitted}...
+Individuals
+                       Dist    Dim.1    ctr   cos2    Dim.2    ctr   cos2 
+Pampryl amb.       |  3.029 | -2.984 31.288  0.970 | -0.082  0.085  0.001
+Tropicana amb.     |  1.976 |  0.886  2.761  0.201 | -1.715 36.771  0.753 
+Fruvita fr.        |  2.595 |  1.937 13.182  0.557 |  0.040  0.020  0.000 
+Joker amb.         |  2.094 | -1.896 12.631  0.820 | -0.834  8.686  0.158 
+Tropicana fr.      |  3.512 |  3.186 35.660  0.823 |  0.589  4.335  0.028 
+Pampryl fr.        |  2.338 | -1.129  4.479  0.233 |  2.002 50.102  0.733 
+...{omitted}...
+```
+
+其中，
+
+- `Dist` 是每個個體(行數據)，到座標軸原點 (平均重心位置) 的距離。此數據中距離原點最遠的兩種橙汁是 `Pampryl amb.` (最左邊) 和 `Tropicana fr.` (最右邊)。
+- `Dim.1` 是該個體，在第一個主成分變量座標軸上的座標。
+- `ctr` 是該個體在第一個主成分變量提取時貢獻的百分比。
+- `cos2` 是該個體在該主成分變量上投影的慣性除以該個體本身的慣性所佔的比例，又叫做該個體對相應主成分變量的代表性評價 (the quality of representation of an individual $i$ on the principle component $s$ is measured by the distance between the point within the space $u_s$ and the projection on the component)。
+
+$$
+\text{quality of representation}_s(i) = \frac{\text{Projected inertia of }i \text{ on } u_s}{\text{Total inertia of }i} = \cos^2\theta_i^s 
+$$
+
+```{r PCAorangevariableplot,  cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=4, fig.cap="", fig.align='center', out.width='70%'}
+fviz_pca_var(org.pca, repel = TRUE, labelsize = 4) 
+```
 
 ## Cluster analysis/PCA practical 
 
