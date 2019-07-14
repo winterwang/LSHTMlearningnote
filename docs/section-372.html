@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 49 章 混雜的調整，交互作用，和模型的可壓縮性 | 醫學統計學</title>
+  <title>第 84 章 建模和模型的檢查 | 醫學統計學</title>
   <meta name="description" content="在LSHTM的學習筆記" />
   <meta name="generator" content="bookdown 0.12 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 49 章 混雜的調整，交互作用，和模型的可壓縮性 | 醫學統計學" />
+  <meta property="og:title" content="第 84 章 建模和模型的檢查 | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 49 章 混雜的調整，交互作用，和模型的可壓縮性 | 醫學統計學" />
+  <meta name="twitter:title" content="第 84 章 建模和模型的檢查 | 醫學統計學" />
   
   <meta name="twitter:description" content="在LSHTM的學習筆記" />
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="poisson-glm-for-rates.html">
-<link rel="next" href="section-224.html">
+<link rel="prev" href="MCMC-methods.html">
+<link rel="next" href="section-376.html">
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-table.css" rel="stylesheet" />
@@ -1303,921 +1303,655 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="section-220" class="section level1">
-<h1><span class="header-section-number">第 49 章</span> 混雜的調整，交互作用，和模型的可壓縮性</h1>
-<p>臨牀醫學，流行病學研究的許多問題，需要我們通過數據來評估某些結果變量 (outcome) 和某些預測變量 (predictors/exposures) 之間的關係 (甚至是因果關係)。這些問題的最佳解決方法應該說是隨機臨牀試驗 (ramdomized clinical trial, RCT)。但是有更多的時候 (由於違反醫學倫理，或者現狀所困，甚至是知識有限) 我們無法設計 RCT 來解決這些問題，就只能藉助於觀察性研究 (observational study)。觀察性研究最大的侷限性在於無法像 RCT 那樣從實驗設計階段把混雜因素排除或者降到最低，所以觀察數據在分析的時候，混雜 (confounding) 是必須要加以考慮的一大要因。在簡單線性迴歸章節 (Section <a href="multivariable-models.html#confounding">29.5</a>)，詳細討論過混雜因素的定義及條件：</p>
-<blockquote>
-<p>對於一個預測變量是否夠格被叫做混雜因子，它必須滿足下面的條件：</p>
-<ul>
-<li>與關心的預測變量相關 (i.e. <span class="math inline">\(\delta_1 \neq 0\)</span>)；</li>
-<li>與因變量相關 (當關心的預測變量不變時，<span class="math inline">\(\beta_2\neq0\)</span> )；</li>
-<li>不在預測變量和因變量的因果關係 (如果有的話) 中作媒介。Not be on the causal pathway between the predictor of interest and the dependent variable.</li>
-</ul>
-</blockquote>
-<p>下面的統計數據來自一個比較手術和超聲碎石術對於腎結石治療結果的評價。已知大多數醫生都公認，腎結石的直徑小於 2 公分時治療成功的概率較高。</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-<span id="tab:Lithotripsy">表 49.1: </span>Lithotripsy
-</caption>
-<thead>
-<tr>
-<th style="border-bottom:hidden" colspan="1">
-</th>
-<th style="border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="2">
-<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
-&lt; 2cm Diameter
-</div>
-</th>
-<th style="border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="2">
-<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
-&gt;= 2cm Diameter
-</div>
-</th>
-</tr>
-<tr>
-<th style="text-align:center;">
-Group
-</th>
-<th style="text-align:center;">
-Surgery
-</th>
-<th style="text-align:center;">
-Lithotripsy
-</th>
-<th style="text-align:center;">
-Surgery
-</th>
-<th style="text-align:center;">
-Lithotripsy
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-81.00
-</td>
-<td style="text-align:center;">
-234
-</td>
-<td style="text-align:center;">
-192.00
-</td>
-<td style="text-align:center;">
-55
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-6.00
-</td>
-<td style="text-align:center;">
-36
-</td>
-<td style="text-align:center;">
-71.00
-</td>
-<td style="text-align:center;">
-25
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-87.00
-</td>
-<td style="text-align:center;">
-270
-</td>
-<td style="text-align:center;">
-263.00
-</td>
-<td style="text-align:center;">
-80
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Odds Ratios
-</td>
-<td style="text-align:center;">
-2.08
-</td>
-<td style="text-align:center;">
-NA
-</td>
-<td style="text-align:center;">
-1.23
-</td>
-<td style="text-align:center;">
-NA
-</td>
-</tr>
-</tbody>
-</table>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.1: Lithotripsy data
-</caption>
-<thead>
-<tr>
-<th style="border-bottom:hidden" colspan="1">
-</th>
-<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
-&lt;div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;&gt; <span class="math inline">\(&lt;2\)</span> cm Diameter
-</div>
-</th>
-<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
-&lt;div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;&gt; <span class="math inline">\(\geqslant2\)</span> cm Diameter
-</div>
-</th>
-</tr>
-<tr>
-<th style="text-align:center;">
-Group
-</th>
-<th style="text-align:center;">
-Surgery
-</th>
-<th style="text-align:center;">
-Lithotripsy
-</th>
-<th style="text-align:center;">
-Surgery
-</th>
-<th style="text-align:center;">
-Lithotripsy
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-81
-</td>
-<td style="text-align:center;">
-234
-</td>
-<td style="text-align:center;">
-192
-</td>
-<td style="text-align:center;">
-55
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-6
-</td>
-<td style="text-align:center;">
-36
-</td>
-<td style="text-align:center;">
-71
-</td>
-<td style="text-align:center;">
-25
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-87
-</td>
-<td style="text-align:center;">
-270
-</td>
-<td style="text-align:center;">
-263
-</td>
-<td style="text-align:center;">
-80
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Odds Ratios
-</td>
-<td style="text-align:center;">
-2.08
-</td>
-<td style="text-align:center;">
-</td>
-<td style="text-align:center;">
-1.23
-</td>
-<td style="text-align:center;">
-</td>
-</tr>
-</tbody>
-</table>
-<p>可以看到，在上面的分組表格中，左右兩邊的四格表分別統計了腎結石尺寸小於 2 cm 和大於 2 cm 時，手術摘除腎結石的成功/失敗次數，以及超聲碎石術的成功/失敗次數。這個表格告訴我們，無論腎結石的尺寸是大於還是小於 2 cm，手術的成功的比值比都大於超聲碎石術。但是如果我們沒有把數據按照腎結石尺寸區分時，數據就被壓縮 (collapsed) 成了下面表格總結的樣子：</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-<span id="tab:Lithotripsy-collapsed">表 49.2: </span>Lithotripsy collapsed
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-Outcome
-</th>
-<th style="text-align:center;">
-Surgery
-</th>
-<th style="text-align:center;">
-Lithotripsy
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-273 (78%)
-</td>
-<td style="text-align:center;">
-289 (83%)
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-77
-</td>
-<td style="text-align:center;">
-61
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-350
-</td>
-<td style="text-align:center;">
-350
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Odds ratio
-</td>
-<td style="text-align:center;">
-0.75
-</td>
-<td style="text-align:center;">
-<ul>
-<li></td>
-</tr>
-</tbody>
-</table></li>
-</ul>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.2: Lithotripsy data collapsed
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-Outcome
-</th>
-<th style="text-align:center;">
-Surgery
-</th>
-<th style="text-align:center;">
-Lithotripsy
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-273 (78%)
-</td>
-<td style="text-align:center;">
-289 (83%)
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-77
-</td>
-<td style="text-align:center;">
-61
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-350
-</td>
-<td style="text-align:center;">
-350
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Odds ratio
-</td>
-<td style="text-align:center;">
-0.75
-</td>
-<td style="text-align:center;">
-</td>
-</tr>
-</tbody>
-</table>
-<p>當腎結石尺寸被忽略時，數據卻顯示超聲碎石術的成功比值比要高於手術，和之前的結果是矛盾的，你會信哪個？</p>
-<p>不要慌，數據不會撒謊，撒謊的永遠是人類。我們來把手術次數，超聲碎石術次數，以及腎結石尺寸之間的關係再列個表格：</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.3: Association between treatment and the size of the stone.
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-Size of the Stone
-</th>
-<th style="text-align:center;">
-Surgery
-</th>
-<th style="text-align:center;">
-Lithotripsy
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-<span class="math inline">\(&lt; 2\)</span> cm
-</td>
-<td style="text-align:center;">
-87 (33%)
-</td>
-<td style="text-align:center;">
-270 (77%)
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-<span class="math inline">\(\geqslant 2\)</span> cm
-</td>
-<td style="text-align:center;">
-263
-</td>
-<td style="text-align:center;">
-80
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-350
-</td>
-<td style="text-align:center;">
-350
-</td>
-</tr>
-</tbody>
-</table>
-<p>可見醫生也都不是傻子，明明腎結石尺寸很大還要用超聲碎石術的人很少，有 77% 的腎結石尺寸小的患者選擇了超聲碎石術。然後我們再列一個表格來看看<strong>腎結石的尺寸大小和超聲碎石術</strong>成功與否有沒有關係：</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.4: Among the <strong>lithotripsy patients</strong> higher percentage of success was observed when stones were small.
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-Outcome
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(&lt; 2\)</span> cm
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(\geqslant 2\)</span> cm
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-234 (87%)
-</td>
-<td style="text-align:center;">
-55 (69%)
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-36
-</td>
-<td style="text-align:center;">
-25
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-370
-</td>
-<td style="text-align:center;">
-80
-</td>
-</tr>
-</tbody>
-</table>
-<p>可見結石尺寸較大時，超聲碎石術的成功率 (69%)，明顯低於尺寸小的時候的成功率 (87%)。在選擇做外科手術的患者中，大多數人的結石尺寸大於 2 cm，成功率仍然達到了 73%。</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.5: Among the <strong>surgery patients</strong> higher percentage of success in both stones compared with lithotripsy
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-Outcome
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(&lt; 2\)</span> cm
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(\geqslant 2\)</span> cm
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-81 (93%)
-</td>
-<td style="text-align:center;">
-192 (73%)
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-6
-</td>
-<td style="text-align:center;">
-71
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-87
-</td>
-<td style="text-align:center;">
-263
-</td>
-</tr>
-</tbody>
-</table>
-<p>看到這裏，你是否也發現了，腎結石尺寸大小，同時和手術類型的選擇有關 (尺寸小的傾向於選擇超聲碎石術)，尺寸大小，同樣也和手術結果的成功與否，高度相關 (結石小的人成功率高)。所以，分析手術類型和結石手術的成功率的關係的時候，患者體內結石尺寸的大小，對這個關係是產生了混雜效應的。他們三者之間的關係，可以用下面的圖 <a href="section-220.html#fig:confounding-kidney">49.1</a> 來理解：</p>
-<div class="figure" style="text-align: center"><span id="fig:confounding-kidney"></span>
-<img src="img/Selection_113.png" alt="Confounding in kidney stones example" width="90%" />
+<div id="section-372" class="section level1">
+<h1><span class="header-section-number">第 84 章</span> 建模和模型的檢查</h1>
+<p>對所有想要嘗試貝葉斯統計學的人來說，這個過程需要你有能力建立一個可以被用於MCMC採樣的貝葉斯模型，並且懂得怎樣獲取收斂合理，樣本量大小合適的事後概率分布樣本。下圖 <a href="section-372.html#fig:BayesianChapter0501">84.1</a> 中總結了建立貝葉斯統計模型並運行MCMC計算的大致過程：</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0501"></span>
+<img src="img/MCMC_procedure.png" alt="Input files, steps for generating a posterior sample and checks required for successfully running a Bayesian analysis using BUGS." width="80%" />
 <p class="caption">
-圖 49.1: Confounding in kidney stones example
+圖 84.1: Input files, steps for generating a posterior sample and checks required for successfully running a Bayesian analysis using BUGS.
 </p>
 </div>
-<p>當數據被壓縮 (忽略了腎結石尺寸時)，比較兩種手術類型的成功率的時候，接受外科手術患者的尺寸大多數都較大的事實被“<strong>人爲的掩蓋住了</strong>”，但是當數據按照結石大小分層以後，你會看見外科手術不論是對付大的結石，還是小的結石，成功率都高於超聲碎石術。這個例子是混雜效應直接逆轉真實相關關係的極佳的實例。同時也提示我們，總體的比值比 (overall odds ratio) 不能通過簡單地把分層表格直接壓縮 (collapsed table) 獲得的數字來計算。</p>
-<div id="section-221" class="section level2">
-<h2><span class="header-section-number">49.1</span> 混雜因素的調整</h2>
-<p>在前面的腎結石手術的例子中，我們利用已有的背景知識 (小尺寸結石的成功率高)，和初步的統計分析 (變量之間兩兩列表分析其內在關係) 發現了混雜因素 (結石尺寸)，並且其結果也讓我們認定了要暴露因素和結果變量之間的關係，混雜因素必須被調整 (adjusted)。</p>
-<p>如腎結石數據這樣簡單的情境下 (被認爲是混雜因素的變量和預測變量/暴露變量都只是一個二分類變量)，我們可以把變量兩兩捉對列表分析其相互關係，確定了混雜效應以後把暴露變量和結果變量按照混雜因素的有無列表之後，就可以求得混雜因素被<strong>調整後的分層的比值比</strong>。這些分層比值比，在暴露變量與結果變量的關係保持混雜因素的層之間保持不變的前提下，可以被“平均化”(簡單地說)以後求得總體/合併的比值比 (overall/pooled odds ratio)。這就是 Mantel-Haenszel 法或者 Woolf 法的合併比值比的思想出發點。我們來回顧一下 Woolf 法的全部計算過程：</p>
-<p>現在假設我們關心的是某種疾病的患病與否 (是/否)，和某個暴露變量 (是/否) 之間的關係，但是同時想要調整另一個具有 <span class="math inline">\(k\)</span> 個分層的混雜因素變量。</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.6: Woolf Method for estimating the stratified and pooled odds ratio
-</caption>
-<thead>
-<tr>
-<th style="border-bottom:hidden" colspan="1">
-</th>
-<th style="border-bottom:hidden" colspan="1">
-</th>
-<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
-<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">
-Group
-</div>
-</th>
-<th style="border-bottom:hidden" colspan="1">
-</th>
-</tr>
-<tr>
-<th style="text-align:center;">
-</th>
-<th style="text-align:center;">
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(X=0\)</span>
-</th>
-<th style="text-align:center;">
-<span class="math inline">\(X=1\)</span>
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-<span class="math inline">\(D=0\)</span>
-</td>
-<td style="text-align:center;">
-<span class="math inline">\(X=0\)</span>
-</td>
-<td style="text-align:center;">
-<span class="math inline">\(n_{00}\)</span>
-</td>
-<td style="text-align:center;">
-<span class="math inline">\(n_{10}\)</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-</td>
-<td style="text-align:center;">
-<span class="math inline">\(X=1\)</span>
-</td>
-<td style="text-align:center;">
-<span class="math inline">\(n_{01}\)</span>
-</td>
-<td style="text-align:center;">
-<span class="math inline">\(n_{10}\)</span>
-</td>
-</tr>
-</tbody>
-</table>
-<div id="woolf-" class="section level3">
-<h3><span class="header-section-number">49.1.1</span> Woolf 法估算合併比值比</h3>
-<p>對想要調整的一個 <span class="math inline">\(k\)</span> 組的混雜因素，把數據按照它的分組分層整理以後，可以得到上面的 <span class="math inline">\(k\)</span> 個四格表 (每個分層四格表都是暴露變量和結果變量結合的四個觀察值 <span class="math inline">\(a_i, b_i, c_i, d_i, i=1,\cdots, k\)</span>)。每個分層四格表的觀測比值比爲 <span class="math inline">\(\hat\Psi_i = \frac{a_id_i}{c_ib_i}\)</span>，且可以證明方差爲</p>
-<p><span class="math display">\[
-\text{Var}(\text{log}\hat\Psi_i) \approx \frac{1}{a_i} + \frac{1}{b_i} + \frac{1}{c_i} + \frac{1}{d_i} = \frac{1}{w_i}
-\]</span></p>
-<p>合併比值比的對數 <span class="math inline">\(\text{log}\hat\Psi_w\)</span> 的 Woolf 的計算方法就是</p>
-<p><span class="math display">\[
-\text{log}\hat\Psi_w = \frac{\sum w_i\text{log}\hat\Psi_i}{\sum w_i}
-\]</span></p>
-<p>所以，每個分層的對數比值比乘以自己的<strong>方差的倒數</strong> (權重 weights) 之後求和，再除以所有權重之和，獲得的是合併後的對數比值比，然後再逆運算回來就是 Woolf 法計算合併比值比的原理是。</p>
-<p>這個合併比值比的對數的方差是</p>
-<p><span class="math display">\[
-\text{Var}(\text{log}\hat\Psi_w) = \frac{1}{\sum w_i}
-\]</span></p>
-<p>有了加權後的合併比值比，和方差，就可以求加權後的合併比值比的信賴區間了。值得注意的是，分層之後每個分層四格表中的四個數字 (四個樣本量) 都不能太小。腎結石手術數據滿足這些條件，那麼不妨跟我一起手算一下結石尺寸調整後的手術與超聲碎石術成功與否的比值比：</p>
+<p>虛線最上端，意爲我們需要準備三種最重要的文件：</p>
+<ol style="list-style-type: decimal">
+<li>BUGS語言描述下的貝葉斯統計學模型；</li>
+<li>包含模型中使用到的觀察變量的數據文件（可以是一個，也可是多個組合）；</li>
+<li>每個未知參數的MCMC採樣鏈的起始值 (initial values, 1 set for each chain)。</li>
+</ol>
+<p>兩條虛線的中間部分是產生事後概率分布的重要步驟及其先後順序。虛線最下面則是三個重要的模型檢查，你需要在運行貝葉斯模型MCMC採集樣本的過程中反復使用這三個檢查模型的方案以確保過程的準確，以獲得合理的結果。</p>
+<p>下面我們通過使用貝葉斯統計學框架來進行一個簡單線性回歸模型的計算和MCMC採集樣本的過程，詳細地解釋圖<a href="section-372.html#fig:BayesianChapter0501">84.1</a>中的每一個步驟及其含義。</p>
+<p>先思考，一個只有概率論知識的統計學者，他/她是如何進行簡單線性回歸模型的擬合過程的？</p>
+<ol style="list-style-type: decimal">
+<li>確認觀察數據的概率分布(似然/likelihood)；</li>
+<li>確認結果變量和預測變量之間的合適表達式(線性回歸方程)。</li>
+</ol>
+<p>這兩個步驟在貝葉斯統計學中也是不可缺少的，此外，貝葉斯統計學模型的建立和MCMC採樣還需要統計師給出回歸系數的先驗概率分布(prior distributions for the regression coefficients)，以及其他未知（可能是令人感到麻煩的 nuisance）參數的先驗概率分布。</p>
+<div id="BayesianLM" class="section level2">
+<h2><span class="header-section-number">84.1</span> 簡單線性回歸模型</h2>
+<p>如果簡單線性回歸模型的結果變量是一個服從正態分布的單一變量 <span class="math inline">\(y_i\)</span>，我們想要拿來預測這個結果變量的預測變量是從每個試驗個體 <span class="math inline">\(i, i = 1, \dots, n\)</span> 上收集到的一系列共變量 (covariates) 的向量 <span class="math inline">\(x_{1i}, \dots, x_{pi}\)</span>。概率論統計學者會把這樣的模型用數學表達式寫成：</p>
 <p><span class="math display">\[
 \begin{aligned}
-\hat\Psi_1 = 2.08 ;&amp;\; \hat\Psi_2 = 1.23 \\
-\text{Var}(\text{log}\hat\Psi_1) = \frac{1}{81} &amp; + \frac{1}{234} + \frac{1}{6} + \frac{1}{36} = 0.2111 \\
-\text{Var}(\text{log}\hat\Psi_2) = \frac{1}{192} &amp; + \frac{1}{55} + \frac{1}{71} + \frac{1}{25} = 0.0775 \\
-w_1 = \frac{1}{\text{Var}(\text{log}\hat\Psi_1)} = 4.74 ; \;&amp; w_2 = \frac{1}{\text{Var}(\text{log}\hat\Psi_2)} = 12.91 \\
-\text{log}\hat\Psi_w = &amp; \frac{4.74\times\text{log(2.08)} + 12.91\times\text{log(1.23)}}{4.74 + 12.91} \\
-                     = &amp; 0.3481 \\
-\Rightarrow \hat\Psi_w =&amp; e^{0.3481} = 1.42\\
-\text{Var}(\hat\Psi_w) =&amp; \frac{1}{4.74+12.91} = 0.0567 \\
-\Rightarrow 95\% \text{ CI} = &amp; e^{0.3481 \pm 1.96\times\sqrt{0.0567}} \\
-                            = &amp; (0.89, 2.26)
+y_i &amp; = \beta_0 + \sum_{k = 1}^p\beta_k x_{ki} + \epsilon_i \\ 
+\epsilon_i &amp; \sim \text{Normal}(0, \sigma^2)
 \end{aligned}
 \]</span></p>
-<p>Woolf 的計算調整後的合併比值比的方法是<strong>在線性迴歸和廣義線性迴歸被發現之前誕生的</strong>，但是其想法之精妙，確實令人感嘆。可惜其最大的缺陷是無法用這樣的方法進行連續型變量的調整，也很難同時進行多個變量的調整，所以現在這一算法已經逐漸被淘汰。現在我們有了廣義線性迴歸模型這一更強大的工具，只要把變量加入廣義線性模型進行調整就可以計算曾經難以計算和擴展的調整後的合併比值比。從下面的代碼計算獲得的調整後比值比 <span class="math inline">\(1.43 (0.91, 2.34)\)</span> 也可以看出，Woolf 方法的計算結果也是足夠令人滿意的。</p>
-<div class="sourceCode" id="cb584"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb584-1" title="1">size &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;&lt; 2cm&quot;</span>, <span class="st">&quot;&lt; 2cm&quot;</span>, <span class="st">&quot;&gt;= 2cm&quot;</span>, <span class="st">&quot;&gt;= 2cm&quot;</span>)</a>
-<a class="sourceLine" id="cb584-2" title="2">treatment &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Surgery&quot;</span>,<span class="st">&quot;Lithotripsy&quot;</span>,<span class="st">&quot;Surgery&quot;</span>,<span class="st">&quot;Lithotripsy&quot;</span>)</a>
-<a class="sourceLine" id="cb584-3" title="3">n &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">87</span>, <span class="dv">270</span>, <span class="dv">263</span>, <span class="dv">80</span>)</a>
-<a class="sourceLine" id="cb584-4" title="4">Success &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">81</span>, <span class="dv">234</span>, <span class="dv">192</span>, <span class="dv">55</span>)</a>
-<a class="sourceLine" id="cb584-5" title="5">Stone &lt;-<span class="st"> </span><span class="kw">data.frame</span>(size, treatment, n, Success)</a>
-<a class="sourceLine" id="cb584-6" title="6">ModelStone &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw">cbind</span>(Success, n <span class="op">-</span><span class="st"> </span>Success) <span class="op">~</span><span class="st"> </span>treatment <span class="op">+</span><span class="st"> </span>size, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit), <span class="dt">data =</span> Stone)</a>
-<a class="sourceLine" id="cb584-7" title="7"><span class="kw">summary</span>(ModelStone)</a></code></pre></div>
+<p>或者也有人習慣於把誤差項拿掉，用結果變量的期望值（也就是均值） <span class="math inline">\(E(y_i) = \mu_i\)</span> 來寫這個模型：</p>
+<p><span class="math display">\[
+\begin{aligned}
+y_i    &amp; \sim \text{Normal}(\mu_i, \sigma^2) \\ 
+\mu_i  &amp; = \beta_0 +  \sum_{k = 1}^p\beta_k x_{ki}
+\end{aligned}
+\]</span></p>
+<p>在貝葉斯框架下，這個模型的參數<span class="math inline">\((\beta_0, \beta_1, \dots, \beta_p, \sigma^2)\)</span>，還需要給出它們各自的先驗概率分布。所以貝葉斯框架下的簡單線性回歸模型的標記法是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+y_i   &amp; \sim \text{Normal}(\mu_i, \sigma^2) \\ 
+\mu_i &amp; = \beta_0+  \sum_{k = 1}^p\beta_k x_{ki} \\
+(\beta_0, \beta_1, \dots, \beta_p, \sigma^2) &amp; \sim \text{ Prior Distributions}
+\end{aligned}
+\]</span></p>
+<p>如果想要獲得和概率論的簡單線性回歸模型的算法(OLS, ordinary least squares / MLE, maximum likelihood estimates)獲得的結果接近的參數估計，那麼先驗概率分布可以指定爲：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\beta_k &amp; \sim \text{Uniform}(-\infty, +\infty), k = 0, \dots, p \\
+\log\sigma^2 &amp; \sim \text{Uniform}(-\infty, +\infty)
+\end{aligned}
+\]</span></p>
+<p>我們以後還會仔細再討論先驗概率分布的選擇問題。</p>
+</div>
+<div id="children-in-the-gambia" class="section level2">
+<h2><span class="header-section-number">84.2</span> Children in the Gambia</h2>
+<p>這個數據實例我們在簡單線性回歸的課程中(Chapter <a href="lm.html#growgam">26.6</a>)也用過，它收集的是岡比亞農村兒童的身高體重年齡等信息。你可以有空和當時的模型擬合過程進行一個對比。這裏用到的變量是190名兒童的體重，年齡，和性別。圖 <a href="section-372.html#fig:BayesianChapter0502">84.2</a>示意的是這些兒童的體重和年齡及性別的關系。</p>
+<pre><code>## # A tibble: 6 x 4
+##          sex   age    wt   len
+##    &lt;dbl+lbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 2 [female]    23  8.40  73.2
+## 2 2 [female]    22 10.9   84.4
+## 3 2 [female]     6  7.20  68.7
+## 4 1 [male]      24 10.3   83.7
+## 5 1 [male]      14 10.5   79.2
+## 6 2 [female]    18  9.60  75.8</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0502"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0502-1.png" alt="Children in the Gambian cross-sectional survey" width="90%" />
+<p class="caption">
+圖 84.2: Children in the Gambian cross-sectional survey
+</p>
+</div>
+<p>在這項橫斷面研究中，我們關心的主要是：</p>
+<ol style="list-style-type: decimal">
+<li>年齡每增加一個月，體重的變化是多少 kg？</li>
+<li>男孩女孩之間的體重差別是多少 kg？</li>
+</ol>
+<div id="section-373" class="section level3">
+<h3><span class="header-section-number">84.2.1</span> 岡比亞兒童數據模型</h3>
+<p>我們給出的模型是：</p>
+<ul>
+<li>結果變量 (outcome/response)：體重(kg), weight in kg；</li>
+<li>預測變量 (predictors)：年齡(age in months)，性別(1=男孩，2=女孩)。</li>
+</ul>
+<p>一開始，我們的假設是，體重和年齡之間有線性關系(linear relationship)，且誤差項服從正態分布。這一句話用貝葉斯統計學標記來表達就是：</p>
+<p><span class="math display" id="eq:gambiamodel">\[
+\begin{aligned}
+\text{wt}_i &amp; \sim \text{Normal}(\mu_i, \sigma^2) \;\; i = 1, \dots, 190 \\
+\mu_i       &amp; = \alpha + \beta \times \text{age}_i + \gamma \times \text{sex}_i \\
+\log\sigma^2 &amp; \sim \text{Uniform}(-100, 100) \\ 
+\alpha       &amp; \sim \text{Uniform}(-1000, 1000) \\
+\beta        &amp; \sim \text{Uniform}(-1000, 1000) \\ 
+\gamma       &amp; \sim \text{Uniform}(-1000, 1000) \\ 
+\end{aligned}
+\tag{84.1}
+\]</span></p>
+<p>如果想用有向無環圖(DAG)來表示這個模型的話，可以用圖 <a href="section-372.html#fig:BayesianChapter0503">84.3</a> 來表示這個線性回歸模型。圖中每一個元素都用圓形或者方形來表示，各個成分之間的關系則用帶方向箭頭的直線或虛線來連接。大的方形標注着 Child <span class="math inline">\(i\)</span> 的部分把該模型中被循環重復的部分。這個方形又被叫做盤(plates)，盤內標記的名稱和下標表示每一個被循環重復的最小個體單位。在這個岡比亞兒童數據中，兩個共變量/預測變量(<span class="math inline">\(age_i, sex_i\)</span>)，和一個結果變量(<span class="math inline">\(wt_i\)</span>)是從每一名兒童身上測量獲得的，所以每一名兒童是模型循環重復的最小單位。未知參數 <span class="math inline">\(\alpha, \beta, \gamma, \sigma^2\)</span> 都放在了盤以外的位置表示這些變量並不會隨着循環重復而改變。</p>
+<p>值得注意的是，這個DAG圖 <a href="section-372.html#fig:BayesianChapter0503">84.3</a> 中有兩種不同類型的直線。如果在你寫下的模型<a href="section-372.html#eq:gambiamodel">(84.1)</a>中兩個變量之間使用的是 <span class="math inline">\(\sim\)</span> 連接的，那麼它們之間的連線就是實線，如果變量之間的關系使用的是等號 <span class="math inline">\(=\)</span> 建立的關系，那麼它們之間的連線是虛線。因爲 <span class="math inline">\(\sim\)</span> 表示的是隨機的不確定的關系(如服從某個先驗概率分布, stochastic links to a probability relationship)，而等號 <span class="math inline">\(=\)</span> 代表的關系是確定的 (deteministic relationships)。習慣上，圓形變量表示未知參數/隨機變量(random variables)，方形變量表示觀測到的值(fully observed covariates)。盡管結果變量 <span class="math inline">\((wt_i)\)</span> 是我們觀測收集的數據之一，但是在模型中它是隨機變量，因此在DAG繪圖法中也用圓形來標記。</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0503"></span>
+<img src="img/DAGgambia.png" alt="DAG for Gambia Regression Model" width="45%" />
+<p class="caption">
+圖 84.3: DAG for Gambia Regression Model
+</p>
+</div>
+</div>
+<div id="bugs-model-for-gambia-example" class="section level3">
+<h3><span class="header-section-number">84.2.2</span> BUGS model for Gambia example</h3>
+<p>模型的數學標記(表達式 <a href="section-372.html#eq:gambiamodel">(84.1)</a>)確定了以後，把它翻譯成BUGS語言就是下一步的工作了。本例中，我們並不想給模型加入任何有意義的先驗概率分布信息，所以給每個未知參數的先驗概率分布都是沒有信息的扁平的分布 (flat priors)。翻譯成BUGS語言以後的模型寫作：</p>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*age[i] + gamma*sex[i]
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+</div>
+<div id="data-file-for-the-gambia-example" class="section level3">
+<h3><span class="header-section-number">84.2.3</span> Data file for the Gambia example</h3>
+<p>準備數據時，有兩種格式是適用的：</p>
+<div id="rectangular-format" class="section level4">
+<h4><span class="header-section-number">84.2.3.1</span> 方形數據格式 rectangular format</h4>
+<pre><code>sex[] age[] wt[]
+2    23  8.40  
+2    22 10.9   
+2     6  7.20  
+1    24 10.3   
+1    14 10.5   
+2    18  9.60  
+...
+1    30 12.1 
+END
+</code></pre>
+</div>
+<div id="rs-plus-" class="section level4">
+<h4><span class="header-section-number">84.2.3.2</span> R/S-plus 格式數據</h4>
+<p>這種格式的數據較爲靈活，你可以在其中放入長度不一樣的向量，假如我們在模型的第一行不給出兒童的人數 <span class="math inline">\(190\)</span> 而是寫作：</p>
+<pre><code>    for(i in 1:N){ # loop through the 190 children</code></pre>
+<p>的話，那麼在數據文件中我們需要給出這個 <code>N</code> 的大小：　</p>
+<pre><code>list(
+  N = 190, 
+ wt = c(8.4, 10.9, , 7.2, 10.3, 10.5, ..., 12.1), 
+age = c(23, 22, 6, 24, 14, 18, ... , 30), 
+sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
+)</code></pre>
+</div>
+</div>
+<div id="initial-value-files" class="section level3">
+<h3><span class="header-section-number">84.2.4</span> 初始值文件 initial value files</h3>
+<p>前一章節我們探討過如何確認事後概率分布的MCMC採樣達到收斂，其中一個要點是使用兩個或更多的起始值，前提是你給模型的未知參數起始值需要是在合理範圍內，且差異較大的起始值。同樣使用 <code>list</code> 命令。</p>
+<p>MCMC採樣鏈1的起始值：</p>
+<pre><code>list(alpha = 0, beta = 1, gamma = 5, logsigma2 = 1)</code></pre>
+<p>MCMC採樣鏈2的起始值：</p>
+<pre><code>list(alpha = 10, beta = 0, gamma = -5, logsigma2 = 5)</code></pre>
+</div>
+<div id="mcmc-check-1" class="section level3">
+<h3><span class="header-section-number">84.2.5</span> 給岡比亞兒童體重數據的貝葉斯模型檢查收斂 (MCMC check 1)</h3>
+<p>一開始我們先採集1000個事後概率分布樣本。模型中的四個未知參數<span class="math inline">\(\alpha, \beta, \gamma, \sigma^2\)</span>的1000次事後MCMC採樣的歷史痕跡圖繪制如圖 <a href="section-372.html#fig:BayesianChapter0505">84.4</a>。我們可以看到模型收斂的速度很快。刨除前50次採樣的圖 (Fig. <a href="section-372.html#fig:BayesianChapter0506">84.5</a>)，可以對採樣過程看得更加清楚。像圖 <a href="section-372.html#fig:BayesianChapter0506">84.5</a> 這樣粗粗的有點像毛毛蟲一樣的歷史痕跡圖通常象徵已經達到理想的收斂。</p>
+<div class="sourceCode" id="cb1474"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1474-1" title="1"><span class="co"># Step 1 check model</span></a>
+<a class="sourceLine" id="cb1474-2" title="2"><span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/gambia-model.txt&quot;</span>) </a></code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode" id="cb1476"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1476-1" title="1"><span class="co"># Load the data </span></a>
+<a class="sourceLine" id="cb1476-2" title="2"><span class="kw">modelData</span>(<span class="st">&quot;backupfiles/gambia-data.txt&quot;</span>)     </a></code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode" id="cb1478"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1478-1" title="1"><span class="co"># compile the model with two separate chains</span></a>
+<a class="sourceLine" id="cb1478-2" title="2"><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </a></code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode" id="cb1480"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1480-1" title="1"><span class="co"># generate initial values </span></a>
+<a class="sourceLine" id="cb1480-2" title="2"><span class="co"># the choice is arbitrary</span></a>
+<a class="sourceLine" id="cb1480-3" title="3">initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb1480-4" title="4"><span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</a></code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode" id="cb1483"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1483-1" title="1">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="dv">-5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)</a>
+<a class="sourceLine" id="cb1483-2" title="2"><span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</a></code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode" id="cb1486"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1486-1" title="1"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></a>
+<a class="sourceLine" id="cb1486-2" title="2">parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)</a>
+<a class="sourceLine" id="cb1486-3" title="3"><span class="kw">samplesSet</span>(parameters)</a></code></pre></div>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;gamma&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;sigma2&#39;</code></pre>
+<div class="sourceCode" id="cb1491"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1491-1" title="1"><span class="co"># Generate 1000 iterations</span></a>
+<a class="sourceLine" id="cb1491-2" title="2"><span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</a></code></pre></div>
+<pre><code>## 1000 updates took 0 s</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0505"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0505-1.png" alt="History plots for iterations 1-1000 for the Gambia example." width="80%" />
+<p class="caption">
+圖 84.4: History plots for iterations 1-1000 for the Gambia example.
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0506"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0506-1.png" alt="History plots for iterations 51-1000 for the Gambia example." width="80%" />
+<p class="caption">
+圖 84.5: History plots for iterations 51-1000 for the Gambia example.
+</p>
+</div>
+<p>再看這1000次MCMC抽樣獲得的 Gelman-Rubin 統計量，差不多鏈內鏈間差異的比值在1000次左右可以認爲等於1，所以我們把這前1000次MCMC採樣作爲 burn-in 從事後樣本中刨除。確定了 burn-in 之後我們再對每一條MCMC鏈重復採樣25000次。</p>
+<pre><code>## Potential scale reduction factors:
+## 
+##        Point est. Upper C.I.
+## alpha        1.01       1.04
+## beta         1.01       1.05
+## gamma        1.00       1.00
+## sigma2       1.00       1.00
+## 
+## Multivariate psrf
+## 
+## 1.01</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0507"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0507-1.png" alt="Gelman-Rubin convergence statistic for the Gambia example." width="80%" />
+<p class="caption">
+圖 84.6: Gelman-Rubin convergence statistic for the Gambia example.
+</p>
+</div>
+</div>
+<div id="section-374" class="section level3">
+<h3><span class="header-section-number">84.2.6</span> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</h3>
+<div class="sourceCode" id="cb1494"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1494-1" title="1"><span class="co"># Step 1 check model</span></a>
+<a class="sourceLine" id="cb1494-2" title="2"><span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/gambia-model.txt&quot;</span>) </a></code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode" id="cb1496"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1496-1" title="1"><span class="co"># Load the data </span></a>
+<a class="sourceLine" id="cb1496-2" title="2"><span class="kw">modelData</span>(<span class="st">&quot;backupfiles/gambia-data.txt&quot;</span>)     </a></code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode" id="cb1498"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1498-1" title="1"><span class="co"># compile the model with two separate chains</span></a>
+<a class="sourceLine" id="cb1498-2" title="2"><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </a></code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode" id="cb1500"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1500-1" title="1"><span class="co"># generate initial values </span></a>
+<a class="sourceLine" id="cb1500-2" title="2"><span class="co"># the choice is arbitrary</span></a>
+<a class="sourceLine" id="cb1500-3" title="3">initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb1500-4" title="4"><span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</a></code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode" id="cb1503"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1503-1" title="1">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="dv">-5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)</a>
+<a class="sourceLine" id="cb1503-2" title="2"><span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</a></code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode" id="cb1506"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1506-1" title="1"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></a>
+<a class="sourceLine" id="cb1506-2" title="2">parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)</a>
+<a class="sourceLine" id="cb1506-3" title="3"><span class="kw">samplesSet</span>(parameters)</a></code></pre></div>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;gamma&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;sigma2&#39;</code></pre>
+<div class="sourceCode" id="cb1511"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1511-1" title="1"><span class="co"># Generate 52000 iterations</span></a>
+<a class="sourceLine" id="cb1511-2" title="2"><span class="kw">modelUpdate</span>(<span class="dv">26000</span>)</a></code></pre></div>
+<pre><code>## 26000 updates took 27 s</code></pre>
+<div class="sourceCode" id="cb1513"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1513-1" title="1">sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)</a>
+<a class="sourceLine" id="cb1513-2" title="2"><span class="kw">print</span>(sample.statistics)</a></code></pre></div>
+<pre><code>##           mean      sd  MC_error val2.5pc  median val97.5pc start sample
+## alpha   7.1490 0.23490 0.0034690   6.6900  7.1500    7.6120  1001  50000
+## beta    0.1642 0.01093 0.0001514   0.1428  0.1642    0.1855  1001  50000
+## gamma  -0.5199 0.18460 0.0017070  -0.8812 -0.5199   -0.1570  1001  50000
+## sigma2  1.5810 0.16570 0.0007710   1.2880  1.5700    1.9340  1001  50000</code></pre>
+<p>由於我們給每個未知參數的先驗概率分布都是沒有實際信息的，因此，預期貝葉斯模型給出的結果將會十分接近概率論模型給出的分析結果，事實也證明的確是如此：</p>
+<div class="sourceCode" id="cb1515"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1515-1" title="1">Gambia.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(sex), <span class="dt">data =</span> growgam1)</a>
+<a class="sourceLine" id="cb1515-2" title="2"><span class="kw">summary</span>(Gambia.lm)</a></code></pre></div>
 <pre><code>## 
 ## Call:
-## glm(formula = cbind(Success, n - Success) ~ treatment + size, 
-##     family = binomial(link = logit), data = Stone)
+## lm(formula = wt ~ age + factor(sex), data = growgam1)
 ## 
-## Deviance Residuals: 
-##        1         2         3         4  
-##  0.76357  -0.35881  -0.27563   0.46948  
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -4.19236 -0.76268 -0.00696  0.75675  3.79163 
 ## 
 ## Coefficients:
-##                  Estimate Std. Error z value  Pr(&gt;|z|)    
-## (Intercept)       1.93655    0.17045 11.3614 &lt; 2.2e-16 ***
-## treatmentSurgery  0.35723    0.22908  1.5594    0.1189    
-## size&gt;= 2cm       -1.26057    0.23900 -5.2742 1.333e-07 ***
+##               Estimate Std. Error t value  Pr(&gt;|t|)    
+## (Intercept)   7.152414   0.234254 30.5327 &lt; 2.2e-16 ***
+## age           0.163998   0.010919 15.0189 &lt; 2.2e-16 ***
+## factor(sex)2 -0.518854   0.183053 -2.8344  0.005095 ** 
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance: 33.12395  on 3  degrees of freedom
-## Residual deviance:  1.00816  on 1  degrees of freedom
-## AIC: 26.3554
-## 
-## Number of Fisher Scoring iterations: 3</code></pre>
-<div class="sourceCode" id="cb586"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb586-1" title="1">epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(ModelStone)</a></code></pre></div>
+## Residual standard error: 1.2503 on 187 degrees of freedom
+## Multiple R-squared:  0.5597, Adjusted R-squared:  0.55499 
+## F-statistic: 118.85 on 2 and 187 DF,  p-value: &lt; 2.22e-16</code></pre>
+<div class="sourceCode" id="cb1517"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1517-1" title="1"><span class="kw">regress.display</span>(Gambia.lm)</a></code></pre></div>
+<pre><code>##  
+##                    Coeff  lower095ci  upper095ci        Pr&gt;|t|
+## (Intercept)   7.15241353  6.69029297  7.61453409 1.4039052e-74
+## age           0.16399839  0.14245724  0.18553954 5.7949167e-34
+## factor(sex)2 -0.51885399 -0.87996857 -0.15773941 5.0951539e-03</code></pre>
+<p>即使用 Stata 獲得的也是一樣的結果，差異十分微小。</p>
 <pre><code>## 
-## Logistic regression predicting cbind(Success, n - Success) 
-##  
-##                                   crude OR(95%CI)   adj. OR(95%CI)    P(Wald&#39;s test) P(LR-test)
-## treatment: Surgery vs Lithotripsy 0.75 (0.51,1.09)  1.43 (0.91,2.24)  0.119          &lt; 0.001   
-##                                                                                                
-## size: &gt;= 2cm vs &lt; 2cm             0.34 (0.23,0.51)  0.28 (0.18,0.45)  &lt; 0.001        &lt; 0.001   
-##                                                                                                
-## Log-likelihood = -10.1777
-## No. of observations = 4
-## AIC value = 26.3554</code></pre>
-<p>所以，此次分析的結論是，在 5% 的顯著性水平下，數據無法提供有效證據證明，當調整了結石尺寸之後，外科手術和超聲碎石術治療腎結石有差別。
-We can conclude that there is no evidence at the 5% level for an effect of surgery, adjusted for stone size.</p>
+## . use &quot;backupfiles/growgam1.d. regress wt age i.sex
+## 
+##       Source |       SS           df       MS      Number of obs   =       190
+## -------------+----------------------------------   F(2, 187)       =    118.85
+##        Model |  371.623281         2   185.81164   Prob &gt; F        =    0.0000
+##     Residual |  292.346478       187  1.56335015   R-squared       =    0.5597
+## -------------+----------------------------------   Adj R-squared   =    0.5550
+##        Total |  663.969759       189  3.51306751   Root MSE        =    1.2503
+## 
+## ------------------------------------------------------------------------------
+##           wt |      Coef.   Std. Err.      t    P&gt;|t|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##          age |   .1639984   .0109195    15.02   0.000     .1424572    .1855395
+##              |
+##          sex |
+##      female  |   -.518854   .1830531    -2.83   0.005    -.8799686   -.1577394
+##        _cons |   7.152414   .2342542    30.53   0.000     6.690293    7.614534
+## ------------------------------------------------------------------------------</code></pre>
+</div>
+<div id="effective-sample-size-mcmc-check-2" class="section level3">
+<h3><span class="header-section-number">84.2.7</span> 檢查岡比亞兒童體重數據貝葉斯模型的有效樣本量 effective sample size (MCMC check 2)</h3>
+<p>盡管我們獲取了50000個事後MCMC樣本，但是關於 <span class="math inline">\(\text{MC_error} \approx 2 \text{ orders of magnitude smaller than the posterior SD}\)</span> 的經驗法則 (rule of thumb)，其實並沒有得到滿足。實際用於估計事後 <span class="math inline">\(\alpha, \beta\)</span> 的有效樣本量是小於 10000的。繪制每個參數的自回歸 (autocorrelation) 圖也證實了這些事後樣本有許多有強的自相關：</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0510"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0510-1.png" alt="Autocorrelation plot for the Gambia example (uncentered model, chain 1)" width="80%" />
+<p class="caption">
+圖 84.7: Autocorrelation plot for the Gambia example (uncentered model, chain 1)
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0511"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0511-1.png" alt="Autocorrelation plot for the Gambia example (uncentered model, chain 2)" width="80%" />
+<p class="caption">
+圖 84.8: Autocorrelation plot for the Gambia example (uncentered model, chain 2)
+</p>
+</div>
+<p>這些 MCMC 樣本的自相關程度之所以如此之高，其最主要的原因是我們沒有把連續變量年齡給中心化。解決這個問題的辦法是把原先模型中的線性回歸模型的年齡中心化：</p>
+<pre><code>mu[i] &lt;- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]</code></pre>
+<p>這一次我們獲得的50000個MCMC事後樣本的參數估計結果如下：</p>
+<div class="sourceCode" id="cb1521"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1521-1" title="1"><span class="co"># Step 1 check model</span></a>
+<a class="sourceLine" id="cb1521-2" title="2"><span class="kw">modelCheck</span>(<span class="st">&quot;backupfiles/gambia-model-agecen.txt&quot;</span>) </a></code></pre></div>
+<pre><code>## model is syntactically correct</code></pre>
+<div class="sourceCode" id="cb1523"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1523-1" title="1"><span class="co"># Load the data </span></a>
+<a class="sourceLine" id="cb1523-2" title="2"><span class="kw">modelData</span>(<span class="st">&quot;backupfiles/gambia-data.txt&quot;</span>)     </a></code></pre></div>
+<pre><code>## data loaded</code></pre>
+<div class="sourceCode" id="cb1525"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1525-1" title="1"><span class="co"># compile the model with two separate chains</span></a>
+<a class="sourceLine" id="cb1525-2" title="2"><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">2</span>) </a></code></pre></div>
+<pre><code>## model compiled</code></pre>
+<div class="sourceCode" id="cb1527"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1527-1" title="1"><span class="co"># generate initial values </span></a>
+<a class="sourceLine" id="cb1527-2" title="2"><span class="co"># the choice is arbitrary</span></a>
+<a class="sourceLine" id="cb1527-3" title="3">initlist &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb1527-4" title="4"><span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist))</a></code></pre></div>
+<pre><code>## Initializing chain 1:</code></pre>
+<pre><code>## initial values loaded and chain initialized but another chain contain uninitialized variables</code></pre>
+<div class="sourceCode" id="cb1530"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1530-1" title="1">initlist1 &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="dv">-5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)</a>
+<a class="sourceLine" id="cb1530-2" title="2"><span class="kw">modelInits</span>(<span class="kw">bugsData</span>(initlist1))</a></code></pre></div>
+<pre><code>## Initializing chain 2:</code></pre>
+<pre><code>## model is initialized</code></pre>
+<div class="sourceCode" id="cb1533"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1533-1" title="1"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></a>
+<a class="sourceLine" id="cb1533-2" title="2">parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)</a>
+<a class="sourceLine" id="cb1533-3" title="3"><span class="kw">samplesSet</span>(parameters)</a></code></pre></div>
+<pre><code>## monitor set for variable &#39;alpha&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;beta&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;gamma&#39;</code></pre>
+<pre><code>## monitor set for variable &#39;sigma2&#39;</code></pre>
+<div class="sourceCode" id="cb1538"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1538-1" title="1"><span class="co"># Generate 51000 iterations</span></a>
+<a class="sourceLine" id="cb1538-2" title="2"><span class="kw">modelUpdate</span>(<span class="dv">26000</span>)</a></code></pre></div>
+<pre><code>## 26000 updates took 34 s</code></pre>
+<div class="sourceCode" id="cb1540"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1540-1" title="1">sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">beg =</span> <span class="dv">1001</span>)</a>
+<a class="sourceLine" id="cb1540-2" title="2"><span class="kw">print</span>(sample.statistics)</a></code></pre></div>
+<pre><code>##           mean     sd   MC_error val2.5pc  median val97.5pc start sample
+## alpha   9.9360 0.1376 0.00111200   9.6660  9.9360   10.2000  1001  50000
+## beta    0.1640 0.0110 0.00005164   0.1424  0.1640    0.1855  1001  50000
+## gamma  -0.5178 0.1845 0.00151300  -0.8788 -0.5178   -0.1564  1001  50000
+## sigma2  1.5800 0.1661 0.00076440   1.2910  1.5690    1.9360  1001  50000</code></pre>
+<p>注意到這時候事後參數估計給出的 <code>alpha</code> 結果發生了微妙的變化，然而其他的幾個變量的事後估計結果幾乎沒有改變。且此時 <code>MC_error</code> 也變得小了很多，達到了我們的經驗法則所要求的。這時候的事後MCMC採樣鏈的自相關圖也提供較爲了理想的結果：</p>
+<div class="sourceCode" id="cb1542"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1542-1" title="1"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))</a>
+<a class="sourceLine" id="cb1542-2" title="2"><span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">1</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,</a>
+<a class="sourceLine" id="cb1542-3" title="3">             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">50</span>)</a></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0513"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0513-1.png" alt="Autocorrelation plot for the Gambia example (centered model, chain 1)" width="80%" />
+<p class="caption">
+圖 84.9: Autocorrelation plot for the Gambia example (centered model, chain 1)
+</p>
+</div>
+<div class="sourceCode" id="cb1543"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1543-1" title="1"><span class="kw">par</span>(<span class="dt">mar =</span> <span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">1</span>))</a>
+<a class="sourceLine" id="cb1543-2" title="2"><span class="kw">samplesAutoC</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">chain =</span> <span class="dv">2</span>, <span class="dt">beg =</span> <span class="dv">1001</span>,</a>
+<a class="sourceLine" id="cb1543-3" title="3">             <span class="dt">ask =</span> <span class="ot">FALSE</span>, <span class="dt">lag.max =</span> <span class="dv">50</span>)</a></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0514"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0514-1.png" alt="Autocorrelation plot for the Gambia example (centered model, chain 2)" width="80%" />
+<p class="caption">
+圖 84.10: Autocorrelation plot for the Gambia example (centered model, chain 2)
+</p>
+</div>
+<p>共變量年齡，和性別的回歸系數的事後概率分布圖繪制如下：</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0515"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0515-1.png" alt="Change in weight per month increase in age (posterior mean: 0.164 kg, 95% credible interval (0.142, 0.185)" width="80%" />
+<p class="caption">
+圖 84.11: Change in weight per month increase in age (posterior mean: 0.164 kg, 95% credible interval (0.142, 0.185)
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0516"></span>
+<img src="bookdown_files/figure-html/BayesianChapter0516-1.png" alt="Change in weight for girls compared to boys (posterior mean: -0.516 kg, 95% credible interval (-0.877, -0.156)" width="80%" />
+<p class="caption">
+圖 84.12: Change in weight for girls compared to boys (posterior mean: -0.516 kg, 95% credible interval (-0.877, -0.156)
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0517"></span>
+<img src="img/fitted_regression_line.png" alt="Fitted regression line versus covariate (age)" width="80%" />
+<p class="caption">
+圖 84.13: Fitted regression line versus covariate (age)
+</p>
+</div>
+<p>BUGS軟件也能提供類似圖 <a href="section-372.html#fig:BayesianChapter0517">84.13</a> 這樣的擬合值和共變量年齡之間的關系的圖。其中紅色線代表體重的擬合值，藍色線代表95%可信區間的範圍。</p>
+<p>經過這些步驟的分析，相信你也意識到，給貝葉斯模型中的共變量中心化(centering covariates)，是提高模型分析採樣效率的好方法。它把事後未知參數的位置中心化，同時減少事後MCMC採樣的自相關。之前沒有把年齡中心化的模型結果也提示我們如果共變量未被中心化，其事後概率分布的MCMC樣本的有效樣本量是會被打了折扣的，採樣的收斂速度也較長。</p>
+</div>
+<div id="checking-model-fit-for-the-gambia-example" class="section level3">
+<h3><span class="header-section-number">84.2.8</span> 檢查模型擬合程度 checking model fit for the Gambia example</h3>
+<p>目前爲止我們完成了貝葉斯簡單線性回歸模型的建立，及其事後概率樣本的 MCMC 採集。下一步應該做的是對模型的擬合度進行檢查。模型檢查包括我們在簡單先行回顧章節學習過的一些標準(standard)檢查要點：</p>
+<ul>
+<li><strong>殘差 residuals：</strong>把殘差和各個共變量做散點圖，檢查每個未知參數的自相關；</li>
+<li><strong>預測 prediction：</strong>把創建的模型拿到其他的新數據中驗證其外部有效程度 (external validation/cross validation)。</li>
+</ul>
+<p>除此之外，我們仍然要補充做的包括：</p>
+<ul>
+<li>檢查先驗概率分布和實際觀察數據之間是否有衝突 check for conflict between prior and data；</li>
+<li>檢查貝葉斯模型是否會對不同的先驗概率分布較爲敏感 check for unintended sensitivity to the prior。</li>
+</ul>
+<p>標準化殘差 (standardised residuals) 的計算公式是 <span class="math inline">\(r = \frac{y - \mu}{\sigma}\)</span>，其中 <span class="math inline">\(\mu = E[y], \sigma^2 = V[y]\)</span>。在貝葉斯模型中獲得的殘差也是隨機變量 (random quantities)，有自己的分布。如果你願意，你可以把殘差的事後概率分布密度圖給繪制出來，或者選擇檢驗分布的形狀參數 (testing distributional shape)等等方法來檢驗殘差，但是如果你只要給每個對象提取一個模型殘差值，你的選擇可以有：</p>
+<ul>
+<li>標準化殘差的事後概率分布均值 posterior mean of the standardised residuals <span class="math inline">\(E(r)\)</span>；</li>
+<li>(plug-in posterior mean) 或者把參數的事後均值<span class="math inline">\(\mu\)</span>及其標準差<span class="math inline">\(\sigma\)</span>的均值放到計算式裏面: <span class="math inline">\(r = \frac{y - E(\mu)}{E(\sigma)}\)</span>。</li>
+</ul>
+<p>使用MCMC計算機模擬試驗的算法優勢，我們擁有了重復計算大量參數的能力。所以對於每一個觀察對象(岡比亞兒童)，我們可以用這個線性回歸模型計算他/她的體重的事後預測分布(predictive distribution) <span class="math inline">\(y_i^{pred}\)</span>，然後把他/她的體重觀察值<span class="math inline">\((y_i^{obs})\)</span>和他/她的體重事後概率分布做比較。利用 <code>step</code> 命令來計算每個孩子身上用模型計算的預測體重分布中，小於觀察的體重數據的面積 <span class="math inline">\(p(y_i^{pred} &lt; y_i^{obs})\)</span>。如果有許多觀測值，位於它各自事後概率分布的兩極（即預測體重遠小於，或者遠大於觀測體重），那麼可以認爲該模型擬合度較差。</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0518"></span>
+<img src="img/predictive-check.png" alt="Predictive check" width="70%" />
+<p class="caption">
+圖 84.14: Predictive check
+</p>
+</div>
+<p>用岡比亞兒童體重的貝葉斯模型來說，我們利用MCMC強大的事後樣本採集能力，在模型中增加並監測三個新的變量 <code>res, wt.pred, p.pred</code>：</p>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]
+    
+    # standardised residuals 
+    res[i] &lt;- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] &lt;- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+<p>所以我們只要增加對新增的三個變量 <code>res, wt.pred, p.pred</code> 的事後樣本採集的監控就可以了。圖 <a href="section-372.html#fig:BayesianChapter0519">84.15</a> 展示了BUGS軟件提供的殘差分析圖(caterpillar/毛蟲 plot)。它其實十分接近箱式圖 (box-plot)，唯一的區別是不顯示四分位數間距 (inter-quartile range)。毛蟲圖的最大優點在於，便於比較有很多事後概率分布的情況，像本例中190名兒童的體重都有各自的事後概率分布，他們每人的殘差也有各自的分布。圖 <a href="section-372.html#fig:BayesianChapter0520">84.16</a> 則是BUGS軟件繪制的岡比亞兒童體重的95%預測區間，後面的黑色散點圖是觀察值。</p>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0519"></span>
+<img src="img/caterpillarplot.png" alt="Caterpillar plot of the posterior distribution of standardised residuals vs. child ID" width="70%" />
+<p class="caption">
+圖 84.15: Caterpillar plot of the posterior distribution of standardised residuals vs. child ID
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:BayesianChapter0520"></span>
+<img src="img/PredictionbandsGambia.png" alt="Prediction bands for replicate data." width="70%" />
+<p class="caption">
+圖 84.16: Prediction bands for replicate data.
+</p>
 </div>
 </div>
-<div id="section-222" class="section level2">
-<h2><span class="header-section-number">49.2</span> 交互作用</h2>
-<p>我們決定調整一個混雜因素的時候，其實同時包含了 “在不同混雜因素的程度下，暴露變量和結果變量之間的關係不變/This implicitly assumes that the effect of the exposure is the same irrespective of the levels of the confounder.” 的假設。但是，一個混雜因素，它可能同時還扮演了改變暴露變量和結果變量之間關係的角色 (effect modifier/交互作用效應)。另外還有的情況下，某變量可能改變了暴露變量和結果變量之間的關係，卻不一定是一個混雜因素。此時我們說這個起到改變關係的變量和暴露變量之間發生了交互作用。</p>
-<p>如果暴露變量在某個分組變量的不同層 (strata) 之間是不同質的 (hetergeneous, not constant)，我們建議<strong>要分析且報告不同層各自的</strong>比值比。惟一的例外是 RCT 臨牀試驗的時候，我們更加關心調整後合併比值比。因爲一項治療藥物對不同的 “個體” 有不同的療效是必然的，但是，RCT 的目的是要評價的其實是這個藥物或者新療法在整個人羣中的療效是怎樣的。</p>
-<p>我們給腎結石數據加上治療方案和結石尺寸大小的交互作用項，結果如下：</p>
-<div class="sourceCode" id="cb588"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb588-1" title="1">ModelStone2 &lt;-<span class="st"> </span><span class="kw">glm</span>(<span class="kw">cbind</span>(Success, n <span class="op">-</span><span class="st"> </span>Success) <span class="op">~</span><span class="st"> </span>treatment<span class="op">*</span>size, <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit), <span class="dt">data =</span> Stone)</a>
-<a class="sourceLine" id="cb588-2" title="2"><span class="kw">summary</span>(ModelStone2)</a></code></pre></div>
-<pre><code>## 
-## Call:
-## glm(formula = cbind(Success, n - Success) ~ treatment * size, 
-##     family = binomial(link = logit), data = Stone)
-## 
-## Deviance Residuals: 
-## [1]  0  0  0  0
-## 
-## Coefficients:
-##                             Estimate Std. Error z value  Pr(&gt;|z|)    
-## (Intercept)                  1.87180    0.17903 10.4553 &lt; 2.2e-16 ***
-## treatmentSurgery             0.73089    0.45942  1.5909 0.1116310    
-## size&gt;= 2cm                  -1.08334    0.30039 -3.6065 0.0003104 ***
-## treatmentSurgery:size&gt;= 2cm -0.52453    0.53716 -0.9765 0.3288211    
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance:  3.31239e+01  on 3  degrees of freedom
-## Residual deviance: -4.21885e-15  on 0  degrees of freedom
-## AIC: 27.3472
-## 
-## Number of Fisher Scoring iterations: 3</code></pre>
-<div class="sourceCode" id="cb590"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb590-1" title="1">epiDisplay<span class="op">::</span><span class="kw">logistic.display</span>(ModelStone2)</a></code></pre></div>
-<pre><code>## 
-## Logistic regression predicting cbind(Success, n - Success) 
-##  
-##                                   crude OR(95%CI)   adj. OR(95%CI)    P(Wald&#39;s test) P(LR-test)
-## treatment: Surgery vs Lithotripsy 0.75 (0.51,1.09)  2.08 (0.84,5.11)  0.112          &lt; 0.001   
-##                                                                                                
-## size: &gt;= 2cm vs &lt; 2cm             0.34 (0.23,0.51)  0.34 (0.19,0.61)  &lt; 0.001        &lt; 0.001   
-##                                                                                                
-## treatmentSurgery:size&gt;= 2cm       -                 0.59 (0.21,1.7)   0.329          &lt; 0.001   
-##                                                                                                
-## Log-likelihood = -9.6736
-## No. of observations = 4
-## AIC value = 27.3472</code></pre>
-<p>交互作用項的迴歸係數是否爲零的檢驗結果是 <span class="math inline">\(p = 0.329\)</span>，提示數據無法提供足夠的證據證明結石尺寸對治療方案和手術成功與否之間的關係造成有意義的交互作用 (There is no evidence of an interaction between stone size and surgery)。所以此次的數據分析我們可以報告結石尺寸調整後的手術成功比值比就可以了。其中，交互作用項的迴歸係數 <span class="math inline">\(-0.5245 = \text{log}(0.59)\)</span>，的含義是當結石尺寸 <span class="math inline">\(\geqslant 2 \text{cm}\)</span> 時，外科手術和超聲碎石術成功<strong>比值比的對數的差</strong>。我們可以看到一開始我們計算的分層比值比的比值 <span class="math inline">\(\frac{1.23}{2.08} = 0.59\)</span>。還注意到這已經是一個飽和模型 (模型偏差爲零)，模型的擬合值和我們的觀測值是完全相同的。</p>
-<p>另外一點不得不提的是，交互作用項的迴歸係數的點估計 <span class="math inline">\(0.59\)</span> 其實低於零假設時的 <span class="math inline">\(1\)</span> 挺多的，它的 <span class="math inline">\(95\%\)</span> 信賴區間也相當的寬 <span class="math inline">\((0.21,1.70)\)</span>，所以其實這裏我們沒有獲得足夠的證據證明替代假設 (有交互作用)，很難說不是因爲樣本量不足導致的統計效能較低，所以我們沒有辦法從這個數據完全排除結石尺寸對治療方案的選擇和手術成功的關係之間的交互作用。(We really cannot be sure that there is no interaction in truth - the data are consistent with quite large interactions between size and surgery effect.) 因此，<strong>有些統計學家可能會傾向於報告分層的比值比，因爲我們沒有辦法從這個樣本數據排除有較強交互作用存在的可能性</strong>。</p>
+<div id="tdreplacegaussian" class="section level3">
+<h3><span class="header-section-number">84.2.9</span> 其他的替代模型 alternative model with t-errors</h3>
+<p>檢查一個模型意爲着我們可能需要替代模型。例如，我們可以使模型中的體重不是服從正態分布，而是服從 t 分布，因爲 t 分布將會給模型提供更高的穩健性。（t分布的兩端面積比起正態分布要大一些，也就是允許模型考慮更多的離羣值outliers）：</p>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dt(mu[i], tau, 4) # robust likelihood t distribution on 4 df
+    mu[i] &lt;- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]
+}
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
 </div>
-<div id="collapsibility" class="section level2">
-<h2><span class="header-section-number">49.3</span> 可壓縮性 collapsibility</h2>
-<p>模型可壓縮性的概念可以這樣來理解：</p>
-<p>當我們把一個 <strong>我們認爲很重要的混雜因子</strong> 加到模型中去時，自然而然我們會期待其對結果變量的 <strong>效果估計 (effect estimate)</strong> (迴歸係數)在調整前後發生變化。如果是反過來，當我們把一個 <strong>我們認爲不重要的非混雜因子</strong> 加到模型中去時，我們也會自然而然地期待其對結果變量的 <strong>效果估計 (effect estimate)</strong> 在調整前後不會發生改變才是。不幸的是，我們這種理想中的想當然，僅僅在某些情境下成立，其中之一是簡單線性迴歸 (Section <a href="lm.html#lm">26</a>)。</p>
-<div id="section-223" class="section level3">
-<h3><span class="header-section-number">49.3.1</span> 線性迴歸的可壓縮性</h3>
-<p><strong>證明</strong></p>
-<p>令 <span class="math inline">\(Y\)</span> 標記結果變量，<span class="math inline">\(X\)</span> 標記暴露變量，<span class="math inline">\(Z\)</span> 則標記我們想要調整的莫個混雜因子：</p>
+</div>
+<div id="bayesian-model-comparison" class="section level2">
+<h2><span class="header-section-number">84.3</span> 貝葉斯統計模型的比較 Bayesian model comparison</h2>
+<p>在使用統計學模型時，我們自然而然地想用模型對數據的擬合度來輔助進行模型的篩選及比較。常用的指標有 Akaike Information Criterion (AIC)：</p>
 <p><span class="math display">\[
-Y = \alpha + \beta_X X + \beta_Z Z + \varepsilon, \text{ where } \varepsilon \sim N(0, \sigma^2)
-\]</span></p>
-<p>然後把等式兩邊同時取以暴露變量 <span class="math inline">\(X\)</span> 爲條件的期待值：</p>
+\text{AIC} = -2\log p(y | \hat \theta) + 2k
+\]</span>
+其中， <span class="math inline">\(p(y|\hat\theta)\)</span> 就是模型的似然(likelihood)用來代表模型對數據的擬合度，<span class="math inline">\(k\)</span> 是模型中的未知參數個數，用來表示模型的復雜程度。</p>
+<div id="deviance-information-criterion-dic" class="section level3">
+<h3><span class="header-section-number">84.3.1</span> Deviance Information Criterion (DIC)</h3>
+<p><span class="citation">(Spiegelhalter et al. <a href="#ref-Spiegelhalter2002">2002</a>)</span>提出用 DIC 來比較貝葉斯模型。它也是利用和 AIC 類似的思想，使用DIC來綜合表示模型的擬合度，及模型的復雜程度：</p>
 <p><span class="math display">\[
-E(Y | X) = \alpha + \beta_X X + \beta_Z E(Z|X)
+\text{DIC} = \text{goodness of fit} + \text{complexity}
 \]</span></p>
-<p>如果 <span class="math inline">\(Z\)</span> 和 <span class="math inline">\(X\)</span> 是相互獨立的 (即，不是 <span class="math inline">\(X, Y\)</span> 之間關係的混淆因子)，那麼 <span class="math inline">\(E(Z|X) = E(Z) = \mu_Z\)</span>，因爲 <span class="math inline">\(X\)</span> 不能提供任何 <span class="math inline">\(Z\)</span> 的有效信息。所以，等式就變爲：</p>
+<p>其中模型的擬合程度部分用的是模型偏差值：<span class="math inline">\(D(\theta) = -2\log L(data | \theta)\)</span>；</p>
+<p>模型復雜程度使用的則是，模型中有效的未知參數的個數：</p>
 <p><span class="math display">\[
-E(Y|X) = \alpha + \beta_Z \mu_Z + \beta_X X
+\begin{aligned}
+p_D &amp; = E_{\theta | y}[D] - D(E_{\theta | y}[\theta]) \\ 
+    &amp; = \bar D - D(\bar\theta)
+\end{aligned}
 \]</span></p>
-<p>所以，當我們用簡單線性迴歸來擬合 <span class="math inline">\(X,Y\)</span> 之間的關係時，如果 <span class="math inline">\(Z,X\)</span> 是相互獨立的，模型中增加了 <span class="math inline">\(Z\)</span>，不會影響 <span class="math inline">\(X\)</span> 的迴歸係數。線性迴歸的這個性質被定義爲模型的可壓縮性 (linear regression models are collapsible)。</p>
+<p>i.e. the posterior mean deviance minus the deviance evaluated at the posterior mean of the parameters.</p>
+<p>然後 DIC 的定義也模仿 AIC：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{DIC} &amp; = D(\bar\theta) + 2 p_D \\ 
+           &amp; = \bar D + p_D
+\end{aligned}
+\]</span></p>
+<p>比較的方法是DIC越小的模型，越優，數據越支持。</p>
+<ul>
+<li>如果兩個模型的 DIC 相差大於 10，說明DIC較小的模型更好；</li>
+<li>如果兩個模型的 DIC 相差小於 5，說明兩個模型無太大差別。</li>
+</ul>
+<p>在BUGS軟件中你需要像追蹤監測其他隨機變量一樣監測模型的DIC，特別是要在確定模型已經達到收斂之後，採集收斂之後的 DIC 數值用於比較。</p>
 </div>
-<div id="collapsibility" class="section level3">
-<h3><span class="header-section-number">49.3.2</span> 邏輯鏈接方程時的不可壓縮性</h3>
-<p>使用對數鏈接方程 (<span class="math inline">\(\text{log link}\)</span>) 的迴歸模型，同樣具有和線性迴歸類似的可壓縮性。但是，邏輯鏈接方程 (<span class="math inline">\(\text{logit link}\)</span>) 的迴歸模型則不具有可壓縮性。下面舉例的分層表格和壓縮表格，證明了邏輯鏈接方程不具有可壓縮性：</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.7: <strong>Non-collapsibility</strong> of logit link in GLM <strong>(stratified data)</strong>
-</caption>
-<thead>
-<tr>
-<th style="border-bottom:hidden" colspan="1">
-</th>
-<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
-&lt;div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;&gt; Strata 1
-</div>
-</th>
-<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2">
-&lt;div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;&gt; Strata 2
-</div>
-</th>
-</tr>
-<tr>
-<th style="text-align:center;">
-Outcome
-</th>
-<th style="text-align:center;">
-Exposure <span class="math inline">\(+\)</span>
-</th>
-<th style="text-align:center;">
-Exposure <span class="math inline">\(-\)</span>
-</th>
-<th style="text-align:center;">
-Exposure <span class="math inline">\(+\)</span>
-</th>
-<th style="text-align:center;">
-Exposure <span class="math inline">\(-\)</span>
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-90
-</td>
-<td style="text-align:center;">
-50
-</td>
-<td style="text-align:center;">
-50
-</td>
-<td style="text-align:center;">
-10
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-10
-</td>
-<td style="text-align:center;">
-50
-</td>
-<td style="text-align:center;">
-50
-</td>
-<td style="text-align:center;">
-90
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-100
-</td>
-<td style="text-align:center;">
-100
-</td>
-<td style="text-align:center;">
-100
-</td>
-<td style="text-align:center;">
-100
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Odds Ratios
-</td>
-<td style="text-align:center;">
-9
-</td>
-<td style="text-align:center;">
-</td>
-<td style="text-align:center;">
-9
-</td>
-<td style="text-align:center;">
-</td>
-</tr>
-</tbody>
-</table>
-<p>從表格的數據計算可知，要被調整的分組變量的兩層數據中，暴露變量和結果變量的關係相同，比值比都是 <span class="math inline">\(9\)</span>，沒有交互作用，也沒有混雜效應 (每一層中暴露與非暴露均佔相同的 <span class="math inline">\(50\%\)</span>)。但是，你如果把這個觀測數據合併：</p>
-<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
-<caption>
-表 49.8: <strong>Non-collapsibility</strong> of logit link in GLM <strong>(collapsed data)</strong>
-</caption>
-<thead>
-<tr>
-<th style="text-align:center;">
-Outcome
-</th>
-<th style="text-align:center;">
-Exposure <span class="math inline">\(+\)</span>
-</th>
-<th style="text-align:center;">
-Exposure <span class="math inline">\(-\)</span>
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center;">
-Success
-</td>
-<td style="text-align:center;">
-140
-</td>
-<td style="text-align:center;">
-60
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Failure
-</td>
-<td style="text-align:center;">
-60
-</td>
-<td style="text-align:center;">
-140
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Total
-</td>
-<td style="text-align:center;">
-200
-</td>
-<td style="text-align:center;">
-200
-</td>
-</tr>
-<tr>
-<td style="text-align:center;">
-Odds ratio
-</td>
-<td style="text-align:center;">
-5.4
-</td>
-<td style="text-align:center;">
-</td>
-</tr>
-</tbody>
-</table>
-<p>既然已知我們拿來分層的變量對暴露和結果的關係既沒有交互作用，也沒有混雜效應，那麼壓縮數據以後的合併比值比應該和分層比值比一樣才說的通，可惜我們獲得了截然不同的合併比值比 (非調整的)。所以在應用邏輯鏈接方程建立廣義線性迴歸模型的時候，一定不能忘記其不可壓縮性的特徵。所以，<strong>即使加入一個非混淆因子，暴露變量的邏輯迴歸的效應估計 (係數) 也會發生改變</strong>。調整了 <span class="math inline">\(Z\)</span> 以後的比值比被叫做條件 (或直接使用分層) 比值比。如同表格中實例所示，條件比值比會比邊緣比值比 (非調整) 看起來要大一些。</p>
-<p>邏輯迴歸的不可壓縮性給我們的啓示是，加入某個變量進入邏輯迴歸模型前後，其他預測變量的迴歸係數發生的變化可能僅僅是由於模型的不可壓縮性導致的變化，而非由於新加入的變量對原先變量與結果之間的關係起到了交互作用或者混雜效應。所以，<strong>擬合迴歸模型的時候，如果你要考慮對莫個因素進行調整，必須做的一件事是，先分析它和其他模型中已有的預測變量之間的關係，從而有助於分析，當把要調整的變量放進模型前後的迴歸係數變化是否是真的來自於交互作用或者混雜效應。</strong></p>
+<div id="section-375" class="section level3">
+<h3><span class="header-section-number">84.3.2</span> 岡比亞兒童體重數據模型比較</h3>
+<p>當設定體重服從正態分布時，我們獲得模型的 DIC 是</p>
+<pre><code>       Dbar  Dhat   DIC    pD
+wt    625.1 621.1 629.1 3.983
+total 625.1 621.1 629.1 3.983</code></pre>
+<p>當設定體重服從自由度爲4的t分布時，我們獲得模型的 DIC 是</p>
+<pre><code>       Dbar Dhat   DIC    pD
+wt    622.1  618 626.2 4.114
+total 622.1  618 626.2 4.114</code></pre>
+<p>兩個模型的DIC差別在3左右，也就是說用正態分布，或者t分布，對結果影響不大。</p>
+<p>這兩個模型給出的我們的問題的答案也不會有本質上的差別：</p>
+<ul>
+<li>年齡每增加1個月，體重的變化：
+<ul>
+<li>正態分布：<span class="math inline">\(\beta\)</span> 的事後均值爲 0.164 kg，95% 可信區間 (0.142, 0.185)；</li>
+<li>t 分布：<span class="math inline">\(\beta\)</span> 的事後均值爲 0.167 kg, 95% 可信區間 (0.146, 0.187)。</li>
+</ul></li>
+<li>男孩和女孩的體重差別：
+<ul>
+<li>正態分布：<span class="math inline">\(\gamma\)</span> 的事後均值爲 -0.519 kg，95% 可信區間 (-0.877, -0.156)；</li>
+<li>t 分布：<span class="math inline">\(\gamma\)</span> 的事後均值爲 -0.574 kg，95% 可信區間 (-0.915, -0.232)。</li>
+</ul></li>
+</ul>
 </div>
 </div>
-<div id="interaction-depend-scale" class="section level2">
-<h2><span class="header-section-number">49.4</span> 交互作用對尺度的依賴性</h2>
-<p>GLM 模型中的交互作用檢驗，對選用的尺度 (比值比 OR，還是危險度比 RR) 依賴性極高。用模型可壓縮性的數據例子也可以說明交互作用對尺度的依賴性。上文書說到，兩個分層中的比值比都是 9，該分層變量既沒有交互作用，也不是混淆因子 (當使用比值比的時候)。如果我們改用危險度比 (risk ratio, RR)，在分類變量的第一層 (Strata 1) 中，暴露的危險度比是 <span class="math inline">\(\frac{90/100}{50/100} = 1.8\)</span>；分類變量的第二層 (Strata 2) 中，暴露的危險度比是 <span class="math inline">\(\frac{50/100}{10/100} = 5\)</span>。所以使用危險度比作爲評價指標的時候，被調整的分類變量就突然搖身一變變成了有交互作用的因子。這裏，我們用數據，證明了交互作用的存在與否，對尺度的選用依賴性極高。<strong>這就導致我們在描述一個變量是否對我們關心的暴露和結果之間的關係有交互作用時，必須明確指出所使用的是比值比，還是危險度比進行的交互作用評價。</strong></p>
+<div id="practical-bayesian-statistics-05" class="section level2">
+<h2><span class="header-section-number">84.4</span> Practical Bayesian Statistics 05</h2>
+<p>本次練習我們來比較多個貝葉斯線性回歸模型。看看在模型中增加其他的變量是否能改善模型的擬合度，最終你會選哪個線性回歸模型來回答一開始我們提出的問題。</p>
+<p>除了本章實例中使用的線性回歸模型，另外可以拿來比較的模型分別是：</p>
+<ol style="list-style-type: decimal">
+<li>增加年齡的二次方項 <span class="math inline">\(age^2\)</span>；</li>
+<li>增加年齡和性別的交互作用項 <span class="math inline">\(age \times sex\)</span>。</li>
+</ol>
+<p>在思考貝葉斯模型怎樣增加上面兩個變量的語法的同時，請思考這樣幾個問題：</p>
+<ol style="list-style-type: decimal">
+<li>要怎樣修改模型的BUGS代碼才能正確表達想要增加的模型變量？特別是模型應該怎麼寫才能把年齡的平方中心化？</li>
+<li>如何寫MCMC鏈的起始值？</li>
+<li>跑完模型以後，給模型的擬合實施常規的檢查。</li>
+<li>簡單線性迴歸模型中增加了這些部分後的結果，要如何回答我們一開始提出的問題？（年齡每增加一個月，體重的變化是多少kg？男孩和女孩之間的體重差別是多少kg？）</li>
+</ol>
+<div id="adding-age-squared" class="section level3">
+<h3><span class="header-section-number">84.4.1</span> 增加年齡二次方項 adding age squared</h3>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*cage[i] + gamma*sex[i] + delta*cagesq[i]
+    cage[i] &lt;- age[i] - mean(age[]) # centered age
+    agesq[i] &lt;- pow(age[i], 2)
+    cagesq[i] &lt;- agesq[i] - mean(agesq[]) # centered age squared
+    
+    # standardised residuals 
+    res[i] &lt;- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] &lt;- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  delta ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+<p>使用的兩個MCMC鏈的起始值分別是：</p>
+<pre><code>initlist &lt;- list(alpha = 0, beta = 1, gamma = 5, delta = -1, logsigma2 = 1)
+initlist1 &lt;- list(alpha = 10, beta = 0, gamma = -5, delta = 1, logsigma2 = 5)</code></pre>
+<p>獲得的50000個事後概率分佈樣本的統計描述是：</p>
+<pre><code>            mean       sd  MC_error  val2.5pc    median  val97.5pc start sample
+alpha   9.945000 0.136100 1.166e-03  9.677000  9.945000 10.2100000  1001  50000
+beta    0.256600 0.053360 1.452e-03  0.151600  0.256500  0.3621000  1001  50000
+delta  -0.002429 0.001372 3.731e-05 -0.005133 -0.002422  0.0002715  1001  50000
+gamma  -0.535000 0.181100 1.526e-03 -0.887300 -0.534900 -0.1815000  1001  50000
+sigma2  1.563000 0.164300 8.325e-04  1.275000  1.551000  1.9190000  1001  50000</code></pre>
+<p>模型的 DIC 是：</p>
+<pre><code>      Dbar Dhat DIC    pD
+wt     623  618 628 5.008
+total  623  618 628 5.008</code></pre>
+<p>和之前沒有增加年齡平方的模型相比較DIC減少了大概只有1。因此，基本沒有差別的情況下，我們選擇沒有年齡平方的一開始的模型。從 <code>delta</code> 的事後概率分佈結果也知道它的95%可信區間是包括0的。也說明了增加年齡平方項的部分無太多意義。</p>
+</div>
+<div id="adding-an-interaction-term" class="section level3">
+<h3><span class="header-section-number">84.4.2</span> 增加年齡和性別的交互作用項 adding an interaction term</h3>
+<pre><code>model{
+    for(i in 1:190){ # loop through the 190 children
+    wt[i] ~ dnorm(mu[i], tau)
+    mu[i] &lt;- alpha + beta*cage[i] + gamma*sex[i] + delta*cage[i]*sex[i]
+    cage[i] &lt;- age[i] - mean(age[]) # centered age
+
+    # standardised residuals 
+    res[i] &lt;- (wt[i] - mu[i]) / sqrt(sigma2)
+    
+    # predictions 
+    wt.pred[i] ~ dnorm(mu[i], tau) # repredict for each child
+    p.pred[i] &lt;- step(wt[i] - wt.pred[i])
+    }
+  # priors
+  alpha ~ dunif(-1000, 1000)
+  beta  ~ dunif(-1000, 1000)
+  gamma ~ dunif(-1000, 1000)
+  delta ~ dunif(-1000, 1000)
+  logsigma2 ~ dunif(-100, 100)
+  sigma2 &lt;- exp(logsigma2)
+  tau    &lt;- 1/sigma2
+}</code></pre>
+<p>使用的起始值分別是：</p>
+<pre><code>initlist &lt;- list(alpha = 0, beta = 1, gamma = 5, delta = -5, logsigma2 = 1)
+initlist1 &lt;- list(alpha = 10, beta = 0, gamma = -5, delta = 5, logsigma2 = 5)</code></pre>
+<p>事後概率分佈樣本的統計學描述是：</p>
+<pre><code>            mean      sd  MC_error val2.5pc    median val97.5pc start sample
+alpha   9.937000 0.13730 0.0011460  9.66900  9.936000  10.21000  1001  50000
+beta    0.165500 0.01609 0.0001244  0.13380  0.165500   0.19710  1001  50000
+delta  -0.002979 0.02223 0.0001703 -0.04668 -0.003053   0.04065  1001  50000
+gamma  -0.519900 0.18380 0.0015730 -0.88040 -0.518800  -0.16250  1001  50000
+sigma2  1.590000 0.16700 0.0007803  1.29800  1.578000   1.94800  1001  50000</code></pre>
+<p>DIC是：</p>
+<pre><code>       Dbar  Dhat   DIC    pD
+wt    626.1 621.1 631.1 5.003
+total 626.1 621.1 631.1 5.003</code></pre>
+<p>增加了性別年齡交互項的模型給出的DIC比原先的模型大了2個單位左右，所以，我們還是會選擇沒有交互作用項的一開始的簡單線性迴歸模型。</p>
+</div>
+</div>
+</div>
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-Spiegelhalter2002">
+<p>Spiegelhalter, David J, Nicola G Best, Bradley P Carlin, and Angelika Van Der Linde. 2002. “Bayesian Measures of Model Complexity and Fit.” <em>Journal of the Royal Statistical Society: Series B (Statistical Methodology)</em> 64 (4): 583–639.</p>
 </div>
 </div>
             </section>
@@ -2225,8 +1959,8 @@ Odds ratio
           </div>
         </div>
       </div>
-<a href="poisson-glm-for-rates.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="section-224.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="MCMC-methods.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="section-376.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -2256,7 +1990,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/09-GLM.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/12-Bayesian-stats.Rmd",
 "text": "編輯"
 },
 "history": {
