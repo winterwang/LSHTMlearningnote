@@ -1481,7 +1481,7 @@ y_p &amp; = a_{p1}x_1 + a_{p2}x_2 + \cdots + a_{pp}x_p \\
 <ul>
 <li><span class="math inline">\(\textbf{S}\)</span> 是數據的<strong>方差協方差矩陣 (variance, covriance matrix)</strong>；</li>
 <li><span class="math inline">\(\textbf{P}\)</span> 是<strong>直角投影矩陣 (orthogonal projection matrix)</strong>，該矩陣的每一列，是旋轉之後的新變量的座標，也就是主成分變量，它們又被叫做<strong>特徵向量 (eigenvectors)</strong>；</li>
-<li><span class="math inline">\(\bf{\Lambda}\)</span> 是一個<strong>對角矩陣 (diagonal matrix)</strong>，它的對角線上是每個主成分變量的方差，它們又被叫做<strong>特徵值 (eigenvalues)</strong>。</li>
+<li><span class="math inline">\(\bf{\Lambda}\)</span> 是一個<strong>對角矩陣 (diagonal matrix)</strong>，它的對角線上是每個主成分變量的方差，它們又被叫做<strong>特徵值 (eigenvalues)</strong>。特徵值常常又被叫做慣性 (inertia)，特徵值從對角線左上角起往右下角是從大到小排列，每一個特徵值是每個特徵向量的方差，也就是數據整體方差投射在這個主成分變量上的慣性，可以理解爲該主成分能夠解釋多少整個數據的方差 (explained variance)。</li>
 </ul>
 
 <div class="theorem">
@@ -1513,30 +1513,237 @@ y_p &amp; = a_{p1}x_1 + a_{p2}x_2 + \cdots + a_{pp}x_p \\
 \Rightarrow \bf{\Sigma}^2 &amp; = \bf{\Lambda}                      
 \end{aligned}
 \]</span></p>
-<p>所以，<span class="math inline">\(\bf{\Sigma}^2 &amp; = \bf{\Lambda}\)</span> 在奇異值分解中獲得的中間矩陣 <span class="math inline">\(\bf{\Sigma}_{n \times p}\)</span>，它對角線上的數值平方了之後就是每個原始變量的方差，或者說它們本身是原始數據的標準差。奇異值分解矩陣的方法最常見被用於實施對應分析 (Correspondence Analysis)。</p>
+<p>所以，<span class="math inline">\(\bf{\Sigma}^2 = \bf{\Lambda}\)</span> ，也就是收在奇異值分解中獲得的中間矩陣 <span class="math inline">\(\bf{\Sigma}_{n \times p}\)</span>，它對角線上的數值的平方，就是每個原始變量的方差，或者說它們本身是原始數據的標準差。奇異值分解矩陣的方法最常見被用於實施對應分析 (Correspondence Analysis)。</p>
 </div>
 </div>
 <div id="section-307" class="section level2">
 <h2><span class="header-section-number">68.4</span> 主成分分析數據實例</h2>
-<p><a href="http://factominer.free.fr/bookV2/orange.csv">數據</a>，是邀請美食家對產自世界各地的不同品牌品種的橙汁進行一個一個的味道/品質描述，並給每個項目打分。你可以用下面的代碼下載這個數據並觀察每個描述的變量，且很容易觀察的到的是，這些變量之間並不完全獨立，有些變量可能和另一些變量相關：</p>
-<div class="sourceCode" id="cb992"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb992-1" title="1">orange &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;http://factominer.free.fr/bookV2/orange.csv&quot;</span>, </a>
-<a class="sourceLine" id="cb992-2" title="2">                     <span class="dt">header =</span> <span class="ot">TRUE</span>, <span class="dt">sep =</span> <span class="st">&quot;;&quot;</span>, <span class="dt">dec =</span> <span class="st">&quot;.&quot;</span>, <span class="dt">row.names =</span> <span class="dv">1</span>)</a>
-<a class="sourceLine" id="cb992-3" title="3"><span class="kw">head</span>(orange[, <span class="dv">1</span><span class="op">:</span><span class="dv">7</span>])</a></code></pre></div>
-<pre><code>##                Odour.intensity Odour.typicality Pulpiness Intensity.of.taste Acidity Bitterness
-## Pampryl amb.              2.82             2.53      1.66               3.46    3.15       2.97
-## Tropicana amb.            2.76             2.82      1.91               3.23    2.55       2.08
-## Fruvita fr.               2.83             2.88      4.00               3.45    2.42       1.76
-## Joker amb.                2.76             2.59      1.66               3.37    3.05       2.56
-## Tropicana fr.             3.20             3.02      3.69               3.12    2.33       1.97
-## Pampryl fr.               3.07             2.73      3.34               3.54    3.31       2.63
-##                Sweetness
-## Pampryl amb.        2.60
-## Tropicana amb.      3.32
-## Fruvita fr.         3.38
-## Joker amb.          2.80
-## Tropicana fr.       3.34
-## Pampryl fr.         2.90</code></pre>
-<p>進行主成分分析只需要這樣一行代碼：</p>
+<p><a href="http://factominer.free.fr/bookV2/orange.csv">橙汁數據</a>，是邀請美食家對產自世界各地的不同品牌品種的橙汁進行一個一個的味道/品質描述，並給每個項目打分。你可以用下面的代碼下載這個數據並觀察每個描述的變量，且很容易觀察的到的是，這些變量之間並不完全獨立，有些變量可能和另一些變量相關：</p>
+<div style="border: 1px solid #ddd; padding: 0px; overflow-y: scroll; height:300px; overflow-x: scroll; width:100%; ">
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;">
+</th>
+<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
+Odour.intensity
+</th>
+<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
+Odour.typicality
+</th>
+<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
+Pulpiness
+</th>
+<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
+Intensity.of.taste
+</th>
+<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
+Acidity
+</th>
+<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
+Bitterness
+</th>
+<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
+Sweetness
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Pampryl amb.
+</td>
+<td style="text-align:right;">
+2.82
+</td>
+<td style="text-align:right;">
+2.53
+</td>
+<td style="text-align:right;">
+1.66
+</td>
+<td style="text-align:right;">
+3.46
+</td>
+<td style="text-align:right;">
+3.15
+</td>
+<td style="text-align:right;">
+2.97
+</td>
+<td style="text-align:right;">
+2.60
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Tropicana amb.
+</td>
+<td style="text-align:right;">
+2.76
+</td>
+<td style="text-align:right;">
+2.82
+</td>
+<td style="text-align:right;">
+1.91
+</td>
+<td style="text-align:right;">
+3.23
+</td>
+<td style="text-align:right;">
+2.55
+</td>
+<td style="text-align:right;">
+2.08
+</td>
+<td style="text-align:right;">
+3.32
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Fruvita fr.
+</td>
+<td style="text-align:right;">
+2.83
+</td>
+<td style="text-align:right;">
+2.88
+</td>
+<td style="text-align:right;">
+4.00
+</td>
+<td style="text-align:right;">
+3.45
+</td>
+<td style="text-align:right;">
+2.42
+</td>
+<td style="text-align:right;">
+1.76
+</td>
+<td style="text-align:right;">
+3.38
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Joker amb.
+</td>
+<td style="text-align:right;">
+2.76
+</td>
+<td style="text-align:right;">
+2.59
+</td>
+<td style="text-align:right;">
+1.66
+</td>
+<td style="text-align:right;">
+3.37
+</td>
+<td style="text-align:right;">
+3.05
+</td>
+<td style="text-align:right;">
+2.56
+</td>
+<td style="text-align:right;">
+2.80
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Tropicana fr.
+</td>
+<td style="text-align:right;">
+3.20
+</td>
+<td style="text-align:right;">
+3.02
+</td>
+<td style="text-align:right;">
+3.69
+</td>
+<td style="text-align:right;">
+3.12
+</td>
+<td style="text-align:right;">
+2.33
+</td>
+<td style="text-align:right;">
+1.97
+</td>
+<td style="text-align:right;">
+3.34
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Pampryl fr.
+</td>
+<td style="text-align:right;">
+3.07
+</td>
+<td style="text-align:right;">
+2.73
+</td>
+<td style="text-align:right;">
+3.34
+</td>
+<td style="text-align:right;">
+3.54
+</td>
+<td style="text-align:right;">
+3.31
+</td>
+<td style="text-align:right;">
+2.63
+</td>
+<td style="text-align:right;">
+2.90
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>進行主成分分析在Stata只需要這樣一行代碼：</p>
+<pre><code>insheet using &quot;http://factominer.free.fr/bookV2/orange.csv&quot; , delimiter(&quot;;&quot;) clear
+pca odour* pulp* intens* acid* bitter* sweetness, cor</code></pre>
+<p>你就會獲得十分直觀的結果：</p>
+<pre><code>
+Principal components/correlation                 Number of obs    =          6
+                                                 Number of comp.  =          5
+                                                 Trace            =          7
+    Rotation: (unrotated = principal)            Rho              =     1.0000
+
+    --------------------------------------------------------------------------
+       Component |   Eigenvalue   Difference         Proportion   Cumulative
+    -------------+------------------------------------------------------------
+           Comp1 |      4.74369       3.4104             0.6777       0.6777
+           Comp2 |      1.33329      .513448             0.1905       0.8681
+           Comp3 |      .819842      .735818             0.1171       0.9853
+           Comp4 |     .0840232     .0648702             0.0120       0.9973
+           Comp5 |      .019153      .019153             0.0027       1.0000
+           Comp6 |            0            0             0.0000       1.0000
+           Comp7 |            0            .             0.0000       1.0000
+    --------------------------------------------------------------------------
+
+Principal components (eigenvectors) 
+
+    ------------------------------------------------------------------------------
+        Variable |    Comp1     Comp2     Comp3     Comp4     Comp5 | Unexplained 
+    -------------+--------------------------------------------------+-------------
+    odourinten~y |   0.2110    0.6534   -0.5174    0.0286    0.0310 |           0 
+    odourtypic~y |   0.4524    0.1162   -0.0646    0.2668    0.2952 |           0 
+       pulpiness |   0.3313    0.5340    0.3290   -0.3327   -0.2250 |           0 
+    intensityo~e |  -0.2984    0.3714    0.6910    0.0189    0.3456 |           0 
+         acidity |  -0.4191    0.3017   -0.0237    0.7065   -0.4106 |           0 
+      bitterness |  -0.4292    0.1628   -0.3152   -0.0974    0.6712 |           0 
+       sweetness |   0.4384   -0.1374    0.2061    0.5553    0.3503 |           0 
+    ------------------------------------------------------------------------------</code></pre>
+<p>根據方差協方差矩陣進行的主成分分析結果，我們發現主成分 6 和 7 可以忽略不計。</p>
 <div class="sourceCode" id="cb994"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb994-1" title="1"><span class="kw">library</span>(FactoMineR)</a>
 <a class="sourceLine" id="cb994-2" title="2">org.pca &lt;-<span class="st"> </span><span class="kw">PCA</span>(orange[, <span class="dv">1</span><span class="op">:</span><span class="dv">7</span>], <span class="dt">ncp =</span> <span class="dv">7</span>, <span class="dt">graph =</span> <span class="ot">FALSE</span>)</a>
 <a class="sourceLine" id="cb994-3" title="3"></a>
@@ -1549,7 +1756,7 @@ y_p &amp; = a_{p1}x_1 + a_{p2}x_2 + \cdots + a_{pp}x_p \\
 ## Dim.3 0.819841150      11.71201643                   98.526053
 ## Dim.4 0.084023297       1.20033282                   99.726386
 ## Dim.5 0.019153009       0.27361442                  100.000000</code></pre>
-<p><img src="bookdown_files/figure-html/PCAorangeScreeplot-1.png" width="50%" style="display: block; margin: auto;" /></p>
+<p><img src="bookdown_files/figure-html/PCAorangeScreeplot-1.png" width="70%" style="display: block; margin: auto;" /></p>
 </div>
 <div id="cluster-analysispca-practical" class="section level2">
 <h2><span class="header-section-number">68.5</span> Cluster analysis/PCA practical</h2>
