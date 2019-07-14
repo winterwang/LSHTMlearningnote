@@ -3927,16 +3927,79 @@ $$
 
 - $\textbf{S}$ 是數據的**方差協方差矩陣 (variance, covriance matrix)**；
 - $\textbf{P}$ 是**直角投影矩陣 (orthogonal projection matrix)**，該矩陣的每一列，是旋轉之後的新變量的座標，也就是主成分變量，它們又被叫做**特徵向量 (eigenvectors)**；
-- $\Lambda$ 是一個**對角矩陣 (diagonal matrix)**，它的對角線上是每個主成分變量的方差，它們又被叫做**特徵值 (eigenvalues)**。
+- $\bf{\Lambda}$ 是一個**對角矩陣 (diagonal matrix)**，它的對角線上是每個主成分變量的方差，它們又被叫做**特徵值 (eigenvalues)**。
 
 ```{theorem, name = "Spectral decomposition"}
 根據**譜定理 Spectral decomposition**：如果矩陣 $\textbf{S}$ 是對稱的，它總是可以被分解爲：
 $$
-\textbf{S} = \textbf{P}\Lambda\textbf{P}^t
+\textbf{S} = \textbf{P}\bf{\Lambda}\textbf{P}^t
 $$
 ```
 
-值得注意的是，分解方差協方差矩陣的時候，我們沒有任何統計學或者概率論上的前提條件。
+值得注意的是，首先，分解方差協方差矩陣的時候，並沒有任何統計學或者概率論上的前提條件；其次，這樣的矩陣分解不一定只用於方差協方差矩陣，你可以對任何對稱矩陣 (symmetrix matrix) 進行分解，它被叫做矩陣縮放 (matrix scaling)；最後，其實數據矩陣本身不一定非要是連續型變量，也不一定要有相似的刻度/取值範圍 (same scale)，如果你願意，對二分類變量或者是計數型變量，均可以進行主成分分析。但是，當變量之間的刻度相差巨大時，可能會產生一些意想不到的假象。所以，在實施主成分分析之前，通常的建議是對原始數據的變量進行標準化，或者直接用其相關係數矩陣 (correlation matrix)。
+
+### 超越對稱矩陣：奇異值分解 (singular value decomposition, SVD)
+
+主成分分析使用的矩陣分解方法，只能應用在方差協方差矩陣或者相關係數矩陣這樣的對稱的正方形矩陣。假如矩陣並非對稱，另一種矩陣分解方法叫做奇異值分解法 (singular value decomposition, SVD)。此時就可以直接應用在原始數據矩陣 $\mathbf{X}_{n\times p}$ 本身，而不需要侷限於數據的方差協方差矩陣/相關係數矩陣：
+
+$$
+\mathbf{X}_{n\times p} = \mathbf{U}_{n\times n}\bf{\Sigma}_{n \times p} \mathbf{W}_{p\times p}
+$$
+
+其中，
+
+- $\mathbf{U}_{n\times n}$ 是含有**左奇異向量 (left singular vectors)** 的矩陣；
+- $\Sigma_{n \times p}$ 是含有**奇異值 (singular values)**的矩陣；
+- $\mathbf{W}_{p\times p}$ 則是含有**右奇異向量 (right singular vectors)** 的矩陣。
+
+所以你看到任意的形狀都可以被分解，此時分解出來的 $\mathbf{U}_{n\times n}$ 和 $\mathbf{W}_{p\times p}$ 是形狀維度不同的正方形矩陣。
+
+另外，根據這樣的分解我們可以推導：
+
+$$
+\begin{aligned}
+\mathbf{X}^t \mathbf{X} & = \mathbf{W}\bf{\Sigma}\mathbf{U}^t\times\mathbf{U}\bf{\Sigma}\mathbf{W}^t \\
+                        & = \mathbf{W}\bf{\Sigma}^2\mathbf{W}^t \\ 
+\Rightarrow \bf{\Sigma}^2 & = \bf{\Lambda}                      
+\end{aligned}
+$$
+ 
+所以，$\bf{\Sigma}^2 & = \bf{\Lambda}$ 在奇異值分解中獲得的中間矩陣 $\bf{\Sigma}_{n \times p}$，它對角線上的數值平方了之後就是每個原始變量的方差，或者說它們本身是原始數據的標準差。奇異值分解矩陣的方法最常見被用於實施對應分析 (Correspondence Analysis)。
+
+
+## 主成分分析數據實例
+
+[數據](http://factominer.free.fr/bookV2/orange.csv)，是邀請美食家對產自世界各地的不同品牌品種的橙汁進行一個一個的味道/品質描述，並給每個項目打分。你可以用下面的代碼下載這個數據並觀察每個描述的變量，且很容易觀察的到的是，這些變量之間並不完全獨立，有些變量可能和另一些變量相關：
+
+```{r PCAorange, message=FALSE, warning=FALSE}
+orange <- read.table("http://factominer.free.fr/bookV2/orange.csv", 
+                     header = TRUE, sep = ";", dec = ".", row.names = 1)
+head(orange[, 1:7])
+```
+
+進行主成分分析只需要這樣一行代碼：
+
+```{r PCAorange1, message=FALSE, warning=FALSE}
+library(FactoMineR)
+org.pca <- PCA(orange[, 1:7], ncp = 7, graph = FALSE)
+
+library(factoextra)
+eig.val <- get_eigenvalue(org.pca)
+eig.val
+```
+
+```{r PCAorangeScreeplot,  cache=TRUE, echo=FALSE, fig.asp=.7, fig.width=4, fig.cap="", fig.align='center', out.width='50%'}
+fviz_eig(org.pca, addlabels = TRUE, ylim = c(0, 70)) + 
+  theme(text = element_text(size = 15, face = "bold")
+  #   axis.text = element_text(size = 15, face = "bold"),
+  # axis.text.x = element_text(size = 15, face = "bold"),
+  # axis.text.y = element_text(size = 15, face = "bold"), 
+  # axis.title = element_text(size = 15, face = "bold"),
+  # plot.title = element_text(size = 15, face = "bold"), 
+  )
+```
+
+
 
 ## Cluster analysis/PCA practical 
 
