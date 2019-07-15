@@ -4145,6 +4145,55 @@ fviz_pca_biplot(org.pca, repel = TRUE, pointsize = "cos2", pointshape = 21,
 
 ## 在PCA圖形中加入補充變量和補充個體 (supplementary elements)
 
+在橙汁數據中，除了有美食家給出的各個味道項目的評分之外，其實還有各個橙汁的物理化學特性數據。
+
+
+```{r OrangePhyChem, message=FALSE, warning=FALSE, echo=FALSE}
+orange[, 8:16] %>%
+  kable() %>%
+  kable_styling() %>% 
+   scroll_box(width = "100%", height = "300px")
+```
+
+我們可以把這些沒有用於計算主成分分析的變量 (active variables)，和其餘的輔助性變量 (supplementary variables) 同時繪製在變量相關係數圓盤圖中。此時我們只需要在進行PCA運算的時候告訴R這些變量是輔助性的連續/分類變量即可：
+
+```{r PCAorangeSuppl, message=FALSE, warning=FALSE}
+
+org.pca <- PCA(orange, quanti.sup = 8:14, quali.sup = 15:16,
+               graph = FALSE)
+org.pca$quanti.sup
+```
+
+
+然後用下面的代碼繪製包含了輔助性變量的變量相關圓盤圖：
+
+```{r PCAvar_suppplot,  cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=4, fig.cap="Orange juice data: representation of the active and supplementary variables..", fig.align='center', out.width='70%'}
+fviz_pca_var(org.pca, repel = TRUE, labelsize = 1.5) 
+```
+
+
+如圖 \@ref(fig:PCAvar_suppplot) 所示，第一個主成分變量分離的左右半球的橙汁味道特徵，和他們的物理特性其實是相呼應的。例如，`pH` 值出現在了圓盤的右半邊，靠近 `Sweetness` 這一變量。因爲 `pH` 越高，酸度越低，那麼味道也就越甜，這是合理的。另外一個有趣的現象是，蔗糖 `saccharose` 含量高的橙汁，`pH` 越高，味道越甜。在圓盤的左邊，是蔗糖在酸環境下分解之後產生的果糖和葡萄糖，所以果糖葡萄糖反而和酸度 `Acidity` 相關性高，因爲橙汁中果糖葡萄糖含量高意味着蔗糖被酸分解。
+
+由此可見，PCA是一個對數據進行初步描述和探索時十分有力的工具。所以，在回歸模型選擇變量之前，建議可以對數據先進行主成分分析，並且把預備考慮放在回歸模型的解釋變量部分的變量用於PCA主成分分析，把想要做預測的變量作爲輔助性變量投射到主成分分析的變量相關圖中，觀察解釋變量之間可能存在的相關性，有助於選取合適的解釋變量。
+
+### 展示分類輔助性變量和個體的關係
+
+根據不同的儲存方式，兩類的橙汁區別很清楚。
+
+```{r PCAindplot_supp,  cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=4, fig.cap="Plane representation of the scatterplot of individuals with a supplementary categorical variable (way of preserving).", fig.align='center', out.width='70%'}
+p <- fviz_pca_ind(org.pca, habillage = 15, 
+             palette = "jco", repel = TRUE, labelsize = 2)
+p
+```
+
+根據橙子的產地區分繪製的個人圖：
+
+```{r PCAindplot_supp2,  cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=4, fig.cap="Plane representation of the scatterplot of individuals with a supplementary categorical variable (origin).", fig.align='center', out.width='70%'}
+p <- fviz_pca_ind(org.pca, habillage = 16, 
+             palette = "jco", repel = TRUE, labelsize = 2)
+p
+```
+
 
 ## Cluster analysis/PCA practical 
 
