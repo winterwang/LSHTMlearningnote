@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2019-08-25" />
+<meta name="date" content="2019-09-16" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -74,7 +74,7 @@ a.sourceLine { text-indent: -1em; padding-left: 1em; }
 pre.numberSource a.sourceLine
   { position: relative; left: -4em; }
 pre.numberSource a.sourceLine::before
-  { content: attr(title);
+  { content: attr(data-line-number);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
     border: none; pointer-events: all; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
@@ -1378,8 +1378,8 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 <p>也正是由於觀測值的協方差矩陣是如此地對稱，該模型被命名爲復合對稱模型 compound symmetric model。</p>
 <p><strong>Adult height measures 數據</strong></p>
 <p>有(閒人)花了數十年時間追蹤隨訪了近2000名女性在 26 歲，36歲，43歲，53歲時的身高。忽略掉可能存在的測量誤差，研究者想知道是否隨着年齡增加，女性的身高會縮水。這些女性在這些年齡時的身高數據總結如下:</p>
-<div class="sourceCode" id="cb967"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb967-1" title="1">height &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/height.dta&quot;</span>)</a>
-<a class="sourceLine" id="cb967-2" title="2"><span class="kw">summ</span>(height[, <span class="dv">2</span><span class="op">:</span><span class="dv">5</span>])</a></code></pre></div>
+<div class="sourceCode" id="cb967"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb967-1" data-line-number="1">height &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/height.dta&quot;</span>)</a>
+<a class="sourceLine" id="cb967-2" data-line-number="2"><span class="kw">summ</span>(height[, <span class="dv">2</span><span class="op">:</span><span class="dv">5</span>])</a></code></pre></div>
 <pre><code>## 
 ## No. of observations = 2187
 ## 
@@ -1389,28 +1389,28 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 ## 3 ht43      1567 162.28 162.1   5.96   140    180   
 ## 4 ht53      1462 161.56 161.5   5.96   134.3  179.6</code></pre>
 <p>原則上每個女性在所有的時間應該都有身高測量值才對，我們暫且認爲擁有缺失測量值的時間點是完全隨機的。先計算樣本中數據完整部分的女性身高在四個時間點時的方差協方差矩陣:</p>
-<div class="sourceCode" id="cb969"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb969-1" title="1"><span class="kw">var</span>(height[, <span class="dv">2</span><span class="op">:</span><span class="dv">5</span>], <span class="dt">use =</span> <span class="st">&quot;complete.obs&quot;</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb969"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb969-1" data-line-number="1"><span class="kw">var</span>(height[, <span class="dv">2</span><span class="op">:</span><span class="dv">5</span>], <span class="dt">use =</span> <span class="st">&quot;complete.obs&quot;</span>)</a></code></pre></div>
 <pre><code>##           ht26      ht36      ht43      ht53
 ## ht26 39.813400 34.758457 34.478981 34.128167
 ## ht36 34.758457 34.455060 33.360413 33.086680
 ## ht43 34.478981 33.360413 34.331501 32.948850
 ## ht53 34.128167 33.086680 32.948850 34.215187</code></pre>
 <p>要給這個數據擬合混合對稱模型 (compound symmetry model)，需要先把數據從寬變長，之後爲每個測量身高的時間點生成一個啞變量，然後擬合無截距式的隨機截距模型:</p>
-<div class="sourceCode" id="cb971"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb971-1" title="1"><span class="co"># 把數據格式從寬變長</span></a>
-<a class="sourceLine" id="cb971-2" title="2">hei_long &lt;-<span class="st"> </span>height <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb971-3" title="3"><span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>id, <span class="op">-</span>bw, <span class="op">-</span>mht) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb971-4" title="4"><span class="st">    </span><span class="kw">separate</span>(key, <span class="dt">into =</span> <span class="kw">c</span>(<span class="st">&quot;Height&quot;</span>, <span class="st">&quot;H_Age&quot;</span>), <span class="dt">sep =</span> <span class="dv">2</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb971-5" title="5"><span class="st">      </span><span class="kw">arrange</span>(id, H_Age, bw, mht) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb971-6" title="6"><span class="st">        </span><span class="kw">spread</span>(Height, value)</a>
-<a class="sourceLine" id="cb971-7" title="7"></a>
-<a class="sourceLine" id="cb971-8" title="8"><span class="co"># 生成四個年齡時間點數據的啞變量</span></a>
-<a class="sourceLine" id="cb971-9" title="9">hei_long &lt;-<span class="st"> </span>hei_long <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb971-10" title="10"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Age_1 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">26</span>, <span class="dv">1</span>, <span class="dv">0</span>), </a>
-<a class="sourceLine" id="cb971-11" title="11">         <span class="dt">Age_2 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">36</span>, <span class="dv">1</span>, <span class="dv">0</span>),</a>
-<a class="sourceLine" id="cb971-12" title="12">         <span class="dt">Age_3 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">43</span>, <span class="dv">1</span>, <span class="dv">0</span>),</a>
-<a class="sourceLine" id="cb971-13" title="13">         <span class="dt">Age_4 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">53</span>, <span class="dv">1</span>, <span class="dv">0</span>))</a>
-<a class="sourceLine" id="cb971-14" title="14">M_hei &lt;-<span class="st"> </span><span class="kw">lmer</span>(ht <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">1</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">3</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">4</span> <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id), <span class="dt">data =</span> hei_long, <span class="dt">REML =</span> <span class="ot">TRUE</span>)</a>
-<a class="sourceLine" id="cb971-15" title="15"><span class="kw">summary</span>(M_hei)</a></code></pre></div>
+<div class="sourceCode" id="cb971"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb971-1" data-line-number="1"><span class="co"># 把數據格式從寬變長</span></a>
+<a class="sourceLine" id="cb971-2" data-line-number="2">hei_long &lt;-<span class="st"> </span>height <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb971-3" data-line-number="3"><span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>id, <span class="op">-</span>bw, <span class="op">-</span>mht) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb971-4" data-line-number="4"><span class="st">    </span><span class="kw">separate</span>(key, <span class="dt">into =</span> <span class="kw">c</span>(<span class="st">&quot;Height&quot;</span>, <span class="st">&quot;H_Age&quot;</span>), <span class="dt">sep =</span> <span class="dv">2</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb971-5" data-line-number="5"><span class="st">      </span><span class="kw">arrange</span>(id, H_Age, bw, mht) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb971-6" data-line-number="6"><span class="st">        </span><span class="kw">spread</span>(Height, value)</a>
+<a class="sourceLine" id="cb971-7" data-line-number="7"></a>
+<a class="sourceLine" id="cb971-8" data-line-number="8"><span class="co"># 生成四個年齡時間點數據的啞變量</span></a>
+<a class="sourceLine" id="cb971-9" data-line-number="9">hei_long &lt;-<span class="st"> </span>hei_long <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb971-10" data-line-number="10"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Age_1 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">26</span>, <span class="dv">1</span>, <span class="dv">0</span>), </a>
+<a class="sourceLine" id="cb971-11" data-line-number="11">         <span class="dt">Age_2 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">36</span>, <span class="dv">1</span>, <span class="dv">0</span>),</a>
+<a class="sourceLine" id="cb971-12" data-line-number="12">         <span class="dt">Age_3 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">43</span>, <span class="dv">1</span>, <span class="dv">0</span>),</a>
+<a class="sourceLine" id="cb971-13" data-line-number="13">         <span class="dt">Age_4 =</span> <span class="kw">ifelse</span>(H_Age <span class="op">==</span><span class="st"> </span><span class="dv">53</span>, <span class="dv">1</span>, <span class="dv">0</span>))</a>
+<a class="sourceLine" id="cb971-14" data-line-number="14">M_hei &lt;-<span class="st"> </span><span class="kw">lmer</span>(ht <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">1</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">3</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">4</span> <span class="op">+</span><span class="st"> </span>(<span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id), <span class="dt">data =</span> hei_long, <span class="dt">REML =</span> <span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb971-15" data-line-number="15"><span class="kw">summary</span>(M_hei)</a></code></pre></div>
 <pre><code>## Linear mixed model fit by REML. t-tests use Satterthwaite&#39;s method [&#39;lmerModLmerTest&#39;]
 ## Formula: ht ~ 0 + Age_1 + Age_2 + Age_3 + Age_4 + (1 | id)
 ##    Data: hei_long
@@ -1441,10 +1441,10 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 ## Age_2 0.933            
 ## Age_3 0.931 0.933      
 ## Age_4 0.928 0.930 0.931</code></pre>
-<div class="sourceCode" id="cb973"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb973-1" title="1"><span class="co"># 檢驗三個年齡點的身高均值是否相同用下面的方法: </span></a>
-<a class="sourceLine" id="cb973-2" title="2"><span class="kw">linearHypothesis</span>(M_hei, <span class="kw">c</span>(<span class="st">&quot;Age_1 - Age_2 = 0&quot;</span>, </a>
-<a class="sourceLine" id="cb973-3" title="3">                          <span class="st">&quot;Age_1 - Age_3 = 0&quot;</span>, </a>
-<a class="sourceLine" id="cb973-4" title="4">                          <span class="st">&quot;Age_1 - Age_4 = 0&quot;</span>))</a></code></pre></div>
+<div class="sourceCode" id="cb973"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb973-1" data-line-number="1"><span class="co"># 檢驗三個年齡點的身高均值是否相同用下面的方法: </span></a>
+<a class="sourceLine" id="cb973-2" data-line-number="2"><span class="kw">linearHypothesis</span>(M_hei, <span class="kw">c</span>(<span class="st">&quot;Age_1 - Age_2 = 0&quot;</span>, </a>
+<a class="sourceLine" id="cb973-3" data-line-number="3">                          <span class="st">&quot;Age_1 - Age_3 = 0&quot;</span>, </a>
+<a class="sourceLine" id="cb973-4" data-line-number="4">                          <span class="st">&quot;Age_1 - Age_4 = 0&quot;</span>))</a></code></pre></div>
 <pre><code>## Linear hypothesis test
 ## 
 ## Hypothesis:
@@ -1470,24 +1470,24 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 \end{array} \right)
 \]</span></p>
 <p>分析這個模型第二層階級殘差，和第一層階級殘差可以計算並做圖 <a href="-longitudinal-data-1.html#fig:5-level2-res">62.1</a> <a href="-longitudinal-data-1.html#fig:5-level1-res">62.2</a> 如下:</p>
-<div class="sourceCode" id="cb975"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb975-1" title="1"><span class="co"># refit the model with lme</span></a>
-<a class="sourceLine" id="cb975-2" title="2">M_hei &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> ht <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">1</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">3</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">4</span>, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, </a>
-<a class="sourceLine" id="cb975-3" title="3">             <span class="dt">data =</span> hei_long, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action=</span>na.omit)</a>
-<a class="sourceLine" id="cb975-4" title="4"><span class="co"># individual level standardized residuals</span></a>
-<a class="sourceLine" id="cb975-5" title="5">ehat_st &lt;-<span class="st"> </span><span class="kw">residuals</span>(M_hei, <span class="dt">type =</span> <span class="st">&quot;normalized&quot;</span>, <span class="dt">level =</span> <span class="dv">1</span>)</a>
-<a class="sourceLine" id="cb975-6" title="6"></a>
-<a class="sourceLine" id="cb975-7" title="7"><span class="co"># extract the EB uhat (level 2 EB residual)</span></a>
-<a class="sourceLine" id="cb975-8" title="8">uhat_eb &lt;-<span class="st"> </span><span class="kw">ranef</span>(M_hei)<span class="op">$</span><span class="st">`</span><span class="dt">(Intercept)</span><span class="st">`</span></a>
-<a class="sourceLine" id="cb975-9" title="9"></a>
-<a class="sourceLine" id="cb975-10" title="10"><span class="co"># standardized level 2 residuals</span></a>
-<a class="sourceLine" id="cb975-11" title="11"><span class="co">### count number of measures for each women</span></a>
-<a class="sourceLine" id="cb975-12" title="12">Nmeas &lt;-<span class="st"> </span><span class="dv">4</span></a>
-<a class="sourceLine" id="cb975-13" title="13"><span class="co">### shrinkage factor </span></a>
-<a class="sourceLine" id="cb975-14" title="14">R =<span class="st"> </span><span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span><span class="op">/</span>(<span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="fl">1.409</span><span class="op">^</span><span class="dv">2</span><span class="op">/</span>Nmeas)</a>
-<a class="sourceLine" id="cb975-15" title="15"><span class="co">### use shrinkage factor calculate variance of uhat_eb</span></a>
-<a class="sourceLine" id="cb975-16" title="16">var_eb &lt;-<span class="st"> </span>R <span class="op">*</span><span class="st"> </span><span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span></a>
-<a class="sourceLine" id="cb975-17" title="17"><span class="co">### standardize uhat</span></a>
-<a class="sourceLine" id="cb975-18" title="18">uhat_st &lt;-<span class="st"> </span>uhat_eb<span class="op">/</span><span class="kw">sqrt</span>(var_eb)</a></code></pre></div>
+<div class="sourceCode" id="cb975"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb975-1" data-line-number="1"><span class="co"># refit the model with lme</span></a>
+<a class="sourceLine" id="cb975-2" data-line-number="2">M_hei &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> ht <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">1</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">3</span> <span class="op">+</span><span class="st"> </span>Age_<span class="dv">4</span>, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, </a>
+<a class="sourceLine" id="cb975-3" data-line-number="3">             <span class="dt">data =</span> hei_long, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action=</span>na.omit)</a>
+<a class="sourceLine" id="cb975-4" data-line-number="4"><span class="co"># individual level standardized residuals</span></a>
+<a class="sourceLine" id="cb975-5" data-line-number="5">ehat_st &lt;-<span class="st"> </span><span class="kw">residuals</span>(M_hei, <span class="dt">type =</span> <span class="st">&quot;normalized&quot;</span>, <span class="dt">level =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb975-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb975-7" data-line-number="7"><span class="co"># extract the EB uhat (level 2 EB residual)</span></a>
+<a class="sourceLine" id="cb975-8" data-line-number="8">uhat_eb &lt;-<span class="st"> </span><span class="kw">ranef</span>(M_hei)<span class="op">$</span><span class="st">`</span><span class="dt">(Intercept)</span><span class="st">`</span></a>
+<a class="sourceLine" id="cb975-9" data-line-number="9"></a>
+<a class="sourceLine" id="cb975-10" data-line-number="10"><span class="co"># standardized level 2 residuals</span></a>
+<a class="sourceLine" id="cb975-11" data-line-number="11"><span class="co">### count number of measures for each women</span></a>
+<a class="sourceLine" id="cb975-12" data-line-number="12">Nmeas &lt;-<span class="st"> </span><span class="dv">4</span></a>
+<a class="sourceLine" id="cb975-13" data-line-number="13"><span class="co">### shrinkage factor </span></a>
+<a class="sourceLine" id="cb975-14" data-line-number="14">R =<span class="st"> </span><span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span><span class="op">/</span>(<span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="fl">1.409</span><span class="op">^</span><span class="dv">2</span><span class="op">/</span>Nmeas)</a>
+<a class="sourceLine" id="cb975-15" data-line-number="15"><span class="co">### use shrinkage factor calculate variance of uhat_eb</span></a>
+<a class="sourceLine" id="cb975-16" data-line-number="16">var_eb &lt;-<span class="st"> </span>R <span class="op">*</span><span class="st"> </span><span class="fl">5.992</span><span class="op">^</span><span class="dv">2</span></a>
+<a class="sourceLine" id="cb975-17" data-line-number="17"><span class="co">### standardize uhat</span></a>
+<a class="sourceLine" id="cb975-18" data-line-number="18">uhat_st &lt;-<span class="st"> </span>uhat_eb<span class="op">/</span><span class="kw">sqrt</span>(var_eb)</a></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:5-level2-res"></span>
 <img src="bookdown_files/figure-html/5-level2-res-1.png" alt="Standardized cluster level residuals (intercept) from the compound symmetry model" width="80%" />
 <p class="caption">
@@ -1532,12 +1532,12 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 \]</span></p>
 <p><strong>Adult height measures 數據</strong></p>
 <p>利用上面的理論，來對身高數據擬合另一個混合效應模型:</p>
-<div class="sourceCode" id="cb976"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb976-1" title="1"><span class="co"># 對年齡中心化到以 26 歲爲起點</span></a>
-<a class="sourceLine" id="cb976-2" title="2">hei_long &lt;-<span class="st"> </span>hei_long <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb976-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">age =</span> <span class="kw">as.numeric</span>(H_Age) <span class="op">-</span><span class="st"> </span><span class="dv">26</span>)</a>
-<a class="sourceLine" id="cb976-4" title="4">M_hei_ran &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> ht <span class="op">~</span><span class="st"> </span>age, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> hei_long, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
-<a class="sourceLine" id="cb976-5" title="5"><span class="co">#M_hei_ran &lt;- lmer(ht ~ age + (age | id), data = hei_long, REML = TRUE)</span></a>
-<a class="sourceLine" id="cb976-6" title="6"><span class="kw">summary</span>(M_hei_ran)</a></code></pre></div>
+<div class="sourceCode" id="cb976"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb976-1" data-line-number="1"><span class="co"># 對年齡中心化到以 26 歲爲起點</span></a>
+<a class="sourceLine" id="cb976-2" data-line-number="2">hei_long &lt;-<span class="st"> </span>hei_long <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb976-3" data-line-number="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">age =</span> <span class="kw">as.numeric</span>(H_Age) <span class="op">-</span><span class="st"> </span><span class="dv">26</span>)</a>
+<a class="sourceLine" id="cb976-4" data-line-number="4">M_hei_ran &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> ht <span class="op">~</span><span class="st"> </span>age, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> hei_long, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
+<a class="sourceLine" id="cb976-5" data-line-number="5"><span class="co">#M_hei_ran &lt;- lmer(ht ~ age + (age | id), data = hei_long, REML = TRUE)</span></a>
+<a class="sourceLine" id="cb976-6" data-line-number="6"><span class="kw">summary</span>(M_hei_ran)</a></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by REML
 ##  Data: hei_long 
 ##         AIC       BIC     logLik
@@ -1547,21 +1547,21 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 ##  Formula: ~age | id
 ##  Structure: General positive-definite, Log-Cholesky parametrization
 ##             StdDev      Corr  
-## (Intercept) 6.158845488 (Intr)
-## age         0.059931795 -0.281
-## Residual    1.259203896       
+## (Intercept) 6.158844448 (Intr)
+## age         0.059929578 -0.281
+## Residual    1.259210714       
 ## 
 ## Fixed effects: ht ~ age 
 ##                 Value   Std.Error   DF    t-value p-value
-## (Intercept) 162.49616 0.141129794 4416 1151.39516       0
-## age          -0.03158 0.002273682 4416  -13.88934       0
+## (Intercept) 162.49616 0.141129788 4416 1151.39521       0
+## age          -0.03158 0.002273653 4416  -13.88951       0
 ##  Correlation: 
 ##     (Intr)
 ## age -0.279
 ## 
 ## Standardized Within-Group Residuals:
 ##           Min            Q1           Med            Q3           Max 
-## -3.9386976137 -0.4542429403 -0.0066041748  0.4297219059  5.5050258184 
+## -3.9386996996 -0.4542383385 -0.0066047392  0.4297466638  5.5051618893 
 ## 
 ## Number of Observations: 6397
 ## Number of Groups: 1980</code></pre>
@@ -1619,11 +1619,11 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{girl}_j + e_{ij}
 \]</span></p>
 <p>在 R 裏擬合這個模型:</p>
-<div class="sourceCode" id="cb978"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb978-1" title="1">growth &lt;-<span class="st"> </span>growth <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb978-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">age2 =</span> age<span class="op">^</span><span class="dv">2</span>)</a>
-<a class="sourceLine" id="cb978-3" title="3"></a>
-<a class="sourceLine" id="cb978-4" title="4">M_growth &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
-<a class="sourceLine" id="cb978-5" title="5"><span class="kw">summary</span>(M_growth)</a></code></pre></div>
+<div class="sourceCode" id="cb978"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb978-1" data-line-number="1">growth &lt;-<span class="st"> </span>growth <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb978-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">age2 =</span> age<span class="op">^</span><span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb978-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb978-4" data-line-number="4">M_growth &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
+<a class="sourceLine" id="cb978-5" data-line-number="5"><span class="kw">summary</span>(M_growth)</a></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by REML
 ##  Data: growth 
 ##         AIC       BIC     logLik
@@ -1652,9 +1652,9 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 ## 
 ## Number of Observations: 198
 ## Number of Groups: 68</code></pre>
-<div class="sourceCode" id="cb980"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb980-1" title="1"><span class="co">## 由於樣本量較小，這裏如果使用極大似然法估計 ML，結果就和 REML 估計的隨機效應的方差部分不太相同</span></a>
-<a class="sourceLine" id="cb980-2" title="2">M_growthml &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;ML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
-<a class="sourceLine" id="cb980-3" title="3"><span class="kw">summary</span>(M_growthml)</a></code></pre></div>
+<div class="sourceCode" id="cb980"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb980-1" data-line-number="1"><span class="co">## 由於樣本量較小，這裏如果使用極大似然法估計 ML，結果就和 REML 估計的隨機效應的方差部分不太相同</span></a>
+<a class="sourceLine" id="cb980-2" data-line-number="2">M_growthml &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;ML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
+<a class="sourceLine" id="cb980-3" data-line-number="3"><span class="kw">summary</span>(M_growthml)</a></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by maximum likelihood
 ##  Data: growth 
 ##         AIC       BIC     logLik
@@ -1685,8 +1685,8 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 ## Number of Groups: 68</code></pre>
 <p><strong>隨機截距和斜率模型</strong></p>
 <p>此時我們再來用相同的數據擬合混合效應模型，現在允許線性年齡的斜率有隨機變化:</p>
-<div class="sourceCode" id="cb982"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb982-1" title="1">M_growth_mix &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
-<a class="sourceLine" id="cb982-2" title="2"><span class="kw">summary</span>(M_growth_mix)</a></code></pre></div>
+<div class="sourceCode" id="cb982"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb982-1" data-line-number="1">M_growth_mix &lt;-<span class="st"> </span><span class="kw">lme</span>(<span class="dt">fixed =</span> weight <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>age2 <span class="op">+</span><span class="st"> </span>gender, <span class="dt">random =</span> <span class="op">~</span><span class="st"> </span>age <span class="op">|</span><span class="st"> </span>id, <span class="dt">data =</span> growth, <span class="dt">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="dt">na.action =</span> na.omit)</a>
+<a class="sourceLine" id="cb982-2" data-line-number="2"><span class="kw">summary</span>(M_growth_mix)</a></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by REML
 ##  Data: growth 
 ##         AIC      BIC     logLik
@@ -1696,16 +1696,16 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 ##  Formula: ~age | id
 ##  Structure: General positive-definite, Log-Cholesky parametrization
 ##             StdDev     Corr  
-## (Intercept) 0.61487714 (Intr)
-## age         0.51776896 0.135 
-## Residual    0.57411968       
+## (Intercept) 0.61487769 (Intr)
+## age         0.51776878 0.135 
+## Residual    0.57411956       
 ## 
 ## Fixed effects: weight ~ age + age2 + gender 
 ##                  Value   Std.Error  DF    t-value p-value
-## (Intercept)  3.7954978 0.168145127 128  22.572749  0.0000
-## age          7.6984361 0.239853346 128  32.096430  0.0000
-## age2        -1.6577339 0.088594504 128 -18.711475  0.0000
-## genderGirls -0.5983844 0.199974669  66  -2.992301  0.0039
+## (Intercept)  3.7954977 0.168145176 128  22.572742  0.0000
+## age          7.6984362 0.239853311 128  32.096435  0.0000
+## age2        -1.6577339 0.088594491 128 -18.711478  0.0000
+## genderGirls -0.5983844 0.199974765  66  -2.992300  0.0039
 ##  Correlation: 
 ##             (Intr) age    age2  
 ## age         -0.543              
@@ -1714,7 +1714,7 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 ## 
 ## Standardized Within-Group Residuals:
 ##          Min           Q1          Med           Q3          Max 
-## -2.041884357 -0.442600712 -0.032412521  0.419398895  2.669682004 
+## -2.041884180 -0.442600563 -0.032412546  0.419399620  2.669681965 
 ## 
 ## Number of Observations: 198
 ## Number of Groups: 68</code></pre>
@@ -1735,22 +1735,22 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 <div id="-predicting-trajectories" class="section level2">
 <h2><span class="header-section-number">62.3</span> 預測軌跡 predicting trajectories</h2>
 <p>比較只有隨機截距模型，和隨機系數模型給出的擬合曲線是否有差異 如圖<a href="-longitudinal-data-1.html#fig:hier05-12">62.8</a>，其實差異十分微小。可以用下面的 R 代碼:</p>
-<div class="sourceCode" id="cb984"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb984-1" title="1">growth<span class="op">$</span>traj2 &lt;-<span class="st"> </span><span class="kw">fitted</span>(M_growth_mix) </a>
-<a class="sourceLine" id="cb984-2" title="2">growth<span class="op">$</span>traj1 &lt;-<span class="st"> </span><span class="kw">fitted</span>(M_growth) </a>
-<a class="sourceLine" id="cb984-3" title="3"></a>
-<a class="sourceLine" id="cb984-4" title="4">G &lt;-<span class="st"> </span><span class="kw">ggplot</span>(growth[growth<span class="op">$</span>id <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">258</span>,<span class="dv">1141</span>,<span class="dv">3148</span>,<span class="dv">287</span>),], <span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> weight)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>(<span class="dt">shape =</span> <span class="dv">19</span>, <span class="dt">size =</span> <span class="dv">4</span>) <span class="op">+</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb984-5" title="5"><span class="st"> </span><span class="co"># geom_line(aes(y = traj1)) + </span></a>
-<a class="sourceLine" id="cb984-6" title="6"><span class="co">#  geom_line(aes(y = traj2), linetype = 2) +</span></a>
-<a class="sourceLine" id="cb984-7" title="7"><span class="st">  </span><span class="kw">stat_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="kw">aes</span>(<span class="dt">y =</span> traj1), <span class="dt">formula =</span> y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span><span class="kw">I</span>(x<span class="op">^</span><span class="dv">2</span>), <span class="dt">se =</span> F, <span class="dt">linetype =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb984-8" title="8"><span class="st">  </span><span class="kw">stat_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="kw">aes</span>(<span class="dt">y =</span> traj2), <span class="dt">formula =</span> y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span><span class="kw">I</span>(x<span class="op">^</span><span class="dv">2</span>), <span class="dt">se =</span> F)  <span class="op">+</span></a>
-<a class="sourceLine" id="cb984-9" title="9"><span class="st">   </span><span class="kw">theme</span>(<span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),</a>
-<a class="sourceLine" id="cb984-10" title="10">  <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),</a>
-<a class="sourceLine" id="cb984-11" title="11">  <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb984-12" title="12"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">17</span>), <span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">8</span>))</a>
-<a class="sourceLine" id="cb984-13" title="13"></a>
-<a class="sourceLine" id="cb984-14" title="14"></a>
-<a class="sourceLine" id="cb984-15" title="15">G <span class="op">+</span><span class="st">  </span><span class="kw">facet_wrap</span>( <span class="op">~</span><span class="st"> </span>id, <span class="dt">ncol =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb984-16" title="16"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.text =</span> <span class="kw">element_text</span>(<span class="dt">face =</span> <span class="st">&quot;bold&quot;</span>, <span class="dt">size =</span> <span class="kw">rel</span>(<span class="fl">1.5</span>)))</a></code></pre></div>
+<div class="sourceCode" id="cb984"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb984-1" data-line-number="1">growth<span class="op">$</span>traj2 &lt;-<span class="st"> </span><span class="kw">fitted</span>(M_growth_mix) </a>
+<a class="sourceLine" id="cb984-2" data-line-number="2">growth<span class="op">$</span>traj1 &lt;-<span class="st"> </span><span class="kw">fitted</span>(M_growth) </a>
+<a class="sourceLine" id="cb984-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb984-4" data-line-number="4">G &lt;-<span class="st"> </span><span class="kw">ggplot</span>(growth[growth<span class="op">$</span>id <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">258</span>,<span class="dv">1141</span>,<span class="dv">3148</span>,<span class="dv">287</span>),], <span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> weight)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>(<span class="dt">shape =</span> <span class="dv">19</span>, <span class="dt">size =</span> <span class="dv">4</span>) <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb984-5" data-line-number="5"><span class="st"> </span><span class="co"># geom_line(aes(y = traj1)) + </span></a>
+<a class="sourceLine" id="cb984-6" data-line-number="6"><span class="co">#  geom_line(aes(y = traj2), linetype = 2) +</span></a>
+<a class="sourceLine" id="cb984-7" data-line-number="7"><span class="st">  </span><span class="kw">stat_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="kw">aes</span>(<span class="dt">y =</span> traj1), <span class="dt">formula =</span> y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span><span class="kw">I</span>(x<span class="op">^</span><span class="dv">2</span>), <span class="dt">se =</span> F, <span class="dt">linetype =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb984-8" data-line-number="8"><span class="st">  </span><span class="kw">stat_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="kw">aes</span>(<span class="dt">y =</span> traj2), <span class="dt">formula =</span> y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span><span class="kw">I</span>(x<span class="op">^</span><span class="dv">2</span>), <span class="dt">se =</span> F)  <span class="op">+</span></a>
+<a class="sourceLine" id="cb984-9" data-line-number="9"><span class="st">   </span><span class="kw">theme</span>(<span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),</a>
+<a class="sourceLine" id="cb984-10" data-line-number="10">  <span class="dt">axis.text.x =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>),</a>
+<a class="sourceLine" id="cb984-11" data-line-number="11">  <span class="dt">axis.text.y =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">15</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb984-12" data-line-number="12"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">17</span>), <span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">8</span>))</a>
+<a class="sourceLine" id="cb984-13" data-line-number="13"></a>
+<a class="sourceLine" id="cb984-14" data-line-number="14"></a>
+<a class="sourceLine" id="cb984-15" data-line-number="15">G <span class="op">+</span><span class="st">  </span><span class="kw">facet_wrap</span>( <span class="op">~</span><span class="st"> </span>id, <span class="dt">ncol =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb984-16" data-line-number="16"><span class="st">  </span><span class="kw">theme</span>(<span class="dt">strip.text =</span> <span class="kw">element_text</span>(<span class="dt">face =</span> <span class="st">&quot;bold&quot;</span>, <span class="dt">size =</span> <span class="kw">rel</span>(<span class="fl">1.5</span>)))</a></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:hier05-12"></span>
 <img src="bookdown_files/figure-html/hier05-12-1.png" alt="Observed weight and predicted growth profiles of four babies in the Asian growth data" width="80%" />
 <p class="caption">
