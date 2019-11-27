@@ -600,19 +600,19 @@ plot(g)
 
 ## 用於對連續型結果變量做因果推斷的被估計量 
 
-邊際潛在結果的差 marginal potential outcomes:
+邊際潛在結果 marginal potential outcomes:
 
 $$
 E\{ Y(1) - Y(0) \}
 $$
 
-或者是條件下潛在結果的差 conditional potential outcomes:
+或者是條件潛在結果 conditional potential outcomes:
 
 $$
 E\{ Y(1) - Y(2) | \mathbf{V = v} \}
 $$
 
-邊際潛在結果的差，有專門的名字: the *Average Causal Effect (ACE) 平均因果效應* 或者叫 *Average Treatment Effect 平均治療效應*。這裏的 "treatment" 其實不是特指治療，而是泛指所有我們想要比較的暴露。
+邊際潛在結果，有專門的名字: the *Average Causal Effect (ACE) 平均因果效應* 或者叫 *Average Treatment Effect 平均治療效應*。這裏的 "treatment" 其實不是特指某種藥物或者醫學治療，而是泛指所有我們想要比較的暴露。
 
 ## 鑑定 identification - revision
 
@@ -1436,10 +1436,12 @@ tab coag rfa, col chi
 
 但是一個患者如果沒有凝血功能障礙，那麼他/她接受哪種療法就變得不受 `coag` 的影響。而此時我們使用 `etat` 估算的是所有接受 RFA 療法的患者中的療效。這裡受到模型變量共線性影響就較小。
 
-# Prospensity Score 傾向性評分  
+# Prospensity Score 傾向性評分
+
+在前兩個章節中我們探討了如何使用標準的統計學回歸模型作爲工具來獲得實驗的因果效應(causal effects)的估計值。我們同樣也注意到使用標準統計學模型時可能遇到的種種限制，特別是當我們想要控制的變量個數非常多的時候，遇到違反前提條件(violation of positivity, finite sample bias)。本章我們探討非標準統計學模型的工具 -- 傾向性評分在因果推斷中的應用。
 
 ```{definition 16-ASM-Causal-infer-20}
-**傾向性評分 propensity score:** 如果研究中結果變量為 $Y$，二分類的暴露變量 $X$，以及條件變量 $\mathbf{C}$，那麼每個觀察對象的傾向性評分 $p\mathbf{C}$ 可以被定義為，一個觀察對象真實被觀察到暴露變量 $X=1$ 的條件概率($p\mathbf{C}$ is defined as the conditional probability of being exposed given covariates)：
+**傾向性評分 propensity score:** 如果研究中結果變量為 $Y$，暴露變量是二分類變量 $X$，以及需要控制的條件（混雜因素）變量 $\mathbf{C}$，那麼每個觀察對象的傾向性評分 $p(\mathbf{C})$ 可以被定義為，一個觀察對象真實被觀察到暴露變量 $X=1$ 的條件概率($p(\mathbf{C})$ is defined as the conditional probability of being exposed given covariates)：
 
 $$
 p(\mathbf{C}) = \text{Pr}(X=1 | \mathbf{C})
@@ -1447,7 +1449,7 @@ $$
 ```
 
 
-注意，傾向性評分 propensity score，本質上僅僅只是一個標量 scalar，而不是條件變量那樣的多維變量。
+注意，傾向性評分 propensity score，本質上僅僅只是一個標量 scalar，無論我們想要控制的混雜因素有多少個（維度 dimension），最終都只提供一個範圍在 0-1 之間的數值作爲傾向性評分。
 
 而且，條件可置換性這一重要的前提假設，被 [@Rosenbaum1983] 證明是可以拓展到這個標量的: 
 
@@ -1455,21 +1457,21 @@ $$
 **傾向性評分的最重要性質:**
 
 $$
-Y(x) \perp\perp X|\mathbf{C}, x=0,1 \Rightarrow Y(x) \perp\perp X|p(\mathbf{C}, x=0, 1)
+Y(x) \perp \!\!\! \perp X|\mathbf{C}, x=0,1 \Rightarrow Y(x) \perp \!\!\! \perp X|p(\mathbf{C}, x=0, 1)
 $$
   
 [@Rosenbaum1983]  
 ```
 
-這一重要的性質告訴我們，其實在考慮調整混雜因素的時候，我們可以專注考慮這一個標量作爲混雜因素。實際操作中，這個標量通常需要通過一個邏輯回歸模型來擬合計算。這個計算傾向性評分的邏輯回歸模型，用的是對象是否被暴露作爲結果變量，用其他的和這個暴露相關的混雜因素作爲預測變量 $X|\mathbf{C}$。
+這一重要的性質告訴我們，其實在考慮調整混雜因素的時候，我們可以專注考慮這一個標量作爲混雜因素。實際操作中，這個標量通常需要通過一個邏輯回歸模型來擬合計算。這個計算傾向性評分的邏輯回歸模型，用的是對象是否暴露作爲結果變量，用其他的和這個暴露相關的混雜因素作爲預測變量 $X|\mathbf{C}$。而標準的統計學模型中，我們的統計模型是把是否暴露作爲預測變量中的一個，和其他的需要控制的條件變量共同預測結果變量 $Y|X,\mathbf{C}$
 
 
 ### 關於條件可置換性
 
 
-如果兩個觀察對象，經過計算，他們二人的傾向性評分相同，那麼從這些條件變量來看，這兩個對象是否被暴露，就是**完全隨機的**，他們有相同的概率屬於被暴露或非暴露人羣。這一點和RCT有些相似，如果，一個完美的隨機化試驗，那麼一個患者被分進治療組或者對照組的概率是完全相同的，他們是完全可以置換的 (exchangeable)。所以，在一個觀察性研究中，如果傾向性評分相同，在給定的觀察到的所有混雜因素的條件下，這兩個對象是否暴露的概率是相同的 (可以條件置換的 conditional exchangeability given the propensity score)。
+如果兩個觀察對象，經過計算，他們二人的傾向性評分相同，比方說都是0.25，那麼從這些條件變量來看，這兩個對象是否暴露，就是**完全隨機的**，他們有相同的概率屬於暴露或非暴露人羣。這一點和RCT頗有些相似，如果，一個完美的隨機化試驗，那麼一個患者被分進治療組或者對照組的概率是完全相同的，他們是可以置換的 (exchangeable)。所以，在一個觀察性研究中，如果傾向性評分相同，在給定的觀察到的所有混雜因素的條件下，這兩個對象是否暴露的概率是相同的 (可以條件置換的 conditional exchangeability given the propensity score)。
 
-當然和RCT相比，這兩個概念的本質區別在於，隨機化臨牀實驗是通過實驗設計手段，保證了研究對象的完全可置換。觀察性研究，則沒有這個優點，因爲他們的可置換性質是由觀察到的混雜因子決定的，許多觀察性研究的混雜因子都無法保證全部觀察得到。條件可置換性是**一個非常強的假設**，因爲它假定我們真的把所有的混雜都觀察到了。
+當然和RCT相比，這兩個概念的本質區別在於，隨機化臨牀實驗是通過**實驗設計手段 (exchangeability holds by design)**，保證了研究對象的完全可置換。但是觀察性研究，則沒有這個優點，因爲他們的可置換性質是由觀察到的混雜因子決定的，許多觀察性研究的混雜因子都無法保證全部觀察得到。條件可置換性是**一個非常強的假設**，因爲它假定我們不但真的把所有的混雜都觀察到了，而且在計算傾向性評分時使用的邏輯回歸模型必須是正確的。
 
 
 ```{example 16-ASM-Causal-infer-22}
@@ -1480,7 +1482,7 @@ $$
 
 $$
 \begin{aligned}
-\text{logit}\{ \text{Pr(RFA}|\mathbf{C} \}  = & \beta_0 + \beta_1\text{age} + \beta_2 \text{gender}+ \beta_3I(\text{hospital = 2}) \\
+\text{logit}\{ \text{Pr(RFA}|\mathbf{C}) \}  = & \beta_0 + \beta_1\text{age} + \beta_2 \text{gender}+ \beta_3I(\text{hospital = 2}) \\
 & +\beta_4I(\text{hospital =3}) + \beta_5I(\text{hospital = 4}) + \beta_6I(\text{smoke = 2} )\\
 & + \beta_7I(\text{smoke = 3}) + \beta_8\text{nodules} + \beta_9\text{mets} + \beta_{10}\text{duration} \\
 & + \cdots + \beta_{20}I(\text{primary = 9}) + \beta_{21}I(\text{position = 2}) + \beta_{22}I(\text{position = 3})
@@ -1488,7 +1490,7 @@ $$
 $$
 
 
-擬合了這個模型，計算每個參數 $\beta_0 sim \beta_22$ 的極大似然估計之後，就可以計算每個患者的傾向性評分: 
+擬合了這個模型，計算每個參數 $\beta_0 \sim \beta_{22}$ 的極大似然估計之後，就可以計算每個患者的傾向性評分: 
 
 $$
 \begin{aligned}
