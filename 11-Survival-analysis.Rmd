@@ -1846,7 +1846,7 @@ $$
 
 Each stratum, s, has a separate baseline hazard $h_{0s}(t)$. However, the other explanatory variables x are assumed to act in the same way on the baseline hazard in each stratum, i.e. the $\beta$ are the same accross strata.
 
-## 加速失效模型 Accelerated failure time (AFT) model
+## 加速失效(死亡)模型 Accelerated failure time (AFT) model
 
 加速失效模型，AFT 模型的特點是不管所謂的風險概念，而是對每個患者真正的生存時間進行模型化處理，其實個人更加喜歡這個模型，因為它很直觀地告訴你某類人的生存時間就是比另一類人短，而不是告訴你一個抽象的一組的風險低於或者高於另一組，因為很多人無法理解什麼是風險 (hazard)，正如很多人無法理解什麼是比值 (odds) 一樣。同樣還因為風險比例模型還要考慮是否對基線風險進行參數估計的取捨問題。
 
@@ -1856,26 +1856,34 @@ $$
 h_1(t) = \psi_{PH}h_0(t)
 $$
 
-在比例風險模型中，我們需要進行估計的(to be estimated)，就是上面式子中的比例係數 $\psi_{PH}$。另外，基線風險度，baseline hazard $h_0(t)$，也是可參數化的 (can be parameterized)。例如我們認爲生存數據服從指數分佈 (exponential distribution, see Chapter \@ref(exponentialdist)) 時，對照組的風險度被認爲不隨着時間而變化，是恆定的 ($h_0(t) = \lambda$)。如果我們認爲對照組風險度其實是會隨着時間而單調遞增或者單調遞減時，那麼它服從 Weibull 分佈 (see Chapter \@ref(weibulldist)) 基線的風險度就是b $h_0(t) = \kappa \lambda t^{\kappa -1}$。在一般常用的 Cox 比例風險模型中，這個基風險度被忽略而不進行參數化。
+在比例風險模型中，我們需要進行估計的(to be estimated)，就是上面式子中的比例係數 $\psi_{PH}$。另外，基線風險度，baseline hazard $h_0(t)$，也是可參數化的 (can be parameterized)。例如我們認爲生存數據服從指數分佈 (exponential distribution, see Chapter \@ref(exponentialdist)) 時，對照組的風險度被認爲不隨着時間而變化，是恆定的 ($h_0(t) = \lambda$)。如果我們認爲對照組風險度其實是會隨着時間而單調遞增或者單調遞減時，那麼它服從 Weibull 分佈 (see Chapter \@ref(weibulldist)) 基線的風險度就是 $h_0(t) = \kappa \lambda t^{\kappa -1}$。在一般常用的 Cox 比例風險模型中，這個基風險度被忽略而不進行參數化。
 
-有時候我們可以簡單一點地思考這個生存數據，換一個角度看待我們的研究問題到底問的是什麼。
+其實有時候我們可以簡單一點地思考這個生存數據，讓我們換一個角度看待我們的研究問題到底問的是什麼。發自我們內心的，其實，如果你也承認，我們會更加關心的是治療組，相比對照組的患者，**生存時間 (survival time)**上有沒有差異，而不是抽象的（難以理解的）風險度 (hazard) 的差異。
 
 
-AFT 模型：
+所以，我們這一章節想要討論的加速失效（死亡）模型，簡稱 AFT 模型就是用於比較組與組之間生存時間 $(T)$ 差異的模型。假設 $T_0$ 是對照組（基線組 baseline group）的生存時間，那麼 $T_1$ 表示治療組的生存時間，假如治療本身對生存時間的影響可以使用乘法的方式來表達，那麼治療組和對照組之間生存時間的關係可以描述成：
 
 $$
 T_1 = \psi_{AFT}T_0
 $$
 
-在 AFT 模型中，$\psi_{AFT}$ 就是加速指數，它的直接涵義就是，治療組患者的死亡時間被“加速”或者“減緩”了。也就是它可以回答，治療組的患者是不是更快的痊癒？或者更快的死亡？這樣明了的問題。
+在 AFT 模型中，$\psi_{AFT}$ 就是加速指數，它的直接涵義就是，治療組患者的死亡時間被“加速”或者“減緩”了。也就是它可以回答，治療組的患者是不是更快的痊癒？或者更快的死亡？這樣明了的問題。假設我們估計說，$\psi_{AFT} = 2$，這就可以被解釋成是，治療組患者的生存時間，是對照組患者生存時間的兩倍，也就是說，治療使得患者發生死亡的時間被推遲了。
 
-通常情況下，這個加速指數用 $e^{-\beta_{AFT}}$ 進行參數化分析：
+
+```{r figaft2, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='The survival curve in the treatment and control groups when accelerated factor = 2 (left); and the survivor curve for the treatment group again (right), but with the scale of the time axis changed.', fig.align='center', out.width='80%'}
+knitr::include_graphics("img/AFTfunction2.png")
+```
+
+
+### 詳細推導
+
+繼續一邊和比例風險模型對比一邊推導加速失效模型。在比例風險模型中 $h_1(t) = \psi_{PH}h_0(t)$，我們常常用 $e^{\beta_{PH}}$ 取代 $\psi_{PH}$。這樣一來，就可以避免估計風險比例係數時只能是正數這樣的取值範圍限制，也就是指數函數中的 $\beta_{PH}$ 現在就又可以取所有實數啦，可正，可負。所以我們也可以用類似的思維對加速失效模型的加速度參數進行參數化分析，通常情況下，這個加速度指數用 $e^{-\beta_{AFT}}$ 進行參數化分析，稍後的解釋可以讓我們更加理解這裏爲什麼被加上了一個減號：
 
 $$
 T_1 = T_0 e^{-\beta_{AFT}}
 $$
 
-寫下此時的生存方程，和基線組生存方程的關係：
+在AFT模型中，用生存方程會更加直觀。對照組（基線組）的生存方程用 $S_0(t)$ 表示的話，那麼治療組的生存方程 $S_1(t)$ 可以表示爲：
 
 $$
 \begin{aligned}
@@ -1885,6 +1893,12 @@ S_1(t) & = \text{Pr}(T_1 > t) \\
        & = S_0(e^{\beta_{AFT}}t)
 \end{aligned}
 $$
+
+也就是說，治療組的生存方程和對照組是相同的，只是時間 $t$ 被替換成了 $e^{\beta_{AFT}}t$。這樣一來，治療組，對照組患者的生存方程的分佈形狀 (shape of survival distribution)，其實是相同的，但是兩組之間的時間軸在前進的速度上有差異（更快了，或者更慢了）。也就是說，治療組相比較對照組，在走到同一個終點（死亡）之前的時間過程中，被按了快進鍵（或者減速鍵）。所以如果 $e^{\beta_{AFT}} > 1$，那麼治療組的患者發生（死亡）事件之前的時間較短，所以治療加速了死亡進程。如果 $e^{\beta_{AFT}} < 1$，那麼治療組患者發生（死亡）事件之前的時間較長，所以治療延長的死亡進程。所以你會看見，這個 $e^{\beta_{AFT}}$ 沒有類似風險度比 (hazard ratio) 那樣的意義，它是一個加速度指數。**人最終都是會走向死亡的，只是時間長短的問題。**
+
+### 再詳細推導
+
+目前爲止，我們只討論了當解釋變量是一個而分類變量時的情況。
 
 ### Weibull 模型也是一種 AFT 模型
 
