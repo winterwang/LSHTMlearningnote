@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 89 章 再訪 MCMC | 醫學統計學</title>
+  <title>第 80 章 貝葉斯生存分析 Bayesian Survival Analysis | 醫學統計學</title>
   <meta name="description" content="在LSHTM的學習筆記" />
   <meta name="generator" content="bookdown 0.16 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 89 章 再訪 MCMC | 醫學統計學" />
+  <meta property="og:title" content="第 80 章 貝葉斯生存分析 Bayesian Survival Analysis | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 89 章 再訪 MCMC | 醫學統計學" />
+  <meta name="twitter:title" content="第 80 章 貝葉斯生存分析 Bayesian Survival Analysis | 醫學統計學" />
   
   <meta name="twitter:description" content="在LSHTM的學習筆記" />
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="貝葉斯等級回歸模型.html"/>
-<link rel="next" href="貝葉斯和概率論的比較.html"/>
+<link rel="prev" href="時間事件數據的高級分析法.html"/>
+<link rel="next" href="爲什麼我們要用貝葉斯統計學方法.html"/>
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-table.css" rel="stylesheet" />
@@ -1290,44 +1290,20 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="再訪-mcmc" class="section level1">
-<h1><span class="header-section-number">第 89 章</span> 再訪 MCMC</h1>
-<p>和我們之前在介紹MCMC(Markov Chain Monte Carlo)時 (Chapter <a href="MCMC-methods.html#MCMC-methods">84</a>)介紹過的那樣，大部分的統計模型其事後概率分佈的直接樣本 <span class="math inline">\(p(\theta|x)\)</span> 採集是十分困難的。但是我們可以使用間接的算法實施採樣過程。吉布斯樣本採集 (Chapter <a href="MCMC-methods.html#Gibbs-sampling">84.1.2</a>) 是<a href="https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm">美特羅波利斯-海斯廷斯(Metroplis-Hastings)算法(algorithm)</a>的特殊形態。本章我們來深入探討Metropolis-Hastings算法具體的實施過程是怎樣進行的。</p>
-<div id="metropolis-hastings-algorithm" class="section level2">
-<h2><span class="header-section-number">89.1</span> Metropolis-Hastings algorithm</h2>
-<p>美特羅波利斯-海斯廷斯算法在歷史上爲統計學打開了一扇嶄新的大門。因爲它的發明，我們現在可以繞過複雜的微積分計算過程，對幾乎任何一種分佈實施樣本採集。這一種要算法的發明，不僅僅對於貝葉斯統計學來說是一個重大突破，同時也爲傳統的概率論統計學提供了強有力的算法。</p>
-<p>具體的算法過程較爲複雜，我們可以不用完全掌握其所有細節，但是我們應該明白它的大致採集樣本的原理。理解了它的採樣原理，有助於我們實際操作時選取合適的參數(parameters)，從目標分佈中獲取品質優良的隨機樣本。它的基本原理框架是這樣的：</p>
-<ol style="list-style-type: decimal">
-<li>先從變量可能的取值樣本中，爲<span class="math inline">\(X_0\)</span>選取一個起始值 (starting value)，我們稱之爲“現在值 current” <span class="math inline">\((X_{t-1} = X_0)\)</span>；</li>
-<li>以第一步選取的預測變量現在值爲條件 <span class="math inline">\(g(Y|X_{t-1})\)</span>，隨機設定一個候選變量(candidate <span class="math inline">\(Y_t\)</span>)的<strong>分佈</strong>，例如可以是典型的高斯（正態）分佈：<span class="math inline">\(Y_t \sim N(X_{t-1}, \sigma)\)</span>；</li>
-<li>隨機從第二步設定的分佈中選取 <span class="math inline">\(Y_t\)</span> 作爲樣本 <span class="math inline">\((X_t)\)</span> 的第二個元素，同時滿足下面的概率關係： <span class="math display">\[
-P(X_t = Y_t) = min(1, \frac{P(Y_t|data)/g(Y_t|X_{t-1})}{P(X_{t-1}|data)/g(X_{t-1}|Y_t)}) 
-\]</span></li>
-<li>假設你沒有選擇 <span class="math inline">\(Y_t\)</span> 那麼 <span class="math inline">\(X_{t-1}\)</span> 會被重複選取作爲樣本的元素，<span class="math inline">\(X_t = X_{t-1}\)</span>；</li>
-<li>回到第二步，然後進行下一個樣本(increase <span class="math inline">\(t\)</span> by 1)的採集。</li>
-</ol>
-<p>在上面的公式中， <span class="math inline">\(P(Y_t|data)\)</span>是利用指定（的先驗概率）分佈的概率密度方程(probability density function, pdf)中隨機選取的 <span class="math inline">\(Y_t\)</span> 計算獲得的概率。這個方程包含了一個很大概率我們人類無法計算的積分分母：<span class="math inline">\(\int P(data|\theta)P(\theta)\)</span>。(however, the method also works if we substitute any function proportional to the posterior because the proportionality constant will cancel out)但是在計算過程中如果我們用與該事後概率密度分佈成比例的方程將之替代掉，那麼這部分複雜的積分方程會由於成比例性最終同時在分子分母中被抹去。例如常用的是事後概率分佈密度方程的分子部分： <span class="math inline">\(f(Y_t) = P(data|Y_t)\times P(Y_t) \propto P(Y_t|data)\)</span>。另外，如果用於採集樣本的分佈 <span class="math inline">\(g\)</span> 是左右對稱的：<span class="math inline">\(g(Y_t|X_{t-1}) = g(X_{t-1}|Y_t)\)</span>，算法會簡化成爲 <strong>Metropolis</strong> 算法：</p>
-<p><span class="math display">\[
-P(X_t = Y_t) = min(1, \frac{f(Y_t)}{f(X_{t-1})})
-\]</span></p>
-<div class="figure" style="text-align: center"><span id="fig:Bayesian0901"></span>
-<img src="img/Metropolis-hastings.png" alt="Sampling with the Metropolis-Hastings algorithm" width="80%" />
-<p class="caption">
-圖 89.1: Sampling with the Metropolis-Hastings algorithm
-</p>
+<div id="貝葉斯生存分析-bayesian-survival-analysis" class="section level1">
+<h1><span class="header-section-number">第 80 章</span> 貝葉斯生存分析 Bayesian Survival Analysis</h1>
+
 </div>
-</div>
-<div id="適應階段-adaptive-phase" class="section level2">
-<h2><span class="header-section-number">89.2</span> 適應階段 adaptive phase</h2>
-</div>
-</div>
+
+
+
             </section>
 
           </div>
         </div>
       </div>
-<a href="貝葉斯等級回歸模型.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="貝葉斯和概率論的比較.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="時間事件數據的高級分析法.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="爲什麼我們要用貝葉斯統計學方法.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1358,7 +1334,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/12-Bayesian-stats.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/11-Survival-analysis.Rmd",
 "text": "編輯"
 },
 "history": {
