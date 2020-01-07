@@ -972,8 +972,6 @@ codaSamples <- coda.samples(
 summary(codaSamples)
 
 #### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
-
-#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
 ggSample <- ggs(codaSamples)
 
 
@@ -998,37 +996,38 @@ model{
 ```
 
 ```{r 12-Bayesian-stats-7, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
-
 # Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/MCcube.txt", sep = "")) 
-# there is no data so just compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as this is 
-# a Monte Carlo forward sampling from a known distribution
-# but the program still requires initial values to begin
-# generate a random value.
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/MCcube.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 10, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
 parameters <- c("y", "ycubed")
-samplesSet(parameters)
-# Generate 100 iterations
-modelUpdate(100000)
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 10000, 
+            progress.bar="none")
 
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+summary(codaSamples)
 
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(y = samplesSample("y"), 
-                    ycubed = samplesSample("ycubed"))
 #### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
-par(mfrow=c(1,2))
+ggSample <- ggs(codaSamples)
 
 
-plot(density(chain$y), main = "y sample 100000", 
+Y <- ggSample %>% 
+  filter(Parameter == "y")
+Ycubed <- ggSample %>% 
+  filter(Parameter == "ycubed")
+
+plot(density(Y$value), main = "y sample 10000", 
      ylab = "P(y)", xlab = "y", col = "red")
 
-plot(density(chain$ycubed), main = "ycubed sample 100000", 
+plot(density(Ycubed$value), main = "ycubed sample 100000", 
      ylab = "P(ycubed)", xlab = "ycubed", col = "red")
 ```
 

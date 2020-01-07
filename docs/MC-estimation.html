@@ -2099,15 +2099,13 @@ codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(
 ##    plus standard error of the mean:
 ## 
 ##           Mean             SD       Naive SE Time-series SE 
-##      -0.014427       1.424387       0.014244       0.013960 
+##       0.025686       1.387238       0.013872       0.013274 
 ## 
 ## 2. Quantiles for each variable:
 ## 
-##      2.5%       25%       50%       75%     97.5% 
-## -2.799089 -0.743190 -0.012025  0.729953  2.756398</code></pre>
+##       2.5%        25%        50%        75%      97.5% 
+## -2.6619594 -0.7198102  0.0087304  0.7520590  2.8520779</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
-
-#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
 ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)
 
 
@@ -2130,47 +2128,72 @@ model{
   ycubed &lt;- pow(y, 3) # note how to write power in BUGS
 }</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
-<span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/MCcube.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </code></pre></div>
-<pre><code>## model is syntactically correct</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
-<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
-<pre><code>## model compiled</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
-<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
-<span class="co"># but the program still requires initial values to begin</span>
-<span class="co"># generate a random value.</span>
-<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
-<pre><code>## initial values generated, model initialized</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, 
+                                     <span class="st">&quot;/backupfiles/MCcube.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),
+                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</code></pre></div>
+<pre><code>## Compiling model graph
+##    Resolving undeclared variables
+##    Allocating nodes
+## Graph information:
+##    Observed stochastic nodes: 0
+##    Unobserved stochastic nodes: 1
+##    Total graph size: 5
+## 
+## Initializing model</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 2 update 1000 iterations</span>
+<span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, 
+        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
+
+<span class="co"># Step 3 set monitor variables</span>
 parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>, <span class="st">&quot;ycubed&quot;</span>)
-<span class="kw">samplesSet</span>(parameters)</code></pre></div>
-<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
-<pre><code>## monitor set for variable &#39;ycubed&#39;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100 iterations</span>
-<span class="kw">modelUpdate</span>(<span class="dv">100000</span>)</code></pre></div>
-<pre><code>## 100000 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
-sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
-<span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##           mean     sd MC_error val2.5pc median val97.5pc start sample
-## y       0.9934  2.004  0.00631   -2.925 0.9944     4.933     1 100000
-## ycubed 12.9700 39.720  0.12930  -25.020 0.9834   120.100     1 100000</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>), 
-                    <span class="dt">ycubed =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;ycubed&quot;</span>))
-#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
-<span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
+codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(
+            jagsModel,
+            <span class="dt">variable.names =</span> parameters,
+            <span class="dt">n.iter =</span> <span class="dv">10000</span>, 
+            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
+
+<span class="kw">summary</span>(codaSamples)</code></pre></div>
+<pre><code>## 
+## Iterations = 11:10010
+## Thinning interval = 1 
+## Number of chains = 1 
+## Sample size per chain = 10000 
+## 
+## 1. Empirical mean and standard deviation for each variable,
+##    plus standard error of the mean:
+## 
+##           Mean      SD Naive SE Time-series SE
+## y       1.0383  2.0128 0.020128       0.020128
+## ycubed 13.4976 40.0223 0.400223       0.400223
+## 
+## 2. Quantiles for each variable:
+## 
+##            2.5%       25%    50%    75%    97.5%
+## y       -2.8977 -0.328158 1.0537  2.403   4.9541
+## ycubed -24.3313 -0.035339 1.1700 13.875 121.5864</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)
 
 
-<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>y), <span class="dt">main =</span> <span class="st">&quot;y sample 100000&quot;</span>, 
-     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
+Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)
+Ycubed &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;ycubed&quot;</span>)
 
-<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>ycubed), <span class="dt">main =</span> <span class="st">&quot;ycubed sample 100000&quot;</span>, 
-     <span class="dt">ylab =</span> <span class="st">&quot;P(ycubed)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;ycubed&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:12-Bayesian-stats-7"></span>
+<span class="kw">plot</span>(<span class="kw">density</span>(Y<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:12-Bayesian-stats-71"></span>
 <img src="bookdown_files/figure-html/12-Bayesian-stats-7-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
 <p class="caption">
 圖 82.14: Predictive distribution of the nodes of interest.
+</p>
+</div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(<span class="kw">density</span>(Ycubed<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;ycubed sample 100000&quot;</span>, 
+     <span class="dt">ylab =</span> <span class="st">&quot;P(ycubed)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;ycubed&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:12-Bayesian-stats-72"></span>
+<img src="bookdown_files/figure-html/12-Bayesian-stats-7-2.png" alt="Predictive distribution of the nodes of interest." width="80%" />
+<p class="caption">
+圖 82.15: Predictive distribution of the nodes of interest.
 </p>
 </div>
 <p>所以，一個隨機變量如果它來自一個均值爲1，標準差爲2的正態分布，那麼它的三次方的期望值是13，注意<code>ycubed</code>右側的尾巴很長。</p>
