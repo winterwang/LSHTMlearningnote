@@ -619,14 +619,14 @@ library(R2jags)
 jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel.txt", sep = ""), n.chains = 1)
 
 # Step 2 update 1000 iterations
-update(jagsModel, n.iter = 1000)
+update(jagsModel, n.iter = 1000, progress.bar="none")
 
 # Step 3 set monitor variables
 
 codaSamples <- coda.samples(
             jagsModel,
             variable.names = c("P8", "y"),
-            n.iter = 1000)
+            n.iter = 1000, progress.bar="none")
 
 summary(codaSamples)
 
@@ -692,17 +692,20 @@ JAGS code:
 
 
 # Step 1 check model
-jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel30.txt", sep = ""), n.chains = 1)
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel30.txt", sep = ""),
+                        n.chains = 1)
 
 # Step 2 update 1000 iterations
-update(jagsModel, n.iter = 1000)
+update(jagsModel, n.iter = 1000, 
+        progress.bar="none")
 
 # Step 3 set monitor variables
 
 codaSamples <- coda.samples(
             jagsModel,
             variable.names = c("P15", "y"),
-            n.iter = 10000)
+            n.iter = 10000, 
+            progress.bar="none")
 
 summary(codaSamples)
 #### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
@@ -729,9 +732,9 @@ model{
 }
 ```
 
-把這個模型存儲成`drug-MC.txt`文件之後，可以使用OpenBUGS完成這個模型的蒙特卡羅模擬試驗計算：
+把這個模型存儲成`drug-MC.txt`文件之後，可以使用OpenBUGS完成該模型的蒙特卡羅模擬試驗計算：
 
-```{r 12-Bayesian-stats-3, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r 12-Bayesian-stats-3, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=FALSE}
 
 # Step 1 check model
 modelCheck(paste(bugpath, "/backupfiles/drug-MC.txt", sep = "")) 
@@ -773,6 +776,56 @@ hist(chain$y, main = "y sample 10000", ylab = "P(Y)",
      xlab = "y", col = "red", prob = TRUE)
 ```
 
+
+也可以使用JAGS完成該模型的蒙特卡羅模擬試驗計算：
+
+
+```{r JAGS02, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/drug-MC.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
+parameters <- c("theta", "y", "P.crit")
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 10000, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+# par(mfrow=c(1,2))
+# 
+ggSample <- ggs(codaSamples)
+# ggSample %>% 
+#   filter(Parameter == "theta") %>% 
+#   ggs_density()
+# 
+# ggSample %>% 
+#   filter(Parameter == "y") %>% 
+#   ggs_histogram(bin = 38)
+
+par(mfrow=c(1,2))
+Theta <- ggSample %>% 
+  filter(Parameter == "theta")
+Y <- ggSample %>% 
+  filter(Parameter == "y")
+plot(density(Theta$value), main = "theta sample 10000", 
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(Y$value, main = "y sample 10000", ylab = "P(Y)", 
+     xlab = "y", col = "red", prob = TRUE)
+```
+
+
+
 如果把藥物治療的臨牀試驗例子的先驗概率分布修改一下，修改成爲一個沒有信息的均一分布 $\text{Uniform}(0, 1)$，模型的結果會有怎樣的變化呢？嘗試繪制成功次數的預測概率分布，此時"20名患者中大於或者等於15名患者有療效"這一事件發生的概率是多少？
 
 ```
@@ -788,38 +841,38 @@ model{
 ```
 
 
-```{r 12-Bayesian-stats-4, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
-
+```{r 12-JAGS-stats-4, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
 # Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/drug-MCuniform.txt", sep = "")) 
-# there is no data so just compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as this is 
-# a Monte Carlo forward sampling from a known distribution
-# but the program still requires initial values to begin
-# generate a random value.
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/drug-MCuniform.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
 parameters <- c("theta", "y", "P.crit")
-samplesSet(parameters)
-# Generate 1000 iterations
-modelUpdate(10000)
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 10000, 
+            progress.bar="none")
 
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+summary(codaSamples)
 
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(theta = samplesSample("theta"),
-                    y = samplesSample("y"),
-                    P.crit = samplesSample("P.crit"))
+
 #### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+ggSample <- ggs(codaSamples)
 
 par(mfrow=c(1,2))
-
-plot(density(chain$theta), main = "theta sample 10000", 
+Theta <- ggSample %>% 
+  filter(Parameter == "theta")
+Y <- ggSample %>% 
+  filter(Parameter == "y")
+plot(density(Theta$value), main = "theta sample 10000", 
      ylab = "P(theta)", xlab = "theta", col = "red")
-hist(chain$y, main = "y sample 10000", ylab = "P(Y)", 
+hist(Y$value, main = "y sample 10000", ylab = "P(Y)", 
      xlab = "y", col = "red", prob = TRUE)
 ```
 
