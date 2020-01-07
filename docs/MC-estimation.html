@@ -1740,7 +1740,7 @@ ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)
 圖 82.10: Predictive distribution of the nodes of interest.
 </p>
 </div>
-<p>所以此時少於或等於１５人得到症狀改善的事件發生的概率被推測爲1.6%。</p>
+<p>所以此時少於或等於１５人得到症狀改善的事件發生的概率被推測爲1.8%。</p>
 <ol start="2" style="list-style-type: decimal">
 <li>藥物治療臨牀試驗</li>
 </ol>
@@ -1939,7 +1939,7 @@ Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span cla
 圖 82.12: Predictive distribution of the nodes of interest.
 </p>
 </div>
-<p>這個條件下，“20名患者中大於或者等於15名患者有療效”這一事件發生的概率爲28.05%。</p>
+<p>這個條件下，“20名患者中大於或者等於15名患者有療效”這一事件發生的概率爲29.2%。</p>
 <ol start="3" style="list-style-type: decimal">
 <li>嘗試自己來寫一個模型。</li>
 </ol>
@@ -1954,54 +1954,108 @@ model{
 }</code></pre>
 <p>分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
-<span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/standardnormalMC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </code></pre></div>
-<pre><code>## model is syntactically correct</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
-<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
-<pre><code>## model compiled</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
-<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
-<span class="co"># but the program still requires initial values to begin</span>
-<span class="co"># generate a random value.</span>
-<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
-<pre><code>## initial values generated, model initialized</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
+jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, 
+                                     <span class="st">&quot;/backupfiles/standardnormalMC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),
+                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</code></pre></div>
+<pre><code>## Compiling model graph
+##    Resolving undeclared variables
+##    Allocating nodes
+## Graph information:
+##    Observed stochastic nodes: 0
+##    Unobserved stochastic nodes: 1
+##    Total graph size: 11
+## 
+## Initializing model</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 2 update 1000 iterations</span>
+<span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, 
+        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
+
+<span class="co"># Step 3 set monitor variables</span>
 parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p.1&quot;</span>, <span class="st">&quot;p.2&quot;</span>, <span class="st">&quot;x&quot;</span>)
-<span class="kw">samplesSet</span>(parameters)</code></pre></div>
-<pre><code>## monitor set for variable &#39;p.1&#39;</code></pre>
-<pre><code>## monitor set for variable &#39;p.2&#39;</code></pre>
-<pre><code>## monitor set for variable &#39;x&#39;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100 iterations</span>
-<span class="kw">modelUpdate</span>(<span class="dv">100</span>)</code></pre></div>
-<pre><code>## 100 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
-sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
-<span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##       mean     sd  MC_error val2.5pc  median val97.5pc start sample
-## p.1 0.0000 0.0000 1.000e-11    0.000 0.00000     0.000     1    100
-## p.2 0.0000 0.0000 1.000e-11    0.000 0.00000     0.000     1    100
-## x   0.0606 0.9453 8.951e-02   -1.559 0.05174     2.003     1    100</code></pre>
+codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(
+            jagsModel,
+            <span class="dt">variable.names =</span> parameters,
+            <span class="dt">n.iter =</span> <span class="dv">100</span>, 
+            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
+
+<span class="kw">summary</span>(codaSamples)</code></pre></div>
+<pre><code>## 
+## Iterations = 11:110
+## Thinning interval = 1 
+## Number of chains = 1 
+## Sample size per chain = 100 
+## 
+## 1. Empirical mean and standard deviation for each variable,
+##    plus standard error of the mean:
+## 
+##         Mean      SD Naive SE Time-series SE
+## p.1 0.020000 0.14071 0.014071       0.014071
+## p.2 0.000000 0.00000 0.000000       0.000000
+## x   0.077735 0.99664 0.099664       0.099664
+## 
+## 2. Quantiles for each variable:
+## 
+##        2.5%      25%      50%     75%  97.5%
+## p.1  0.0000  0.00000 0.000000 0.00000 0.0000
+## p.2  0.0000  0.00000 0.000000 0.00000 0.0000
+## x   -1.7989 -0.49143 0.038874 0.67264 1.9906</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 900 iterations</span>
-<span class="kw">modelUpdate</span>(<span class="dv">900</span>)</code></pre></div>
-<pre><code>## 900 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
-sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
-<span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##       mean     sd MC_error val2.5pc    median val97.5pc start sample
-## p.1 0.0240 0.1530 0.005491    0.000  0.000000     0.000     1   1000
-## p.2 0.0110 0.1043 0.003899    0.000  0.000000     0.000     1   1000
-## x   0.0261 1.0090 0.036770   -1.928 -0.007392     2.032     1   1000</code></pre>
+codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(
+            jagsModel,
+            <span class="dt">variable.names =</span> parameters,
+            <span class="dt">n.iter =</span> <span class="dv">1000</span>, 
+            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
+
+<span class="kw">summary</span>(codaSamples)</code></pre></div>
+<pre><code>## 
+## Iterations = 111:1110
+## Thinning interval = 1 
+## Number of chains = 1 
+## Sample size per chain = 1000 
+## 
+## 1. Empirical mean and standard deviation for each variable,
+##    plus standard error of the mean:
+## 
+##        Mean       SD  Naive SE Time-series SE
+## p.1 0.02300 0.149978 0.0047427      0.0047427
+## p.2 0.01000 0.099549 0.0031480      0.0031480
+## x   0.03386 1.002280 0.0316949      0.0316949
+## 
+## 2. Quantiles for each variable:
+## 
+##        2.5%      25%      50%     75%  97.5%
+## p.1  0.0000  0.00000 0.000000 0.00000 0.0000
+## p.2  0.0000  0.00000 0.000000 0.00000 0.0000
+## x   -1.9411 -0.62375 0.051332 0.73284 1.9461</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 100000 iterations</span>
-<span class="kw">modelUpdate</span>(<span class="dv">99000</span>)</code></pre></div>
-<pre><code>## 99000 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
-sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
-<span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##          mean     sd  MC_error val2.5pc   median val97.5pc start sample
-## p.1  0.025160 0.1566 0.0004711    0.000  0.00000     1.000     1 100000
-## p.2  0.010180 0.1004 0.0002970    0.000  0.00000     0.000     1 100000
-## x   -0.003323 1.0020 0.0031550   -1.962 -0.00278     1.967     1 100000</code></pre>
-<p>我們知道理論上 <span class="math inline">\(x\sim N(0,1^2)\)</span>，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到<code>p.1, p.2</code>的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，<code>MC_error</code>也在變得越來越小（越來越精確）。事實上，這個<code>MC_error</code>本身約等於<span class="math inline">\(\frac{\text{sd}}{\sqrt{\text{sample size}}}\)</span>。所以對<span class="math inline">\(x\)</span>來說，經過1000次蒙特卡羅計算，<span class="math inline">\(\text{sd}(x) = 1.009\)</span>，那麼此時的<code>MC_error</code><span class="math inline">\(=\frac{1.009}{\sqrt{1000}} \approx 0.0319\)</span>，十分接近計算機給出的<code>MC_error = 0.03677</code>。<code>MC_error</code>本身可以作爲這個<span class="math inline">\(x\)</span>均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值<span class="math inline">\(\pm 2\times\)</span> <code>MC_error</code>範圍內。</p>
+codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(
+            jagsModel,
+            <span class="dt">variable.names =</span> parameters,
+            <span class="dt">n.iter =</span> <span class="dv">100000</span>, 
+            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
+
+<span class="kw">summary</span>(codaSamples)</code></pre></div>
+<pre><code>## 
+## Iterations = 1111:101110
+## Thinning interval = 1 
+## Number of chains = 1 
+## Sample size per chain = 100000 
+## 
+## 1. Empirical mean and standard deviation for each variable,
+##    plus standard error of the mean:
+## 
+##         Mean      SD   Naive SE Time-series SE
+## p.1 0.025490 0.15761 0.00049840     0.00049840
+## p.2 0.010240 0.10067 0.00031836     0.00031836
+## x   0.003453 0.99958 0.00316094     0.00316094
+## 
+## 2. Quantiles for each variable:
+## 
+##        2.5%      25%       50%     75%  97.5%
+## p.1  0.0000  0.00000 0.0000000 0.00000 1.0000
+## p.2  0.0000  0.00000 0.0000000 0.00000 0.0000
+## x   -1.9693 -0.66714 0.0060749 0.67796 1.9533</code></pre>
+<p>我們知道理論上 <span class="math inline">\(x\sim N(0,1^2)\)</span>，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到<code>p.1, p.2</code>的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，<code>MC_error</code>也在變得越來越小（越來越精確）。事實上，這個<code>Naive SE</code>本身約等於<span class="math inline">\(\frac{\text{sd}}{\sqrt{\text{sample size}}}\)</span>。所以對<span class="math inline">\(x\)</span>來說，經過1000次蒙特卡羅計算，<span class="math inline">\(\text{sd}(x) = 1.009\)</span>，那麼此時的<code>Naive SE</code><span class="math inline">\(=\frac{1.009}{\sqrt{1000}} \approx 0.0319\)</span>，十分接近計算機給出的<code>Naive SE =   0.03244</code>。<code>Naive SE</code>本身可以作爲這個<span class="math inline">\(x\)</span>均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值<span class="math inline">\(\pm 2\times\)</span> <code>Naive SE</code>範圍內。</p>
 <p>下面我們來探索一下 t分布。嘗試寫下一個BUGS模型，它的先驗概率分布是一個自由度爲4的t分布，<code>y ~ dt(0,1,4)</code>。然後進行10000次蒙特卡羅採樣計算，並給出概率密度分布圖。</p>
 <pre><code>#  Monte Carlo predictions
 #  with a t distribution prior with degree of freedom = 4
@@ -2010,34 +2064,57 @@ model{
   y ~ dt(0, 1, 4)
 }</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
-<span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/MCt.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </code></pre></div>
-<pre><code>## model is syntactically correct</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
-<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
-<pre><code>## model compiled</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as this is </span>
-<span class="co"># a Monte Carlo forward sampling from a known distribution</span>
-<span class="co"># but the program still requires initial values to begin</span>
-<span class="co"># generate a random value.</span>
-<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
-<pre><code>## initial values generated, model initialized</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
-parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>)
-<span class="kw">samplesSet</span>(parameters)</code></pre></div>
-<pre><code>## monitor set for variable &#39;y&#39;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 10000 iterations</span>
-<span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</code></pre></div>
-<pre><code>## 10000 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
-sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
-<span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##       mean   sd MC_error val2.5pc    median val97.5pc start sample
-## y -0.02244 1.43  0.01534   -2.857 -0.001755     2.725     1  10000</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))
-#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, 
+                                     <span class="st">&quot;/backupfiles/MCt.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),
+                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</code></pre></div>
+<pre><code>## Compiling model graph
+##    Resolving undeclared variables
+##    Allocating nodes
+## Graph information:
+##    Observed stochastic nodes: 0
+##    Unobserved stochastic nodes: 1
+##    Total graph size: 4
+## 
+## Initializing model</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 2 update 1000 iterations</span>
+<span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, 
+        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
 
-<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>y), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, 
+<span class="co"># Step 3 set monitor variables</span>
+parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>)
+codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(
+            jagsModel,
+            <span class="dt">variable.names =</span> parameters,
+            <span class="dt">n.iter =</span> <span class="dv">10000</span>, 
+            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)
+
+<span class="kw">summary</span>(codaSamples)</code></pre></div>
+<pre><code>## 
+## Iterations = 11:10010
+## Thinning interval = 1 
+## Number of chains = 1 
+## Sample size per chain = 10000 
+## 
+## 1. Empirical mean and standard deviation for each variable,
+##    plus standard error of the mean:
+## 
+##           Mean             SD       Naive SE Time-series SE 
+##      -0.014427       1.424387       0.014244       0.013960 
+## 
+## 2. Quantiles for each variable:
+## 
+##      2.5%       25%       50%       75%     97.5% 
+## -2.799089 -0.743190 -0.012025  0.729953  2.756398</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)
+
+
+Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)
+
+<span class="kw">plot</span>(<span class="kw">density</span>(Y<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, 
      <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:12-Bayesian-stats-6"></span>
 <img src="bookdown_files/figure-html/12-Bayesian-stats-6-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
