@@ -188,7 +188,7 @@ points(x, u, type = "l", col = "red")
 ```
 
 
-2. 先驗概率使用懷疑觀點的概率分布: scetptical prior
+2. 先驗概率使用懷疑觀點的概率分布: sceptical prior
 
 - 假定我們不相信專家意見，懷疑地認爲阿尼普酶對降低心肌梗塞患者死亡率本身應該沒有什麼效果的話，可以認爲比值比爲1，也就是 $\log(\text{OR}) = 0$。同時還認爲有顯著療效是小概率事件。此時，先驗概率的分布可以表示爲：
 
@@ -423,9 +423,9 @@ knitr::include_graphics("img/tosses10heads.png")
 
 重複上面步驟1，2成千上萬次之後，獲得的新的概率分佈，就是 $y$ 的預測分佈的一個樣本。這樣獲得的樣本，我們就可以想進各種方法來描述它，可以是取均值，取方差，取四分位，等任何你可以用來描述的特徵值來作爲對預測概率分佈的描述。
 
-## 蒙特卡羅法分析軟件 OpenBUGS 
+## 蒙特卡羅法分析軟件 OpenBUGS / JAGS
 
-本書中我們用 [OpenBUGS](http://www.openbugs.net/w/FrontPage) 這一軟件進行全部的貝葉斯分析。
+本書中我們用 [OpenBUGS](http://www.openbugs.net/w/FrontPage) 和 JAGS 軟件進行貝葉斯統計分析。
 
 ### 用 OpenBUGS 分析投擲硬幣數據
  
@@ -471,10 +471,10 @@ model{
 
 ```
 Node statistics
-  		  mean	 sd	       MC_error	 val2.5pc	 median	 val97.5pc	start	sample
-P.crit 	0.015	 0.1216	   0.00121	 0.0	     0.0	   0.0	      1  	  10000
+  		  mean	    sd	     MC_error	 val2.5pc	 median	 val97.5pc	start	sample
+P.crit 	0.015	   0.1216	   0.00121	 0.0	     0.0	   0.0	      1  	  10000
 theta   0.4008   0.09903	 9.683E-4	 0.2159	   0.3982	 0.5993	    1	    10000
-y       8.034    2.919	 0.02578	 3.0	     8.0	   14.0	      1	    10000
+y       8.034    2.919	   0.02578	 3.0	     8.0	   14.0	      1	    10000
 ```
 
 第一行我們可以看見顯示的是列的名稱，接下來每一行都是OpenBUGS的軟件在進行計算機模擬試驗過程中監測的(monitor)變量的結果，以及它們的數據描述。值得注意的是其中`P.crit`這一行，除了第一列的均值`mean = 0.015`有實際意義意外，其餘的數值是沒有什麼含義的，可以忽略。這個`P.crit`均值的含義即是我們關心的問題【"這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）"這件事發生的概率】的答案，
@@ -573,7 +573,7 @@ model{
 
 下面的代碼展示了如何在R裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：
 
-```{r R-OpenBUGS00, cache=TRUE, fig.width=9, fig.cap='History of the iterations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r R-OpenBUGS00, cache=TRUE, fig.width=9, fig.cap='History of the iterations.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, eval=FALSE}
 library(BRugs)
 
 # bugpath <- "C:/Users/Chao/Documents/LSHTMlearningnote/" # in letsnote win10
@@ -606,6 +606,39 @@ samplesHistory("*", mfrow = c(2,1), ask=FALSE)
 ```
 
 
+
+下面的代碼展示了如何在R裏連接JAGS進行蒙特卡羅運算和調出其結果的過程：
+
+```{r JAGS00, cache=TRUE, fig.width=9, fig.cap='History of the iterations by JAGS.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+library(runjags)
+library(rjags)
+library(R2jags)
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel.txt", sep = ""), n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000)
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = c("P8", "y"),
+            n.iter = 1000)
+
+summary(codaSamples)
+
+# Show the trace plot
+library(ggmcmc)
+ggSample <- ggs(codaSamples)
+ggs_traceplot(ggSample)
+```
+
+
+
+
 對模型進行修改，嘗試計算相同設計的試驗，在徵集了30名患者，新藥的有效率爲0.7時，15名或者以內的患者有顯著療效的事件發生的概率是多少？
 
 
@@ -616,7 +649,9 @@ model{
 } 
 ```
 
-```{r R-OpenBUGS01, cache=TRUE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+OpenBUGS Codes:
+
+```{r R-OpenBUGS01, cache=TRUE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=FALSE}
 
 # Step 1 check model
 modelCheck(paste(bugpath, "/backupfiles/coinmodel30.txt", sep = "")) 
@@ -650,6 +685,33 @@ for(p_ in parameters)
          nclas=50, col="red")
   }
 ```
+
+JAGS code: 
+
+```{r JAGS01, cache=TRUE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel30.txt", sep = ""), n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000)
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = c("P15", "y"),
+            n.iter = 10000)
+
+summary(codaSamples)
+#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
+ggSample <- ggs(codaSamples)
+ggs_histogram(ggSample, bins = 18)
+```
+
+
+
 
 所以此時少於或等於１５人得到症狀改善的事件發生的概率被推測爲1.6%。
 
