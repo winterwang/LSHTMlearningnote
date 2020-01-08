@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-01-07" />
+<meta name="date" content="2020-01-08" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1379,7 +1379,7 @@ p(\theta | y, n) &amp; \propto p(y|\theta, n)p(\theta) \\
 <p><span class="math display">\[
 p(\theta | y,n) = \text{Beta}(a + y, b + n -y)
 \]</span></p>
-<p>像這樣，先驗概率和事後概率兩個概率分布都來自相同家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。</p>
+<p>像這樣，先驗概率和事後概率兩個概率分布都來自相同分佈家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">1</span>))
 <span class="co"># Plot exact prior probability density </span>
 <span class="co"># values of the hyperparameters</span>
@@ -1419,7 +1419,7 @@ posterior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span 
 圖 83.1: Prior, likelihood, and posterior for Drug example
 </p>
 </div>
-<p>本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 <a href="共軛先驗概率-conjugate-priors.html#fig:R-OpenBUGS07">83.1</a> 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：</p>
+<p>本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 <a href="共軛先驗概率-conjugate-priors.html#fig:R-OpenBUGS07">83.1</a> 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS/JAGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：</p>
 <pre><code>#  Monte Carlo model for Drug example
 
 model{
@@ -1427,7 +1427,7 @@ model{
     y       ~ dbin(theta,20)           # sampling distribution (likelihood)
     y       &lt;- 15                      # data
 }</code></pre>
-<p>你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白我們現在要來做事後概率分布的計算了。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。</p>
+<p>你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS/JAGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白並且切換到事後概率分布的計算。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。</p>
 <div id="事後概率分布預測" class="section level3">
 <h3><span class="header-section-number">83.2.1</span> 事後概率分布預測</h3>
 <p>假如這個新藥的效果仍然無法讓人覺得信服，我們考慮再做一次試驗徵集更多的患者，如果在這個試驗中，40名患者中有25名或者更多的患者症狀得到緩解，可以考慮把該藥物加入下一次發展計劃當中。這時候，又一次回到了預測概率的問題上來，我們想知道，“再做40人的試驗時，有25名或者更多的患者的症狀可以得到緩解”這件事可能發生的概率。這時候的模型可以被擴展如下：</p>
@@ -1446,7 +1446,7 @@ P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \t
   y.pred    ~ dbin(theta, m)               # predictive distribution
   P.crit   &lt;- step(y.pred - mcrit + 0.5)   # = 1 if y.pred &gt;= mcrit, 0 otherwise
 }</code></pre>
-<p>我們可以把數據寫在另一個txt文件裏面：</p>
+<p>我們可以把數據寫在另一個txt文件/向量裏面：</p>
 <pre><code>list(a = 9.2,             # parameters of prior distribution 
      b = 13.8, 
      y = 15,              # number of successes in completed trial
@@ -1461,91 +1461,84 @@ P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \t
   P.crit   &lt;- step(y.pred - 24.5)               # = 1 if y.pred &gt;= mcrit, 0 otherwise
   y        &lt;- 15
 }</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
-<span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/MCdrugP29.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </code></pre></div>
-<pre><code>## model is syntactically correct</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
-<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
-<pre><code>## model compiled</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
-<span class="co"># they are aleady provided in the model specification</span>
-<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
-<pre><code>## initial values generated, model initialized</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
-parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>)
-<span class="kw">samplesSet</span>(parameters)</code></pre></div>
-<pre><code>## monitor set for variable &#39;P.crit&#39;</code></pre>
-<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
-<pre><code>## monitor set for variable &#39;y.pred&#39;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 50000 iterations</span>
-<span class="kw">modelUpdate</span>(<span class="dv">50000</span>)</code></pre></div>
-<pre><code>## 50000 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
-sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
-<span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##           mean      sd  MC_error val2.5pc median val97.5pc start sample
-## P.crit  0.3316 0.47080 0.0020680   0.0000  0.000    1.0000     1  50000
-## theta   0.5632 0.07483 0.0003351   0.4153  0.564    0.7068     1  50000
-## y.pred 22.5500 4.30900 0.0190200  14.0000 23.000   31.0000     1  50000</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>), 
-                    <span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>), 
-                    <span class="dt">y.pred =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y.pred&quot;</span>))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Dat &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">a =</span> <span class="fl">9.2</span>,             <span class="co"># parameters of prior distribution </span>
+            <span class="dt">b =</span> <span class="fl">13.8</span>, 
+            <span class="dt">y =</span> <span class="dv">15</span>,              <span class="co"># number of successes in completed trial</span>
+            <span class="dt">n =</span> <span class="dv">20</span>,              <span class="co"># number of patients in completed trial</span>
+            <span class="dt">m =</span> <span class="dv">40</span>,              <span class="co"># number of patients in future trial </span>
+            <span class="dt">mcrit =</span> <span class="dv">25</span>)          <span class="co"># critical value of future successes</span>
+
+<span class="co"># fit use R2jags package</span>
+
+post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(
+  <span class="dt">data =</span> Dat,
+  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),
+  <span class="dt">n.iter =</span> <span class="dv">50100</span>,
+  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, 
+                     <span class="st">&quot;/backupfiles/MCdrugP29.txt&quot;</span>, 
+                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),
+  <span class="dt">n.chains =</span> <span class="dv">1</span>,
+  <span class="dt">n.thin =</span> <span class="dv">10</span>,
+  <span class="dt">n.burnin =</span> <span class="dv">100</span>,
+  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</code></pre></div>
+<pre><code>## module glm loaded</code></pre>
+<pre><code>## Compiling model graph
+##    Resolving undeclared variables
+##    Allocating nodes
+## Graph information:
+##    Observed stochastic nodes: 1
+##    Unobserved stochastic nodes: 2
+##    Total graph size: 12
+## 
+## Initializing model</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(post.jags)</code></pre></div>
+<pre><code>## Inference for Bugs model at &quot;/home/ccwang/Documents/LSHTMlearningnote/backupfiles/MCdrugP29.txt&quot;, fit using jags,
+##  1 chains, each with 50100 iterations (first 100 discarded), n.thin = 10
+##  n.sims = 5000 iterations saved
+##          mu.vect sd.vect   2.5%    25%    50%    75%  97.5%
+## P.crit     0.333   0.471  0.000  0.000  0.000  1.000  1.000
+## theta      0.563   0.074  0.418  0.514  0.565  0.614  0.707
+## y.pred    22.564   4.262 14.000 20.000 23.000 25.000 31.000
+## deviance   6.615   2.360  3.378  4.853  6.157  7.887 12.281
+## 
+## DIC info (using the rule, pD = var(deviance)/2)
+## pD = 2.8 and DIC = 9.4
+## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(post.jags)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(Simulated)
+
 #### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
 <span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))
-
-
-<span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="fl">.3</span><span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 50000&quot;</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),
+Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)
+Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y.pred&quot;</span>)
+<span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 50000&quot;</span>, 
      <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of response&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)
-
-<span class="kw">hist</span>(chain<span class="fl">.3</span><span class="op">$</span>y.pred, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 50000&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>),
-     <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</code></pre></div>
+<span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 50000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, 
+     <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>))</code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS08"></span>
 <img src="bookdown_files/figure-html/R-OpenBUGS08-1.png" alt="Posterior and predictive distributions for Drug example" width="80%" />
 <p class="caption">
 圖 83.2: Posterior and predictive distributions for Drug example
 </p>
 </div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># # Or simply use the denplot() function from the mcmcplots package</span>
+<span class="co"># mcmcplots::denplot(post.jags, &quot;theta&quot;)</span></code></pre></div>
 <p>圖<a href="共軛先驗概率-conjugate-priors.html#fig:R-OpenBUGS08">83.2</a>左邊的圖，是前一次試驗結果的事後概率分布，20名患者中觀察到15名患者症狀改善。右邊的圖則是對下一次40人的試驗的結果做的預測，平均22.5名患者可能會有症狀改善，這個均值的標準差是4.3。</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Step 1 check model</span>
-<span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/MCdrugP29.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </code></pre></div>
-<pre><code>## model is syntactically correct</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># there is no data so just compile the model</span>
-<span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </code></pre></div>
-<pre><code>## model compiled</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># There is no need to provide initial values as </span>
-<span class="co"># they are aleady provided in the model specification</span>
-<span class="kw">modelGenInits</span>() <span class="co">#</span></code></pre></div>
-<pre><code>## initial values generated, model initialized</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span>
-parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>)
-<span class="kw">samplesSet</span>(parameters)</code></pre></div>
-<pre><code>## monitor set for variable &#39;P.crit&#39;</code></pre>
-<pre><code>## monitor set for variable &#39;theta&#39;</code></pre>
-<pre><code>## monitor set for variable &#39;y.pred&#39;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Generate 50000 iterations</span>
-<span class="kw">modelUpdate</span>(<span class="dv">50000</span>)</code></pre></div>
-<pre><code>## 50000 updates took 0 s</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### SHOW POSTERIOR STATISTICS
-sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)
-<span class="kw">print</span>(sample.statistics)</code></pre></div>
-<pre><code>##           mean      sd  MC_error val2.5pc median val97.5pc start sample
-## P.crit  0.3316 0.47080 0.0020680   0.0000  0.000    1.0000     1  50000
-## theta   0.5632 0.07483 0.0003351   0.4153  0.564    0.7068     1  50000
-## y.pred 22.5500 4.30900 0.0190200  14.0000 23.000   31.0000     1  50000</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>), 
-                    <span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>), 
-                    <span class="dt">y.pred =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y.pred&quot;</span>))
-
-<span class="kw">plot</span>(chain<span class="fl">.3</span><span class="op">$</span>theta, <span class="dt">main=</span><span class="st">&quot;&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>, <span class="dt">ylab=</span><span class="st">&quot;theta&quot;</span>, 
-     <span class="dt">xlab=</span><span class="st">&quot;iteration&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="fl">1.2</span>))</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mcmcplots<span class="op">::</span><span class="kw">traplot</span>(post.jags, <span class="st">&quot;theta&quot;</span>)</code></pre></div>
+<pre><code>## Registered S3 method overwritten by &#39;mcmcplots&#39;:
+##   method        from  
+##   as.mcmc.rjags R2jags</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:MCMC00"></span>
 <img src="bookdown_files/figure-html/MCMC00-1.png" alt="Plot of the MCMC chain of the parameter, Drug example." width="80%" />
 <p class="caption">
 圖 83.3: Plot of the MCMC chain of the parameter, Drug example.
 </p>
 </div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># plot(Theta$value, main=&quot;&quot;, type=&quot;l&quot;, ylab=&quot;theta&quot;, </span>
+<span class="co">#      xlab=&quot;iteration&quot;, col=&quot;red&quot;, ylim = c(0,1.2))</span></code></pre></div>
 <p>爲了比較，我們可以把精確計算獲得的答案和蒙特卡羅算法給出的預測做個比較：</p>
 <ol style="list-style-type: decimal">
 <li><span class="math inline">\(\theta:\)</span>均值爲0.563，標準差是0.075；</li>

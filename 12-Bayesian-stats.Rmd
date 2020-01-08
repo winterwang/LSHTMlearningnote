@@ -1131,7 +1131,7 @@ $$
 p(\theta | y,n) = \text{Beta}(a + y, b + n -y)
 $$
 
-像這樣，先驗概率和事後概率兩個概率分布都來自相同家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。
+像這樣，先驗概率和事後概率兩個概率分布都來自相同分佈家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。
 
 
 ```{r R-OpenBUGS07, cache=TRUE, fig.width=3.5, fig.height=6, fig.cap='Prior, likelihood, and posterior for Drug example', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
@@ -1170,7 +1170,7 @@ curve(posterior, 0, 1, type = "l", main = "Posterior for "~theta,
       lwd = 2, cex.axis = 1.5, cex.lab = 1.5)
 ```
 
-本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 \@ref(fig:R-OpenBUGS07) 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：
+本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 \@ref(fig:R-OpenBUGS07) 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS/JAGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：
 
 
 ```
@@ -1183,7 +1183,7 @@ model{
 }
 ```
 
-你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白我們現在要來做事後概率分布的計算了。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。
+你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS/JAGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白並且切換到事後概率分布的計算。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。
 
 ### 事後概率分布預測
 
@@ -1209,7 +1209,7 @@ model{
 }
 ```
 
-我們可以把數據寫在另一個txt文件裏面：
+我們可以把數據寫在另一個txt文件/向量裏面：
 
 ```
 list(a = 9.2,             # parameters of prior distribution 
@@ -1236,36 +1236,44 @@ model{
 
 ```{r R-OpenBUGS08, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Posterior and predictive distributions for Drug example', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/MCdrugP29.txt", sep = "")) 
-# there is no data so just compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("P.crit", "theta", "y.pred")
-samplesSet(parameters)
-# Generate 50000 iterations
-modelUpdate(50000)
+Dat <- list(a = 9.2,             # parameters of prior distribution 
+            b = 13.8, 
+            y = 15,              # number of successes in completed trial
+            n = 20,              # number of patients in completed trial
+            m = 40,              # number of patients in future trial 
+            mcrit = 25)          # critical value of future successes
 
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+# fit use R2jags package
 
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.crit", "theta", "y.pred"),
+  n.iter = 50100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/MCdrugP29.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 10,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+Simulated <- coda::as.mcmc(post.jags)
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain.3 <- data.frame(P.crit = samplesSample("P.crit"), 
-                    theta = samplesSample("theta"), 
-                    y.pred = samplesSample("y.pred"))
+ggSample <- ggs(Simulated)
+
 #### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
 par(mfrow=c(1,2))
-
-
-plot(density(chain.3$theta), main = "theta sample 50000", xlim = c(0,1),
+Theta <- ggSample %>% 
+  filter(Parameter == "theta")
+Y <- ggSample %>% 
+  filter(Parameter == "y.pred")
+plot(density(Theta$value), main = "theta sample 50000", 
      ylab = "P(theta)", xlab = "Probability of response", col = "red")
-
-hist(chain.3$y.pred, main = "y.pred sample 50000", prob = TRUE,xlim = c(0, 40),
-     ylab = "P(y.pred)", xlab = "Number of success", col = "red")
+hist(Y$value, main = "y.pred sample 50000", ylab = "P(y.pred)", 
+     xlab = "Number of success", col = "red", prob = TRUE,xlim = c(0, 40))
+# # Or simply use the denplot() function from the mcmcplots package
+# mcmcplots::denplot(post.jags, "theta")
 ```
 
 
@@ -1273,32 +1281,10 @@ hist(chain.3$y.pred, main = "y.pred sample 50000", prob = TRUE,xlim = c(0, 40),
 圖\@ref(fig:R-OpenBUGS08)左邊的圖，是前一次試驗結果的事後概率分布，20名患者中觀察到15名患者症狀改善。右邊的圖則是對下一次40人的試驗的結果做的預測，平均22.5名患者可能會有症狀改善，這個均值的標準差是4.3。
 
 
-```{r MCMC00, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Plot of the MCMC chain of the parameter, Drug example.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
-
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/MCdrugP29.txt", sep = "")) 
-# there is no data so just compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("P.crit", "theta", "y.pred")
-samplesSet(parameters)
-# Generate 50000 iterations
-modelUpdate(50000)
-
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
-
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain.3 <- data.frame(P.crit = samplesSample("P.crit"), 
-                    theta = samplesSample("theta"), 
-                    y.pred = samplesSample("y.pred"))
-
-plot(chain.3$theta, main="", type="l", ylab="theta", 
-     xlab="iteration", col="red", ylim = c(0,1.2))
+```{r MCMC00, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Plot of the MCMC chain of the parameter, Drug example.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+mcmcplots::traplot(post.jags, "theta")
+# plot(Theta$value, main="", type="l", ylab="theta", 
+#      xlab="iteration", col="red", ylim = c(0,1.2))
 ```
 
 爲了比較，我們可以把精確計算獲得的答案和蒙特卡羅算法給出的預測做個比較：
