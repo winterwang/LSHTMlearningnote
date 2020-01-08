@@ -2797,41 +2797,41 @@ inits <- function (){
   list (beta0=rnorm(1), beta1=runif(1) )
 }
 
-# step 1 check model
-jagsModel <- jags.model(
-                     file = paste(bugpath, 
-                                  "/backupfiles/logistic-reg-model.txt",
-                                  sep = ""),
-                     data = Dat,
-                     n.chains = 2, 
-                     inits = inits,
-                     quiet = TRUE)
-# Step 2 update 10000 iterations
+# # step 1 check model
+# jagsModel <- jags.model(
+#                      file = paste(bugpath, 
+#                                   "/backupfiles/logistic-reg-model.txt",
+#                                   sep = ""),
+#                      data = Dat,
+#                      n.chains = 2, 
+#                      inits = inits,
+#                      quiet = TRUE)
+# # Step 2 update 10000 iterations
+# 
+# update(jagsModel, n.iter = 1, progress.bar = "none")
+# 
+# # Step 3 set monitor variables
+# 
+# codaSamples <- coda.samples(
+#   jagsModel, variable.names = c("beta0", "beta1", "theta[6]"),
+#   n.iter = 10000, progress.bar = "none"
+# )
+# summary(codaSamples)
 
-update(jagsModel, n.iter = 1, progress.bar = "none")
+post.jags <- jags(
+  data = Dat,
+  inits = inits,
+  parameters.to.save = c("beta0", "beta1", "theta[6]"),
+  n.iter = 5000,
+  model.file = paste(bugpath,
+                     "/backupfiles/logistic-reg-model.txt",
+                     sep = ""),
+  n.chains = 2,
+  n.thin = 1,
+  n.burnin = 0,
+  progress.bar = "none")
 
-# Step 3 set monitor variables
-
-codaSamples <- coda.samples(
-  jagsModel, variable.names = c("beta0", "beta1", "theta[6]"),
-  n.iter = 10000, progress.bar = "none"
-)
-summary(codaSamples)
-
-# post.jags <- jags(
-#   data = Dat,
-#   inits = inits,
-#   parameters.to.save = c("beta0", "beta1", "theta[6]"),
-#   n.iter = 10000,
-#   model.file = paste(bugpath, 
-#                      "/backupfiles/logistic-reg-model.txt", 
-#                      sep = ""),
-#   n.chains = 2,
-#   n.thin = 1,
-#   n.burnin = 0,
-#   progress.bar = "none")
-
-mcmcplots::traplot(codaSamples, c("beta0", "beta1", "theta[6]"))
+mcmcplots::traplot(post.jags, c("beta0", "beta1", "theta[6]"))
 
 
 # OpenBUGS codes:
@@ -2867,10 +2867,10 @@ mcmcplots::traplot(codaSamples, c("beta0", "beta1", "theta[6]"))
 
 
 ```{r OpenBUGSPractical0412, cache=TRUE, fig.width=8, fig.cap='Brooks-Gelman-Rubin diagnostic graph', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
-# Simulated <- coda::as.mcmc(post.jags)
+Simulated <- coda::as.mcmc(post.jags)
 # postsamples <- buildMCMC("*")
-gelman.diag(codaSamples)
-gelman.plot(codaSamples)
+gelman.diag(Simulated)
+gelman.plot(Simulated)
 ```
 
 從Gelman.plot的圖形可以看出，在2000次及以上的採集樣本過後，基本上應該可以認爲採集的樣本收斂於事後概率分布。
