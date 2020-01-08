@@ -614,6 +614,7 @@ samplesHistory("*", mfrow = c(2,1), ask=FALSE)
 library(runjags)
 library(rjags)
 library(R2jags)
+bugpath <- getwd()
 
 # Step 1 check model
 jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel.txt", sep = ""), n.chains = 1)
@@ -631,9 +632,10 @@ codaSamples <- coda.samples(
 summary(codaSamples)
 
 # Show the trace plot
-library(ggmcmc)
-ggSample <- ggs(codaSamples)
-ggs_traceplot(ggSample)
+library(mcmcplots)
+# ggSample <- ggs(codaSamples)
+# ggs_traceplot(ggSample)
+mcmcplots::traplot(codaSamples)
 ```
 
 
@@ -1260,10 +1262,11 @@ post.jags <- jags(
 print(post.jags)
 Simulated <- coda::as.mcmc(post.jags)
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-ggSample <- ggs(Simulated)
+ggSample <- ggmcmc::ggs(Simulated)
 
 #### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
 par(mfrow=c(1,2))
+
 Theta <- ggSample %>% 
   filter(Parameter == "theta")
 Y <- ggSample %>% 
@@ -1722,9 +1725,9 @@ B. THM 三氯甲烷濃度實例
 # THM model:
 model {
    # data 
-   y[1] <- 128
-   y[2] <- 132
-   tau <- 1/pow(5, 2)
+   # y[1] <- 128
+   # y[2] <- 132
+   # tau <- 1/pow(5, 2)
 
    for(i in 1:2) {
       y[i] ~ dnorm(theta, tau)
@@ -1745,27 +1748,51 @@ model {
 
 ```{r R-OpenBUGS12, cache=TRUE, message=TRUE, warning=FALSE}
 
+# Codes for R2JAGS
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/thm-model.txt", sep = "")) 
-  
-# compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("theta")
-samplesSet(parameters)
 
-# Generate 10000 iterations
-modelUpdate(10000)
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+Dat <- list(
+y = c(128, 132),                       # observed 
+tau = 1/(5^2)
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("theta"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/thm-model.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# OpenBUGS code:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/thm-model.txt", sep = "")) 
+#   
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("theta")
+# samplesSet(parameters)
+
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
 ```
 
-所以這個區域三氯甲烷的事後均值和95%可信區間分別是 128.9 (122.4, 135.5)。和我們之前用精確計算法給出的結果相同。
+所以這個區域三氯甲烷的事後均值和95%可信區間分別是 128.9 (122.3, 135.4)。和我們之前用精確計算法給出的結果相同/相近。
 
 如果在這個模型中，我們嘗試沒有信息的先驗概率分佈，結果會怎樣呢？
 
@@ -1774,30 +1801,55 @@ print(sample.statistics)
 ```{r R-OpenBUGS13, cache=TRUE, message=TRUE, warning=FALSE}
 
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/THM-vaguemodel.txt", sep = "")) 
+# Codes for R2JAGS
 
-# compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("theta")
-samplesSet(parameters)
 
-# Generate 10000 iterations
-modelUpdate(10000)
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+Dat <- list(
+y = c(128, 132),                       # observed 
+tau = 1/(5^2)
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("theta"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/THM-vaguemodel.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# OpenBUGS code:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/THM-vaguemodel.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("theta")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
 ```
 
-MC試驗10000次給出的事後均值是130.0，它和樣本均值相同，因爲此時我們給模型一個幾乎不含有效信息的先驗概率分佈時，意味着我們讓試驗獲得的數據做完全主導作用，"data speak for themselves"。
+MC試驗10000次給出的事後均值是129.9，它和樣本均值相同，因爲此時我們給模型一個幾乎不含有效信息的先驗概率分佈時，意味着我們讓試驗獲得的數據做完全主導作用，"data speak for themselves"。
 
 C. Disease risk in a small area
 
-下面的BUGS模型代碼可以用來進行泊淞－伽馬分布似然的MC計算。在這個例子中，在某個區域我們觀察到５例白血病新病例，已知該區域的年齡性別標準化發病期望病例數是$E = 2.8$。注意看我們在代碼中加入了兩種不同類型的先驗概率分布，一個是沒有太多信息的(vague prior distribution)`dgamma(0.1, 0.1)`，一個則是有一定信息的(informative prior, stribution) `dgamma(48, 40)`。我們把兩個先驗概率分布同時加在一個模型裏，這是十分便於進行兩種先驗概率對結果的影響的比較的手段。你當然可以把它寫成兩個不同的模型。注意模型代碼是如何表示事後概率分布和計算相對危險度比(relative risk)大於1的概率的。
+下面的BUGS/JAGS模型代碼可以用來進行泊淞－伽馬分布似然的MC計算。在這個例子中，在某個區域我們觀察到５例白血病新病例，已知該區域的年齡性別標準化發病期望病例數是$E = 2.8$。注意看我們在代碼中加入了兩種不同類型的先驗概率分布，一個是沒有太多信息的(vague prior distribution)`dgamma(0.1, 0.1)`，一個則是有一定信息的(informative prior, stribution) `dgamma(48, 40)`。我們把兩個先驗概率分布同時加在一個模型裏，這是十分便於進行兩種先驗概率對結果的影響的比較的手段。你當然可以把它寫成兩個不同的模型。注意模型代碼是如何表示事後概率分布和計算相對危險度比(relative risk)大於1的概率的。
 
 
 ```
@@ -1818,8 +1870,8 @@ model {
   P.excess[2] <- step(lambda[2] - 1)
  
 	# data
-	y[1] <- 5
-	y[2] <- 5             # replicate data to fit both models together
+	# y[1] <- 5
+	# y[2] <- 5             # replicate data to fit both models together
 
 }
 ```
@@ -1827,53 +1879,84 @@ model {
 ```{r R-OpenBUGS14, cache=TRUE, message=TRUE, warning=FALSE}
 
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/disease-model.txt", sep = "")) 
+# Codes for R2JAGS
 
-# compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
-samplesSet(parameters)
 
-# Generate 10000 iterations
-modelUpdate(10000)
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+Dat <- list(
+y = c(5, 5)                      # replicate data to fit both models together
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/disease-model.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/disease-model.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
 ```
 
-在沒有信息的先驗概率(`dgamma(0.1, 0.1)`)分布條件下，該地區可能有較高白血病發病率的概率是85%，但是在有參考價值信息的先驗概率分布(`dgamma(48, 40)`)條件下，該地區可能有較高白血病發病率的概率是93%。所以，盡管相對危險度(relative risk)的事後均值在沒有信息的先驗概率分布條件下比較高(`lambda[1] = 1.766 > lambda[2] = 1.239`)，但是沒有信息的先驗概率分布條件下，這個相對危險度大於1的概率(85%)要比有信息的先驗概率分布條件下相對危險度大於1的概率要低(93%)。這是因爲在沒有信息的先驗概率分布條件下，相對危險度估計本身有太多的不確定性(uncertainty，圖\@ref(fig:R-OpenBUGS15))。
+在沒有信息的先驗概率(`dgamma(0.1, 0.1)`)分布條件下，該地區可能有較高白血病發病率的概率是85%，但是在有參考價值信息的先驗概率分布(`dgamma(48, 40)`)條件下，該地區可能有較高白血病發病率的概率是93%。所以，盡管相對危險度(relative risk)的事後均值在沒有信息的先驗概率分布條件下比較高(`lambda[1] = 1.770 > lambda[2] = 1.238`)，但是沒有信息的先驗概率分布條件下，這個相對危險度大於1的概率(85%)要比有信息的先驗概率分布條件下相對危險度大於1的概率要低(93%)。這是因爲在沒有信息的先驗概率分布條件下，相對危險度估計本身有太多的不確定性(uncertainty，圖\@ref(fig:R-OpenBUGS15))。
 
 
 ```{r R-OpenBUGS15, cache=TRUE, fig.width=4, fig.height=4, fig.cap='Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2).', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
-
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/disease-model.txt", sep = "")) 
-
-# compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
-samplesSet(parameters)
-
-# Generate 10000 iterations
-modelUpdate(10000)
+# 
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/disease-model.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
 
 
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
-                    P.excess2 = samplesSample("P.excess[2]"), 
-                    lambda1 = samplesSample("lambda[1]"), 
-                    lambda2 = samplesSample("lambda[2]"))
+# chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
+#                     P.excess2 = samplesSample("P.excess[2]"), 
+#                     lambda1 = samplesSample("lambda[1]"), 
+#                     lambda2 = samplesSample("lambda[2]"))
+Simulated <- coda::as.mcmc(post.jags)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+ggSample <- ggmcmc::ggs(Simulated)
 
-boxplot(chain$lambda1,chain$lambda2, col = "green", ylab = "lambda", 
+Lambda1 <- ggSample %>% 
+  filter(Parameter == "lambda[1]")
+Lambda2 <- ggSample %>% 
+  filter(Parameter == "lambda[2]")
+
+boxplot(Lambda1$value,Lambda2$value, col = "green", ylab = "lambda", 
         outline=FALSE, main = "boxplot: lambda", ylim = c(0,4), 
         names = c("1", "2")) 
 abline(h = 1.5)
@@ -1903,8 +1986,8 @@ model {
   P.excess[2] <- step(lambda[2] - 1)
  
 	# data
-	y[1] <- 100             # the observed new cases changed from 5 to 100
-	y[2] <- 100             # replicate data to fit both models together
+	# y[1] <- 100             # the observed new cases changed from 5 to 100
+	# y[2] <- 100             # replicate data to fit both models together
 
 }
 ```
@@ -1912,27 +1995,50 @@ model {
 
 ```{r R-OpenBUGS16, cache=TRUE, message=TRUE, warning=FALSE}
 
+# Codes for R2JAGS
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/disease-modelupdated.txt", sep = "")) 
 
-# compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
-samplesSet(parameters)
+Dat <- list(
+y = c(100, 100)                    # the observed new cases changed from 5 to 100
+)
 
-# Generate 10000 iterations
-modelUpdate(10000)
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/disease-modelupdated.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/disease-modelupdated.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
 ```
 
-有了更多的觀察數據的模型，我們看到，相對危險度的事後估計`lambda[1], lambda[2]`都變得更加精確了，有了更小的標準差。這和我們的預期相同，因爲觀察數據增加自然會提高相對危險度估計的精確度。可是，我們發現在沒有信息的先驗概率分布條件下，相對危險度的事後估計幾乎沒有太大的變化(1.786 v.s. 1.766)。相反地，有信息的先驗概率分布條件下，相對危險度的事後估計比之前增加了不少(1.541 v.s. 1.239)。這主要是因爲，現在我們得到更多的觀察數據，這些數據得到的信息被給予了更多的權重，且觀察數據提示相對危險度應該要比較大(100/56 = 1.786)。
+有了更多的觀察數據的模型，我們看到，相對危險度的事後估計`lambda[1], lambda[2]`都變得更加精確了，有了更小的標準差。這和我們的預期相同，因爲觀察數據增加自然會提高相對危險度估計的精確度。可是，我們發現在沒有信息的先驗概率分布條件下，相對危險度的事後估計幾乎沒有太大的變化(1.783 v.s. 1.770)。相反地，有信息的先驗概率分布條件下，相對危險度的事後估計比之前增加了不少(1.540 v.s. 1.238)。這主要是因爲，現在我們得到更多的觀察數據，這些數據得到的信息被給予了更多的權重，且觀察數據提示相對危險度應該要比較大(100/56 = 1.786)。
 
 盡管觀察數據確實給模型提供了較多的有價值的信息，你會發現，我們使用的第二個先驗概率分布（也就是有信息的先驗概率分布）仍然對相對危險度的事後估計起到了相當的影響(the prior variance is 0.03, giving prior sd of 0.17)。這也是因爲這個先驗概率分布給出的信息量，幾乎相當於觀察數據給出的信息量（二者的標準差很接近）。另外一種理解此現象的方法是看事後概率分布推導出的新的伽馬分布的計算式：
 
@@ -1950,12 +2056,20 @@ $$
 
 ```{r R-OpenBUGS17, cache=TRUE, fig.width=4, fig.height=4, fig.cap='Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2) with more observations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
-                    P.excess2 = samplesSample("P.excess[2]"), 
-                    lambda1 = samplesSample("lambda[1]"), 
-                    lambda2 = samplesSample("lambda[2]"))
+# chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
+#                     P.excess2 = samplesSample("P.excess[2]"), 
+#                     lambda1 = samplesSample("lambda[1]"), 
+#                     lambda2 = samplesSample("lambda[2]"))
+Simulated <- coda::as.mcmc(post.jags)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+ggSample <- ggmcmc::ggs(Simulated)
 
-boxplot(chain$lambda1,chain$lambda2, col = "green", ylab = "lambda", 
+Lambda1 <- ggSample %>% 
+  filter(Parameter == "lambda[1]")
+Lambda2 <- ggSample %>% 
+  filter(Parameter == "lambda[2]")
+
+boxplot(Lambda1$value,Lambda2$value, col = "green", ylab = "lambda", 
         outline=FALSE, main = "boxplot: lambda", ylim = c(0,4), 
         names = c("1", "2")) 
 abline(h = 1.66)
@@ -1985,8 +2099,9 @@ model{
    
    P.Moneyback   <- step(0.5 - y.pred)  # =1 if y.pred <= 0.5, 0 otherwise
   #P.Moneyback   <- equals(y.pred, 0)   # alternative way of calculating predictive prob of 0 correct taste tests
+  
 # data 
-  y <- 13                               # observed number of correct taste tests in original experiment
+#  y <- 13                               # observed number of correct taste tests in original experiment
   
 }
 ```
@@ -1994,31 +2109,53 @@ model{
 
 ```{r R-OpenBUGS18, cache=TRUE, message=TRUE, warning=FALSE}
 
+# Codes for R2JAGS
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/bondmodel.txt", sep = "")) 
 
-# compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("P.ability", "P.Moneyback", "theta", "y.pred")
-samplesSet(parameters)
+Dat <- list(
+y = c(13)                    # Bond had 13 correct taste tests
+)
 
-# Generate 100000 iterations
-modelUpdate(100000)
-#### SHOW POSTERIOR STATISTICS
-sample.statistics <- samplesStats("*")
-print(sample.statistics)
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.ability", "P.Moneyback", "theta", "y.pred"),
+  n.iter = 100100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/bondmodel.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/bondmodel.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.ability", "P.Moneyback", "theta", "y.pred")
+# samplesSet(parameters)
+# 
+# # Generate 100000 iterations
+# modelUpdate(100000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
 ```
 
-1. 第一個問題，可以用 `theta` 的事後概率分布來回答，十萬次MC計算的結果顯示，邦德能夠準確分辨馬丁尼酒的調制方法的概率是0.78，且這個事後概率分布的95%可信區間是(0.5653, 0.9317)。
+1. 第一個問題，可以用 `theta` 的事後概率分布來回答，十萬次MC計算的結果顯示，邦德能夠準確分辨馬丁尼酒的調制方法的概率是0.78，且這個事後概率分布的95%可信區間是(0.564, 0.933)。
 
-2. 第二個問題，邦德擁有能準確分辨馬丁尼酒調制方法的能力(不是猜的)的概率是 `P.ability = 0.9935`。如果邦德只是瞎猜，那麼 `theta` 就只能等於或者十分接近0.5。所以我們相信邦德有這樣一種分辨能力的概率是99.4%。
+2. 第二個問題，邦德擁有能準確分辨馬丁尼酒調制方法的能力(不是猜的)的概率是 `P.ability = 0.993`。如果邦德只是瞎猜，那麼 `theta` 就只能等於或者十分接近0.5。所以我們相信邦德有這樣一種分辨能力的概率是99.3%。
 
-3. 你和４名好友在酒吧能從邦德身上把4被馬丁尼酒錢賺回來的概率，也就等價於邦德在這四次猜酒的結果上都給出了錯誤的答案，四次全錯的概率，就是 `P.Moneyback = 0.0057`。模型代碼中 `y.pred` 用來預測邦德在接下來４次猜酒遊戲中給出的答案是 0還是 1(四次都對的話和爲4)。結果顯示 `y.pred` 的均值達到了3.116，４次全錯的概率是驚人的0.006。
+3. 你和４名好友在酒吧能從邦德身上把4被馬丁尼酒錢賺回來的概率，也就等價於邦德在這四次猜酒的結果上都給出了錯誤的答案，四次全錯的概率，就是 `P.Moneyback = 0.006`。模型代碼中 `y.pred` 用來預測邦德在接下來４次猜酒遊戲中給出的答案是 0還是 1(四次都對的話和爲4)。結果顯示 `y.pred` 的均值達到了3.105，４次全錯的概率是驚人的0.006。
 
 # 馬爾可夫鏈蒙特卡羅MCMC，圖形模型，BUGS語言 {#MCMC-methods}
 
@@ -2041,7 +2178,7 @@ $$
 
 我們無法獲得解析解 (analytical solution/closed solution) 的情況下，可以求助於數學上的數值解 (numerical solution/intergration)。
 
-第二章 (\@ref(MC-estimation)) 我們已經見識過了蒙特卡羅模擬法可以用來從先驗概率分布，或者從**閉合解形式(closed form)**的事後概率分布中採樣計算的過程。如果我們可以把人類不可能完成的任務，也交給計算機來對無法獲取閉合解的事後概率分布做蒙特卡羅樣本採集的話，那麼貝葉斯統計學推斷就可以被推廣到幾乎任何一種模型，任何一種試驗設計中。
+第二章 (Chapter \@ref(MC-estimation)) 我們已經見識過了蒙特卡羅模擬法可以用來從先驗概率分布，或者從**閉合解形式(closed form)**的事後概率分布中採樣計算的過程。如果我們可以把人類不可能完成的任務，也交給計算機來對無法獲取閉合解的事後概率分布做蒙特卡羅樣本採集的話，那麼貝葉斯統計學推斷就可以被推廣到幾乎任何一種模型，任何一種試驗設計中。
 
 所以，我們的目的是希望從無法獲得閉合解形式的多維(多變量)事後概率分布$p(\mathbf{\theta}|x)$中採集樣本做計算機模擬實驗(simulation)。但是，現實中從這樣的事後概率分布中採集**相互獨立(independent)**的樣本，是不容易的一件事。反其道行之，科學家發現，從事後概率分布**有依賴性的馬爾可夫鏈式樣本採集(dependent sampling from a Markov chain)**，作爲一種穩態分布(stationary/equilibrium distribution)卻相對容易。
 
@@ -2141,7 +2278,7 @@ $$
 
 你完全可以另闢蹊徑在STATA或者R裏面寫下吉布斯採樣的算法，但是這並不簡單。幸好，許多軟件已經能夠幫助我們規避掉寫吉布斯採樣算法這一複雜的過程。
 
-BUGS全稱是 **B**ayesian inference **U**sing **G**ibbs **S**ampling。它是用來描述貝葉斯統計學模型的計算機語言。有三種流行的統計學軟件都使用BUGS語言來描述貝葉斯統計學模型，他們分別是 WinBUGS，OpenBUGS，和 JAGS。他們的語法十分接近R的語法，甚至可以直接在R的環境下運行(正如我這本書中在R裏連接OpenBUGS運算貝葉斯統計推斷一樣)。
+BUGS全稱是 **B**ayesian inference **U**sing **G**ibbs **S**ampling。它是用來描述貝葉斯統計學模型的計算機語言。有三種流行的統計學軟件都使用BUGS語言來描述貝葉斯統計學模型，他們分別是 WinBUGS，OpenBUGS，和 JAGS。他們的語法十分接近R的語法，甚至可以直接在R的環境下運行(正如我這本書中在R裏連接JAGS運算貝葉斯統計推斷一樣)。
 
 WinBUGS 1.4.3是一個穩定的貝葉斯統計學軟件，但是它已經不再更新，也沒有再跟進開發。也正如其名字暗示的那樣，它能且只能運行在瘟倒死(windows)機器上。你可以從它的網站上下載並免費使用之: [https://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-winbugs/](https://www.mrc-bsu.cam.ac.uk/software/bugs/the-bugs-project-winbugs/)。
 
@@ -2239,7 +2376,7 @@ $$
 在 BUGS 環境下，每個變量或者參數都被叫做一個節點。它主要被分爲兩類：
 
 - **隨機節點 (stochastic nodes)：**需要我們給出它們分布的描述。一個波浪線 `~` 被用來幫助我們描述這些隨機節點的分布，例如 ` r ~ dunif(a, b)` 的含義就是，在區間 $[a,b]$ 內，$r$服從均一分布。
-- **邏輯節點 (logical nodes)：**則表示的是對節點和節點之間關系的定義，它常常是一個方程，用 `<-` 來輔助定義。例如，`m <- alpha + beta*x` 定義的是 $m$ 和 $alpha, beta, x$ 節點之間的數學關系。
+- **邏輯節點 (logical nodes)：**則表示的是對節點和節點之間關系的定義，它常常是一個方程，用 `<-` 來輔助定義。例如，`m <- alpha + beta*x` 定義的是 $m$ 和 $\alpha, \beta, x$ 節點之間的數學關系。
 
 ### 分布的標記法
 
@@ -2306,7 +2443,7 @@ log(m[i]) <- c + d*y[i]
 
 ## 爲BUGS model模型準備格式正確的數據
 
-OpenBUGS 只能接受格式爲 R/S-plus 的，或者是整理成形狀爲長方形的文字格式數據。例如，名叫GREAT的臨牀試驗數據中，
+OpenBUGS/JAGS 只能接受格式爲 R/S-plus 的，或者是整理成形狀爲長方形的文字格式數據。例如，名叫GREAT的臨牀試驗數據中，
 
 - 在家中接受治療的患者人數是163，其中13例死亡；
 - 在醫院內接受治療的患者人數是148，其中23例死亡。
@@ -2348,7 +2485,7 @@ OpenBUGS同時還允許你給模型加載多個數據文件，你如果願意的
 
 ## Practical Bayesian Statistics 04
 
-這一次練習題的主要目的是，通過使用OpenBUGS來思考，它是如何從非共軛模型的事後概率分布中採集MCMC樣本的。這個過程和從共軛模型的事後概率分布中採樣有哪些不同。
+這一次練習題的主要目的是，通過使用OpenBUGS/JAGS來思考，它是如何從非共軛模型的事後概率分布中採集MCMC樣本的。這個過程和從共軛模型的事後概率分布中採樣有哪些不同。
 
 思考前一次，第三章的課後練習題裏的(Chapter \@ref(BayesPrac03))新藥試驗的例子。還是用這個場景，但是我們這次實施8個不同的試驗，$i = 1,\dots,8$，其中第$i$次試驗有 $n_i$ 名患者，其中 $y_i$ 名患者的治療被認爲有顯著療效。每次試驗中的 $n_i$ 名患者都給予相同劑量$x_i$，但是不同於其他次試驗時的使用劑量的藥物。此時我們把注意力轉到，評估治療有效百分比 $\theta_i$，和劑量$x_i$之間的關系上來。
 
@@ -2380,33 +2517,57 @@ $$
 model{
     theta ~ dbeta(1,1)     # prior distribution
     y     ~ dbin(theta, 20)# sampling distribution for 20 observed patients
-    y    <- 15
+    #y    <- 15
 }
 ```
 
 ```{r OpenBUGSPractical0400, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of theta', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
 
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/MCdrugPractical04.txt", sep = "")) 
+# Codes for R2JAGS
 
-# compile the model
-modelCompile(numChains = 1) 
-# There is no need to provide initial values as 
-# they are aleady provided in the model specification
-modelGenInits() #
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("theta")
-samplesSet(parameters)
 
-# Generate 1000 iterations
-modelUpdate(1000)
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(theta = samplesSample("theta"))
+Dat <- list(
+y = c(15)                    
+)
 
-#### PLOT THE MCMC CHAINS:
-plot(chain$theta, main=~theta, type="l", ylim = c(0.2, 1.2),
-         ylab="theta", xlab="iteration", col="red")
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("theta"),
+  n.iter = 1100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/MCdrugPractical04.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/MCdrugPractical04.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("theta")
+# samplesSet(parameters)
+# 
+# # Generate 1000 iterations
+# modelUpdate(1000)
+# #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(theta = samplesSample("theta"))
+
+# #### PLOT THE MCMC CHAINS:
+# plot(chain$theta, main=~theta, type="l", ylim = c(0.2, 1.2),
+#          ylab="theta", xlab="iteration", col="red")
 ```
 
 2. 下面我們來看題幹中的邏輯回歸模型的BUGS版本：
@@ -2432,50 +2593,79 @@ list(y = c(1, 3, 6, 8, 11, 15, 17, 19),
      N = 8 )
 ```
 
-3. 嘗試使用OpenBUGS來跑這個模型。記得你需要把數據加載到軟件裏面去。
+3. 嘗試使用JAGS/OpenBUGS來跑這個模型。記得你需要把數據加載到軟件裏面去。
 
 ```{r OpenBUGSPractical0401, cache=TRUE, message=TRUE, warning=FALSE}
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
-# Load the data 
-modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
-# compile the model
-modelCompile(numChains = 1) 
-# generate initial values 
-modelGenInits() 
+# Codes for R2JAGS
+
+
+Dat <- list(
+  y = c(1, 3, 6, 8, 11, 15, 17, 19), 
+     n = c(20, 20, 20, 20, 20, 20, 20, 20), 
+     x = c(30, 32, 34, 36, 38, 40, 42, 44), 
+     N = 8 
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("beta0", "beta1", "theta[6]"),
+  n.iter = 1100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/logistic-reg-model.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+# print(post.jags)
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
+# # compile the model
+# modelCompile(numChains = 1) 
+# # generate initial values 
+# modelGenInits() 
 ```
 
 4. 對未知參數，也就是邏輯回歸的回歸系數 `beta0, beta1`，和第六次試驗的治療成功百分比 `theta[6]` 設定監測追蹤其採樣軌跡。試着執行1000次MCMC採樣，把這三個跟蹤的未知參數的採樣歷史軌跡繪制下來。
 
 
 ```{r OpenBUGSPractical0402, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of beta0', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
 # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("beta0", "beta1", "theta[6]")
-samplesSet(parameters)
+# parameters <- c("beta0", "beta1", "theta[6]")
+# samplesSet(parameters)
 
 # Generate 1000 iterations
-modelUpdate(1000)
+# modelUpdate(1000)
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
+# chain <- data.frame(beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"),
+#                     theta6 = samplesSample("theta[6]"))
 
 #### PLOT THE MCMC CHAINS:
-plot(chain$beta0[1:1000], main="beta0", type="l", ylim = c(-100, 180),
-         ylab="beta0", xlab="iteration", col="red")
+mcmcplots::traplot(post.jags, c("beta0", "beta1", "theta[6]"))
+# plot(chain$beta0[1:1000], main="beta0", type="l", ylim = c(-100, 180),
+#          ylab="beta0", xlab="iteration", col="red")
 ```
 
 
-```{r OpenBUGSPractical0403, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-plot(chain$beta1[1:1000], main="beta1", type="l", ylim = c(-100, 180),
-         ylab="beta1", xlab="iteration", col="red")
-```
+<!-- ```{r OpenBUGSPractical0403, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- plot(chain$beta1[1:1000], main="beta1", type="l", ylim = c(-100, 180), -->
+<!--          ylab="beta1", xlab="iteration", col="red") -->
+<!-- ``` -->
 
-```{r OpenBUGSPractical0404, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-plot(chain$theta6[1:1000], main="theta[6]", type="l", ylim = c(-0, 1.2),
-         ylab="theta[6]", xlab="iteration", col="red")
-```
+<!-- ```{r OpenBUGSPractical0404, cache=TRUE, fig.width=7, fig.height=3, fig.cap='History plot showing 1000 samples of theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- plot(chain$theta6[1:1000], main="theta[6]", type="l", ylim = c(-0, 1.2), -->
+<!--          ylab="theta[6]", xlab="iteration", col="red") -->
+<!-- ``` -->
 
 對這三個位置變量的採樣歷史繪制痕跡圖之後，你發現每個參數期初的一些採樣是十分不穩定的，有很大的變動(variability)。
 
@@ -2484,33 +2674,56 @@ plot(chain$theta6[1:1000], main="theta[6]", type="l", ylim = c(-0, 1.2),
 
 ```{r OpenBUGSPractical0405, cache=TRUE, fig.width=7, fig.height=7, fig.cap='History plot showing 1000 samples of beta0, beta1, and theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
-# Load the data 
-modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
-# compile the model with two separate chains
-modelCompile(numChains = 2) 
-# generate initial values 
-modelGenInits() 
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("beta0", "beta1", "theta[6]")
-samplesSet(parameters)
+# fit use R2jags package
 
-# Generate 1000 iterations
-modelUpdate(1000)
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
-samplesHistory("*", mfrow = c(3,1), ask = FALSE)
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("beta0", "beta1", "theta[6]"),
+  n.iter = 1000,
+  model.file = paste(bugpath, 
+                     "/backupfiles/logistic-reg-model.txt", 
+                     sep = ""),
+  n.chains = 2,
+  n.thin = 1,
+  n.burnin = 0,
+  progress.bar = "none")
+
+mcmcplots::traplot(post.jags, c("beta0", "beta1", "theta[6]"))
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
+# # compile the model with two separate chains
+# modelCompile(numChains = 2) 
+# # generate initial values 
+# modelGenInits() 
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("beta0", "beta1", "theta[6]")
+# samplesSet(parameters)
+# 
+# # Generate 1000 iterations
+# modelUpdate(1000)
+# #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"),
+#                     theta6 = samplesSample("theta[6]"))
+# samplesHistory("*", mfrow = c(3,1), ask = FALSE)
 ```
 
 
 
 使用兩個不同的起始值作爲MCMC的採樣起點時，每個未知參數分別獲得兩條不同顏色的歷史痕跡圖。和之前只有一條MCMC採樣鏈時一樣，採樣的起始部分(大約100次左右)都有一些不穩定的值。等到100次採樣過後，我們發現每個參數的採樣結果都趨向於比較穩定，也就是方差，變化小了很多。但是藍色鏈，紅色鏈一直到200-300次採樣之後才逐漸互相交叉重疊。下面的圖把起初的500次採樣刨除了之後重新對每個未知參數的MCMC採樣繪制歷史痕跡。
 
-```{r OpenBUGSPractical0407, cache=TRUE, fig.width=7, fig.height=7, fig.cap='History plot showing 1000 samples of beta0, beta1, and theta[6], iteration between 501-1000', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
-samplesHistory("*", mfrow = c(3,1), beg = 501, ask = FALSE)
+```{r OpenBUGSPractical0407, cache=TRUE, fig.width=4, fig.height=4, fig.cap='History plot showing 1000 samples of beta0, beta1, and theta[6], iteration between 501-1000', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+# samplesHistory("*", mfrow = c(3,1), beg = 501, ask = FALSE)
+Simulated <- coda::as.mcmc(post.jags)
+ggSample <- ggs(Simulated)
+
+ggSample %>% 
+  filter(Iteration >= 500 & Parameter %in% c("beta0", "beta1", "theta[6]")) %>% 
+  ggs_traceplot()
 ```
 
 500-1000次之間的隨機採樣被放大了觀察之後，我們發現 `beta0, beta1` 的兩條MCMC鏈條的重疊程度並不理想，不像`theta[6]`那樣呈現令人滿意地重疊，兩條採樣鏈上下扭動，且在一些地方差異較大。
@@ -2518,144 +2731,221 @@ samplesHistory("*", mfrow = c(3,1), beg = 501, ask = FALSE)
 繪制每個參數的MCMC鏈的自相關圖 (autocorrelation)，下面的圖中只繪制了500-1000次範圍內採樣的自相關圖。
 
 
-```{r OpenBUGSPractical040808, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
-samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 501,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 501, 
-             ask = FALSE, main = "", lag.max = 100)
+```{r OpenBUGSPractical040808, cache=TRUE, fig.width=5, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+ggSample %>% 
+  filter(Iteration >= 500 & Parameter %in% c("beta0", "beta1", "theta[6]")) %>% 
+  ggs_autocorrelation()
+# samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 501,
+#              ask = FALSE, main = "", lag.max = 100)
+# samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 501, 
+#              ask = FALSE, main = "", lag.max = 100)
 # acf(chain$beta0, main="beta0",lwd=4,col="red", lag.max = 50)
 ```
 
-```{r OpenBUGSPractical0409, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 501,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 501,
-             ask = FALSE, main = "", lag.max = 100)
-```
+<!-- ```{r OpenBUGSPractical0409, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 501, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 501, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- ``` -->
 
-```{r OpenBUGSPractical0410, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-samplesAutoC("theta[6]", mfrow = c(1, 1), 1, beg = 501,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("theta[6]", mfrow = c(1, 1), 2, beg = 501,
-             ask = FALSE, main = "", lag.max = 100)
-```
+<!-- ```{r OpenBUGSPractical0410, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for theta[6]', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- samplesAutoC("theta[6]", mfrow = c(1, 1), 1, beg = 501, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- samplesAutoC("theta[6]", mfrow = c(1, 1), 2, beg = 501, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- ``` -->
 
-其中 `theta[6]` 可以在視覺上認爲這些樣本基本沒有自相關。但是 `beta0, beta1` 的自相關圖提示相隔50次以上的採樣之間仍然有較強的，不能被忽視的自相關。這一點在 `beta0, beta1`各自的歷史痕跡圖中也能看出來因爲他們各自的痕跡圖提示採樣時的跳躍並不顯著，相對照的， `theta[6]`的採樣的跳躍就比較顯著，反映了這個未知參數事後概率分布採樣時的連續互相獨立性較好(near-independence of the values being sampled at consecutive iterations.)。
+其中 `theta[6]` 可以在視覺上認爲這些樣本大致上沒有自相關。但是 `beta0, beta1` 的自相關圖提示相隔50次以上的採樣之間仍然有較強的，不能被忽視的自相關。這一點在 `beta0, beta1`各自的歷史痕跡圖中也能看出來因爲他們各自的痕跡圖提示採樣時的跳躍並不顯著，相對照的， `theta[6]`的採樣的跳躍就比較顯著，反映了這個未知參數事後概率分布採樣時的連續互相獨立性較好(near-independence of the values being sampled at consecutive iterations.)。
 
-```{r OpenBUGSPractical0408, eval=FALSE, cache=TRUE, fig.width=7, fig.height=7, fig.cap='Autocorrelation plots for beta0, beta1, and theta[6], iteration between 501-1000', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-# output.dir <- "/backupfiles/bugsoutput/"
-# 
-# bugs.data <- list("y", "n", "x")
-# 
-# # set up list of parameters to be monitored
-# pars <- c("beta0", "beta1", "theta[6]")
-# 
-# # specify directory for BUGS output
-# 
-# drug.odir <- paste(output.dir, "drug-logistic-model/", sep = "")
-# 
-# # Call OpenBUGS to run model 
-# drug.log.sim <- bugs(data = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote//backupfiles/logistic-reg-data.txt", parameters.to.save = pars, 
-#                      model.file = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote//backupfiles/logistic-reg-model.txt", inits = NULL,
-#                      n.chains = 2, n.iter = 1000, 
-#                      n.burnin = 0, DIC = T, working.directory = drug.odir,
-#                      codaPkg = TRUE)
+<!-- ```{r OpenBUGSPractical0408, eval=FALSE, cache=TRUE, fig.width=7, fig.height=7, fig.cap='Autocorrelation plots for beta0, beta1, and theta[6], iteration between 501-1000', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- # output.dir <- "/backupfiles/bugsoutput/" -->
+<!-- #  -->
+<!-- # bugs.data <- list("y", "n", "x") -->
+<!-- #  -->
+<!-- # # set up list of parameters to be monitored -->
+<!-- # pars <- c("beta0", "beta1", "theta[6]") -->
+<!-- #  -->
+<!-- # # specify directory for BUGS output -->
+<!-- #  -->
+<!-- # drug.odir <- paste(output.dir, "drug-logistic-model/", sep = "") -->
+<!-- #  -->
+<!-- # # Call OpenBUGS to run model  -->
+<!-- # drug.log.sim <- bugs(data = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote//backupfiles/logistic-reg-data.txt", parameters.to.save = pars,  -->
+<!-- #                      model.file = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote//backupfiles/logistic-reg-model.txt", inits = NULL, -->
+<!-- #                      n.chains = 2, n.iter = 1000,  -->
+<!-- #                      n.burnin = 0, DIC = T, working.directory = drug.odir, -->
+<!-- #                      codaPkg = TRUE) -->
 
-```
+<!-- ``` -->
 
 6. 重新在OpenBUGS裏跑這個邏輯回歸模型，這一次，嘗試自己給 `beta0, beta1` 設置起始值。然後更新模型，採集MCMC鏈樣本10000次。這次嘗試同時使用繪制歷史痕跡圖（視覺檢查），和計算Brooks-Gelman-Rubin診斷參數及其圖示來判斷事後概率分布採樣是否達到收斂。你能判斷這個模型需要拋出掉多少一開始採集的樣本嗎(burn-in)？
 
 ```{r OpenBUGSPractical0411, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='History plots based on first 10000 iterations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
-# Load the data 
-modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
-# compile the model with two separate chains
-modelCompile(numChains = 2) 
-# generate initial values 
-# the choice is arbitrary
-initlist <- list(beta0=-45, beta1=38)
-modelInits(bugsData(initlist))
-initlist1 <- list(beta0=60, beta1=-40)
-modelInits(bugsData(initlist1))
+Dat <- list(
+     y = c(1, 3, 6, 8, 11, 15, 17, 19), 
+     n = c(20, 20, 20, 20, 20, 20, 20, 20), 
+     x = c(30, 32, 34, 36, 38, 40, 42, 44), 
+     N = 8 
+)
 
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("beta0", "beta1", "theta[6]")
-samplesSet(parameters)
+# fit use rjags package
 
-# Generate 10000 iterations
-modelUpdate(10000)
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
+inits <- function (){
+  list (beta0=rnorm(1), beta1=runif(1) )
+}
 
-#### PLOT the chain history of beta0, beta1
-samplesHistory("beta0", mfrow = c(1,1), ask = FALSE)
-samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
+# step 1 check model
+jagsModel <- jags.model(
+                     file = paste(bugpath, 
+                                  "/backupfiles/logistic-reg-model.txt",
+                                  sep = ""),
+                     data = Dat,
+                     n.chains = 2, 
+                     inits = inits,
+                     quiet = TRUE)
+# Step 2 update 10000 iterations
+
+update(jagsModel, n.iter = 1, progress.bar = "none")
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+  jagsModel, variable.names = c("beta0", "beta1", "theta[6]"),
+  n.iter = 10000, progress.bar = "none"
+)
+summary(codaSamples)
+
+# post.jags <- jags(
+#   data = Dat,
+#   inits = inits,
+#   parameters.to.save = c("beta0", "beta1", "theta[6]"),
+#   n.iter = 10000,
+#   model.file = paste(bugpath, 
+#                      "/backupfiles/logistic-reg-model.txt", 
+#                      sep = ""),
+#   n.chains = 2,
+#   n.thin = 1,
+#   n.burnin = 0,
+#   progress.bar = "none")
+
+mcmcplots::traplot(codaSamples, c("beta0", "beta1", "theta[6]"))
+
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
+# # compile the model with two separate chains
+# modelCompile(numChains = 2) 
+# # generate initial values 
+# # the choice is arbitrary
+# initlist <- list(beta0=-45, beta1=38)
+# modelInits(bugsData(initlist))
+# initlist1 <- list(beta0=60, beta1=-40)
+# modelInits(bugsData(initlist1))
+# 
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("beta0", "beta1", "theta[6]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"),
+#                     theta6 = samplesSample("theta[6]"))
+# 
+# #### PLOT the chain history of beta0, beta1
+# samplesHistory("beta0", mfrow = c(1,1), ask = FALSE)
+# samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
 ```
 
 
 
 ```{r OpenBUGSPractical0412, cache=TRUE, fig.width=8, fig.cap='Brooks-Gelman-Rubin diagnostic graph', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
-# Let's use R2OpenBUGS to run the model again
-# Call OpenBUGS to run model
-#/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote/
-# output.dir <- "/backupfiles/bugsoutput/"
-# drug.odir <- paste(output.dir, "drug-logistic-model/", sep = "")
-#  pars <- c("beta0", "beta1")
-# drug.data <- list(y = c(1, 3, 6, 8, 11, 15, 17, 19), 
-#      n = c(20, 20, 20, 20, 20, 20, 20, 20), 
-#      x = c(30, 32, 34, 36, 38, 40, 42, 44), 
-#      N = 8 )
-# 
-# 
-# drug.log.sim <- bugs(data = drug.data, parameters.to.save = pars,
-#                      model.file = "//backupfiles/logistic-reg-model.txt", inits = list(initlist, initlist1),
-#                      n.chains = 2, n.iter = 10000,
-#                      n.burnin = 0, DIC = T, working.directory = drug.odir,
-#                      codaPkg = TRUE)
-# drug.log.sim
-# 
-# postsamples <- read.bugs(drug.log.sim)
-postsamples <- buildMCMC("*")
-gelman.diag(postsamples)
-gelman.plot(postsamples)
+# Simulated <- coda::as.mcmc(post.jags)
+# postsamples <- buildMCMC("*")
+gelman.diag(codaSamples)
+gelman.plot(codaSamples)
 ```
 
-從Gelman.plot的圖形可以看出，在2000次及以上的採集樣本過後，基本上可以認爲採集的樣本收斂於事後概率分布。
+從Gelman.plot的圖形可以看出，在2000次及以上的採集樣本過後，基本上應該可以認爲採集的樣本收斂於事後概率分布。
 
-7. 確認了你想要刨除的初始樣本量(burn-in)，繼續再進行MCMC採樣直到獲得100,000個事後概率分布樣本。此時你對獲得的事後概率分布樣本量提供的參數估計精確度滿意否？(MC_error is about 1% of the posterior SD?)嘗試報告此時獲得的參數們的事後均值，及其95%可信區間。
+7. 確認了你想要刨除的初始樣本量(burn-in)，繼續再進行MCMC採樣直到獲得1,000,000個事後概率分布樣本。此時你對獲得的事後概率分布樣本量提供的參數估計精確度滿意否？嘗試報告此時獲得的參數們的事後均值，及其95%可信區間。
 
 
 
 ```{r OpenBUGSPractical04110000, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+post.jags <- jags(
+  data = Dat,
+  inits = inits,
+  parameters.to.save = c("beta0", "beta1", "theta[6]"),
+  n.iter = 502000,
+  model.file = paste(bugpath,
+                     "/backupfiles/logistic-reg-model.txt",
+                     sep = ""),
+  n.chains = 2,
+  n.thin = 1,
+  n.burnin = 2000,
+  progress.bar = "none")
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
-# Load the data 
-modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
-# compile the model with two separate chains
-modelCompile(numChains = 2) 
-# generate initial values 
-# the choice is arbitrary
-initlist <- list(beta0=-45, beta1=38)
-modelInits(bugsData(initlist))
-initlist1 <- list(beta0=60, beta1=-40)
-modelInits(bugsData(initlist1))
+print(post.jags)
 
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("beta0", "beta1", "theta[6]")
-samplesSet(parameters)
 
-# Generate 10000 iterations
-modelUpdate(10000)
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
+# # step 1 check model
+# jagsModel <- jags.model(
+#                      file = paste(bugpath, 
+#                                   "/backupfiles/logistic-reg-model.txt",
+#                                   sep = ""),
+#                      data = Dat,
+#                      n.chains = 2, 
+#                      inits = inits,
+#                      quiet = TRUE)
+# # Step 2 update 10000 iterations
+# 
+# update(jagsModel, n.iter = 2000, progress.bar = "none")
+# 
+# # Step 3 set monitor variables
+# 
+# codaSamples <- coda.samples(
+#   jagsModel, variable.names = c("beta0", "beta1", "theta[6]"),
+#   n.iter = 5000, progress.bar = "none"
+# )
+# summary(codaSamples)
 
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
+# # compile the model with two separate chains
+# modelCompile(numChains = 2) 
+# # generate initial values 
+# # the choice is arbitrary
+# initlist <- list(beta0=-45, beta1=38)
+# modelInits(bugsData(initlist))
+# initlist1 <- list(beta0=60, beta1=-40)
+# modelInits(bugsData(initlist1))
+# 
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("beta0", "beta1", "theta[6]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"),
+#                     theta6 = samplesSample("theta[6]"))
+# # Generate another 1000000 iterations
+# modelUpdate(42000) 
+# sample.statistics <- samplesStats("*", beg = 2001)
+# print(sample.statistics)
 # #### PLOT the chain history of beta0, beta1
 # samplesHistory("beta0", mfrow = c(1,1), ask = FALSE)
 # samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
@@ -2664,49 +2954,66 @@ chain <- data.frame(beta0  = samplesSample("beta0"),
 
 
 
-```{r OpenBUGSPractical0413, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE}
+<!-- ```{r OpenBUGSPractical0413, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE} -->
 
 
-# Generate another 1000000 iterations
-modelUpdate(42000) 
-sample.statistics <- samplesStats("*", beg = 2001)
-print(sample.statistics)
-```
+<!-- # Generate another 1000000 iterations -->
+<!-- modelUpdate(42000)  -->
+<!-- sample.statistics <- samplesStats("*", beg = 2001) -->
+<!-- print(sample.statistics) -->
+<!-- ``` -->
 
 
-由於 `beta0, beta1` 事後MCMC採樣的高度自相關性，我們不得不採取獲得十萬以上的事後樣本量的手段來獲取較爲精確的事後參數的均值估計。此時，`beta0`的`MC_error` 仍然也只達到事後樣本標準差的3.6% (0.077560/2.17800)。其對應的有效樣本量(effective sample size)大約是 1/(0.036^2) = 772。即使我們再繼續進行MCMC採樣達到一百萬的事後樣本量，我們也只能勉強讓MC_error達到事後標準差的1.4%(=0.02742/2.09200)，對應的有效樣本量是 1/(0.014^2) = 5102。
+<!-- 由於 `beta0, beta1` 事後MCMC採樣的高度自相關性，我們不得不採取獲得十萬以上的事後樣本量的手段來獲取較爲精確的事後參數的均值估計。此時有效樣本量(effective sample size) 大約是。即使我們再繼續進行MCMC採樣達到一百萬的事後樣本量，我們也只能勉強讓MC_error達到事後標準差的1.4%(=0.02742/2.09200)，對應的有效樣本量是 1/(0.014^2) = 5102。 -->
 
-```{r OpenBUGSPractical0414, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE}
+<!-- 由於 beta0, beta1 事後MCMC採樣的高度自相關性，我們不得不採取獲得十萬以上的事後樣本量的手段來獲取較爲精確的事後參數的均值估計。此時，beta0的MC_error 仍然也只達到事後樣本標準差的3.6% (0.006856/2.1682)。其對應的有效樣本量(effective sample size)大約是 1/(0.036^2) = 772。即使我們再繼續進行MCMC採樣達到一百萬的事後樣本量，我們也只能勉強讓MC_error達到事後標準差的1.4%(=0.02742/2.09200)，對應的有效樣本量是 1/(0.014^2) = 5102。 -->
+
+<!-- ```{r OpenBUGSPractical0414, cache=TRUE, message=TRUE, warning=FALSE, echo=TRUE} -->
 
 
-# Generate another 900000 iterations
-modelUpdate(480000) 
-sample.statistics <- samplesStats("*", beg = 2001)
-print(sample.statistics)
-```
+<!-- # Generate another 900000 iterations -->
+<!-- modelUpdate(480000)  -->
+<!-- sample.statistics <- samplesStats("*", beg = 2001) -->
+<!-- print(sample.statistics) -->
+<!-- ``` -->
+
+
+
 
 8. 繪制此時`beta0,beta1`的自相關圖。
 
 ```{r OpenBUGSPractical0415, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 2001,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 2001,
-             ask = FALSE, main = "", lag.max = 100)
+Simulated <- coda::as.mcmc(post.jags)
+ggSample <- ggs(Simulated)
+
+ggSample %>% 
+  filter(Iteration >= 2001 & Parameter %in% c("beta0", "beta1")) %>% 
+  ggs_autocorrelation()
+# samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 2001,
+#              ask = FALSE, main = "", lag.max = 100)
+# samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 2001,
+#              ask = FALSE, main = "", lag.max = 100)
 ```
 
-```{r OpenBUGSPractical0416, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 2001,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 2001,
-             ask = FALSE, main = "", lag.max = 100)
-```
+<!-- ```{r OpenBUGSPractical0416, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 2001, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 2001, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- ``` -->
 
 ```{r OpenBUGSPractical0417, cache=TRUE, fig.width=5, fig.height=5, fig.cap='The joint posterior distribution, scatter plot of beta0 and beta1.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
-plot(chain$beta0[2001:100000], chain$beta1[2001:100000], main="Scatterplot", 
+# chain <- data.frame(beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"),
+#                     theta6 = samplesSample("theta[6]"))
+
+Beta0 <- ggSample %>% 
+  filter(Iteration >= 2001 & Parameter == "beta0")
+Beta1 <- ggSample %>% 
+  filter(Iteration >= 2001 & Parameter == "beta1")
+
+plot(Beta0$value, Beta1$value, main="Scatterplot", 
   	xlab="beta0", ylab="beta1", pch=19, col=c(1,2))
 ```
 
@@ -2731,113 +3038,171 @@ model{
 
 
 ```{r OpenBUGSPractical0418, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='History plots based on first 10000 iterations with centred covariates.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+# JAGS codes:
+# 
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model-centred.txt", sep = "")) 
-# Load the data 
-modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
-# compile the model with two separate chains
-modelCompile(numChains = 2) 
-# generate initial values 
-# the choice is arbitrary
-initlist <- list(beta0=-45, beta1=38)
-modelInits(bugsData(initlist))
-initlist1 <- list(beta0=60, beta1=-40)
-modelInits(bugsData(initlist1))
+# step 1 check model
+jagsModel <- jags.model(
+                     file = paste(bugpath, 
+                                  "/backupfiles/logistic-reg-model-centred.txt",
+                                  sep = ""),
+                     data = Dat,
+                     n.chains = 2, 
+                     inits = inits,
+                     quiet = TRUE)
+# Step 2 update 10000 iterations
 
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("beta0", "beta1", "theta[6]")
-samplesSet(parameters)
+update(jagsModel, n.iter = 1, progress.bar = "none")
 
-# Generate 10000 iterations
-modelUpdate(10000)
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
+# Step 3 set monitor variables
 
-#### PLOT the chain history of beta0, beta1
-samplesHistory("beta0", mfrow = c(1,1), ask = FALSE)
-samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
+codaSamples <- coda.samples(
+  jagsModel, variable.names = c("beta0", "beta1", "theta[6]"),
+  n.iter = 10000, progress.bar = "none"
+)
+# summary(codaSamples)
+
+mcmcplots::traplot(codaSamples, c("beta0", "beta1", "theta[6]"))
+
+# post.jags <- jags(
+#   data = Dat,
+#   inits = inits,
+#   parameters.to.save = c("beta0", "beta1", "theta[6]"),
+#   n.iter = 10000,
+#   model.file = paste(bugpath,
+#                      "/backupfiles/logistic-reg-model-centred.txt",
+#                      sep = ""),
+#   n.chains = 2,
+#   n.thin = 1,
+#   n.burnin = 0,
+#   progress.bar = "none")
+# 
+# 
+# mcmcplots::traplot(post.jags, c("beta0", "beta1", "theta[6]"))
+# print(post.jags)
+
+
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model-centred.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
+# # compile the model with two separate chains
+# modelCompile(numChains = 2) 
+# # generate initial values 
+# # the choice is arbitrary
+# initlist <- list(beta0=-45, beta1=38)
+# modelInits(bugsData(initlist))
+# initlist1 <- list(beta0=60, beta1=-40)
+# modelInits(bugsData(initlist1))
+# 
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("beta0", "beta1", "theta[6]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"),
+#                     theta6 = samplesSample("theta[6]"))
+# 
+# #### PLOT the chain history of beta0, beta1
+# samplesHistory("beta0", mfrow = c(1,1), ask = FALSE)
+# samplesHistory("beta1", mfrow = c(1,1), ask = FALSE)
 ```
 
 
 
-用中心化之後的模型我們發現需要更多的起始樣本來達到事後概率分布的收斂(7500左右)。BGR診斷圖 \@ref(fig:OpenBUGSPractical0419) 也提示我們大概在7500次之後的重復採樣才能達到收斂。所以我們決定要刨除起始7500次採集的樣本。(burn-in = 7500)
+用中心化之後的模型我們發現需要10000或更多的起始樣本來達到事後概率分布的收斂。BGR診斷圖 \@ref(fig:OpenBUGSPractical0419) 也提示我們大概在10000次之後的重復採樣才能達到收斂。所以我們決定要刨除起始10000次採集的樣本。(burn-in = 10000)
 
 
 ```{r OpenBUGSPractical0419, cache=TRUE, fig.width=8, fig.cap='Brooks-Gelman-Rubin diagnostic graph', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
-# Let's use R2OpenBUGS to run the model again
-# Call OpenBUGS to run model
-# output.dir <- "/backupfiles/bugsoutput/"
-# drug.odir <- paste(output.dir, "drug-logistic-model/", sep = "")
-#  pars <- c("beta0", "beta1")
-# drug.log.sim <- bugs(data = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote//backupfiles/logistic-reg-data.txt", parameters.to.save = pars,
-#                      model.file = "/home/takeshi/ドキュメント/githubprojects/LSHTMlearningnote//backupfiles/logistic-reg-model-centred.txt", inits = list(initlist, initlist1),
-#                      n.chains = 2, n.iter = 20000,
-#                      n.burnin = 0, DIC = T, working.directory = drug.odir,
-#                      codaPkg = TRUE)
-# drug.log.sim
-# 
-# postsamples <- read.bugs(drug.log.sim)
-modelUpdate(20000)
 
-postsamples <- buildMCMC("*")
 
-gelman.diag(postsamples)
-gelman.plot(postsamples)
+
+gelman.diag(codaSamples)
+gelman.plot(codaSamples)
 ```
 
-刨除了起始7500次採集的樣本之後，剩餘的25000個MCMC樣本的自相關也基本都降至0，說明這時候採集的事後概率分布樣本基本上都可以認爲是相互獨立的樣本，散點圖 (Fig. \@ref(fig:OpenBUGSPractical0423))同樣支持了這一觀點。此時有效樣本量基本上約等於採集到的樣本量。
+刨除了起始10000次採集的樣本之後，剩餘的MCMC樣本的自相關也基本都降至0，說明這時候採集的事後概率分布樣本基本上都可以認爲是相互獨立的樣本。此時有效樣本量基本上約等於採集到的樣本量。
 
 ```{r OpenBUGSPractical0420, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+# R2JAGS codes
+post.jags <- jags(
+  data = Dat,
+  inits = inits,
+  parameters.to.save = c("beta0", "beta1", "theta[6]"),
+  n.iter = 20000,
+  model.file = paste(bugpath,
+                     "/backupfiles/logistic-reg-model-centred.txt",
+                     sep = ""),
+  n.chains = 2,
+  n.thin = 1,
+  n.burnin = 10000,
+  progress.bar = "none")
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model-centred.txt", sep = "")) 
-# Load the data 
-modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
-# compile the model with two separate chains
-modelCompile(numChains = 2) 
-# generate initial values 
-# the choice is arbitrary
-initlist <- list(beta0=-45, beta1=38)
-modelInits(bugsData(initlist))
-initlist1 <- list(beta0=60, beta1=-40)
-modelInits(bugsData(initlist1))
 
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("beta0", "beta1", "theta[6]")
-samplesSet(parameters)
+mcmcplots::traplot(post.jags, c("beta0", "beta1", "theta[6]"))
+print(post.jags)
 
-# Generate 10000 iterations
-modelUpdate(20000)
-#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"),
-                    theta6 = samplesSample("theta[6]"))
-sample.statistics <- samplesStats("*", beg = 7501)
-print(sample.statistics)
+Simulated <- coda::as.mcmc(post.jags)
+ggSample <- ggs(Simulated)
+
+ggSample %>% 
+  filter(Iteration >= 2001 & Parameter %in% c("beta0", "beta1")) %>% 
+  ggs_autocorrelation()
+# # OpenBUGS codes
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model-centred.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
+# # compile the model with two separate chains
+# modelCompile(numChains = 2) 
+# # generate initial values 
+# # the choice is arbitrary
+# initlist <- list(beta0=-45, beta1=38)
+# modelInits(bugsData(initlist))
+# initlist1 <- list(beta0=60, beta1=-40)
+# modelInits(bugsData(initlist1))
+# 
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("beta0", "beta1", "theta[6]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(20000)
+# #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"),
+#                     theta6 = samplesSample("theta[6]"))
+# sample.statistics <- samplesStats("*", beg = 7501)
+# print(sample.statistics)
 ```
 
 
-```{r OpenBUGSPractical0421, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 7501,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 7501,
-             ask = FALSE, main = "", lag.max = 100)
-```
-```{r OpenBUGSPractical0422, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 7501,
-             ask = FALSE, main = "", lag.max = 100)
-samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 7501,
-             ask = FALSE, main = "", lag.max = 100)
-```
-```{r OpenBUGSPractical0423, cache=TRUE, fig.width=5, fig.height=5, fig.cap='The joint posterior distribution, scatter plot of beta0 and beta1 with centred covariates.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
-plot(chain$beta0[7501:20000], chain$beta1[7501:20000], main="Scatterplot", 
-  	xlab="beta0", ylab="beta1", pch=19, col=c(1,2))
-```
+<!-- ```{r OpenBUGSPractical0421, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta0', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- samplesAutoC("beta0", mfrow = c(1, 1), 1, beg = 7501, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- samplesAutoC("beta0", mfrow = c(1, 1), 2, beg = 7501, -->
+<!--              ask = FALSE, main = "", lag.max = 100) -->
+<!-- ``` -->
+<!-- # ```{r OpenBUGSPractical0422, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Autocorrelation plot for beta1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- # samplesAutoC("beta1", mfrow = c(1, 1), 1, beg = 7501, -->
+<!-- #              ask = FALSE, main = "", lag.max = 100) -->
+<!-- # samplesAutoC("beta1", mfrow = c(1, 1), 2, beg = 7501, -->
+<!-- #              ask = FALSE, main = "", lag.max = 100) -->
+<!-- # ``` -->
+<!-- # ```{r OpenBUGSPractical0423, cache=TRUE, fig.width=5, fig.height=5, fig.cap='The joint posterior distribution, scatter plot of beta0 and beta1 with centred covariates.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE} -->
+<!-- # plot(chain$beta0[7501:20000], chain$beta1[7501:20000], main="Scatterplot",  -->
+<!-- #   	xlab="beta0", ylab="beta1", pch=19, col=c(1,2)) -->
+<!-- # ``` -->
 
-10. 這時候我們獲得的回歸系數的事後估計的均值 `beta1 = 0.3746`，和它的95%可信區間，`0.2706, 0.4887`。它其實是藥物劑量每增加1mg，隨之增加的藥物有效百分比的對數比值比 (log-odds-ratio of a positive response per 1 mg increase in dose.)，你有沒有發現其實我們很難解釋這個變量的實際含義呢？有沒有什麼辦法可以來改善這個結果，讓它更加容易讓人明白呢？
+
+
+
+10. 這時候我們獲得的回歸系數的事後估計的均值 `beta1 = 0.377`，和它的95%可信區間，`0.271, 0.492`。它其實是藥物劑量每增加1mg，隨之增加的藥物有效百分比的對數比值比 (log-odds-ratio of a positive response per 1 mg increase in dose.)，你有沒有發現其實我們很難解釋這個變量的實際含義呢？有沒有什麼辦法可以來改善這個結果，讓它更加容易讓人明白呢？
 
 11. 想辦法在未知參數被中心的話邏輯回歸模型中增加新的語句，生成一些新的容易讓人解釋的變量，改善模型的易解釋程度。也許你可以把對數比值比轉換成比值比，你也許可以自己算一下在哪種劑量條件下可以讓95%的患者都有治療療效(ED95)：
 
@@ -2859,55 +3224,93 @@ model{
   # priors 
   beta0 ~ dunif(-100, 100)
   beta1 ~ dunif(-100, 100)
+  
+  # generated values
   OR <- exp(beta1) # odds ratio of positive response per 1 mg increase in dose
   ED95 <- (logit(0.95) - beta0)/beta1 + mean(x[]) # dose that gives 95% of maximal response
-  logit(P35) <- beta0 + beta1 * (35 - mean(x[]))
+  logit(P35) <- beta0 + beta1 * (35 - mean(x[])) # probability of positive reaction if given 35mg drugs
 }
 ```
 
 
 ```{r OpenBUGSPractical0424, message=TRUE, warning=FALSE, echo=TRUE}
+# R2JAGS codes:
 
-# Step 1 check model
-modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model-centred-stat.txt", sep = "")) 
-# Load the data 
-modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
-# compile the model with two separate chains
-modelCompile(numChains = 2) 
-# generate initial values 
-# the choice is arbitrary
-initlist <- list(beta0=-45, beta1=38)
-modelInits(bugsData(initlist))
-initlist1 <- list(beta0=60, beta1=-40)
-modelInits(bugsData(initlist1))
+post.jags <- jags(
+  data = Dat,
+  inits = inits,
+  parameters.to.save = c("ED95", "OR", "P35", "beta0", "beta1"),
+  n.iter = 20000,
+  model.file = paste(bugpath,
+                     "/backupfiles/logistic-reg-model-centred-stat.txt",
+                     sep = ""),
+  n.chains = 2,
+  n.thin = 1,
+  n.burnin = 10000,
+  progress.bar = "none")
 
-# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
-parameters <- c("ED95", "OR", "P35", "beta0", "beta1")
-samplesSet(parameters)
 
-# Generate 10000 iterations
-modelUpdate(20000)
+# mcmcplots::traplot(post.jags, c("beta0", "beta1", "theta[6]"))
+print(post.jags)
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/logistic-reg-model-centred-stat.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/logistic-reg-data.txt", sep = ""))     
+# # compile the model with two separate chains
+# modelCompile(numChains = 2) 
+# # generate initial values 
+# # the choice is arbitrary
+# initlist <- list(beta0=-45, beta1=38)
+# modelInits(bugsData(initlist))
+# initlist1 <- list(beta0=60, beta1=-40)
+# modelInits(bugsData(initlist1))
+# 
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("ED95", "OR", "P35", "beta0", "beta1")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(20000)
 #### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
-chain <- data.frame(ED95   = samplesSample("ED95"),
-                    OR     = samplesSample("OR"),
-                    P35    = samplesSample("P35"),
-                    beta0  = samplesSample("beta0"),
-                    beta1  = samplesSample("beta1"))
-sample.statistics <- samplesStats("*", beg = 7501)
-print(sample.statistics)
+# chain <- data.frame(ED95   = samplesSample("ED95"),
+#                     OR     = samplesSample("OR"),
+#                     P35    = samplesSample("P35"),
+#                     beta0  = samplesSample("beta0"),
+#                     beta1  = samplesSample("beta1"))
+# sample.statistics <- samplesStats("*", beg = 7501)
+# print(sample.statistics)
 ```
 
-所以，藥物每增加劑量1mg，有療效的比值比是OR = 1.46 (95%CrI: 1.31, 1.63)。能夠達到95%患者都有療效的劑量是 45.05 mg (95% CrI: 42.8, 48.1 mg)。如果給予患者藥物劑量爲 35 mg，患者的疼痛能夠得到緩解(有療效)的概率是 32.3% (95% CrI: 22.8%, 42.2%)。跟着看到這裏的你是不是也覺得貝葉斯的結果和過程能夠更加豐富地回答我們想知道的問題呢？ 
+所以，藥物每增加劑量1mg，有療效的比值比是OR = 1.46 (95%CrI: 1.31, 1.63)。能夠達到95%患者都有療效的劑量是 45.02 mg (95% CrI: 42.7, 48.2 mg)。如果給予患者藥物劑量爲 35 mg，患者的疼痛能夠得到緩解(有療效)的概率是 32.3% (95% CrI: 22.7%, 42.3%)。跟着看到這裏的你是不是也覺得貝葉斯的結果和過程能夠更加豐富地回答我們想知道的問題呢？ 
 
 ```{r R-OpenBUGSPractical0425, cache=TRUE, fig.width=3.5, fig.height=3, fig.cap='Posterior density plots of ED95, OR, and P35.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
 #### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+par(mfrow=c(3,1))
+Simulated <- coda::as.mcmc(post.jags)
+ggSample <- ggs(Simulated)
 
-plot(density(chain$ED95[7501:20000]), main = "ED95 sample 25000", 
-     ylab = "P(ED95)", xlab = "y", col = "red")
-plot(density(chain$OR[7501:20000]), main = "OR sample 25000", 
-     ylab = "P(OR)", xlab = "y", col = "red")
-plot(density(chain$P35[7501:20000]), main = "OR sample 25000", 
-     ylab = "P(OR)", xlab = "y", col = "red")
+ED95 <- ggSample %>% 
+  filter(Parameter == "ED95")
+OR <- ggSample %>% 
+  filter(Parameter == "OR")
+P35 <- ggSample %>% 
+  filter(Parameter == "P35")
+
+plot(density(ED95$value), main = "ED95 sample", 
+     ylab = "P(ED95)", xlab = "Distribution of ED95", col = "red")
+plot(density(OR$value), main = "OR sample", 
+     ylab = "P(OR)", xlab = "Distribution of OR", col = "red")
+plot(density(P35$value), main = "P35 sample", 
+     ylab = "P(P35)", xlab = "Distribution of P35", col = "red")
+
+# plot(density(chain$ED95[7501:20000]), main = "ED95 sample 25000", 
+#      ylab = "P(ED95)", xlab = "y", col = "red")
+# plot(density(chain$OR[7501:20000]), main = "OR sample 25000", 
+#      ylab = "P(OR)", xlab = "y", col = "red")
+# plot(density(chain$P35[7501:20000]), main = "OR sample 25000", 
+#      ylab = "P(OR)", xlab = "y", col = "red")
 ```
 
 
