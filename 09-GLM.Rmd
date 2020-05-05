@@ -1687,17 +1687,19 @@ points(lbw$lwt, pi)
 
 Lowess 平滑曲線提示模型的擬合值(`fitted.values`)有一些變動，由於樣本採樣方法等原因，這是無法避免的。但是總體來說，擬合值和平滑曲線基本在同一個步調上，從該圖來看，認為母親的最後一次月經時體重和是否生下低出生體重兒的概率的 logit 之間的關係是線性的應該不是太大的問題。
 
-# 計數型因變量 Poisson regression
+# 計數型因變量 Count outcomes 
 
-計數型變量在醫學研究中也十分常見，下面是一些例子：
+計數型變量在臨牀醫學/流行病學研究中也十分常見，下面是一些例子：
 
 1. 某個呼吸科診所的患者中，每個人在過去一個月中哮喘發作的次數；
 2. 癲癇患者在過去一年中癲癇發作次數；
 3. 接受腦部 CT 掃描的患者中，每個人被診斷出顱內腫瘤個數。
 
+最早的泊松模型可以追溯到普魯士騎兵連中被馬蹄踢死士兵的人數模型。
+
 ## 泊松 GLM
 
-一個計數型的隨機變量，只能取大於等於零的正整數，$0,1,\cdots$。泊松模型可以用於計數型數據的迴歸模型的構建：
+一個計數型的隨機變量，只能取大於等於零的正整數，$0,1,\cdots$。泊松隨機變量可以理解爲產生於發生在一段時間內的事件次數。泊松模型可以用於計數型數據的迴歸模型的構建：
 
 $$
 \begin{aligned}
@@ -1720,7 +1722,7 @@ $$
 $$
 \begin{aligned}
   & \frac{\text{exp}(\alpha + \beta_1 x_{11} + \cdots + \beta_p x_{1p})}{\text{exp}(\alpha + \beta_1 x_{01} + \cdots + \beta_p x_{0p})} \\
-= & exp(\beta_1(x_{11}-x_{01}) + \cdots + \beta_p(x_{1p} - x_{0p}))
+= & \exp(\beta_1(x_{11}-x_{01}) + \cdots + \beta_p(x_{1p} - x_{0p}))
 \end{aligned}
 $$
 
@@ -1880,6 +1882,60 @@ robust.est <- cbind(Estimate= coef(m2), "Robust SE" = std.err,
 LL = coef(m1) - 1.96 * std.err,
 UL = coef(m1) + 1.96 * std.err)
 robust.est
+```
+
+## GLM Practical 05
+
+在這次練習中，我們來探索幾個不同的計數型數據的模型，進一步探討如何處理過度離散的方法。數據來自Stata的網站，記錄的是美國亞利桑那州醫院的住院時長[數據](http://www.stata-press.com/data/hh3/medpar.dta)。使用如下代碼下載該數據:
+
+```{r GLM-prac05-01, cache=TRUE}
+# medpar <- read_dta("http://www.stata-press.com/data/hh3/medpar.dta")
+medpar <- read_dta(file = "backupfiles/medpar.dta")
+```
+
+我們主要使用的數據是下面這幾列：
+
+| Variable | Description                                    |
+|----------|------------------------------------------------|
+| `los`    | length of hospital stay, in days               |
+| `age`    | Age group                                      |
+| `type1`  | Binary variable indicating elective admission  |
+| `type2`  | Binary variable indicating urgent admission    |
+| `type3`  | Binary variable indicating emergency admission |
+
+
+1. 分析住院時間長短和年齡及其他共變量之間關係之前，先瞭解一下 `los` 本身的特徵。 首先，計算 `los` 的平均值，及其 [Wald 法的 95% 信賴區間](https://rpubs.com/FJRubio/WCIN)。在怎樣的前提條件下，這個信賴區間可以被認爲有效 (valid)？你認爲這些前提條件在這裏得到滿足了嗎？
+
+```{r GLM-prac05-02, cache=TRUE}
+psych::describe(medpar$los)
+t.test(medpar$los)$conf.int
+```
+
+這裏默認的前提條件是，住院時長 (days) 服從正態分佈。即使住院時長這一數據可能並不100% 服從正態分佈，但是如果樣本量足夠大，那麼該 95% 信賴區間依然可以被認爲近似可以涵蓋95%的可重複實驗的次數。這一結論依據的是中心極限定理。在這裏，住院時長的數據其實分佈的非常的偏，並非正態分佈。但是我們可以認爲由於樣本量接近1500，可以認爲計算獲得的95%信賴區間是漸進有效的。
+
+2. 接下來我們使用 `glm` 命令來估計 `los` 的邊際均值 (marginal mean)，不加任何預測變量。根據你擬合的泊松回歸模型獲得的結果，請思考 `los` 的模型估計 95% 信賴區間是多少。和前一步簡單的估計相比較，他們是否相似或者有怎樣的不同，原因是什麼。你認爲哪種估計更加有意義？
+
+```{r GLM-prac05-03, cache=TRUE}
+mA <- glm(los ~ 1, family=poisson(link = log), data=medpar)
+jtools::summ(mA, digits = getOption("jtools-digits", default = 6))
+```
+
+根據這個模型的結果，住院時長的均值可以被估計爲 $\exp(2.287896) = 9.854$。但是其95%信賴區間的估計是：
+
+下限爲，$\exp(2.287896 - 1.96\times0.008239) = 9.696$
+
+上限爲，$\exp(2.287896 + 1.96\times0.008239) = 10.014$
+
+我們發現，均值的點估計，和第一步簡單歸納時的結果一致，都是 9.854 天。但是模型估計的95%信賴區間 (9.696, 10.014) 相比 Wald 法的 95% 信賴區間 (9.406, 10.302) 更加精確 (範圍更窄)。當然可以理解爲，當數據本身分佈較偏 (skew) 時，使用泊松模型分析獲得的結果更加可靠且更加有效 (more efficient)。在這個數據中，模型估計的信賴區間和wald法信賴區間之間的差別更加可能是由於住院時長數據本身的過度離散問題導致的。在R裏我們獲得的結果只有殘差離差量 (residual deviance): `Residual deviance: 8901.1  on 1494  degrees of freedom`。如果你用的是 Stata，還可以獲得 Pearson 統計量，以及他們除以自由度以後獲得的數字都顯著地大於1。這說明其實病人住院時長這樣的數據很大程度上有相當大的差異，因爲每個病人各自住院的時間長度更加取決於他們本身患病的程度。**這樣的數據不會是通過泊松分佈可以簡單擬合的，因爲泊松分佈的均值和方差是嚴格相等的。**
+
+```{r description, engine='stata', echo=FALSE}
+use http://www.stata-press.com/data/hh3/medpar, clear
+glm los, family(Poisson) 
+```
+
+```
+## Deviance         =  8901.134077                   (1/df) Deviance =   5.957921
+## Pearson          =  11828.70662                   (1/df) Pearson  =   7.917474
 ```
 
 
