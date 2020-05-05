@@ -1917,7 +1917,7 @@ t.test(medpar$los)$conf.int
 
 ```{r GLM-prac05-03, cache=TRUE}
 mA <- glm(los ~ 1, family=poisson(link = log), data=medpar)
-jtools::summ(mA, digits = getOption("jtools-digits", default = 6))
+jtools::summ(mA, digits = 6, confint = TRUE)
 ```
 
 根據這個模型的結果，住院時長的均值可以被估計爲 $\exp(2.287896) = 9.854$。但是其95%信賴區間的估計是：
@@ -1933,12 +1933,52 @@ use http://www.stata-press.com/data/hh3/medpar, clear
 glm los, family(Poisson) 
 ```
 
+
+也就是下面這兩行所提示的內容。
+
 ```
 ## Deviance         =  8901.134077                   (1/df) Deviance =   5.957921
 ## Pearson          =  11828.70662                   (1/df) Pearson  =   7.917474
 ```
 
+3. 下面我們在泊松回歸模型中加入不同的入院類型的啞變量，看他們是否和患者住院時長有關。嘗試用醫學文獻的文章寫法描述這個模型的結果。
 
+```{r GLM-prac05-05, cache=TRUE}
+mB <- glm(los ~ type2 + type3, family=poisson(link = log), data=medpar)
+jtools::summ(mB, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+記得模型中省略掉了 `type1` 因爲它被當作參考組 (reference group)。
+
+下面的文獻描述可以用於參考：
+
+There is strong evidence (p < 0.0001) that the length of hospital admission is related to the type of admission. The mean length of stay for elective admission is 8.83 days (95% CI 8.66 to 9.01 days). Urgent admissions are associated with stays that are on average 26.8% (95% CI 21.7% to 32.1%) longer than those resulting from elective admissions. Emergency admissions result in stays that are on average 2.06 (95% CI 1.96 to 2.17) times as long as those from elective admissions. 
+
+
+值得注意的是，這些結果所依據的泊松回歸模型的前提條件很可能因爲數據本身存在過度離散 (overdispersion) 的問題而無法得到滿足。
+
+4. 在上述模型中如果加入年齡作爲解釋變量，試分析年齡是否可以認爲是住院時長的獨立解釋變量 (獨立於住院形態 type of admission)。
+
+
+```{r GLM-prac05-06, cache=TRUE}
+mC <- glm(los ~ as.factor(age) + type2 + type3, 
+          family=poisson(link = log), data=medpar)
+jtools::summ(mC, digits = 6, confint = TRUE, exp = TRUE)
+
+lrtest(mC, mB)
+```
+
+加入和年齡組作爲預測變量的模型結果如上所示。和沒有加年齡的模型相比較的似然比檢驗 (likelihood ratio test) 結果顯示，如果泊松回歸模型前提得到滿足，那麼有證據證明 (p = 0.018)，在調整了住院形態之後，年齡依然是住院時長獨立的預測變量。
+
+5. 重新對加入年齡的泊松回歸模型加入穩健統計標準誤 (robust standard error) 的估計，獲得新的穩健信賴區間估計。與非穩健信賴區間相比較，你能得出怎樣的結論？
+
+
+```{r GLM-prac05-07, cache=TRUE}
+jtools::summ(mC, digits = 6, confint = TRUE, exp = TRUE, 
+             robust = "HC1", s)
+```
+
+可以看到加入了 `robust` 選項之後，並不會改變每個變量的回歸係數的點估計 (point estimates)。但是，可以發現每個變量的回歸係數對應的標準誤發生了較大的變化。
 
 
 # 率的廣義線性迴歸 Poisson GLM for rates
