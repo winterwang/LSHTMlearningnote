@@ -1324,29 +1324,29 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1><span class="header-section-number">第 98 章</span> Crude and stratified rate ratios</h1>
 <p>本章內容不討論任何理論的東西，着重強調用 R 進行實際數據的分析，並加強對輸出結果的理解。</p>
 <p>此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。</p>
-<div class="sourceCode" id="cb1652"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1652-1" data-line-number="1">whitehal &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/whitehal.dta&quot;</span>)</a>
-<a class="sourceLine" id="cb1652-2" data-line-number="2">whitehal<span class="op">$</span>followupyrs &lt;-<span class="st"> </span>(whitehal<span class="op">$</span>timeout <span class="op">-</span><span class="st"> </span>whitehal<span class="op">$</span>timein)<span class="op">/</span><span class="fl">365.25</span></a>
-<a class="sourceLine" id="cb1652-3" data-line-number="3"><span class="kw">max</span>(whitehal<span class="op">$</span>followupyrs<span class="op">*</span><span class="fl">365.25</span>) <span class="co"># time difference in days</span></a></code></pre></div>
+<div class="sourceCode" id="cb1676"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1676-1" data-line-number="1">whitehal &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;backupfiles/whitehal.dta&quot;</span>)</a>
+<a class="sourceLine" id="cb1676-2" data-line-number="2">whitehal<span class="op">$</span>followupyrs &lt;-<span class="st"> </span>(whitehal<span class="op">$</span>timeout <span class="op">-</span><span class="st"> </span>whitehal<span class="op">$</span>timein)<span class="op">/</span><span class="fl">365.25</span></a>
+<a class="sourceLine" id="cb1676-3" data-line-number="3"><span class="kw">max</span>(whitehal<span class="op">$</span>followupyrs<span class="op">*</span><span class="fl">365.25</span>) <span class="co"># time difference in days</span></a></code></pre></div>
 <pre><code>## Time difference of 7078.9927 days</code></pre>
-<div class="sourceCode" id="cb1654"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1654-1" data-line-number="1"><span class="kw">summary</span>(whitehal<span class="op">$</span>followupyrs &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(whitehal<span class="op">$</span>followupyrs)) <span class="co"># time difference in years</span></a></code></pre></div>
+<div class="sourceCode" id="cb1678"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1678-1" data-line-number="1"><span class="kw">summary</span>(whitehal<span class="op">$</span>followupyrs &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(whitehal<span class="op">$</span>followupyrs)) <span class="co"># time difference in years</span></a></code></pre></div>
 <pre><code>##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
 ##  0.15063 17.16357 17.96020 16.46116 18.56262 19.38123</code></pre>
-<div class="sourceCode" id="cb1656"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1656-1" data-line-number="1"><span class="co"># categorize agein into groups (40-44, 45-49, 50-54, ... , 65-69)</span></a>
-<a class="sourceLine" id="cb1656-2" data-line-number="2">whitehal<span class="op">$</span>agecat &lt;-<span class="st"> </span><span class="kw">cut</span>(whitehal<span class="op">$</span>agein, <span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="dv">40</span>, <span class="dv">70</span>, <span class="dv">5</span>), <span class="dt">right =</span> <span class="ot">FALSE</span>)</a>
-<a class="sourceLine" id="cb1656-3" data-line-number="3"><span class="kw">with</span>(whitehal, <span class="kw">table</span>(agecat))</a></code></pre></div>
+<div class="sourceCode" id="cb1680"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1680-1" data-line-number="1"><span class="co"># categorize agein into groups (40-44, 45-49, 50-54, ... , 65-69)</span></a>
+<a class="sourceLine" id="cb1680-2" data-line-number="2">whitehal<span class="op">$</span>agecat &lt;-<span class="st"> </span><span class="kw">cut</span>(whitehal<span class="op">$</span>agein, <span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="dv">40</span>, <span class="dv">70</span>, <span class="dv">5</span>), <span class="dt">right =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb1680-3" data-line-number="3"><span class="kw">with</span>(whitehal, <span class="kw">table</span>(agecat))</a></code></pre></div>
 <pre><code>## agecat
 ## [40,45) [45,50) [50,55) [55,60) [60,65) [65,70) 
 ##     277     445     362     340     215      38</code></pre>
-<div class="sourceCode" id="cb1658"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1658-1" data-line-number="1"><span class="co"># examine how mortality rates change with age at entry</span></a>
-<a class="sourceLine" id="cb1658-2" data-line-number="2"><span class="co"># </span></a>
-<a class="sourceLine" id="cb1658-3" data-line-number="3"><span class="co"># with(whitehal %&gt;% group_by(agecat) %&gt;%</span></a>
-<a class="sourceLine" id="cb1658-4" data-line-number="4"><span class="co">#   summarise(D = sum(all),</span></a>
-<a class="sourceLine" id="cb1658-5" data-line-number="5"><span class="co">#             Y = sum(followupyrs)),</span></a>
-<a class="sourceLine" id="cb1658-6" data-line-number="6"><span class="co">#   cbind(whitehal$agecat, pois.exact(x = D, pt = Y/1000)))</span></a>
-<a class="sourceLine" id="cb1658-7" data-line-number="7"></a>
-<a class="sourceLine" id="cb1658-8" data-line-number="8"></a>
-<a class="sourceLine" id="cb1658-9" data-line-number="9"><span class="co">## rate ratios and 95% CIs for each age category compare with [40,44) age group</span></a>
-<a class="sourceLine" id="cb1658-10" data-line-number="10">Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class="op">~</span><span class="st"> </span>agecat <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(followupyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> whitehal); <span class="kw">ci.exp</span>(Model0)</a></code></pre></div>
+<div class="sourceCode" id="cb1682"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1682-1" data-line-number="1"><span class="co"># examine how mortality rates change with age at entry</span></a>
+<a class="sourceLine" id="cb1682-2" data-line-number="2"><span class="co"># </span></a>
+<a class="sourceLine" id="cb1682-3" data-line-number="3"><span class="co"># with(whitehal %&gt;% group_by(agecat) %&gt;%</span></a>
+<a class="sourceLine" id="cb1682-4" data-line-number="4"><span class="co">#   summarise(D = sum(all),</span></a>
+<a class="sourceLine" id="cb1682-5" data-line-number="5"><span class="co">#             Y = sum(followupyrs)),</span></a>
+<a class="sourceLine" id="cb1682-6" data-line-number="6"><span class="co">#   cbind(whitehal$agecat, pois.exact(x = D, pt = Y/1000)))</span></a>
+<a class="sourceLine" id="cb1682-7" data-line-number="7"></a>
+<a class="sourceLine" id="cb1682-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb1682-9" data-line-number="9"><span class="co">## rate ratios and 95% CIs for each age category compare with [40,44) age group</span></a>
+<a class="sourceLine" id="cb1682-10" data-line-number="10">Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class="op">~</span><span class="st"> </span>agecat <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(followupyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> whitehal); <span class="kw">ci.exp</span>(Model0)</a></code></pre></div>
 <pre><code>##                   exp(Est.)          2.5%         97.5%
 ## (Intercept)    0.0048794197  0.0032705278  0.0072797841
 ## agecat[45,50)  1.1740971320  0.7154062934  1.9268827913
@@ -1354,40 +1354,40 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## agecat[55,60)  4.5784055712  2.9519678778  7.1009572062
 ## agecat[60,65)  6.6882727538  4.2856745766 10.4377949444
 ## agecat[65,70) 17.1110624279 10.1140257533 28.9487553770</code></pre>
-<div class="sourceCode" id="cb1660"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1660-1" data-line-number="1"><span class="co">## The rate ratios are increasing with age although there is no statistical evidence</span></a>
-<a class="sourceLine" id="cb1660-2" data-line-number="2"><span class="co">## at 5% level that the rate among 45-49 year olds is different to the rate among men</span></a>
-<a class="sourceLine" id="cb1660-3" data-line-number="3"><span class="co">## who are &lt;40 years</span></a>
-<a class="sourceLine" id="cb1660-4" data-line-number="4"></a>
-<a class="sourceLine" id="cb1660-5" data-line-number="5"></a>
-<a class="sourceLine" id="cb1660-6" data-line-number="6"><span class="co"># with(whitehal %&gt;% group_by(grade) %&gt;%</span></a>
-<a class="sourceLine" id="cb1660-7" data-line-number="7"><span class="co">#   summarise(D = sum(all),</span></a>
-<a class="sourceLine" id="cb1660-8" data-line-number="8"><span class="co">#             Y = sum(followupyrs)),</span></a>
-<a class="sourceLine" id="cb1660-9" data-line-number="9"><span class="co">#   cbind(whitehal$grade, pois.exact(x = D, pt = Y/1000)))</span></a>
-<a class="sourceLine" id="cb1660-10" data-line-number="10"></a>
-<a class="sourceLine" id="cb1660-11" data-line-number="11">Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(grade) <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(followupyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> whitehal); <span class="kw">ci.exp</span>(Model1)</a></code></pre></div>
+<div class="sourceCode" id="cb1684"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1684-1" data-line-number="1"><span class="co">## The rate ratios are increasing with age although there is no statistical evidence</span></a>
+<a class="sourceLine" id="cb1684-2" data-line-number="2"><span class="co">## at 5% level that the rate among 45-49 year olds is different to the rate among men</span></a>
+<a class="sourceLine" id="cb1684-3" data-line-number="3"><span class="co">## who are &lt;40 years</span></a>
+<a class="sourceLine" id="cb1684-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb1684-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb1684-6" data-line-number="6"><span class="co"># with(whitehal %&gt;% group_by(grade) %&gt;%</span></a>
+<a class="sourceLine" id="cb1684-7" data-line-number="7"><span class="co">#   summarise(D = sum(all),</span></a>
+<a class="sourceLine" id="cb1684-8" data-line-number="8"><span class="co">#             Y = sum(followupyrs)),</span></a>
+<a class="sourceLine" id="cb1684-9" data-line-number="9"><span class="co">#   cbind(whitehal$grade, pois.exact(x = D, pt = Y/1000)))</span></a>
+<a class="sourceLine" id="cb1684-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb1684-11" data-line-number="11">Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(grade) <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(followupyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> whitehal); <span class="kw">ci.exp</span>(Model1)</a></code></pre></div>
 <pre><code>##                  exp(Est.)         2.5%       97.5%
 ## (Intercept)    0.010865404 0.0095233128 0.012396632
 ## factor(grade)2 2.305446287 1.8947528380 2.805158793</code></pre>
-<div class="sourceCode" id="cb1662"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1662-1" data-line-number="1"><span class="co">## There is strong evidence that the all cause mortality rate differs between high</span></a>
-<a class="sourceLine" id="cb1662-2" data-line-number="2"><span class="co">## and low grade workers.</span></a>
-<a class="sourceLine" id="cb1662-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb1662-4" data-line-number="4"><span class="co">## To examine whether the estimated RR for grade is confounded by age at entry</span></a>
-<a class="sourceLine" id="cb1662-5" data-line-number="5"><span class="co">## we compare the crude RR =2.31 (1.90, 2.81) with the Mantel-Haenszel summary</span></a>
-<a class="sourceLine" id="cb1662-6" data-line-number="6"><span class="co">## estimate.</span></a>
-<a class="sourceLine" id="cb1662-7" data-line-number="7"></a>
-<a class="sourceLine" id="cb1662-8" data-line-number="8">whitehal_table &lt;-<span class="st"> </span><span class="kw">aggregate</span>(<span class="kw">cbind</span>(all, followupyrs) <span class="op">~</span><span class="st"> </span>grade <span class="op">+</span><span class="st"> </span>agecat, <span class="dt">data=</span>whitehal, sum)</a>
-<a class="sourceLine" id="cb1662-9" data-line-number="9">stmh_array &lt;-<span class="st"> </span><span class="kw">array</span>(<span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">20</span>,   <span class="fl">693.1284</span>,<span class="fl">4225.4893</span>,</a>
-<a class="sourceLine" id="cb1662-10" data-line-number="10">                      <span class="dv">10</span>,<span class="dv">35</span>,   <span class="fl">1363.821</span>,<span class="fl">6491.072</span>,</a>
-<a class="sourceLine" id="cb1662-11" data-line-number="11">                      <span class="dv">30</span>,<span class="dv">52</span>,  <span class="fl">1399.63</span>, <span class="fl">4660.12</span>,                                                        <span class="dv">51</span>,<span class="dv">67</span>,   <span class="fl">1832.169</span>,<span class="fl">3449.846</span>,</a>
-<a class="sourceLine" id="cb1662-12" data-line-number="12">                      <span class="dv">59</span>,<span class="dv">42</span>,   <span class="fl">1660.597</span>,<span class="fl">1434.251</span>,</a>
-<a class="sourceLine" id="cb1662-13" data-line-number="13">                      <span class="dv">28</span>,<span class="dv">5</span>,  <span class="fl">316.23840</span>, <span class="fl">79.00879</span>),</a>
-<a class="sourceLine" id="cb1662-14" data-line-number="14">                      <span class="dt">dim=</span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">6</span>),</a>
-<a class="sourceLine" id="cb1662-15" data-line-number="15">                      <span class="dt">dimnames =</span> <span class="kw">list</span>(</a>
-<a class="sourceLine" id="cb1662-16" data-line-number="16">                      <span class="dt">Grade=</span><span class="kw">c</span>(<span class="st">&quot;2&quot;</span>,<span class="st">&quot;1&quot;</span>),</a>
-<a class="sourceLine" id="cb1662-17" data-line-number="17">                      <span class="kw">c</span>(<span class="st">&quot;death&quot;</span>, <span class="st">&quot;Person_years&quot;</span>),</a>
-<a class="sourceLine" id="cb1662-18" data-line-number="18">                      <span class="dt">Agecat=</span><span class="kw">names</span>(<span class="kw">table</span>(whitehal<span class="op">$</span>agecat))</a>
-<a class="sourceLine" id="cb1662-19" data-line-number="19">                    ))</a>
-<a class="sourceLine" id="cb1662-20" data-line-number="20">stmh_array</a></code></pre></div>
+<div class="sourceCode" id="cb1686"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1686-1" data-line-number="1"><span class="co">## There is strong evidence that the all cause mortality rate differs between high</span></a>
+<a class="sourceLine" id="cb1686-2" data-line-number="2"><span class="co">## and low grade workers.</span></a>
+<a class="sourceLine" id="cb1686-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb1686-4" data-line-number="4"><span class="co">## To examine whether the estimated RR for grade is confounded by age at entry</span></a>
+<a class="sourceLine" id="cb1686-5" data-line-number="5"><span class="co">## we compare the crude RR =2.31 (1.90, 2.81) with the Mantel-Haenszel summary</span></a>
+<a class="sourceLine" id="cb1686-6" data-line-number="6"><span class="co">## estimate.</span></a>
+<a class="sourceLine" id="cb1686-7" data-line-number="7"></a>
+<a class="sourceLine" id="cb1686-8" data-line-number="8">whitehal_table &lt;-<span class="st"> </span><span class="kw">aggregate</span>(<span class="kw">cbind</span>(all, followupyrs) <span class="op">~</span><span class="st"> </span>grade <span class="op">+</span><span class="st"> </span>agecat, <span class="dt">data=</span>whitehal, sum)</a>
+<a class="sourceLine" id="cb1686-9" data-line-number="9">stmh_array &lt;-<span class="st"> </span><span class="kw">array</span>(<span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">20</span>,   <span class="fl">693.1284</span>,<span class="fl">4225.4893</span>,</a>
+<a class="sourceLine" id="cb1686-10" data-line-number="10">                      <span class="dv">10</span>,<span class="dv">35</span>,   <span class="fl">1363.821</span>,<span class="fl">6491.072</span>,</a>
+<a class="sourceLine" id="cb1686-11" data-line-number="11">                      <span class="dv">30</span>,<span class="dv">52</span>,  <span class="fl">1399.63</span>, <span class="fl">4660.12</span>,                                                        <span class="dv">51</span>,<span class="dv">67</span>,   <span class="fl">1832.169</span>,<span class="fl">3449.846</span>,</a>
+<a class="sourceLine" id="cb1686-12" data-line-number="12">                      <span class="dv">59</span>,<span class="dv">42</span>,   <span class="fl">1660.597</span>,<span class="fl">1434.251</span>,</a>
+<a class="sourceLine" id="cb1686-13" data-line-number="13">                      <span class="dv">28</span>,<span class="dv">5</span>,  <span class="fl">316.23840</span>, <span class="fl">79.00879</span>),</a>
+<a class="sourceLine" id="cb1686-14" data-line-number="14">                      <span class="dt">dim=</span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">6</span>),</a>
+<a class="sourceLine" id="cb1686-15" data-line-number="15">                      <span class="dt">dimnames =</span> <span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb1686-16" data-line-number="16">                      <span class="dt">Grade=</span><span class="kw">c</span>(<span class="st">&quot;2&quot;</span>,<span class="st">&quot;1&quot;</span>),</a>
+<a class="sourceLine" id="cb1686-17" data-line-number="17">                      <span class="kw">c</span>(<span class="st">&quot;death&quot;</span>, <span class="st">&quot;Person_years&quot;</span>),</a>
+<a class="sourceLine" id="cb1686-18" data-line-number="18">                      <span class="dt">Agecat=</span><span class="kw">names</span>(<span class="kw">table</span>(whitehal<span class="op">$</span>agecat))</a>
+<a class="sourceLine" id="cb1686-19" data-line-number="19">                    ))</a>
+<a class="sourceLine" id="cb1686-20" data-line-number="20">stmh_array</a></code></pre></div>
 <pre><code>## , , Agecat = [40,45)
 ## 
 ##      
@@ -1429,8 +1429,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## Grade death Person_years
 ##     2    28    316.23840
 ##     1     5     79.00879</code></pre>
-<div class="sourceCode" id="cb1664"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1664-1" data-line-number="1">mhgrade_age &lt;-<span class="st"> </span><span class="kw">epi.2by2</span>(stmh_array, <span class="dt">method =</span> <span class="st">&quot;cohort.time&quot;</span>, <span class="dt">units =</span> <span class="dv">1000</span>)</a>
-<a class="sourceLine" id="cb1664-2" data-line-number="2">mhgrade_age</a></code></pre></div>
+<div class="sourceCode" id="cb1688"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1688-1" data-line-number="1">mhgrade_age &lt;-<span class="st"> </span><span class="kw">epi.2by2</span>(stmh_array, <span class="dt">method =</span> <span class="st">&quot;cohort.time&quot;</span>, <span class="dt">units =</span> <span class="dv">1000</span>)</a>
+<a class="sourceLine" id="cb1688-2" data-line-number="2">mhgrade_age</a></code></pre></div>
 <pre><code>##              Outcome +    Time at risk        Inc rate *
 ## Exposed +          182            7266              25.0
 ## Exposed -          221           20340              10.9
@@ -1448,22 +1448,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##  Wald confidence limits
 ##  M-H: Mantel-Haenszel; CI: confidence interval
 ##  * Outcomes per 1000 units of population time at risk</code></pre>
-<div class="sourceCode" id="cb1666"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1666-1" data-line-number="1"><span class="co">## Overall estimate and Wald 95% confidence intervals,</span></a>
-<a class="sourceLine" id="cb1666-2" data-line-number="2"><span class="co">## controlling for agecate</span></a>
-<a class="sourceLine" id="cb1666-3" data-line-number="3">mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.mh.wald</a></code></pre></div>
+<div class="sourceCode" id="cb1690"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1690-1" data-line-number="1"><span class="co">## Overall estimate and Wald 95% confidence intervals,</span></a>
+<a class="sourceLine" id="cb1690-2" data-line-number="2"><span class="co">## controlling for agecate</span></a>
+<a class="sourceLine" id="cb1690-3" data-line-number="3">mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.mh.wald</a></code></pre></div>
 <pre><code>##        est     lower     upper
 ## 1 1.429211 1.1598631 1.7611078</code></pre>
-<div class="sourceCode" id="cb1668"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1668-1" data-line-number="1">mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>chisq.mh <span class="co">## p-value for age-adjusted MH rate ratio</span></a></code></pre></div>
+<div class="sourceCode" id="cb1692"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1692-1" data-line-number="1">mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>chisq.mh <span class="co">## p-value for age-adjusted MH rate ratio</span></a></code></pre></div>
 <pre><code>##   test.statistic df       p.value
 ## 1      11.132745  5 0.00084816981</code></pre>
-<div class="sourceCode" id="cb1670"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1670-1" data-line-number="1"><span class="co">## The Mantel-Haenszel summary estimate RR = 1.43 (1.16, 1.76).</span></a>
-<a class="sourceLine" id="cb1670-2" data-line-number="2"><span class="co">## The result shows that the crude estimate of the effect of grade was</span></a>
-<a class="sourceLine" id="cb1670-3" data-line-number="3"><span class="co">## partly confounded by age at entry.</span></a>
-<a class="sourceLine" id="cb1670-4" data-line-number="4"></a>
-<a class="sourceLine" id="cb1670-5" data-line-number="5"><span class="co">## To assess whether there is effect modification betwee grade and</span></a>
-<a class="sourceLine" id="cb1670-6" data-line-number="6"><span class="co">## agecat we examine the stratum specific estimates and assess</span></a>
-<a class="sourceLine" id="cb1670-7" data-line-number="7"><span class="co">## whether there is evidence of important variation between them.</span></a>
-<a class="sourceLine" id="cb1670-8" data-line-number="8">mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.strata.wald</a></code></pre></div>
+<div class="sourceCode" id="cb1694"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1694-1" data-line-number="1"><span class="co">## The Mantel-Haenszel summary estimate RR = 1.43 (1.16, 1.76).</span></a>
+<a class="sourceLine" id="cb1694-2" data-line-number="2"><span class="co">## The result shows that the crude estimate of the effect of grade was</span></a>
+<a class="sourceLine" id="cb1694-3" data-line-number="3"><span class="co">## partly confounded by age at entry.</span></a>
+<a class="sourceLine" id="cb1694-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb1694-5" data-line-number="5"><span class="co">## To assess whether there is effect modification betwee grade and</span></a>
+<a class="sourceLine" id="cb1694-6" data-line-number="6"><span class="co">## agecat we examine the stratum specific estimates and assess</span></a>
+<a class="sourceLine" id="cb1694-7" data-line-number="7"><span class="co">## whether there is evidence of important variation between them.</span></a>
+<a class="sourceLine" id="cb1694-8" data-line-number="8">mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.strata.wald</a></code></pre></div>
 <pre><code>##         est      lower     upper
 ## 1 1.2192515 0.30302945 3.6397113
 ## 2 1.3598500 0.60057144 2.8059055
@@ -1471,13 +1471,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## 4 1.4332751 0.97576189 2.0941999
 ## 5 1.2132872 0.80308583 1.8474726
 ## 6 1.3991002 0.53338106 4.6404658</code></pre>
-<div class="sourceCode" id="cb1672"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1672-1" data-line-number="1"><span class="co">## The result indicates that the data are compatible with the assumption</span></a>
-<a class="sourceLine" id="cb1672-2" data-line-number="2"><span class="co">## of no interaction/effect modification (p=0.79)</span></a>
-<a class="sourceLine" id="cb1672-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb1672-4" data-line-number="4"><span class="co">## test for unequal RRs (effect modification):</span></a>
-<a class="sourceLine" id="cb1672-5" data-line-number="5">mhgrade_age<span class="op">$</span>res<span class="op">$</span>RR.homog</a></code></pre></div>
+<div class="sourceCode" id="cb1696"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1696-1" data-line-number="1"><span class="co">## The result indicates that the data are compatible with the assumption</span></a>
+<a class="sourceLine" id="cb1696-2" data-line-number="2"><span class="co">## of no interaction/effect modification (p=0.79)</span></a>
+<a class="sourceLine" id="cb1696-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb1696-4" data-line-number="4"><span class="co">## test for unequal RRs (effect modification):</span></a>
+<a class="sourceLine" id="cb1696-5" data-line-number="5">mhgrade_age<span class="op">$</span>res<span class="op">$</span>RR.homog</a></code></pre></div>
 <pre><code>## NULL</code></pre>
-<div class="sourceCode" id="cb1674"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1674-1" data-line-number="1"><span class="co">## Hence, we do not need to present the stratum-specific estimates.</span></a></code></pre></div>
+<div class="sourceCode" id="cb1698"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1698-1" data-line-number="1"><span class="co">## Hence, we do not need to present the stratum-specific estimates.</span></a></code></pre></div>
 
 </div>
             </section>
