@@ -1861,7 +1861,7 @@ summary(m2)
 
 1. 迴歸係數的計算是完全相同的 (由於我們只放了一個簡單的分類型變量作爲預測變量，一般來說泊松迴歸和負二項式分佈迴歸計算的迴歸係數會有些許不同)；
 2. 另外一個變化是標準誤的估計量在負二項式分佈模型中明顯變大了，這就是我們放寬了前提條件，允許模型考慮個體的隨機效應的體現。如果泊松模型被數據本身的過度離散影響顯著，那麼泊松迴歸計算獲得的參數標準無是偏低的；
-3. 負二項式分佈迴歸的結果最底下出現的 `Theta:  1.723` 部分，它的倒數是前面提到的歌廳效應部分 $a_i$ 服從的伽馬分佈的方差 $\alpha$。它是關鍵的離散程度參數 (dispersion parameter)。在 STATA 裏，如果用 `nbreg` 擬合負二項式分佈迴歸的模型，輸出的結果最底下會有 $\alpha$ 值的報告，注意它和 R 輸出的 `Theta` 結果互爲倒數。另外，STATA 的輸出結果還會對 $\alpha = 0$ 直接進行檢驗。在 R 裏面則需要給兩個模型分別進行擬合優度檢驗，多數情況下你會發現負二項式分佈迴歸的模型更加擬合數據：
+3. 負二項式分佈迴歸的結果最底下出現的 `Theta:  1.723` 部分，它的倒數是前面提到的個體的隨機效應部分 $a_i$ 服從的伽馬分佈的方差 $\alpha$。它是關鍵的離散程度參數 (dispersion parameter)。**在 STATA 裏，如果用 `nbreg` 擬合負二項式分佈迴歸的模型，輸出的結果最底下會有 $\alpha$ 值的報告，注意它和 R 輸出的 `Theta` 結果互爲倒數**。另外，STATA 的輸出結果還會對 $\alpha = 0$ 直接進行檢驗。在 R 裏面則需要給兩個模型分別進行擬合優度檢驗，多數情況下你會發現負二項式分佈迴歸的模型更加擬合數據：
 
 ```{r  GLM-0411, cache=TRUE, eval = TRUE}
 with(m1, cbind(res.deviance = deviance, df = df.residual,
@@ -1978,7 +1978,79 @@ jtools::summ(mC, digits = 6, confint = TRUE, exp = TRUE,
              robust = "HC1", s)
 ```
 
-可以看到加入了 `robust` 選項之後，並不會改變每個變量的回歸係數的點估計 (point estimates)。但是，可以發現每個變量的回歸係數對應的標準誤發生了較大的變化。
+可以看到加入了 `robust` 選項之後，並不會改變每個變量的回歸係數的點估計 (point estimates)。但是，可以發現每個變量的回歸係數對應的標準誤發生了較大的變化 -- 信賴區間的範圍都無一例外地變大了。由於使用 `robust = "HC1"` 選項，這裏的標準誤估計不再依據泊松模型的前提條件 -- 泊松分佈的特徵。在 Stata 中擬合相同的模型，我們可以獲得是否有過度離散的指標型數據結果，也就是殘差離差量 (residual deviance) 和 Pearson 統計量，以及他們對各自的自由度之比：
+
+```{r GLM-prac05-08, engine='stata', echo=FALSE}
+use http://www.stata-press.com/data/hh3/medpar, clear
+glm los type2 type3 i.age, family(Poisson) robust eform
+```
+
+可以看到殘差離差量 (residual deviance) 和 Pearson 統計量與各自的自由度之比均顯著大於1。提示該數據有相當程度的過度離散，也就是泊松回歸模型的前提泊松分佈無法得到滿足。而使用了 `robust = "HC1"` (in R) 或者 `robust` (in Stata) 的選項之後，就不再需要這一前提假設。我們也看到穩健信賴區間相較於沒有使用該選項時要不那麼精確，也就是區間範圍都變寬了。
+
+6. 當考慮了過度離散的模型被採納後 `robust` (in Stata)，我們無法再使用似然比檢驗法檢驗年齡是否是住院時長的獨立預測變量。但是我們可以使用 Stata 裏特有的模型擬合之後的 `test` 命令來實施聯合 Wald 檢驗 (joint Wald test) 年齡是否在穩健泊松模型下依然是住院時長的獨立預測變量。試解讀該檢驗結果和之前未考慮過度離散現象時使用的模型的年齡的獨立預測變量檢驗之間有何不同，原因是什麼呢？
+
+```{r GLM-prac05-09, engine='stata', echo=FALSE}
+use http://www.stata-press.com/data/hh3/medpar, clear
+quietly: glm los type2 type3 i.age, family(Poisson) robust eform
+test 2.age = 3.age = 4.age = 5.age = 6.age = 7.age = 8.age = 9.age = 0
+```
+
+
+這個聯合 Wald 檢驗的結果是 `p = 0.8493`。這和之前未考慮數據過度離散時使用的模型時進行的對年齡這一變量的似然比模型檢驗結果大相徑庭 (p = 0.018)。之所以結果相差如此之大，我們相信主要是因爲之前忽略數據過度離散問題的模型其實是錯誤的。而考慮了數據過度離散特徵之後，可以認爲使用了穩健泊松回歸模型之後的聯合 Wald 檢驗結果才是真的值得相信的。
+
+7. 請使用負二項回歸模型 (negative binomial regression model) 來擬合上述模型，先擬合一個不加任何預測變量的負二項回歸模型。請解釋模型結果的下半部分出現的似然比檢驗的意義，和無預測變量的泊松回歸模型結果做一下對比。
+
+在 Stata 裏：
+```{r GLM-prac05-10, engine='stata', echo=FALSE}
+use http://www.stata-press.com/data/hh3/medpar, clear
+nbreg los
+```
+
+
+在 R 裏：
+```{r GLM-prac05-11, cache=TRUE}
+mD <- glm.nb(los ~ 1, data=medpar)
+jtools::summ(mD, digits = 6, confint = TRUE, exp = TRUE)
+summary(mD)
+```
+
+可以看到在 R 裏最下方出現的是 `Theta` 也就是評價過度離散程度的指標，他和 Stata 的輸出報告中的 `alpha` 互爲倒數。不同的是 Stata 的報告中還對 `alpha = 0` 做了檢驗。檢驗結果提示住院時長這個數據並不服從泊松分佈。也就是實際的住院時長的數據比泊松分佈時的結果的方差要大的多。 (there is more variability than would be expected from a Poisson variable) 其實，簡單對 `los` 分析一下就知道它的樣本均值和樣本方差分別是：（他們相差巨大，不符合泊松分佈的特徵）
+
+```{r GLM-prac05-12, cache=TRUE}
+mean(medpar$los) 
+var(medpar$los)
+```
+
+8. 如果你有興趣，請擬合一個只有住院形態一個預測變量的負二項回歸模型。使用其輸出的結果來計算一下不同住院形態下的平均住院時長。比較模型預測的平均住院時長和觀測到的不同住院形態下的實際住院時長的平均值之間的差別。
+
+
+在 Stata 裏：
+```{r GLM-prac05-13, engine='stata', echo=FALSE}
+use http://www.stata-press.com/data/hh3/medpar, clear
+nbreg los type2 type3 
+```
+
+
+在 R 裏：
+```{r GLM-prac05-14, cache=TRUE}
+mE <- glm.nb(los ~ type2 + type3, data=medpar)
+jtools::summ(mE, digits = 6, confint = TRUE)
+summary(mE)
+```
+
+從輸出的分析報告結果來看，模型估計的不同住院形態 (elective, urgent, and emergency) 的平均住院時長分別是 $\exp(2.1782) = 8.83$ 天，$\exp(2.1782 + 0.2373) = 11.20$ 天，$\exp(2.1782 + 0.7253) = 18.24$天。要估算模型的預測方差，可以通過手工計算。已知如果期待值是 $\mu$，那麼其方差是 $\mu(1 + \alpha \mu)$。那麼依據這個公式，就可以估算不同住院形態 (elective, urgent, and emergency) 的住院時長的方差分別是 $8.83 \times (1 + 0.4478 \times 8.83) = 43.74$ days$^2$，$11.2 \times (1 + 0.4478 \times 11.2) = 67.3$ days$^2$，$18.24 \times (1 + 0.4478 \times 18.24) = 167.2$ days$^2$。
+
+和觀測值相比較：
+
+```{r GLM-prac05-15, cache=TRUE}
+
+var(medpar$los[medpar$type1 == 1])
+var(medpar$los[medpar$type2 == 1])
+var(medpar$los[medpar$type3 == 1])
+```
+
+可見，對於前兩種住院形態來說，模型推測的方差和觀測方差還是比較接近的。但是對於第三種住院形態 (emergency)，觀測方差遠遠大於模型推測方差。當然，這可能由於因爲緊急住院的患者人數較低 (n = 96)。也就是說，樣本量太低的組使用該模型推測的方差準確度就比較低。另一種原因值得考慮的就是，負二項回歸模型中使用的 Gamma 隨機效應分佈可能並不適用與本數據 (對於不同住院形態的住院時長可能需要不同的 `alpha`，而不是強迫他們都是相同的)。另外一個被忽視的是，住院時長這一數據其實是只能取正值的數據。然而泊松分佈和負二項分佈本身其實是允許有 0 這樣的數字的。如此一來，或許我們應該把住院時長定義爲允許 0 存在的數字。也就是把住院時長的數據減去1。(number of days from the day of admission)
+
 
 
 # 率的廣義線性迴歸 Poisson GLM for rates
