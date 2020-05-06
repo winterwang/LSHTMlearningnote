@@ -1188,7 +1188,7 @@ print(Insect)
 
 2. 將濃度和死亡比例做散點圖
 
-```{r GLM-exe-3-3, echo=FALSE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Scatter plot of CS2 dose and proportion killed.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r GLM-exe-3-3, echo=TRUE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Scatter plot of CS2 dose and proportion killed.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 ggplot(Insect, aes(x = dose, y = p)) +
   geom_point()+
   scale_x_continuous(breaks = seq(50, 75, by = 5)) +
@@ -1211,7 +1211,7 @@ ggplot(Insect, aes(x = dose, y = p)) +
 
 3. 計算死亡比例的對數比值比 (log-odds)，再作相同的散點圖，你會得出什麼樣的結論？
 
-```{r GLM-exe-3-4, echo=FALSE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Scatter plot of CS2 dose and log-odds of proportion killed.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+```{r GLM-exe-3-4, echo=TRUE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Scatter plot of CS2 dose and log-odds of proportion killed.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 Insect <- Insect %>%
   mutate(log_odds = log(p / (1-p)))
 
@@ -1603,7 +1603,8 @@ lbw <- read_dta(file = "backupfiles/lbw.dta")
 lbw$race <- factor(lbw$race)
 lbw$smoke <- factor(lbw$smoke)
 lbw$ht <- factor(lbw$ht)
-Modelgof <- glm(low ~ age + lwt + race + smoke + ptl + ht + ui, data = lbw, family = binomial(link = logit))
+Modelgof <- glm(low ~ age + lwt + race + smoke + ptl + ht + ui, 
+                data = lbw, family = binomial(link = logit))
 hosmer(lbw$low, fitted(Modelgof))
 hosmer(lbw$low, fitted(Modelgof), group=5)
 ```
@@ -1620,8 +1621,9 @@ Insect <- read.table("backupfiles/INSECT.RAW", header =  FALSE, sep ="", col.nam
 Insect <- Insect %>% 
   mutate(p = n_deaths/n_subjects)
 
-Model1 <- glm(cbind(n_deaths, n_subjects - n_deaths) ~ dose, family = binomial(link = logit), data = Insect)
-summary(Model1)
+Model1 <- glm(cbind(n_deaths, n_subjects - n_deaths) ~ dose, 
+              family = binomial(link = logit), data = Insect)
+summary(Model1); jtools::summ(Model1, digits = 6, confint = TRUE, exp = TRUE)
 ```
 
 2. 根據上面模型輸出的結果，檢驗是否有證據證明該模型對數據的擬合不佳。
@@ -2131,7 +2133,7 @@ $$
 
 和分組型二項分佈數據相似，如果泊松 GLM 擬合的數據也是分組型數據，如本章開頭的英國醫生隊列數據。那麼模型偏差值 (deviance) 可以用來衡量模型擬合的好壞。在零假設條件下，模型偏差值服從自由度爲 $n-p$ 的卡方分佈 (這裏的 $n$ 是分組型數據中的“組的數量”，也就是飽和模型中參數的數量，$p$ 是擬合的線性預測方程中參數的數量)。
 
-## 實戰演練
+## 分析實例 Example: British doctors study
 
 數據是本章開頭使用的英國醫生隊列
 
@@ -2151,7 +2153,7 @@ print(BritishD)
 2. 調查吸菸與冠心病死亡率的年齡調整後關係；
 3. 調查年齡是否對吸菸與冠心病死亡率的關係起到交互作用。
 
-### 模型 1
+### 模型 1: 吸菸
 
 第一個模型可以用下面的數學表達式：
 
@@ -2165,7 +2167,7 @@ $$
 # the following 2 models are equivalent
 Model1 <- glm(deaths ~ smokes + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
 Model1 <- glm(deaths ~ smokes, offset = log(pyrs), family = poisson(link = "log"), data = BritishD)
-summary(Model1)
+summary(Model1); jtools::summ(Model1, digits = 6, confint = TRUE, exp = TRUE)
 ```
 
 輸出報告中的參數估計部分 `Estimate` 就是我們擬合模型中參數的估計 $\hat\alpha, \hat\beta_1$，他們各自的含義是：
@@ -2183,7 +2185,7 @@ with(Model1, cbind(res.deviance = deviance, df = df.residual,
 
 擬合優度檢驗結果提示，這個模型對數據的擬合非常差 (poor fit)。可能的原因是，模型 1 中忽略了“年齡”這一重要的因素，使得當僅僅使用 吸菸與否 的信息擬合的泊松迴歸模型的擬合值和觀察值之間的差異的波動非常大，大到很可能無法滿足泊松分佈的前提假設。
 
-### 模型 2
+### 模型 2: 吸菸 + 年齡
 
 第二個模型的線性預測方程可以寫作：
 
@@ -2195,7 +2197,7 @@ $$
 
 ```{r  GLM-0505, cache=TRUE}
 Model2 <- glm(deaths ~ smokes + agegrp + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
-summary(Model2)
+summary(Model2); jtools::summ(Model2, digits = 6, confint = TRUE, exp = TRUE)
 ```
 
 此時可以計算吸菸者與非吸菸者相比時，年齡調整後冠心病死亡率的比爲：
@@ -2217,15 +2219,205 @@ with(Model2, cbind(res.deviance = deviance, df = df.residual,
 結果依然提示，即使把年齡組放入這個泊松迴歸，模型對數據的擬合程度依然非常的不好。所以，到這裏，在即使調整了年齡之後模型擬合度依然不理想的情況下 (這是需要加交互作用項的證據)，我們需要在模型中加入年齡和吸菸的交互作用項 (結果是加入交互作用項的模型就變成了飽和模型)。
 
 
-### 模型 3
+### 模型 3: 吸菸 + 年齡 + 吸菸與年齡的交互作用項
 
 
 ```{r  GLM-0507, cache=TRUE}
-Model3 <- glm(deaths ~ smokes*agegrp + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
-summary(Model3)
+Model3 <- glm(deaths ~ smokes*agegrp + offset(log(pyrs)), 
+              family = poisson(link = "log"), data = BritishD)
+summary(Model3); jtools::summ(Model3, digits = 6, confint = TRUE, exp = TRUE)
 ```
 
-此時你會看到模型的偏差已經幾乎接近於零，因爲這已經是一個飽和模型。
+此時你會看到模型的偏差已經幾乎接近於零，因爲這已經是一個飽和模型。你能根據這個模型的結果描述吸菸與冠心病發病率之間的關係及其如何隨着年齡變化而變化的嗎？
+
+根据上述模型的结果，相對於非吸菸人羣，吸菸人羣的年齡調整後的冠心病發病率比 (rate ratio)，隨着年齡的增加而呈現下降趨勢。在最低年齡組 "35-44歲" 中，吸菸與非吸菸相比冠心病發病率比的估計值是 $e^{1.747} = 5.74$。 在 "45-54歲" 年齡組中，吸菸與非吸菸相比冠心病發病率比的估計值是 $e^{1.747 - 0.987} = 2.14$。。。。
+
+
+
+## GLM Practical 06
+
+在這個練習題中，我們將學會擬合，並能夠解釋多個不同的泊松回歸模型的分析結果，研究對象來自兩家橡膠製造工廠的男性職員。其中一家工廠在製造過程中對員工施加了保護的獨立設備，然而另一家工廠的工人則較多的暴露在製造橡膠過程中產生的粉塵和污染物中。該研究是爲了分析兩家工廠職工的死亡率是否有不同，需要考慮的已知的混雜因素是職工年齡。
+
+### 將數據導入 R 環境中，初步計算每個工廠不同年齡組工人的死亡人數，和追蹤人年數據。
+
+```{r GLM-prac06-01, cache=TRUE}
+Rubber <- read.table("backupfiles/RUBBER.RAW", header = FALSE, 
+                     sep ="", col.names = c("Agegrp", "Factory", 
+                                            "n_deaths", "Pyears"))
+Rubber <- Rubber %>% 
+  mutate(Factory = as.factor(Factory)) %>% 
+  mutate(Agegrp = as.factor(Agegrp)) %>% 
+  mutate(Agegrp = fct_recode(Agegrp, 
+                             "50-59" = "1", 
+                             "60-69" = "2", 
+                             "70-79" = "3", 
+                             "80-89" = "4"))
+
+tab <- stat.table(index=list(Factory=Factory,Agegrp=Agegrp),
+                   contents=list(sum(n_deaths), 
+                                 sum(Pyears)), 
+                  data=Rubber, margins=T)
+
+print(tab, digits = 0)
+```
+
+上面的代碼計算了每個工廠不同年齡組的死亡人數 (總人數 160) ，以及追蹤的人年 (總人年 19345)。
+
+在 Stata 裏面的代碼更簡單(嗎？)
+
+```{r GLM-prac06-02, engine='stata', echo=FALSE}
+infile agegrp factory deaths pyrs using "/Users/wangcc.me/Documents/LSHTMlearningnote/backupfiles/RUBBER.RAW", clear
+
+label var agegrp "Age group (1:5-59; 2:60-69; 3: 70-79; 4: 80-89)"
+label var factor "Factory 1 or 2"
+label var deaths "Number of deaths"
+label var pyrs "Number of person-years of exposure"
+
+table factory agegrp, c(sum deaths) row col
+
+table factory agegrp, c(sum pyrs) row col
+```
+
+
+### 計算死亡率的對數值，繪製其與年齡組的點圖。
+
+```{r deathRAgeR, echo=TRUE, fig.asp=.7, fig.width=7, fig.cap='Rates increase with age and age specific rates are higher in factory 2.', fig.align='center', out.width='90%', cache=TRUE}
+
+Rubber <- Rubber %>%
+  mutate(logdeathR = log(n_deaths/Pyears))
+
+ggplot(Rubber, aes(x = Agegrp, y = logdeathR, shape = Factory)) +
+  geom_point(size=3)+
+  scale_y_continuous(breaks = seq(-7.5, -2.5, by = 0.5)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age group", y = "Log death rate (deaths/year)")  +
+  theme(axis.title = element_text(size = 17), 
+        axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+
+下面是 Stata 繪製圖\@ref(fig:deathRAge)的代碼：
+
+```
+gen logdeathR = log(deaths/pyrs)
+twoway (scatter logdeathR agegrp, name(deathRAge, replace) mlabel(factory)), xtitle(age group) xlabel (1(1)4.2)
+```
+
+```{r deathRAge, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Rates increase with age and age specific rates are higher in factory 2.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics("img/deathRAge.png")
+```
+
+
+不論你用哪個圖，都可以看出，死亡率隨年齡增長而增加，2號工廠的死亡率似乎在各個年齡組都較1號工廠高。
+
+
+### 請用數學語言描述死亡率和年齡組之間關係的模型。
+
+令 $Y_i$ 爲年齡組 $i, (i = 1,\dots,8)$ 死亡人數，對應的觀測時間則爲 $t_i$ 年。如果前提條件每名工人之間相互獨立可以認爲得到滿足，那麼 $Y_i$ 可以用一個死亡率爲 $\lambda_i$ 的泊松模型來描述：
+
+$$
+Y_i \sim \text{Po}(\mu_i) \text{ where } \mu_i = \lambda_i t_i
+$$
+
+對應的鏈接方程以及其線性預測變量之間的關係可以表述爲：
+
+$$
+\begin{aligned}
+\eta_i & = \log(\mu_i) = \log(t_i) + \beta_0 + \beta_1x_{1i} + \beta_2x_{2i} + \beta_3x_{3i} \\
+\text{where } x_{1i} & = \left\{ \begin{array}{ll}  0 \text{ if the } i \text{th group is not aged 60-69}\\  1 \text{ if the } i \text{th group is aged 60-69}\\ \end{array} \right. \\
+\text{where } x_{2i} & = \left\{ \begin{array}{ll}  0 \text{ if the } i \text{th group is not aged 70-79}\\  1 \text{ if the } i \text{th group is aged 70-79}\\ \end{array} \right. \\
+\text{where } x_{3i} & = \left\{ \begin{array}{ll}  0 \text{ if the } i \text{th group is not aged 80-89}\\  1 \text{ if the } i \text{th group is aged 80-89}\\ \end{array} \right. \\
+\end{aligned}
+$$
+
+#### 用R和Stata計算上述數學模型描述的死亡率和年齡之間關係的極大似然估計 (MLE)。年齡對於死亡率的效果有多強？
+  
+```{r GLM-prac06-03, cache=TRUE}
+# fit a model without "agegroup"
+mA <- glm(n_deaths ~ offset(log(Pyears)), 
+              family = poisson(link = "log"), data = Rubber)
+jtools::summ(mA, confint = TRUE, digits = 6)
+
+# fit a model with age group
+mB <- glm(n_deaths ~ Agegrp + offset(log(Pyears)), 
+              family = poisson(link = "log"), data = Rubber)
+jtools::summ(mB, confint = TRUE, digits = 6)
+
+lrtest(mA, mB)
+```
+
+你可以比較加入年齡和沒加入年齡時的兩個模型，如上面使用的似然比檢驗法 (likelihood ratio test)。
+
+在 Stata 你可以這樣做上面相同的事：
+
+```{r GLM-prac06-04, engine='stata', echo=FALSE}
+infile agegrp factory deaths pyrs using "/Users/wangcc.me/Documents/LSHTMlearningnote/backupfiles/RUBBER.RAW", clear
+
+gen lpyrs = log(pyrs)
+
+glm deaths, family(poisson) offset(lpyrs) link(log)
+est store A
+
+glm deaths i.agegrp, family(poisson) offset(lpyrs) link(log)
+est store B
+
+lrtest A B
+```
+
+
+其實Stata裏面還可以用簡化的 `Poisson` 命令
+
+```{r GLM-prac06-05, engine='stata', echo=FALSE}
+infile agegrp factory deaths pyrs using "/Users/wangcc.me/Documents/LSHTMlearningnote/backupfiles/RUBBER.RAW", clear
+
+gen lpyrs = log(pyrs)
+
+poisson deaths i.agegrp, e(pyrs)
+```
+
+#### 計算下列兩組年齡組對比之下的模型估計死亡率比 (rate ratios)
+
+1. 60-69歲 比 50-59歲 RR 及其 95%CI
+
+$$
+\exp(1.583) (\exp(1.005), \exp(2.161)) = 4.87 (2.73, 8.68)
+$$
+
+2. 80-89歲 比 70-79歲 RR 及其 95%CI 的計算
+
+$$
+\exp(\hat{\beta_3} - \hat{\beta_2}) = \exp(2.555 - 2.302) = 1.29
+$$
+
+爲了獲取 $\hat{\beta_3} - \hat{\beta_2}$ 的方差，已知 $\text{Var}(\hat{\beta_3} - \hat{\beta_2}) = \text{Var}(\hat{\beta_3}) + \text{Var}(\hat{\beta_2}) - 2\text{Cov}(\hat{\beta_3}, \hat{\beta_2})$。根據這個在概率論學到的方差性質，我們可以手動計算想要的方差和標準差，從而進一步獲取其 95% CI：
+
+You can also use `vce` command in Stata to obtain the Covariance matrix of coefficients of a fitted poisson model
+
+
+```{r GLM-prac06-06, cache=TRUE}
+vcov(mB) 
+```
+
+
+$$
+\begin{aligned}
+\text{Var}(\hat{\beta_3} - \hat{\beta_2}) & = \text{Var}(\hat{\beta_3}) + \text{Var}(\hat{\beta_2}) - 2\text{Cov}(\hat{\beta_3}, \hat{\beta_2}) \\
+& =  0.13025 + 0.08681 - 2 \times 0.07143 \\
+& = 0.0743 \\
+\Rightarrow \text{the 95%CI} & = \exp(2.555 - 2.303 \pm\sqrt{0.07143}) \\
+                             & = 0.75, 2.20 
+\end{aligned}
+$$
+
+```{r}
+uwIntr  
+```
+
 
 
 # 混雜的調整，交互作用，和模型的可壓縮性
