@@ -2410,14 +2410,168 @@ $$
 & =  0.13025 + 0.08681 - 2 \times 0.07143 \\
 & = 0.0743 \\
 \Rightarrow \text{the 95%CI} & = \exp(2.555 - 2.303 \pm\sqrt{0.07143}) \\
-                             & = 0.75, 2.20 
+                             & = (0.75, 2.20) 
 \end{aligned}
 $$
 
-```{r}
-uwIntr  
+在R裏你可以這樣計算：
+
+```{r GLM-prac06-07, cache=TRUE}
+# change the reference group to "70-79"
+Rubber <- Rubber %>% 
+  mutate(Agegrp1 = fct_relevel(Agegrp, "70-79"))
+
+mC <- glm(n_deaths ~ Agegrp1 + offset(log(Pyears)), 
+              family = poisson(link = "log"), data = Rubber)
+jtools::summ(mC, confint = TRUE, digits = 6, exp = TRUE)
 ```
 
+但是在 Stata 裏面可以使用靈活無比的 `lincom` 命令：
+
+```{r GLM-prac06-08, engine='stata', echo=FALSE}
+infile agegrp factory deaths pyrs using "/Users/wangcc.me/Documents/LSHTMlearningnote/backupfiles/RUBBER.RAW", clear
+
+gen lpyrs = log(pyrs)
+
+quitely: poisson deaths i.agegrp, e(pyrs)
+lincom 4.agegrp - 3.agegrp, eform
+```
+
+### 接下來的模型中在前面的基礎上加入工廠編號，你認爲是否有證據證明工廠之間的工人的死亡率在調整了年齡之後依然有差異？計算年齡調整過後的兩工廠之間死亡率之比和95%CI。
+
+```{r GLM-prac06-09, cache=TRUE}
+mD <- glm(n_deaths ~ Agegrp + Factory + offset(log(Pyears)), 
+              family = poisson(link = "log"), data = Rubber)
+jtools::summ(mD, confint = TRUE, digits = 6, exp = TRUE)
+
+lrtest(mD, mB)
+```
+
+從 `mD` 模型的報告來看，2號工廠比較1號工廠的工人死亡率比是 1.21 (95%CI: 0.89, 1.66)。兩個模型的似然比檢驗結果也提示，並無確實證據證明兩工廠工人的死亡率在調整了年齡因素之後有顯著差異。
+
+### 現在在前一步加了工廠變量的基礎上，重新擬合模型，加入工廠和年齡之間的交互作用項
+
+```{r GLM-prac06-10, cache=TRUE}
+mE <- glm(n_deaths ~ Agegrp + Factory + Factory*Agegrp 
+                    + offset(log(Pyears)), 
+              family = poisson(link = "log"), data = Rubber)
+summary(mE); jtools::summ(mE, confint = TRUE, digits = 6, exp = TRUE)
+```
+
+#### 請問這是一個怎樣的模型？
+
+這是一個有8組觀測數據，8個參數估計的模型，是一個飽和模型。 The model is saturated. 
+
+#### 有沒有足夠的證據證明工廠和年齡變量之間的交互作用項是有意義的？
+
+```{r GLM-prac06-11, cache=TRUE}
+lrtest(mE, mD)
+```
+
+似然比檢驗結果顯示，沒有證據證明二者之間交互作用項是有意義的。
+
+#### 用數學語言描述上述包含了交互作用項的模型，並利用這個模型手頭計算下列各組的死亡率：
+
+1. 1號工廠的 70-79 歲
+2. 2號工廠的 50-50 歲
+3. 2號工廠的 60-69 歲
+
+
+$$
+\begin{aligned}
+\eta_i  = \log(\mu_i) & = \log(t_i) + \beta_0 + \beta_1x_{1i} + \beta_2x_{2i} + \beta_3x_{3i} + \beta_4z_{i}  \\
+            & \;\;\; + \beta_5(x_{1i}z_{i}) + \beta_6(x_{2i}z_{i}) + \beta_7(x_{3i}z_{i})\\
+\text{where } x_{1i} & = \left\{ \begin{array}{ll}  0 \text{ if the } i \text{th group is not aged 60-69}\\  1 \text{ if the } i \text{th group is aged 60-69}\\ \end{array} \right. \\
+\text{where } x_{2i} & = \left\{ \begin{array}{ll}  0 \text{ if the } i \text{th group is not aged 70-79}\\  1 \text{ if the } i \text{th group is aged 70-79}\\ \end{array} \right. \\
+\text{where } x_{3i} & = \left\{ \begin{array}{ll}  0 \text{ if the } i \text{th group is not aged 80-89}\\  1 \text{ if the } i \text{th group is aged 80-89}\\ \end{array} \right. \\
+\text{and } z_{i} & = \left\{ \begin{array}{ll}  0 \text{ if the } i \text{th group is from factory 1}\\  1 \text{ if the } i \text{th group is from factory 2}\\ \end{array} \right. 
+\end{aligned}
+$$
+
+1. 1號工廠的 70-79 歲組中該模型估計的死亡率是
+
+$$
+\exp(\hat{\beta}_0 + \hat{\beta}_2) = \exp(-6.359 + 2.2778) = 16.9 /1000 \text{ person-years}
+$$
+
+
+2. 2號工廠的 50-59 歲組中該模型估計的死亡率是
+
+$$
+\exp(\hat{\beta}_0 + \hat{\beta}_4) = \exp(-6.359 + 0.089) = 1.89 / 1000 \text{ person-years}
+$$
+
+
+3. 2號工廠的 60-69 歲組中該模型估計的死亡率是
+
+$$
+\exp(\hat{\beta}_0 + \hat{\beta}_1 + \hat{\beta}_4 + \hat{\beta}_5) = \exp(-6.359 + 1.475 + 0.089 + 0.190) = 10.0 / 1000 \text{ person-years}
+$$
+
+
+#### 對比你計算的模型估計死亡率和實際觀測到的死亡率
+
+```{r GLM-prac06-12, cache=TRUE}
+tab <- stat.table(index=list(Factory=Factory,Agegrp=Agegrp),
+                   contents=list(sum(n_deaths/Pyears)), 
+                  data=Rubber, margins=FALSE)
+
+print(tab, digits = 7)
+```
+
+我們發現該模型估計的各組的死亡率和觀測值完全一致。
+
+### 現在把年齡當作連續型變量來考慮。擬合下列模型
+
+#### 只有年齡作爲連續型變量
+
+```{r GLM-prac06-13, cache=TRUE}
+mF <- glm(n_deaths ~ as.numeric(Agegrp) + offset(log(Pyears)), 
+              family = poisson(link = "log"), data = Rubber)
+jtools::summ(mF, confint = TRUE, digits = 6, exp = TRUE)
+```
+
+`mF` 的結果提供很強的證據證明年齡作爲連續型變量和死亡率的變化有關。年齡每增加10歲，死亡率增長的數字要乘以 2.24。
+
+#### 年齡和工廠兩個預測變量
+
+```{r GLM-prac06-14, cache=TRUE}
+mG <- glm(n_deaths ~ as.numeric(Agegrp) + Factory + offset(log(Pyears)), 
+              family = poisson(link = "log"), data = Rubber)
+jtools::summ(mG, confint = TRUE, digits = 6, exp = TRUE)
+
+lrtest(mG, mF)
+```
+
+並無有效證據證明工廠之間有死亡率的顯著區別。
+
+#### 年齡和工廠，及兩個變量的交互作用項
+
+
+```{r GLM-prac06-15, cache=TRUE}
+mH <- glm(n_deaths ~ as.numeric(Agegrp) + Factory  + as.numeric(Agegrp)*Factory + 
+          offset(log(Pyears)), family = poisson(link = "log"), data = Rubber)
+jtools::summ(mH, confint = TRUE, digits = 6, exp = TRUE)
+
+lrtest(mG, mH)
+```
+
+並無有效證據證明工廠之間的相互作用項有意義。
+
+
+### 計算只有年齡(連續型)和工廠兩個變量模型時的模型偏差 (deviance)，該模型和第一部分中飽和模型之間相比相差幾個參數(parameters)？你有怎樣的推論？
+
+
+```{r GLM-prac06-16, cache=TRUE}
+lrtest(mF, mE)
+```
+
+看上面似然比檢驗結果顯示，有一些不太強的證據 (p = 0.0262) 證明相對飽和模型來說，把年齡當連續變量的模型可能擬合度較差。所以把年齡當作分類型變量 (categorical) 會是比較好的選擇。
+
+
+### 對這個數據進行了這一系列的分析之後，你從流行病學的角度來說，有怎樣的結論？
+
+總的來說，死亡率隨着年齡增長而增加。60-69 歲組的死亡率是50-59 歲組的 4.8 (95% CI 2.7, 8.6) 倍。之後年齡每增長十歲死亡率也在增長，只是增長幅度逐漸減少。至於工廠之間的死亡率比較，2號工廠似乎有 21% 較高 (95%CI: -11%, 66%) 的死亡率。但是工廠之間的死亡率差異並無顯著性 (p = 0.22)。交互作用項的分析也表明，並沒有證據表明工廠之間的死亡率差異會由於年齡的變化而有所不同。
 
 
 # 混雜的調整，交互作用，和模型的可壓縮性
