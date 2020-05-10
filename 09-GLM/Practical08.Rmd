@@ -3,5 +3,139 @@
 
 在第一部分的數據分析中，我們會使用邏輯回歸模型來分析來自病例對照研究設計的數據，並獲取比值比 (odds ratios)。
 
-該病例對照研究數據來自一項關於食道癌的研究。病例是200名被診斷爲患有食道癌的法國男性。對照組則來自176名健康男性。你可以從作者的[個人網站](http://faculty.washington.edu/norm/datasets.html)下載原始數據。
+該病例對照研究數據來自一項關於食道癌的研究 [@breslow1980volume]。病例是200名被診斷爲患有食道癌的法國男性。對照組則來自176名健康男性。
+
+數據包含的變量及其解釋描述如下：
+
+| Variable Name   | Content                                                                              |
+|-----------------|--------------------------------------------------------------------------------------|
+| `case`          | 1 = case, 0 = control                                                                |
+| `age_group`     | age group [1: 25-34; 2: 35-44; 3: 45-54; 4: 55-64; 5: 65-74; 6: 75+]                 |
+| `tobacco_group` | tobacco intake group [0: None; 1: 1-9 g/d; 2: 10-19 g/d; 3: 20-29 g/day; 4: 30+ g/d] |
+| `alcohol_grp`   | alcohol intake group [0: 0-39 g/d; 1: 40-79 g/d; 80-119 g/d; 3: 120+ g/d]            |
+
+
+該研究的主要目的是分析吸菸量 `tobacco_group` 與飲酒量 `alcohol_grp` 是否是食道癌的危險因子。變量中的年齡 `age_group` 則作爲唯一已知的混雜因子。
+
+
+#### 簡單初步總結各個解釋變量的分佈及特徵。思考吸菸量和飲酒量，吸菸量和年齡之間有怎樣的關係。
+
+```{r  GLM-prac08-01, cache=TRUE}
+Oesophageal <- read_dta("../backupfiles/oesophageal_data-1.dta")
+
+tab <- stat.table(index=list(Tobacco_gr = tobacco_group, 
+                             Alcohol_gr = alcohol_grp),
+                   contents=list(count(), 
+                                 percent(alcohol_grp)), 
+                  data=Oesophageal, margins=TRUE)
+
+print(tab, digits = 2)
+
+tab <- stat.table(index=list(Tobacco_gr = tobacco_group, 
+                             Age_gr = age_group),
+                   contents=list(count(), 
+                                 percent(age_group)), 
+                  data=Oesophageal, margins=TRUE)
+
+print(tab, digits = 2)
+```
+
+
+似乎在吸菸量和飲酒量之間存在正關係，吸菸較多的人，飲酒量也呈現較多的趨勢。另外，不吸菸的人中，以及吸菸量最多的人中，都有較多的年輕人。吸菸量和飲酒量也許都和患有食道癌相關。而且上述簡單的表格總結也提示，吸菸量同時和飲酒量和年齡相關。
+
+#### 我們先從分析吸菸習慣着手。將研究對象根據吸菸習慣分爲吸菸者 (`tobacco_group = 1~4`) 與非吸菸者 (`tobacco_group = 0`)。使用2 $\times$ 2表格分析吸菸與否和患有食道癌與否之間的關係。使用公式手頭計算比值比 0dds ratio，和它的 95% 信賴區間。用統計軟件確認你的計算結果是否正確。
+
+```{r GLM-prac08-02, cache=TRUE}
+Oesophageal <- Oesophageal %>% 
+  mutate(Tobacco_2 = as.factor(tobacco_group)) %>% 
+  mutate(Tobacco_2 = fct_collapse(Tobacco_2, 
+                                  NonSMker = "0",
+                                  SMker = c("1", "2", "3", "4")))
+
+tab <- stat.table(index=list(Case = case, 
+                             Tobacco_gr = Tobacco_2),
+                   contents=list(count(),
+                                 percent(Tobacco_2)), 
+                  data=Oesophageal, margins=TRUE)
+
+print(tab, digits = 2)
+```
+
+
+手動計算比值比和95%信賴區間：
+```{r GLM-prac08-03, cache=TRUE}
+OR <- (255*191)/(9*521)
+
+Var <- 1/255 + 1/191 + 1/9 + 1/521 
+Var
+OR_L <- OR*exp(-1.96*sqrt(Var))
+
+OR_U <- OR*exp(1.96*sqrt(Var))
+
+c(OR, OR_L, OR_U)
+```
+
+所以，從表格推算的比值比 OR = 10.39；該比值比的對數對應的分佈方差估算爲 0.122。據此，該比值比的 95% CI爲 (5.24, 20.61)。有很強的證據表明，吸菸習慣的有無和患有食道癌之間有正關係。
+
+用R驗證你的計算結果：
+
+```{r GLM-prac08-04, cache=TRUE}
+
+with(Oesophageal, epiDisplay::cc(Tobacco_2, case, 
+                                 graph = FALSE))
+```
+
+用 Stata 做一樣的事情：
+
+```{r GLM-prac08-05, engine='stata', echo=FALSE}
+use "../backupfiles/oesophageal_data-1.dta"
+
+gen tobacco_2 = .
+replace tobacco_2 = 0 if tobacco_group == 0
+replace tobacco_2 = 1 if tobacco_group >= 1
+
+mhodds case tobacco_2
+```
+
+值得注意的是，Stata 裏面的 `mhodds` 用的是不同於R的方法計算 95% 信賴區間的。
+
+#### 考慮使用邏輯回歸模型來獲取我們感興趣的比值比。請用數學語言寫下下列兩個模型的表達式：
+
+1. 吸菸與否爲結果變量，病例和對照的標記爲預測變量。
+
+令 $X$ 爲吸菸與否變量，$D$ 爲病例/對照標記變量。
+
+$$
+\text{Pr}(X = 1 | D = d) = \frac{e^{\alpha^* + \beta d}}{1 + e^{\alpha^* + \beta d}}
+$$
+
+
+2. 病例和對照的標記爲結果變量，吸菸與否爲預測變量。
+
+使用相同的標記來表達這個模型，另外，用 $S = 1$ 表示該對象被選做本次研究的病例-對照樣本。所以，在下面的模型中，不要忘記我們還有一個條件變量，也就是該對象被選入本次實驗中。
+
+$$
+\text{Pr}(D = 1|X = x, S = 1) = \frac{e^{\lambda^* + \beta x}}{1 + e^{\lambda^* + \beta x}}
+$$
+
+
+#### 用你熟悉的統計軟件分別擬合上述兩個邏輯回歸模型。比較兩個解析報告的結果，並試着解釋他們各自的截距估計量的含義。用概率的數學表達式來說明二者的不同。
+
+```{r GLM-prac08-06, cache=TRUE}
+M1 <- glm(Tobacco_2 ~ case, 
+          data = Oesophageal, 
+          family = binomial(link = logit))
+summary(M1); jtools::summ(M1, digits = 6, confint = TRUE, exp = TRUE)
+
+M2 <- glm(case ~ Tobacco_2, 
+          data = Oesophageal, 
+          family = binomial(link = logit))
+summary(M2); jtools::summ(M2, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+
+
+你看到兩個模型計算出的比值比結果是完全一致的。這符合我們的預期。
+
+其中，第一個模型的截距 $\exp(\hat{\alpha*}) = 2.043$。用概率的數學表達式表達爲： $\exp(\hat{\alpha*}) =\text{Pr}(X=1 | D=0)/\text{Pr}(X = 0 | D = 0)$。
 
