@@ -1,0 +1,265 @@
+
+## 明確分析目的
+
+作爲統計學家，着手分析數據之前，千萬記得，必須要制定一個儘可能詳盡的分析計劃。即使你的分析，可能並不一定受到第三方的監管或者調控，因爲同行評審的專家們，喜歡看到你分析的目的明確，假設檢驗的過程是經過仔細推敲的。同時，也可以避免陷入 “[玩弄數據 (data dredging)](https://en.wikipedia.org/wiki/Data_dredging)” 指控的危險。
+
+數據分析的目的，可以分成三大類：
+
+1. 估計一個或者幾個暴露變量，對結果變量的影響。以此目的的數據分析過程，需要我們有[醫學偵探](https://en.wikipedia.org/wiki/John_Snow)一樣的眼光和見解，從數據中判斷那些需要被調整和控制的混雜因子，從而提高你的分析效率。最常見的例子是分析隨機對照臨牀實驗 (RCT) 中，療效的差異；或者流行病學研究中，分析某種生活習慣，和疾病的發生或者死亡之間的關係。
+2. 在現有的數據庫中，尋找並且建立 “最佳” 模型。以此目的的數據分析，需要我們對模型中的結果變量有極爲深入的瞭解，把與之相關的**所有要因**，儘可能多的納入你的分析模型。常見的例子如，在某個特定人羣的數據庫中尋找並確定能夠決定自殺這一結果變量的決定性因素，之所以有這樣的目的，背後可能有決策者希望尋找這些決定性因素後採取一些對策從而達到改善現狀的最終目的。所以找到和結果變量相關的因素，是此類研究的重中之重。
+3. 建立預測模型。例如，某項研究的目的是爲了能夠建立一個能夠預測孕期胎兒患有唐氏綜合症的預測模型，用能夠測量的一些指標(如血液指標，或者母親的一些健康指標)，通過模型的算法，去計算胎兒患病的概率是多大。這樣的模型，對與診斷醫學有重大意義。所以，此類研究的目的，不是爲了尋找確定和胎兒患病相關的全部要因，而是**怎樣才能提高模型預測的準確度**，提高診斷的效率，減少錯誤診斷，拯救生命。
+
+當然，上述目的中的 2 和 3 有時候易讓人混淆，因爲我們可能建立最佳模型，除了想要找到和 “自殺” 這一結果相關的所有要因，還可能希望通過該模型做出預測，尋找可能自殺的高危人羣，進行干預。這並不矛盾。
+
+## 分析目的 1.1 -- 估計 RCT 中治療效果 (treatment effect)
+
+先揀最軟的柿子捏，RCT 的療效比較作爲數據分析的目的時，情況要比其他的目的相對簡單些。RCT 的隨機過程，確保了臨牀試驗不會受到混雜因素的影響。但是我們還會出於爲了**提高統計分析效能**，**改善估計的精確度**的目的，對參與臨牀試驗的受試者最初測量的一些特徵進行調整。當然，不是所有的數據專家，也不是所有的 RCT 實施者都同意進行這一調整的。如果確定要調整，放入模型中的變量，可能常常是一開始隨機分配時用到的那些用於將受試者分層歸類或者最小化 (minimisation) 的那些變量。
+
+基線值調整 (baseline adjustment)，在結果變量爲**連續型，同時模型是線性迴歸模型**時，能夠顯著提高統計效能 (statistical efficiency)，降低估計值的標準誤。理論上，一個基線測量時的連續型變量，如果它和實驗後測量的連續型結果變量之間的 **皮爾森相關係數 Pearson correlation coefficient** 是 $r$，那麼如果你用 ANCOVA 模型調整了這個基線值的話，療效差異估計值的標準誤會是沒有調整時的 $\sqrt{1-r^2}$ 倍 (也就是永遠比不調整時要小，大大提高精確度，縮小療效差異估計值的 95% 信賴區間)。
+
+但是，但是，但是！如果一個 RCT 測量的結果變量是一個二分類變量 (死亡/存活)，線性迴歸模型不適用，只能使用邏輯迴歸時，模型中加入和結果變量相關 (和暴露變量無關) 的基線值的做法对分析效能的提高顯得十分有限，相反還会受到邏輯迴歸的不可壓縮性較大的影響 (Section \@ref(collapsibility))。
+
+再把之前講邏輯迴歸不可壓縮性時用过的例子拿过来这里解释这个现象：
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 51.1: **Non-collapsibility** of logit link in GLM **(stratified data)**</caption>
+ <thead>
+  <tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;> Strata 1 </div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;> Strata 2 </div></th>
+</tr>
+<tr>
+   <th style="text-align:center;"> Outcome </th>
+   <th style="text-align:center;"> Drug </th>
+   <th style="text-align:center;"> Placebo </th>
+   <th style="text-align:center;"> Drug </th>
+   <th style="text-align:center;"> Placebo </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> Success </td>
+   <td style="text-align:center;"> 90 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 10 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Failure </td>
+   <td style="text-align:center;"> 10 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 50 </td>
+   <td style="text-align:center;"> 90 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 100 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Odds Ratios </td>
+   <td style="text-align:center;"> 9 </td>
+   <td style="text-align:center;">  </td>
+   <td style="text-align:center;"> 9 </td>
+   <td style="text-align:center;">  </td>
+  </tr>
+</tbody>
+</table>
+
+上面的數據表示，分層變量 (Strata 1-2) 本身和使用藥物和安慰劑無交互作用，也和藥物使用與臨牀試驗結果之間的關係無關。但是，即使這個分類變量無關，壓縮後的數據計算獲得的比值比和分層時的比值比差異巨大：
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 51.2: **Non-collapsibility** of logit link in GLM **(collapsed data)**</caption>
+ <thead>
+  <tr>
+   <th style="text-align:center;"> Outcome </th>
+   <th style="text-align:center;"> Drug </th>
+   <th style="text-align:center;"> Placebo </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> Success </td>
+   <td style="text-align:center;"> 140 </td>
+   <td style="text-align:center;"> 60 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Failure </td>
+   <td style="text-align:center;"> 60 </td>
+   <td style="text-align:center;"> 140 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> 200 </td>
+   <td style="text-align:center;"> 200 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Odds ratio </td>
+   <td style="text-align:center;"> 5.4 </td>
+   <td style="text-align:center;">  </td>
+  </tr>
+</tbody>
+</table>
+
+實際在 R 裏擬合邏輯迴歸模型的結果如下：
+
+
+```{r GLM-0510, echo=FALSE, cache=TRUE}
+Strata <- c(rep("1",200), rep("2", 200))
+Treatment <- c(rep("Drug", 100), rep("Placebo", 100), rep("Drug", 100), rep("Placebo", 100))
+Result <- c(rep(1,90), rep(0,10), rep(1,50), rep(0,50),
+            rep(1,50), rep(0,50), rep(1,10), rep(0,90))
+RCT <- data.frame(Strata, Treatment, Result)
+
+#with(RCT, table(Result, Treatment, Strata))
+
+Model1 <- glm(Result ~ Treatment, family=binomial(link = logit),
+              data = RCT)
+summary(Model1)
+
+Model2 <- glm(Result ~ Treatment + Strata, family=binomial(link = logit),
+              data = RCT)
+summary(Model2)
+```
+
+從結果的迴歸係數估計和計算的標準誤來看，調整了其他的變量會引起：
+
+1. 使對數比值比的估計量升高 (這是由於模型的不可壓縮性) $1.69 \rightarrow 2.19$；
+2. 對數比值比的標準誤估計升高 (非但不能增加估計精確度，反而起到了反作用) $0.22\rightarrow0.27$；
+3. 對數比值比的統計檢驗量升高 (由於對數比值比的升高比標準誤升高的更多一些) $7.77\rightarrow7.99$。
+
+事實上，上面的現象在使用邏輯迴歸的時候基本上都會呈現。在經典論文 [@Robinson1991] 中給出了詳細的論證。所以其實使用邏輯迴歸擬合數據的 RCT 臨牀試驗，我們可以推論，**當模型中加入第三個僅和結果變量有關的基線共變量** (baseline covariates)，如果模型估計的對數比值比在調整前後變化不大 (即，不可壓縮性造成的影響很小)，那這樣的調整對於改善分析的統計效能上幾乎也沒有貢獻。(跟使用線性迴歸的 RCT 完全不同！)
+
+由於邏輯迴歸受使用 $\text{logit}$ 鏈接方程時不可壓縮性的侷限，同時還由於使用 $\text{log}$ 鏈接方程時獲得的危險度比 (risk ratios) 比比值比 (odds ratios) 更加容易讓人理解，結果變量爲二分類的 RCT 臨牀試驗常常會選用 $\text{log}$ 鏈接方程的廣義線性迴歸模型 (見 Section \@ref(logit-or-log) 第 5 條討論)。選用 $\text{log}$ 鏈接方程的 GLM 最大的問題在於，當模型中**加入過多的預測變量**時，會導致模型**無法收斂 (converge)--無法找到極大似然估計**。
+
+至於使用泊松迴歸模型的時候，預測變量如果放入不合理，那麼很容易違反泊松分佈的前提 (方差和均值相同)。對於違反了泊松分佈前提，模型變得過度離散 (over-dispersed) 的 GLM，加入適當的基線共變量 (baseline covariates) 則有助於減少模型的過度離散，減小參數估計的標準誤 (使之變得更精確些)。和線性迴歸相同的是，泊松迴歸模型不受不可壓縮性 (non-collapsibility) 的影響。
+
+### RCT 數據分析的一些不成熟的小建議
+
+1. RCT 臨牀試驗通常都有嚴格的數據管理和監控，且統計分析計劃 (statistical analysis plan, SAP) 在任何一個 RCT 都已經是必須條件。除此之外，還要在試驗進行前就制訂所有詳細的計劃，並寫成實驗實施計劃文件，以供參與的所有人及倫理審查委員會等各種第三方機構的監督。所以，RCT 的統計分析計劃必須儘量考慮到所有的可能情況，因爲一旦開始了試驗，分析計劃是很難改動的。
+2. SAP 必須詳細記錄哪些共變量需要被調整，常見的是實驗設計階段用於實施隨機化過程的那些特徵變量。對於連續型結果變量，(還有過度離散的計數型變量)，基線共變量的調整許多時候會有助於改善參數估計的精確度，提高統計效能。對於使用邏輯迴歸模型的試驗，調整基線共變量則沒有太多的好處，且調整後的比值比的含義會發生較大的改變，需慎重。
+3. 有些統計學家支持調整基線共變量，認爲這樣做有助於減少萬一隨機化不徹底造成的治療組和對照組之間隨機產生的殘差偏倚 (residual bias)，但是你無法提前欲知那些變量可能會產生隨機的殘差偏倚，這樣便無法在事先需要準備的SAP計劃文件中明確到底哪些基線變量需要被調整。
+4. 另有許多研究者喜歡在 RCT 中尋找交互作用的存在，但是他們常常忽略掉的一點是，一個 RCT 本身的檢驗效能是 80%-90%，其用於檢驗交互作用的效能會更低。建議在 RCT 中儘量少 (甚至不建議) 進行任何交互作用的統計檢驗。
+
+## 分析目的 1.2 -- 估計流行病學研究中暴露變量和結果變量的關係 (exposure effect)
+
+前文討論的關於調整僅僅和結果變量相關 (與暴露變量無關) 的基線共變量的內容，同樣適用與一般的流行病學研究。流行病學研究中另一個 (應該是更加) 重要的點是，混雜因子的排查和調整。
+
+實例：
+
+- $Y$ 標記結果變量，如嬰兒的出生體重；
+- $X_1$ 標記最主要的 (想要分析其與結果變量之間的關係的) 預測變量，如母親孕期高血壓 (是/否)；
+- $X_2, X_3, \cdots, X_Q$ 標記其他非主要預測變量，但是可能是 $X_1, Y$ 之間關係中重要的潛在混雜因子，如嬰兒的性別/母親孕前體重/嬰兒胎齡等等。
+
+在這個簡單流行病學研究實例中，我們關心的問題包括：
+
+1. 主要暴露變量--孕期高血壓，和結果變量--嬰兒出生體重二者的未调整前 (粗) 關係 (crude/before adjustment association) 是什麼樣的？
+2. 主要暴露變量和結果變量之間的關係是否被其他因素影響 (例如胎齡)？如果有，那麼調整後的關係會發生怎樣的變化？
+3. 有沒有其他的變量會改變 (modify) 主要暴露變量和結果變量之間的關係？也就是，有沒有那個變量和主要暴露變量有交互作用？
+4. 有沒有其他的變量和主要暴露變量無關，卻可能和結果變量有關係呢？如果存在這樣的變量，模型中調整它在一些情況下可能會改善擬合的結果提高模型的統計效能 (statistical power)。
+5. 收集的變量中，有沒有哪個變量可能是在主要暴露變量和結果變量之間因果關係 (如果存在因果關係的話) 的通路上 (on the causal pathway) 的呢？如果有，這樣的變量應該被認爲是媒介因子 (mediator)。
+
+### 不成熟的小策略
+
+這是很常見的簡單流行病學數據分析。可以按照 (但不一定非要按照) 下面建議的步驟實施統計分析：
+
+1. 第一步，分析主要暴露變量和結果變量之間的未調整前 (粗) 關係： <br> $$g\{ E(Y|X_1) \} = \alpha + \beta_1 X_1$$
+2. 第二步，逐個分析**其餘的變量和主要暴露變量之間的關係**，以及這些**潛在的混雜因子和結果變量之間的關係**。注意，這一步可能耗時較長，但是它並不是決定模型中是否要加入某個或某些非主要暴露變量的步驟，通過**這一步過程有助於我們分析和理解，進一步分析中調整前後的參數估計變化**。
+3. 第三步，建立主要暴露變量和這些潛在混雜因子同時放入模型中的 GLM，逐步放入，**一次放入一個 (one at a time) 潛在混雜因子**，和上一步分析的三者之間的關係相結合，分析調整該潛在混雜因子前後，主要暴露變量的迴歸係數的參數估計變化的原因。<br> $$g\{ E(Y|X_1, X_k) \} = \alpha^* + \beta_1^*X_1 + \beta_kX_k,\; k= 1,\cdots,Q$$
+
+我們來分析這個可以從 [Stata 網站上下載的數據](http://www.stata-press.com/data/r12/lbw.dta)：
+
+- 第一步，先看看暴露變量和結果變量之間的關係
+
+```{r  GLM-0511, cache=TRUE, warning=FALSE, message=FALSE}
+lbw <- read_dta("http://www.stata-press.com/data/r12/lbw.dta")
+lbw$race <- factor(lbw$race)
+lbw$smoke <- factor(lbw$smoke)
+lbw$ht <- factor(lbw$ht)
+a <- Epi::stat.table(list("Birthweight <2500g" = low, "History of hypertension"=ht), list(count(),percent(low)), data = lbw, margins = TRUE)
+# We first tabulate the data
+print(a, digits = c(percent = 2))
+```
+
+- 第二步，分析母親高血壓病史和嬰兒低出生體重之間的調整前 (粗) 關係。
+
+```{r  GLM-0512, cache=TRUE}
+Model0 <- glm(low~ht, data = lbw, family = binomial(link = "logit"))
+summary(Model0); epiDisplay::logistic.display(Model0)
+```
+
+所以，數據提供了一些證據證明母親的高血壓病史和嬰兒低出生體重之間可能存在正關係，這個調整前的關係是，粗比值比 (crude odds ratio) 爲 3.37 (1.02, 11.09)。
+
+- 接下來，分析潛在的混雜因子是否和主要暴露變量相關：
+
+```{r  GLM-0513, cache=TRUE}
+# lwt is the last weight of mothers before pregnancy
+Model1 <- lm(lwt ~ ht, data = lbw)
+summary(Model1); epiDisplay::regress.display(Model1)
+```
+
+可見，有高血壓病史的母親，孕前體重較高。再看其與結果變量是否有關係：
+
+```{r  GLM-0514, cache=TRUE}
+Model2 <- glm(low ~ lwt, data = lbw, family = binomial(link = "logit"))
+summary(Model2); epiDisplay::logistic.display(Model2)
+```
+
+由此知，母親孕前體重較高的人，有較低的可能剩下低出生體重的嬰兒。這兩個單獨的關係，各自看都具有 5% 的統計學意義，但是這 (或者其他變量分析的結果沒有統計學意義時) 並不是決定模型中是否加入母親孕前體重這一潛在的混雜因子的理由。接下來，我們通過模型中加入母親孕前體重這一變量前後模型的參數估計變化來分析：
+
+```{r  GLM-0515, cache=TRUE}
+Model3 <- glm(low ~ ht + lwt, data = lbw, family = binomial(link = "logit"))
+summary(Model3);epiDisplay::logistic.display(Model3)
+```
+
+加入了孕前體重的模型給出的母親是否有高血壓病史對嬰兒的低出生體重關係的比值比估計爲 $6.39$，這很明顯比調整孕前體重前的粗比值比 $(3.37)$ 大了很多。這個比值比估計的變化有兩個原因：
+
+1. (常被忽略的) 邏輯迴歸模型的不可壓縮性導致的；
+2. 母親孕前體重對高血壓病史和嬰兒的低出生體重之間的關係造成了混雜效應。
+
+上面的分析結果，告訴我們，數據提供了足夠的證據證明母親孕前體重和是否有高血壓病史，在調整了彼此之後，仍然獨立地和嬰兒低出生體重的發生有相關性。這裏，我們可以下結論認爲，模型中加入母親孕前體重作爲混雜因子，是合情合理的。
+
+完成了目前爲止的初步分析和混雜因子的判斷以後，下一階段的分析側重於尋找有沒有任何第三方的預測變量，會對主要暴露變量 $X_1$ (孕期高血壓) 與結果變量 $Y$ (嬰兒出生體重過低) 之間的關係產生交互作用。如果數據中的預測變量有多個，那可能導致需要分析潛在的交互作用有許多對，通常建議在遇到多個預測變量之間的複雜關係需要討論的時候，建議不要一股腦全部作交互作用的分析，而是限定一個或者幾個最有可能有交互作用的變量就可以了。否則模型過於複雜，反而不利於理解。一般生物醫學的統計分析中考慮的重要交互作用分析，需要有重要的生物學意義，常見的例子是年齡，性別等。
+
+
+本節使用的例子中，令人感興趣的是，母親的孕前體重，會不會對妊娠高血壓的有無與嬰兒出生體重過低之間的關係造成交互作用：
+
+```{r  GLM-0516, cache=TRUE, message=FALSE, warning=FALSE}
+Model4 <- glm(low ~ ht*lwt, family = binomial(link = "logit"), data = lbw)
+summary(Model4); epiDisplay::logistic.display(Model4)
+```
+
+由於交互作用項結果爲 `ht1:lwt      0.003732   0.016173   0.231  0.81749`，無足夠的證據證明孕前體重會對妊娠高血壓和嬰兒出生體重過低之間的關係造成交互作用。
+
+如果確認沒有交互作用，建立本例最終模型前的幾個建議：
+
+1. 最終分析 $X_1, Y$ 之間關係的模型，需要加入我們逐一甄別之後確認過的混淆因子，此時稱爲**模型 1**；
+2. 對於確認不是 $X_1, Y$ 之間關係的混淆因子的那些剩餘變量，逐一加入**模型 1**，比較前後是否模型中各個混淆因子的參數估計是否發生了變化 (有沒有混淆因子的混淆因子？)；
+3. 最終模型中的變量，需要包含前兩步確認過的全部混淆因子；
+4. 在報告中把調整前後的參數估計整理成表格。
+
+如果在分析過程中發現了有重要意義的交互作用，那麼除了包含全部的混淆因子之外，你的最終模型中還需加入重要的交互作用項。此時需要報告的參數估計是有交互作用項部分的分層比值比/其他指標。
+
+### 補充
+
+除了使用二項分佈的邏輯迴歸之外，當結果變量是連續型或者計數型，也就是分析模型使用線性迴歸 (ANCOVA)，或者 (可能過度離散的) 泊松迴歸時，爲了提高模型的統計效能，減小參數估計的標準誤，模型可以選擇進一步調整一個或幾個**只和結果變量有關的基線變量**。此時，在你寫論文或者報告時，**必須把這些變量和確認是混雜因子的變量加以區分**，因爲加它們進入模型的目的不同。
+
+
+## 分析目的 2 和 3 -- 建立預測模型 (predictive models)
+
+建立預測模型的過程，其實就是選擇哪個或者那些變量進入模型的過程。方法有很多，可惜的是，沒有哪種是公認完美的。這裏只介紹兩種最常見，也最常被批評的方法 -- 前/後 逐步選擇法 (forward stepwise selection/backward elimination)。強調一下，逐步法本身並不是神奇法術，不同的算法選擇的變量自然會有不同，如果你用了逐步選擇法，選出來的模型變量僅僅只能作爲參考，而不能作爲最終結論。
+
+```{r GLM50, cache=TRUE}
+vitc <- haven::read_dta("backupfiles/vitC.dta")
+vitc$ctakers <- factor(vitc$ctakers)
+vitc$sex <- factor(vitc$sex)
+
+stats::step(lm(seruvitc~1,data=vitc[complete.cases(vitc),]),direction="forward",scope=~age+height+weight+sex+cigs+ctakers)
+
+stats::step(lm(seruvitc~.,data=vitc[complete.cases(vitc),]),direction="backward")
+```
+

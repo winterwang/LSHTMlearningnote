@@ -1,0 +1,399 @@
+
+## 流行病學研究最常用的實驗設計
+
+在流行病學研究中，我們最關心的無非是 暴露變量 (治療方案的選用，或者一些對象的某些特徵如吸菸或飲酒等生活習慣) 與結果變量 (罹患某種我們關心的疾病與否，或者死亡與否) 之間的關係。爲了方便解釋本章暫且只考慮 **單一的結果變量 (univariate)** 的情況，不過不要忘了真實世界中的數據和實驗，我們常要 **同時處理多個不同的結果變量 (multivariate)**。
+
+流行病學最常用的兩種研究設計是：
+
+- 隊列研究/前瞻性研究 cohort or prospective studies；
+- 病例對照/回顧性研究 case-control or retrospective studies。
+
+無論是這兩種研究中的哪一種，都要從定義研究的人羣開始 (start by defining some population we wish to study)。例如某個年齡段的男性或者女性；某個特定時間段內，在某特定地區範圍內生活的所有人等。這被定義爲 **潛在研究人羣 (underlying population of interest)**。
+
+如果是**隊列研究**，我們需要對這個潛在研究人羣取樣，選取具 **有代表性的，且有足夠樣本量** 的一羣個體 (隊列) 參與研究。那些我們要研究的 **暴露變量 $(\mathbf{X})$** 被提前定義好，然後在開始研究的時候收集整理成數據庫。之後這個隊列的參與者不斷被隨訪，這個時間段可以是先定義好的 (一年，五年，十年...)，也可以因人而異，最終直至每個個體的結果變量被觀測到 $(D=1 \text{ or } D=0)$。更一般地，如果我們要研究的暴露因素是二分類的，甚至是多分類的，我們可能會使用一些取樣的技巧，從而保證取樣構成的隊列能夠真實地反應該暴露因子在人羣中的分佈情況，保證隊列的代表性。
+
+如果是**病例對照研究**，從它的別名 -- 回顧性研究 -- 也可以看出，它的研究起點和隊列研究相反，是從收集到的病例開始的 $(D=1)$。有了病例以後，我們從人羣中沒有該結果變量 $(D=0)$ 的人羣中，取適合樣本量的人作爲對照組。然後再分別對病例和對照組用採訪或者問卷，或者調取過去的病例記錄/數據庫記錄等等尋找他們是否接觸過我們要研究的暴露變量。
+
+到這裏，如果你還沒暈，恭喜你應該能理解爲什麼說**病例對照研究研究的是 “結果的原因/causes of effect”**；**隊列研究研究的是 “原因導致的結果/effect of causes”**。二者的終極目標卻是一致的 -- 尋找暴露和結果二者之間的關係/To investigate the association between exposures and the outcomes -- 只是手段不同而已。
+
+觀察性研究 (不論是隊列還是病例對照研究)，除了我們一定會測量並收集的暴露變量數據，在分析過程中還不可避免地需要把混雜效應考慮進來，也就是我們還必須測量並收集那些潛在的混雜因子的數據 $(W)$。圖 \@ref(fig:cohort-case-control) 用簡單示意圖總結了 $W (\text{ confounders }), X (\text{ exposures }), D (\text{ outcomes })$ 之間，在不同實驗設計下的關係。
+
+
+```{r cohort-case-control, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Path diagrams showing relationships between variables in the underlying population and selection to a cohort study and a case-control study.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics("../img/Selection_114.png")
+```
+
+## 以簡單二分類暴露變量爲例 {#GLM8-3}
+
+### 先決條件
+
+我們以一個最簡單的二分類暴露變量 $(X)$ (例如是否接觸了某種化學試劑)，和一個二分類結果變量 $(D)$ (是否患有食道癌) 爲例展開：
+
+- 觀察對象樣本量爲 $n, i = 1,\cdots,n$；
+- $X_i$ 爲一個二分類暴露變量 (是否接觸了某種化學試劑，$1=$是，$0=$否)；
+- $D_i$ 爲一個二分類結果變量 (是否有食道癌，$1=$是，$0=$否)。
+
+所以，該研究的潛在研究人羣可以被分成四組：$(X=1,D=1),(X=1,D=0),(X=0,D=1),(X=0,D=0)$。如果用 $\pi_{11}, \pi_{10}, \pi_{01}, \pi_{00}$ 標記每組人在該潛在研究人羣中所佔的比例，那麼有：
+
+$$
+\begin{aligned}
+\pi_{xd} & = \text{Pr}(X=x, D=d) \\
+\pi_{11} &+ \pi_{10} + \pi_{01} + \pi_{00}  = 1
+\end{aligned}
+(\#eq:GLM8-123)
+$$
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 50.1: Probabilities associated with binary explanatory and binary response variables **in the underlying population structure** </caption>
+ <thead>
+  <tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;"> $D$ </div></th>
+</tr>
+<tr>
+   <th style="text-align:center;">   </th>
+   <th style="text-align:center;">   </th>
+   <th style="text-align:center;"> $0$ </th>
+   <th style="text-align:center;"> $1$ </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> $X$ </td>
+   <td style="text-align:center;"> $0$ </td>
+   <td style="text-align:center;"> $\pi_{00}$ </td>
+   <td style="text-align:center;"> $\pi_{01}$ </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;">  </td>
+   <td style="text-align:center;"> $1$ </td>
+   <td style="text-align:center;"> $\pi_{10}$ </td>
+   <td style="text-align:center;"> $\pi_{11}$ </td>
+  </tr>
+</tbody>
+</table>
+
+
+
+這裏我們應用概率標記法來輔助理解隊列研究：我們從潛在研究人羣中抽樣，觀察其暴露情況，再追蹤其結果變量。所以實際上，**隊列研究的樣本，來自與對暴露與否 $(X=0, X=1)$ 兩組人的抽樣**，所以我們實際求的是，
+
+$$
+\begin{equation}
+\text{Pr}(D=d|X=x) = \frac{\pi_{xd}}{\pi_{x0} + \pi_{x1}}
+\end{equation}
+$$
+
+
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-color:#ccc;border-spacing:0;}
+.tg td{background-color:#fff;border-color:#ccc;border-style:solid;border-width:0px;color:#333;
+  font-family:Arial, sans-serif;font-size:14px;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{background-color:#f0f0f0;border-color:#ccc;border-style:solid;border-width:0px;color:#333;
+  font-family:Arial, sans-serif;font-size:14px;font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-baqh{text-align:center;vertical-align:top}
+.tg .tg-0lax{text-align:left;vertical-align:top}
+.tg .tg-nrix{text-align:center;vertical-align:middle}
+</style>
+<table class="tg">
+<caption>表 50.2: Probabilities associated with binary explanatory and binary response variables **in a cohort study**</caption>
+<thead>
+  <tr>
+    <th class="tg-0lax"></th>
+    <th class="tg-baqh" colspan="2"> $D$ </th>
+    <th class="tg-nrix" rowspan="2"> $\text{Pr}(D=d|X=x)$</th>
+  </tr>
+  <tr>
+    <td class="tg-0lax"> $X$ </td>
+    <td class="tg-0lax"> $0$ </td>
+    <td class="tg-0lax"> $1$ </td>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0lax"> $0$ </td>
+    <td class="tg-0lax"> $\pi_{00}$ </td>
+    <td class="tg-0lax"> $\pi_{01}$ </td>
+    <td class="tg-0lax"> $\frac{\pi_{01}}{\pi_{01} + \pi_{00}}$ </td>
+  </tr>
+  <tr>
+    <td class="tg-0lax"> $1$ </td>
+    <td class="tg-0lax"> $\pi_{10}$ </td>
+    <td class="tg-0lax"> $\pi_{11}$ </td>
+    <td class="tg-0lax"> $\frac{\pi_{11}}{\pi_{10} + \pi_{11}}$ </td>
+  </tr>
+</tbody>
+</table>
+
+<!-- <table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;"> -->
+<!-- <caption>表 50.2: Probabilities associated with binary explanatory and binary response variables **in a cohort study**</caption> -->
+<!--  <thead> -->
+<!--   <tr> -->
+<!-- <th style="border-bottom:hidden" colspan="1"></th> -->
+<!-- <th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"> $D$ </th> -->
+<!-- <th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="1"> $\text{Pr}(D=d|X=x)$</th> -->
+<!-- </tr> -->
+<!-- <tr> -->
+<!--    <th style="text-align:center;"> $X$ </th> -->
+<!--    <th style="text-align:center;"> $0$ </th> -->
+<!--    <th style="text-align:center;"> $1$ </th> -->
+<!--    <th style="text-align:center;">  </th> -->
+<!--   </tr> -->
+<!--  </thead> -->
+<!-- <tbody> -->
+<!--   <tr> -->
+<!--    <td style="text-align:center;"> $0$ </td> -->
+<!--    <td style="text-align:center;"> $\pi_{00}$ </td> -->
+<!--    <td style="text-align:center;"> $\pi_{01}$ </td> -->
+<!--    <td style="text-align:center;"> $\frac{\pi_{01}}{\pi_{01} + \pi_{00}}$ </td> -->
+<!--   </tr> -->
+<!--   <tr> -->
+<!--    <td style="text-align:center;"> $1$ </td> -->
+<!--    <td style="text-align:center;"> $\pi_{10}$ </td> -->
+<!--    <td style="text-align:center;"> $\pi_{11}$ </td> -->
+<!--    <td style="text-align:center;"> $\frac{\pi_{11}}{\pi_{10} + \pi_{11}}$ </td> -->
+<!--   </tr> -->
+<!-- </tbody> -->
+<!-- </table> -->
+
+相反地，病例對照研究中我們從已有的病例 $(D=1)$ 出發，這樣做的理由有很多，通常可能由於病例可能十分稀少，如果建立隊列研究可能需要龐大的樣本量 (即便如此也不一定能夠收集到足夠分析的數據，可能還要花費相當長的隨訪時間，吃力不討好)。所以，在病例對照研究的設計中，我們其實是獨立地從兩個人羣 (病例組，$D=1$，對照組，$D=0$) 中抽取樣本。所以，**病例對照研究獲得的數據，只能用於計算暴露在病例組和對照組中的條件概率**：
+
+$$
+\text{Pr}(X=x|D=d) = \frac{\pi_{xd}}{\pi_{0d}+\pi_{1d}}
+$$
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 50.3: Separate samples from subpopulations $D=0,1$ with relavant conditional probabilities **in a case-control study** </caption>
+ <thead>
+  <tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;"> $D$ </div></th>
+</tr>
+<tr>
+   <th style="text-align:center;">   </th>
+   <th style="text-align:center;">   </th>
+   <th style="text-align:center;"> $0$ </th>
+   <th style="text-align:center;"> $1$ </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> $X$ </td>
+   <td style="text-align:center;"> $0$ </td>
+   <td style="text-align:center;"> $\pi_{00}$ </td>
+   <td style="text-align:center;"> $\pi_{01}$ </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;">  </td>
+   <td style="text-align:center;"> $1$ </td>
+   <td style="text-align:center;"> $\pi_{10}$ </td>
+   <td style="text-align:center;"> $\pi_{11}$ </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;">  </td>
+   <td style="text-align:center;"> $\text{Pr}(X=x|D=d)$ </td>
+   <td style="text-align:center;"> $\frac{\pi_{10}}{\pi_{10}+\pi_{00}}$ </td>
+   <td style="text-align:center;"> $\frac{\pi_{11}}{\pi_{11}+\pi_{01}}$ </td>
+  </tr>
+</tbody>
+</table>
+
+### 比值比 Odds ratios
+
+某研究的數據中，暴露變量是二分類的 $X$，和 結果變量是二分類的 $D$。我們其實最關心的問題是：結果變量的兩個分類 $D=0, D=1$，在暴露變量 $X=0, X=1$ 兩組中到底個佔多少比例。用吸菸與肺癌的例子來解釋就是，我們最關心的是，在吸菸人羣中，發生肺癌的人的比例，是否顯著地高於非吸菸人羣中發生肺癌的人的比例，僅此而已。這句話用概率論的標記法來寫的話，則是兩個條件概率：$\text{Pr}(D=1|X=1), \text{Pr}(D=1|X=0)$。此處，可以定義暴露變量 $X=1$ 的條件下，結果變量 $D=1$ 的概率的比值 (Odds)：
+
+$$
+\text{Odds}_1 = \frac{\text{Pr}(D=1|X=1)}{1-\text{Pr}(D=1|X=1)} = \frac{\pi_{11}/(\pi_{10} + \pi_{11})}{1-\pi_{11}/(\pi_{10} + \pi_{11})}
+$$
+
+類似地，暴露變量 $X=0$ 的條件下，結果變量 $D=1$ 的概率的比值 (Odds)：
+
+$$
+\text{Odds}_2 = \frac{\text{Pr}(D=1|X=0)}{1-\text{Pr}(D=1|X=0)} = \frac{\pi_{01}/(\pi_{01} + \pi_{00})}{1-\pi_{01}/(\pi_{01} + \pi_{00})}
+$$
+
+故，從隊列研究中，可以很自然的計算暴露變量和結果變量的比值比：
+
+$$
+\begin{aligned}
+\text{Odds Ratio}_{\text{cohort}} = \frac{\text{Odds}_1}{\text{Odds}_2} & = \frac{\frac{\text{Pr}(D=1|X=1)}{1-\text{Pr}(D=1|X=1)}}{\frac{\text{Pr}(D=1|X=0)}{1-\text{Pr}(D=1|X=0)}}\\
+ & = \frac{\frac{\pi_{11}/(\pi_{10} + \pi_{11})}{1-\pi_{11}/(\pi_{10} + \pi_{11})}}{\frac{\pi_{01}/(\pi_{01} + \pi_{00})}{1-\pi_{01}/(\pi_{01} + \pi_{00})}} \\
+ & = \frac{\frac{\pi_{11}/(\pi_{10}+\pi_{11})}{\pi_{10}/(\pi_{10}+\pi_{11})}}{\frac{\pi_{01}/(\pi_{01}+\pi_{00})}{\pi_{00}/(\pi_{01}+\pi_{00})}} \\
+ & = \frac{\pi_{11}\pi_{00}}{\pi_{10}\pi_{01}}
+\end{aligned}
+$$
+
+從病例對照研究中，推算的暴露變量和結果變量的比值比是另外一個過程：
+
+$$
+\begin{aligned}
+\text{Odds Ratio}_{\text{case-control}} = \frac{\text{Odds}^\prime_1}{\text{Odds}^\prime_2} & = \frac{\frac{\text{Pr}(X=1|D=1)}{1-\text{Pr}(X=1|D=1)}}{\frac{\text{Pr}(X=0|D=0)}{1-\text{Pr}(X=0|D=0)}} \\
+& = \frac{\frac{\pi_{11}/(\pi_{11} + \pi_{01})}{1-\pi_{11}/(\pi_{11} + \pi_{01})}}{\frac{\pi_{10}/(\pi_{10} + \pi_{00})}{1-\pi_{10}/(\pi_{10} + \pi_{00})}} \\
+& = \frac{\frac{\pi_{11}/(\pi_{11}+\pi_{01})}{\pi_{01}/(\pi_{11}+\pi_{01})}}{\frac{\pi_{10}/(\pi_{10}+\pi_{00})}{\pi_{00}/(\pi_{10}+\pi_{00})}} \\
+& =  \frac{\pi_{11}\pi_{00}}{\pi_{10}\pi_{01}}
+\end{aligned}
+$$
+
+經過上面的推演，我們發現用病例對照研究的數據，**雖然不能像隊列研究一樣直接推算正確的暴露條件下的比值 (conditional odds given exposure)**，**卻能用較少的樣本量中獲得真實的比值比 (OR) **。
+
+### 邏輯迴歸應用於病例對照研究的合理性 {#GLM8-3-4}
+
+在一個**隊列研究**中，當我們有不止一個暴露變量時，顯然就需要更加複雜的模型來輔助分析 (迴歸型分析法) 暴露變量和結果變量之間的關係。估計比值比最佳的模型是邏輯迴歸。如果 $D$ 表示一個隨機型結果變量，其中每個觀察對象的結果變量服從暴露變量的條件二項分佈 (繼續用單一的**二分類暴露變量** $x_i$)：
+
+$$
+D_i|X_i = x_i \sim \text{Binomial}(1, \pi_i)
+$$
+
+所以，可以用邏輯迴歸來擬合：
+
+$$
+\text{logit}(\pi_i) = \text{log}(\frac{\pi_i}{1-\pi_i}) = \alpha + \beta x_i
+$$
+
+把這個邏輯迴歸方程重新整理：
+
+$$
+\begin{aligned}
+\text{Pr}(D=1|X=1) & = \frac{e^{\alpha + \beta}}{1 + e^{\alpha + \beta}} \\
+\text{Pr}(D=1|X=0) & = \frac{e^\alpha}{1 + e^\alpha} \\
+\text{Where, }\alpha & =  \text{log}{\frac{\pi_{01}}{\pi_{00}}} \\
+\beta & = \text{log}{\frac{\pi_{11}\pi_{00}}{\pi_{10}\pi_{01}}}
+\end{aligned}
+$$
+
+在一個**病例對照研究**中，結果變量 $D_i$ 被鎖死，暴露變量成了服從結果變量的條件二項分佈的隨機變量：
+
+$$
+X_i | D_i = d_i \sim \text{Binomial}(1,\pi_i^*)
+$$
+
+繼續任性地用邏輯迴歸擬合的話：
+
+$$
+\text{logit}(\pi_i^*) = \text{log}(\frac{\pi_i^*}{1-\pi_i^*}) = \alpha^* + \beta d_i
+$$
+
+同樣整理成概率方程：
+
+$$
+\begin{aligned}
+\text{Pr}(X=1|D=1) & = \frac{e^{\alpha^* + \beta}}{1 + e^{\alpha^* + \beta}} \\
+\text{Pr}(X=1|D=0) & = \frac{e^{\alpha^*}}{1 + e^{\alpha^*}} \\
+\text{Where, }\alpha & =  \text{log}{\frac{\pi_{10}}{\pi_{00}}} \\
+\beta & = \text{log}{\frac{\pi_{11}\pi_{00}}{\pi_{10}\pi_{01}}}
+\end{aligned}
+$$
+
+所以，用邏輯迴歸擬合病例對照研究的數據，同樣可以得到和隊列研究一樣正確的比值比估計。但是這個截距 $\alpha$，**在隊列研究中指的是，非暴露組中患病的比值的對數 (log odds of disease in the unexposed)**；**在病例對照研究中指的是，對照組中暴露的比值的對數 (log odds of exposure in the controls)**。是兩個完全不同含義的估計量。
+
+綜上所述，從一個**隊列研究獲得的似然方程**是：
+
+$$
+\begin{aligned}
+L_{\text{cohort}} & = \prod_{i=1}^n(\frac{e^{\alpha + \beta x_i}}{1+e^{\alpha + \beta x_i}})^{d_i}(\frac{1}{e^{\alpha + \beta x_i}})^{1-d_i} \\
+\text{Where } d_i & = \left\{ \begin{array}{ll}  0 \text{ if subjects were not observed with the outcome}\\  1 \text{ if subjects were observed with the outcome}\\ \end{array} \right. \\
+              x_i & = \left\{ \begin{array}{ll}  0 \text{ if subjects were not observed with the exposure}\\  1 \text{ if subjects were observed with the exposure}\\ \end{array} \right.
+\end{aligned}
+$$
+
+從一個**病例對照研究獲得的似然方程**是：
+
+
+$$
+\begin{aligned}
+L_{\text{case-control}} & = \prod_{i=1}^n(\frac{e^{\alpha + \beta d_i}}{1+e^{\alpha + \beta d_i}})^{x_i}(\frac{1}{e^{\alpha + \beta d_i}})^{1-x_i} \\
+\text{Where } d_i & = \left\{ \begin{array}{ll}  0 \text{ if subjects were not observed with the outcome}\\  1 \text{ if subjects were observed with the outcome}\\ \end{array} \right. \\
+              x_i & = \left\{ \begin{array}{ll}  0 \text{ if subjects were not observed with the exposure}\\  1 \text{ if subjects were observed with the exposure}\\ \end{array} \right.
+\end{aligned}
+$$
+
+## 拓展到多個暴露變量的邏輯迴歸模型
+
+現在來考慮 $p$ 個暴露變量的情況：$X_1, \cdots, X_p$，這些暴露變量可以是分類型變量，也可以是連續型變量，例如，
+
+- $D_i = 0 \text{ or } 1$，第 $i$ 名研究對象觀察到有 $(=1)$，或沒有 $(=0)$ 結果變量 (如發生胰腺癌)；
+- $X_{i1} = 0 \text{ or } 1$，第 $i$ 名研究對象有 $(=1)$，或沒有 $(=0)$ 暴露變量 (如吸菸)；
+- $X_{i2} = 0 \text{ or } 1$，第 $i$ 名研究對象是男性 $(=1)$，或女性 $(=0)$；
+- $X_{i3}$，第 $i$ 名研究對象的年齡 (years)。
+
+### Mantel Haenszel 法
+
+如果數據有且只有兩個暴露變量，$X_1, X_2$，其中 $X_1$ 是一個二分類變量，$X_2$ 是一個可以分成 $C$ 組的分類變量。那麼如果樣本量足夠大，可以把數據整理成 $C$ 個四格表用於分析每一個 $X_2$ 的分層中 $X_1$ 和結果變量 $D$ 之間的關係。多層數據的合併比值比可以用 [Mantel Haenszel 法](https://en.wikipedia.org/wiki/Cochran%E2%80%93Mantel%E2%80%93Haenszel_statistics)。此法在兩個分類暴露變量的情況下還能適用，當某個(或兩個)分類變量的層數越來越多時，你會發現最終落到小格子裏的樣本量急劇下降，侷限性就體現了出來。另外，此法亦不能應用於連續型變量的調整，用處簡直就是捉襟見肘。迫切地我們需要有更加一般的 (藉助於迴歸的威力的) 方法來對多個暴露變量進行調整。
+
+### 隊列研究和病例對照研究的似然
+
+一個**隊列研究**，用邏輯迴歸擬合其結果變量 (因變量) $D$ 和暴露變量 $X_1, \cdots, X_p$ 之間的關係時，可以寫作：
+
+$$
+\begin{aligned}
+D_i=1 | (X_{i1} & = x_{i1}, \cdots, X_{ip} = x_{ip}) \sim \text{Binomial}(1, \pi_i) \\
+\text{logit} (\pi_i) & = \text{log}(\frac{\pi_i}{1-\pi_i}) = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}
+\end{aligned}
+$$
+
+將這個迴歸方程重新整理成爲概率方程：
+
+$$
+\text{Pr}(D_i = 1 | X_{i1}  = x_{i1}, \cdots, X_{ip} = x_{ip}) = \frac{e^{\alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}{1+e^{\alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}
+$$
+
+- 截距 $\alpha$ 的含義是，當所有的暴露變量都取 $0$ 時，研究對象觀察到結果變量爲 $1$ 的對數比值 $(\text{log odds})$；
+- 迴歸係數 $\beta_k$ 的含義是，當其餘的暴露變量保持不變時，$x_k$ 每增加一個單位，結果變量爲 $1$ 的對數比值比 $(\text{log odds-ratio})$ (即，調整了其餘所有變量之後，$x_k$ 和結果變量之間的對數比值比)。
+
+所以，隊列研究的數據，其似然方程是：
+
+$$
+\begin{aligned}
+L_{\text{cohort}} & = \prod_{i=1}^n\text{Pr}(D_i = d_i |  X_{i1} = x_{i1}, \cdots, X_{ip} = x_{ip}) \\
+                  & = \prod_{i=1}^n\text{Pr}(\frac{e^{\alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}{1+e^{\alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}})^{d_i}(\frac{1}{1+e^{\alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}})^{1-d_i}
+\end{aligned}
+$$
+
+當數據變成了**病例對照研究**，其似然方程會變成怎樣呢？
+
+$$
+L_{\text{case-control}} = \prod_{i=1}^n\text{Pr}(X_{i1} = x_{i1}, \cdots, X_{ip} = x_{ip} |D_i = d_i)
+$$
+
+這裏，我們很難看出這到底是怎樣的一個條件概率，如果預測變量中同時包括了連續型變量和分類變量，情況就更加複雜，剪不斷理還亂。
+
+### 病例對照研究中的邏輯迴歸
+
+用 $\text{Pr}(S_i=1 \text{ or } 0)$ 表示在潛在研究人羣 (underlying study population) 中，被抽樣 (或者沒有被抽樣) 進入該隊列研究的概率。那麼，理想情況下，可認爲實施病例對照研究時，病例是稀少的，即我們收集到的病例，幾乎等價於我們關心的潛在研究人羣中全部的病例，且可以被證明：
+
+$$
+\begin{aligned}
+ & \text{Pr}(X_{i1} = x_{i1}, \cdots, X_{ip} = x_{ip} |D_i = 1) \\
+=& \text{Pr}(X_{i1} = x_{i1}, \cdots, X_{ip} = x_{ip} |D_i = 1, S_i=1) \\
+=& \frac{e^{\alpha^* + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}{1+e^{\alpha^* + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}  \\
+ & \;\;\;\; \times \frac{\text{Pr}(X_{i1} = x_{i1}, \cdots, X_{ip} = x_{ip} |S_i=1)}{\text{Pr}(D_i = 1 | S_i = 1)} \\
+\text{Where } \alpha^* & =  \alpha + \text{log}(\frac{\text{Pr}(D_i = 0)}{\text{Pr}(D_i = 1)}) + \text{log}(\frac{\text{Pr}(D_i = 1|S_i=1)}{\text{Pr}(D_i = 0|S_i=1)})
+\end{aligned}
+(\#eq:GLM8-2526)
+$$
+
+概率方程 \@ref(eq:GLM8-2526) 中，可以看出第一部分 $\frac{e^{\alpha^* + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}{1+e^{\alpha^* + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}$ 是一個邏輯迴歸模型。跟隊列研究的邏輯迴歸模型相比較，差別只是截距不同 $\alpha \neq \alpha^*$。其餘的部分如 $\text{Pr}(X_{i1} = x_{i1}, \cdots, X_{ip} = x_{ip} |S_i=1)$ 的含義是潛在人羣中被取樣放入該隊列研究，且預測變量各自不同的隨機概率分佈，其實和我們尋找的參數 $\beta_1,\cdots,\beta_p$，是沒有什麼關係的。最後一部分分母的 $\text{Pr}(D_i = 1 | S_i = 1)$ 的意思是，結果變量爲 $1$ 的人被選入本項病例對照研究的概率，理想的實驗設計下這被認爲是接近於 $1$ 的，即使不是，它也是一個固定不變的常數。所以，病例對照研究的似然方程中，我們關心的只有第一部分，邏輯迴歸模型：
+
+$$
+L_{\text{case-control}} \propto \prod_{i=1}^n(\frac{e^{\alpha^* + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}{1+e^{\alpha^* + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}})^{d_i}(\frac{1}{1+e^{\alpha^* + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}})^{1-d_i}
+$$
+
+這裏必須明確的一點是，病例對照研究擬合的邏輯迴歸，其截距是 $\alpha^*$，並非 $\alpha$。這個 $\alpha^*$ 其實是包含了 $\text{Pr}(D_i=1),\text{Pr}(D_i=0)$ 的，可惜這些概率也無法用病例對照研究設計獲得。所以，**病例對照研究數據擬合了邏輯迴歸模型以後的截距，其實沒有太多實際的含義**。
+
+## 流行病學研究中變量的調整策略
+
+
+```{r epi-adjustment, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='relationships between three variables in an underlying population of interest', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics("../img/Selection_115.png")
+```
+
+圖 \@ref(fig:epi-adjustment) 展示的是在潛在研究人羣中 $W (\text{potential confounder}),X (\text{exposure}),D (\text{outcome})$ 三者之間可能存在的四種關係。
+
+- 圖 \@ref(fig:epi-adjustment) - (a) $W$ 和 $X, D$ 都沒有關係，那麼我們研究 $X,D$ 之間的關係時，完全可以忽略掉 $W$，不用調整。<br> 但是，如果在邏輯迴歸模型中調整了一個和暴露變量結果變量之間無關的變量，獲得的比值比估計幾乎不會有太大改變，但是代價是會獲得較大的對數比值比的**標準誤 (standard error)，降低了對比值比估計的精確程度**。
+- 圖 \@ref(fig:epi-adjustment) - (b) $W$ 和 $X, D$ 同時都相關，且不在 $X\rightarrow D$ 的因果關係通路上，此種情況下，必須對 $W$ 進行調整，否則獲得的比值比估計是帶有嚴重偏倚的。
+- 圖 \@ref(fig:epi-adjustment) - (c) $W$ 僅僅和 $X$ 有關係，和結果變量 $D$ 沒有相關性。此時研究 $X,D$ 之間的關係時，忽略掉 $W$，不需要對之進行任何調整。和 (a) 一樣，如果此時調整了 $W$，估計的比值比不會發生質變，但是會損失估計的精確度。
+- 圖 \@ref(fig:epi-adjustment) - (d) $W$ 僅僅和結果變量 $D$ 有關係，和暴露變量 $X$ 無關時，如果模型對 $W$ 進行調整，我們會獲得完全不同的比值比估計，因爲這種情況下其實調整 $W$ 前後的比值比估計的是具有不同含義的，二者都具有實際意義。調整前的估計量，是總體估計，有助於作總體的決策；調整後的估計量，是帶有某些特徵的部分人羣估計，有助於評價個人水平的 $X,D$ 之間的關係。

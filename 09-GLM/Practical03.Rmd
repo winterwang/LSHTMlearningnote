@@ -1,0 +1,269 @@
+
+數據來自一個毒理學實驗，該實驗中 8 組昆蟲在不同濃度的二硫化碳下暴露四個小時，實驗的目的是研究二硫化碳劑量和昆蟲死亡率之間的關系。
+
+### 昆蟲的死亡率
+
+```{r GLM-exe-3-1, echo=TRUE, cache=TRUE}
+Insect <- read.table("../backupfiles/INSECT.RAW", header =  FALSE, sep ="", col.names = c("dose", "n_deaths", "n_subjects"))
+print(Insect)
+```
+
+1. 計算每組實驗濃度下死亡昆蟲的比例
+
+```{r GLM-exe-3-2, echo=TRUE, cache=TRUE}
+Insect <- Insect %>%
+  mutate(p = n_deaths/n_subjects)
+print(Insect)
+```
+
+2. 將濃度和死亡比例做散點圖
+
+```{r GLM-exe-3-3, echo=TRUE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Scatter plot of CS2 dose and proportion killed.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggplot(Insect, aes(x = dose, y = p)) +
+  geom_point()+
+  scale_x_continuous(breaks = seq(50, 75, by = 5)) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "CS2 dose (mg/L)", y = "Proportion killed")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+這裏如果使用**線性回歸模型是不合適的**，這是因爲:
+
+- 散點圖提示濃度和死亡比例之間不是線性關系;
+- “比例”這一數據被局限在 (0,1) 範圍之內，線性回歸的結果變量不會滿足這個條件;
+- 觀察數據本身的方差不齊，也就是每個觀察點(死亡比例)的變化程度無法保證是相同的。
+
+3. 計算死亡比例的對數比值比 (log-odds)，再作相同的散點圖，你會得出什麼樣的結論？
+
+```{r GLM-exe-3-4, echo=TRUE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Scatter plot of CS2 dose and log-odds of proportion killed.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+Insect <- Insect %>%
+  mutate(log_odds = log(p / (1-p)))
+
+ggplot(Insect, aes(x = dose, y = log_odds)) +
+  geom_point()+
+  scale_x_continuous(breaks = seq(50, 75, by = 5)) +
+  scale_y_continuous(breaks = seq(-2, 4, by = 1)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "CS2 dose (mg/L)", y = "Log odds of proportion killed")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+
+死亡比例的對數比值比和二硫化碳濃度之間更加接近線性關系。
+
+4. 寫下此模型的數學表達式，你的表達式必須指明數據的分布，線性預測方程，和鏈接方程三個部分。用 R 擬合你寫下的模型。
+
+**解**
+
+本數據中，隨機變量是每組昆蟲中死亡的個數。用 $Y_i$ 標記第 $i$ 組昆蟲中死亡昆蟲數量，$d_i$ 表示第 $i$ 組昆蟲被暴露的二硫化碳濃度。對於所有的廣義線性回歸模型來說，它都由三個部分組成:
+1) 反應量分布 the response distribution; 2) 鏈接方程 link function; 3) 線性預測方程 linear predictor.
+
+反應量分布:
+
+$$
+Y_i \sim \text{Bin}(n_i, \pi_i),i = 1, \cdots, 8
+$$
+
+$Y_i$ 的期望值是 $\mu_i$ 的話，鏈接方程是
+
+$$
+\eta_i = \log(\frac{\mu_i}{n_i - \mu_i}) = \log(\frac{\pi_i}{1- \pi_i}) = \text{logit}(\pi_i)
+$$
+
+線性預測方程是
+
+$$
+\eta_i = \beta_0 + \beta_1 d_i
+$$
+
+用 R 來擬合這個模型:
+
+```{r  GLM-exe-3-5, echo=TRUE, cache=TRUE}
+Model1 <- glm(cbind(n_deaths, n_subjects - n_deaths) ~ dose, family = binomial(link = logit), data = Insect)
+summary(Model1)
+```
+
+
+1. 計算 CS~2~ 在 55mg/l 時該模型預測的昆蟲死亡概率是多少。
+
+$$
+\text{logit}(\hat\pi_i) = -14.09 + 0.2366\times55 \\
+\Rightarrow \hat\pi_i = \frac{\exp(-14.09 + 0.2366\times55)}{1+\exp(-14.09 + 0.2366\times55)} = 0.254
+$$
+
+2. 計算昆蟲死亡比例達到50%的CS~2~濃度(LD50)。
+
+當死亡比例達到一半時， $\hat\pi = 0.5 \Rightarrow \text{logit}(\hat\pi) = 0$
+
+$$
+0 = -14.09 + 0.2366 \times \text{LD50} \\
+\Rightarrow \text{LD50} = 59.5 \text{mg/l}
+$$
+
+3. 有證據證明昆蟲的死亡率隨着 CS~2~ 濃度的增加而升高嗎？
+
+有極強的證據證明昆蟲死亡率隨着 CS~2~ 濃度增加而升高 $(z = 11.65, P < 0.001, \text{Wald test})$。
+
+4. 將參數轉換成比值比，並解釋其實際含義。
+
+CS~2~ 濃每增加 1 個單位 (1 mg/l)，昆蟲死亡率的比值比是 $\exp(0.2366) = 1.27$，95% 信賴區間下限: $\exp(0.2366 - 1.96\times0.0203) = 1.22$，上限: $\exp(0.2366 + 1.96\times0.0203) = 1.32$。
+
+下面是在 R 裏計算的 OR 及其對應的信賴區間:
+```{r GLM-exe-3-6, echo=TRUE, cache=TRUE}
+epiDisplay::logistic.display(Model1)
+```
+
+5. 提取模型中擬合值 fitted value
+
+```{r GLM-exe-3-7, echo=TRUE, cache=TRUE}
+# the fitted values relate to the probability of the deaths in each group
+Model1$fitted.values
+# to calculate the counts of numbers of deaths in each group
+Model1$fitted.values * Insect$n_subjects
+```
+
+6. 把模型擬合的概率和觀測概率放在同一個散點圖中比較:
+
+```{r GLM-exe-3-8, echo=FALSE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Observed (circles) and fitted (triangles) proportions are generally similar, with differences greatest in the third and fourth dose groups.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+Insect$fitval <- Model1$fitted.values
+# shapes  <- c("s1" = 16, "s2" = 17)
+
+Insect_long <- Insect[,-5] %>%
+  gather(Fitted, probability, -dose, -n_deaths, -n_subjects) %>%
+      arrange(Fitted, dose, n_subjects, n_deaths)
+
+
+ggplot(Insect_long, aes(x = dose, y = probability, shape = Fitted)) +
+  geom_point(size = 4) +  scale_shape(solid = FALSE)+
+  # geom_point(aes(y = p), shape =1 , size = 4)+
+  # geom_point(aes(y = fitval), shape = 2, size = 4) +
+  scale_x_continuous(breaks = seq(50, 75, by = 5)) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "CS2 dose (mg/L)", y = "Proportion killed")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) +
+  scale_shape_manual(name = "", values = c(1,2),
+                     labels = c("Obeserved", "Fitted")) +
+    theme(plot.subtitle = element_text(vjust = 1),
+  plot.caption = element_text(vjust = 1),
+  legend.position = "bottom", legend.direction = "horizontal")
+```
+
+7. 現在計算一個新的濃度值 dose2 = dose^2^。這個新的變量用於分析是否模型中使用濃度平方可以提升模型的擬合優度。1) 用 Wald 檢驗的結果說明濃度平方的回歸系數是否有意義。2) 新模型的擬合值是否有所改善？
+
+```{r GLM-exe-3-9, echo=TRUE, cache=TRUE}
+Insect <- Insect %>%
+  mutate(dose2 = dose^2)
+Model2 <- glm(cbind(n_deaths, n_subjects - n_deaths) ~ dose + dose2, family = binomial(link = logit), data = Insect)
+summary(Model2)
+```
+
+加入了濃度平方以後，該項本身的 Wald 檢驗結果告訴我們，沒有證據證明濃度和昆蟲死亡比例的對數比值比之間呈拋物線關系。
+
+```{r GLM-exe-3-10, echo=FALSE, cache=TRUE, fig.asp=.7, fig.width=6, fig.cap='Fitted probabilities for each dose from two models', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+Insect$fitval2 <- Model2$fitted.values
+# shapes  <- c("s1" = 16, "s2" = 17, "s3" = 18)
+
+Insect_long <- Insect[,-c(5,7)] %>%
+  gather(Fitted, probability, -n_deaths, -n_subjects, -dose) %>%
+      arrange(Fitted, dose, n_subjects, n_deaths)
+
+
+ggplot(Insect_long, aes(x = dose, y = probability, shape = Fitted)) +
+  geom_point(size = 4)+ scale_shape(solid = FALSE)+
+  # geom_point(aes(y = fitval), shape = 2, size = 4) +
+  # geom_point(aes(y = fitval2), shape = 3, size = 4) +
+  scale_x_continuous(breaks = seq(50, 75, by = 5)) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.2)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "CS2 dose (mg/L)", y = "Proportion killed")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())  +
+  scale_shape_manual(name = "",
+                     values = c(1:3),
+                     labels = c("Obeserved", "Fitted-quadratic", "Fitted-linear")) + theme(plot.subtitle = element_text(vjust = 1),
+  plot.caption = element_text(vjust = 1),
+  legend.position = "bottom", legend.direction = "horizontal")
+```
+
+加入濃度平方二次項的模型在第三和第四組給出了比一次模型更加接近觀測值的估計。但是這種提升是極爲有限的，且統計學上加入的二次項的回歸系數並無意義。
+
+所以，本數據分析的結論是，有很強的證據證明昆蟲死亡的概率隨着CS~2~ 濃度的升高而升高 (P<0.001)。死亡的比值 (odds)，隨着濃度每升高1個單位 (mg/l) 而升高 27% (95% CI: 22%-32%)。
+
+### 哮喘門診數據
+
+在一項橫斷面研究中，訪問哮喘門診連續達到 6 個月以上的全部患者被一一詢問其目前的用藥情況和症狀。下面的表格總結的是這些患者中，目前使用口服類固醇藥物與否，及患者報告夜間由於哮喘症狀而從睡眠中醒來的次數。
+
+```{r GLM-exe-3-11, echo=FALSE, cache=TRUE}
+my_tbl <- tibble::tribble(
+  ~Corticosteroids, ~Never, ~Less.than.once.a.week, ~More.than.once.a.week, ~Every.night,
+            "User",     27,                     41,                     44,           38,
+        "Non-user",     20,                     10,                      8,           22
+  )
+
+kable(my_tbl, digits = 3, row.names = FALSE, align = "c",
+              format = "html", caption = "Frequency of night waking due to asthma") %>%
+ kable_styling(
+        bootstrap_options = c("striped", "hover", "condensed"),
+        position = "center", full_width = FALSE)
+```
+
+下面的 STATA 輸出報告，是對上述數據擬合的邏輯回歸的結果。其中變量 `user` 和 `never` 被編碼爲 0/1，1 代表該患者正在使用口服類固醇藥物，或者從未因爲哮喘而在夜間醒來。變量 `sev` 是患者自己報告的哮喘症狀嚴重程度 (0-3 分，分數越高症狀越嚴重)。
+
+
+```{r GLM-exe-3-12, echo=FALSE, fig.asp=.7, fig.width=7, fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics("img/Selection_125.png")
+```
+
+
+1. 用表格的數據實施了一個總體的卡方檢驗還有一個卡方檢驗的傾向性檢驗。這兩個卡方檢驗的統計量分別是 12.87, 和 0.25。請解釋這兩個統計量的實際含義。
+
+在零假設 -- 使用口服類固醇藥物和夜間因爲哮喘而醒來次數之間沒有關系 -- 條件下，表格總體的卡方檢驗服從 $\chi^2_3$ 分布。查表或者在 R 裏使用
+
+```{r GLM-exe-3-13, echo=TRUE,cache=TRUE}
+1-pchisq(12.87, 3)
+```
+
+可以知道 p = 0.005。這是極強的反對零假設的證據。
+
+相反，卡方檢驗的傾向性檢驗結果是 p = 0.62，這個結果提示使用類固醇藥物所佔的比例沒有傾向性:
+
+```{r GLM-exe-3-14, echo=TRUE,cache=TRUE}
+1-pchisq(0.25, 1)
+```
+
+兩個卡方檢驗的顯著不同應是因爲用類固醇藥物的患者比例在 "從不", "低於每周一次"，"多餘每周一次" 中遞增，但是到了最後一組 "每天" 時又下降。傾向性檢驗比起總體的卡方檢驗在關系是單調遞增或者單調遞減時統計學效能更好，但是當關系變得復雜以後，傾向性卡方檢驗變得不再有優勢。傾向性檢驗其實等同於用一個變量 (用藥與否) 和另一個變量 (夜間因爲哮喘醒來次數) 做線性回歸。對於這個表格的數據來說，這是一個 U 型的關系，所以做線性回歸的結果也是會給出沒有意義的 p 值。
+
+2. 利用 STATA 的邏輯回歸報告，能對哮喘的嚴重程度和患者報告夜間從未因爲哮喘醒來(never wake up)之間的關系作出怎樣的結論？
+
+從 STATA 計算的結果來看，該數據提供了極強的證據證明哮喘的嚴重程度和報告從未因哮喘而醒來之間呈負相關。特別地，哮喘嚴重程度爲 2 的患者比 1 的患者報告從未醒來的比值比 (odds ratio) 是 0.077 (95% CI: 0.027, 0.224, p < 0.001); 哮喘嚴重程度爲 3 的患者 比 1 的患者報告醒來的比值比是 0.0128 (95% CI: 0.0022, 0.0738, p < 0.001)。所以，哮喘越嚴重，報告夜裏從未醒來的概率越低。
+
+
+3. 利用 STATA 的邏輯回歸報告，能對是否使用口服類固醇藥物和報告從未因哮喘而醒來之間的關系作出怎樣的結論？
+
+如果要計算未調整的比值比，我們可以把表格中第2-4列的數據合並，那麼在使用類固醇藥物的患者 (n = 150) 中 27 人報告從未醒來，在不使用類固醇藥物的患者中 (n = 60)，有 20 人報告從未醒來。這樣未調整的比值比就是 $\frac{27 \times 40}{20 \times 123} = 0.44$。STATA 計算的邏輯回歸模型的結果顯示，這一數字在調整了哮喘症狀之後，發生了本質的變化:
+$e^{0.815} = 2.26$。雖然調整後的比值比並沒有統計學意義。但是它從小於 1 變成了大於 1，方向上發生了轉變。所以，調整了哮喘嚴重程度之後，數據似乎提示使用類固醇藥物和報告從不在夜間因哮喘醒來的概率呈正相關 (用藥者睡得更好)，但是這個相關性沒有統計學意義，其95%信賴區間很寬。
+
+4. 從這些分析來看，哮喘嚴重程度和是否口服類固醇藥物之間有什麼樣的關系？
+
+因爲用類固醇藥物和報告夜間不曾醒來在調整了哮喘嚴重程度之後從原先的負相關變成了正相關。又因爲哮喘嚴重程度本身和報告夜間不曾醒來之間是負相關，所以，是否口服類固醇藥物和哮喘嚴重程度之間呈正相關，也就是哮喘越嚴重，患者越傾向於使用類固醇藥物。

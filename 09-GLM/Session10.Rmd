@@ -1,0 +1,181 @@
+
+
+每次定義一個 GLM 模型的時候 (Section \@ref(defineaGLM))，均分三步走，所以一個模型會出錯的部分，就在這三步驟中的任何一步：
+
+1. 因變量分佈定義錯誤 (或者分佈的假設不成立) mis-specified distribution: 因變量之間**是否相互獨立**，且**服從某個已知的分佈**，這兩個條件中的任意一個不能滿足，第一步都無法成立。例如，最常見的是我們用泊松迴歸模型來擬合計數型數據時，因爲缺乏一些關鍵變量，導致模型遇到過度離散的問題 (over-dispersed for a Poisson distribution due to an omitted covariate)；
+2. 線性預測方程定義錯誤 mis-specified linear predictor: 線性預測方程中放入的變量，有的可能需要被轉換 (連續型轉換成分類型，或者是需要數學轉換)。或者是應該加入的交互作用項被我們粗心忽略了；
+3. 鏈接方程錯誤 mis-specified link function: 對前一步定義好的線性預測方程，第三步的鏈接方程指定很可能出現錯誤。或者是，我們可以考慮選用別的鏈接方程 ($\text{log instead of logit}$)，改變了鏈接方程之後，很可能原先認爲有交互作用的變量之間交互作用就消失了 (Section \@ref(interaction-depend-scale))。
+
+本章介紹一些廣義線性迴歸模型診斷的方法，這些手段雖然偶爾有一些檢驗方法，但更多的診斷方法需要繪圖通過視覺判斷。介紹邏輯迴歸時解釋過模型比較時使用的模型偏差 (deviance) 概念 (Section \@ref(deviance)) Pearson 的擬合優度檢驗，以及使用 Hosmer-Lemeshow 檢驗法檢驗個人二分類變量數據的邏輯迴歸擬合優度 (Section \@ref(gof)) 法。值得注意的是，這些方法是一種整體檢驗 (global test)，其零假設是 “**模型可以擬合數據**”，如果擬合優度檢驗的結果是拒絕這個零假設，那麼可以認爲模型建立的不佳，即**接受 “模型不能擬合數據” 的替代假設**。如果擬合優度檢驗的結果是無法拒絕零假設，那麼我們僅僅只能認爲**無證據證明 “模型不可以擬合數據”**，而**不能證明設計的模型可以良好的擬合數據**。所以，擬合優度的檢驗結果可以警告我們模型擬合有沒有錯誤，卻不能證明這個模型到底是不是一個良好的模型 (個人感覺應把擬合優度檢驗 goodness of fit 的名稱改爲 **擬合劣度檢驗 badness of fit**)。
+
+## 線性預測方程的定義
+
+線性預測方程定義錯誤的最常見的就是“忽略了不該忽略的交互作用”，及**連續型變量可能被以不恰當的方式加入預測方程中**。當然，你可以通過把一個變量放入模型前後，該變量本身的迴歸係數是否有意義 (Wald test) 或者你關心的**預測變量的迴歸係數的變化程度** (magnitude of the corresponding parameter estimate) 來判斷是否保留這個變量在你的模型裏。這麼做的時候，你要當心自己陷入多重比較 (multiple testing) 的陷阱 (某次或者某幾次出現的統計學有意義的結果，可以僅僅是由於偶然，而不是因爲它真的有意義)。
+
+### 殘差
+
+觀測值跟擬合值之間的差距，就是我們常說的殘差。
+
+以二項分佈數據爲例，
+
+$$Y_i\sim\text{Bin}(n_i, \pi_i), \\
+\text{where n is the number of subjects in one group} \\
+\text{logit}(\pi_i) = \eta_i$$
+
+其第 $i$ 個觀測值的原始殘差 (raw residual)，是
+
+$$
+\begin{aligned}
+r_i & = y_i - \hat\mu_i \\
+    & = y_i - n_i\hat\pi_i
+\end{aligned}
+$$
+
+觀測值 $Y_i$ 的變化程度 (variability) 本身並不是一成不變的 (會根據模型中加入的共變量而改變)，其變化程度可能是觀測值 $Y_i$ 的方差導致的。二項分佈數據的方差已知是 $\text{Var}(Y_i) = n_i\pi_i(1-\pi_i)$。舉個栗子，如果 $n_i = 10, \hat\pi_i = 0.01, Y_i = 10$，那麼 $r_i \approx 10$，這是一個很差的擬合效果。如果，$n_i = 100000, \hat\pi_i = 0.5, Y_i = 5010$，那麼 $r_i = 10$，此時的殘差也是 $10$ 又證明了這是一個擬合效果良好的模型。相同的殘差，由於方差不同，判斷則不一樣，所以我們需要有一個類似簡單線性迴歸中標準化殘差 (Section \@ref(standardres)) 的過程 -- **Pearson 殘差**:
+
+$$
+p_i = \frac{r_i}{\sqrt{\hat{\text{Var}}}(Y_i)}
+$$
+
+所以，二項分佈數據的 Pearson 殘差公式爲
+
+$$
+p_i = \frac{r_i}{\sqrt{n_i\hat\pi_i(1-\hat\pi_i)}}
+$$
+
+Pearson 殘差的平方和，就是 Pearson 卡方統計量，在只有分類變量的邏輯迴歸模型中可以用於擬合度診斷 (Section \@ref(calibration))，自由度爲 $1$：
+
+$$
+\sum_i^Np^2_i = \text{Pearson's } \chi^2 \text{ statistic}
+$$
+
+和標準化 Pearson 殘差相似地，另一個選項是使用**偏差殘差 (deviance residual)**。只要使偏差殘差 $d_i$ 和原始殘差 $r_i$ 保持相同的符號，偏差殘差也可以被標準化用於模型診斷。
+
+用二項分佈數據的例子，
+
+$$
+\begin{aligned}
+d_i & = \text{sign}(r_i)\sqrt{2\{ y_i\text{ln}(\frac{y_i}{\hat\mu_i}) + (n_i - y_i)\text{ln}(\frac{n_i-y_i}{n_i - \hat\mu_i})\}} \\
+\sum_{i=1}^n d^2 = D & = 2\sum_{i=1}^N\{ y_i\text{ln}(\frac{y_i}{\hat\mu_i}) + (n_i - y_i)\text{ln}(\frac{n_i - y_i}{n_i - \hat\mu_i}) \}
+\end{aligned}
+$$
+
+
+### GLM 在 R 裏獲取殘差
+
+```{r  GLM-0517, cache=TRUE, eval=FALSE}
+boot::glm.diag(modelname)$rp       ## 可以獲取 standardized Pearson residuals
+resid(modelname, type = "pearson") ## 可以獲取 Pearson residuals
+rstandard(modelname)               ## 可以獲取 standardized deviance residuals
+resid(modelname)                   ## 可以獲取 deviance residuals
+```
+
+### 如何利用獲得的殘差
+
+1. 將殘差和觀測值的排序作散點圖--查看是否有觀測值擁有過大的標準化殘差；
+2. 作殘差和線性預測方程值的散點圖--如果模型合理的話，這兩者之間視覺上可以判斷是沒有關係的 (no systematic relationship)；
+3. 作殘差和模型中任意一個連續型變量 (如果有的話) -- 可以判定該連續型變量的放入方式是否合理；
+4. 作殘差和數據中尚未加入模型的新變量之間的散點圖 (甚至是已有變量的二次/三次方值)--如果二者之間有明顯的相關性，需要考慮是否加入這個新變量到模型中去。
+
+做這些散點圖時，推薦都加上 `lowess` 的非線性平滑曲線，用於輔助判斷是否變量之間存在特殊關係。
+
+## 共變量模式殘差 covariate pattern residuals
+
+
+
+## 鏈接方程
+
+## NHANES 飲酒量數據實例 {#NHANESdrinker}
+
+數據的變量和每個變量的解釋如下表，總樣本量是 2548 人，飲酒量大於 5 杯每日者被定義爲重度飲酒者。
+
+Variable  |  Description      |
+:--------|:---------------- |
+`gender`  |  1=male, 2=female
+`ageyrs`  | Age in years at survey
+`bmi`     | Body mass index $(\text{kg/m}^2)$
+`sbp`     | Systolic blood pressure $(\text{mmHg})$
+`ALQ130`  | Reported average number of drinks per day
+
+```{r 09-GLM-1, cache=TRUE}
+NHANES <- read_dta("../backupfiles/nhanesglm.dta")
+NHANES <- NHANES %>%
+  mutate(Gender = ifelse(gender == 1, "Male", "Female")) %>%
+    mutate(Gender = factor(Gender, levels = c("Male", "Female")))
+with(NHANES, table(gender))
+NHANES <- mutate(NHANES, Heavydrinker = ALQ130 > 5)
+Model_NH <- glm(Heavydrinker ~ gender + ageyrs, data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH);summary(Model_NH)
+```
+
+當用邏輯迴歸模型擬合數據，線性迴歸方程加入年齡和性別時，數據給出了極強的證據證明性別和年齡和是否爲重度飲酒者都有很大的關係。但是，擬合完這樣一個邏輯迴歸模型之後，我們最大的擔心是，模型中的年齡變量和 $\text{logit}(\text{P}(Y=1))$ 之間的關係，用簡單線性是不是恰當？要檢驗這樣的擔憂，最好的方法是追加一個非線性轉換後的年齡值，去看看模型的擬合程度是否得到改善：
+
+
+```{r 09-GLM-2, cache=TRUE}
+NHANES <- mutate(NHANES, age2 = ageyrs^2)
+Model_NH2 <- glm(Heavydrinker ~ gender + ageyrs + age2, data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH2) ; summary(Model_NH2)
+```
+
+擬合了年齡的平方 (`age2`) 進入邏輯迴歸模型中之後，`age2` 的迴歸係數的 Wald 檢驗結果是 $p = 0.073$，這證明用簡單的線性關係把年齡放在模型裏**並不算不妥當 (not unreasonable)**。
+
+另外，可以提取 `Model_NH` 的標準化 Pearson 殘差和年齡作如下的散點圖：
+
+```{r stPearsonAge, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Standardized Pearson residuals agianst age, in logistic model with gender and linear age as covariates', fig.align='center', out.width='80%', cache=TRUE, message=FALSE, warning=FALSE}
+#NHANES$stresPearson <- resid(Model_NH, type = "pearson")
+NHANES$stresPearson <- boot::glm.diag(Model_NH)$rp       ## 可以獲取 standardized Pearson residuals
+ggplot(NHANES, aes(x=ageyrs, y=stresPearson)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(span = 0.8) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age in Years", y = "Standardized Pearson residual")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+圖 \@ref(fig:stPearsonAge) 中靠近橫軸的藍色實線是 LOWESS 平滑曲線，它十分接近平直的橫線，也證明了 Pearson 標準化殘差值和年齡本身並無關聯。這同時也佐證了，將年齡以連續型共變量的形式放入本次邏輯迴歸模型中**並非不合理 (not unreasonable)**。
+
+下一步，我們再來考慮，模型中加入 `bmi` 是否合理 (能改善模型的擬合度)：
+
+```{r 09-GLM-3, cache=TRUE}
+Model_NH3 <- glm(Heavydrinker ~ gender + ageyrs + bmi, data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH3) ; summary(Model_NH3)
+```
+
+BMI的迴歸係數是否爲零的 Wald 檢驗 $p=0.477$，提示數據無法提供證據去反對零假設：“調整了年齡和性別之後，BMI 和是否是重度飲酒者的概率的對數比值 $\text{log-odds}$ 之間無線性關係”，也就是二者之間可能有非線性關係。如果把 Pearson 標準化殘差和 BMI 作殘差散點圖，如下所示：
+
+```{r stPearsonBMI, echo=FALSE, fig.asp=.7, fig.width=8, fig.cap='Standardized Pearson residuals agianst BMI, in logistic model with gender and linear age as covariates', fig.align='center', out.width='80%', cache=TRUE, message=FALSE, warning=FALSE}
+#NHANES$stresPearson_bmi <- resid(Model_NH3, type = "pearson")
+NHANES$stresPearson_bmi <- boot::glm.diag(Model_NH3)$rp       ## 可以獲取 standardized Pearson residuals for individuals
+
+ggplot(NHANES, aes(x=bmi, y=stresPearson_bmi)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(span = 0.8) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Body Mass Index", y = "Standardized Pearson residual")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+此殘差圖 \@ref(fig:stPearsonBMI) 的 LOWESS 平滑曲線卻提示我們，BMI 和殘差之間不完全是毫無關係的 (應該是非線性的，拋物線關係？)。如果我們把 BMI 取平方放入模型中再看其結果：
+
+
+```{r 09-GLM-4, cache=TRUE}
+NHANES <- mutate(NHANES, bmi2 = bmi^2)
+Model_NH4 <- glm(Heavydrinker ~ gender + ageyrs + bmi + bmi2, data = NHANES, family = binomial(link = "logit"))
+summary(Model_NH4)
+logistic.display(Model_NH4)
+lmtest::lrtest(Model_NH, Model_NH4)
+```
+
+通過似然比檢驗比較加了 `bmi, bmi2` 兩個共變量的模型和只有 `gender, ageyrs` 兩個共變量的模型 $(p=0.022)$，提示我們 BMI 和是否是重度飲酒者 (概率的對數比值 $\text{log-odds}$) 之間的關係並非簡單的線性關係。不過這樣的關係似乎並不是特別的明顯，圖 \@ref(fig:stPearsonBMI) 的平滑曲線的彎曲程度也沒有特別明顯。所以，在這樣的情況下，有的統計學家可能還是會選擇不放 BMI 進入模型裏。

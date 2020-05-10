@@ -1,0 +1,196 @@
+
+
+計數型變量在臨牀醫學/流行病學研究中也十分常見，下面是一些例子：
+
+1. 某個呼吸科診所的患者中，每個人在過去一個月中哮喘發作的次數；
+2. 癲癇患者在過去一年中癲癇發作次數；
+3. 接受腦部 CT 掃描的患者中，每個人被診斷出顱內腫瘤個數。
+
+最早的泊松模型可以追溯到普魯士騎兵連中被馬蹄踢死士兵的人數模型。
+
+## 泊松 GLM
+
+一個計數型的隨機變量，只能取大於等於零的正整數，$0,1,\cdots$。泊松隨機變量可以理解爲產生於發生在一段時間內的事件次數。泊松模型可以用於計數型數據的迴歸模型的構建：
+
+$$
+\begin{aligned}
+Y &\sim \text{Po}(\mu) \\
+\text{P} (Y = y) & = \frac{\mu^y e^{-\mu}}{y!}
+\end{aligned}
+$$
+
+所以，一個泊松迴歸，默認的前提是因變量 $Y$ 服從一個以預測變量 $x_1, \cdots, x_p$ 爲條件的泊松分佈。其標準鏈接方程是 $\theta=\text{log}(\mu)$。
+
+$$
+\begin{aligned}
+Y_i & \sim \text{Po}(\mu_i) \\
+\text{log}(\mu_i) & = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}
+\end{aligned}
+$$
+
+觀測對象 1，用模型中全部的預測變量 $\mathbf{x_1}=(x_{11},\cdots,x_{1p})$ 計算獲得的擬合值，和另一個觀測對象 0 的擬合值之比爲：
+
+$$
+\begin{aligned}
+  & \frac{\text{exp}(\alpha + \beta_1 x_{11} + \cdots + \beta_p x_{1p})}{\text{exp}(\alpha + \beta_1 x_{01} + \cdots + \beta_p x_{0p})} \\
+= & \exp(\beta_1(x_{11}-x_{01}) + \cdots + \beta_p(x_{1p} - x_{0p}))
+\end{aligned}
+$$
+
+其中，
+
+- 線性預測方程 linear predictor 中的截距 $\alpha$ 的含義是，**當所有的預測變量均等於零 $\mathbf{x_1} = 0$** 時，**因變量 $Y$ 的均值之對數**。
+- $\beta_1$ 的含義是，**其餘預測變量保持不變時，預測變量 $x_1$ 每增加一個單位時，因變量變化量的對數**。
+- 迴歸係數的指數 (自然底數) 大小，可以被理解爲是**率比 (rate ratio)** (詳見下一章率的 GLM)。
+
+
+## 泊松迴歸實例
+
+下列數據來自 [UCLA 的統計學網站](https://stats.idre.ucla.edu/r/dae/poisson-regression/)。數據內容是某高中全部學生，獲獎的次數。預測變量包括，1) 獲獎種類 “一般 General”，“學術類 Academic”，“技能類 Vocational”；和所有學生期末數學考試分數。
+
+
+
+```{r  GLM-0404, cache=TRUE, cache=TRUE}
+p <- read_csv("backupfiles/poisson_sim.csv")
+p <- within(p, {
+  prog <- factor(prog, levels=1:3, labels=c("General", "Academic",
+                                                     "Vocational"))
+  id <- factor(id)
+})
+summary(p)
+```
+
+下面的代碼擬合因變量爲獲獎次數，預測變量爲獲獎種類 (分類) 和數學成績 (連續) 的泊松分佈，泊松分佈默認的鏈接方程就是 $\text{log}$，所以你可以像第一行那樣把鏈接方程部分省略。結果也是一樣的。
+
+```{r  GLM-0405, cache=TRUE}
+m1 <- glm(num_awards ~ prog, family="poisson", data=p)
+m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
+summary(m1); summary(m2)
+```
+
+輸出結果的迴歸係數部分，
+
+- 該學校學生獲得學術類獎項的平均次數和獲得一般獎項的平均次數的比值是 $\text{exp}(1.6094) = 4.999$，所以獲得的學術類獎平均次數要高於一般獎次數 $390\%$；
+- 獲得技能類獎的平均次數和一般獎平均次數的比值是 $\text{exp}(0.1823) = 1.199$，也就是高出了 $19.9\%$；
+- 該校學生獲得一般類獎的次數平均每人是 $\text{exp}(-1.6094) = 0.20$ 次；
+- 該校學生獲得學術獎的次數平均每人是 $\text{exp}(-1.6094 + 1.6094) = 1$ 次；(一人一次夠流弊)
+- 該校學生獲得技能類獎的次數平均每人是 $\text{exp}(-1.6094 + 0.182) = 0.24$ 次。
+
+
+看來該校師生很重視學術。
+
+當然也可以用下面定義的函數來幫助我們計算上面這些數值，及其信賴區間。
+
+```{r GLM-0406, cache=TRUE}
+glm.RR <- function(GLM.RESULT, digits = 2) {
+
+    if (GLM.RESULT$family$family == "binomial") {
+        LABEL <- "OR"
+    } else if (GLM.RESULT$family$family == "poisson") {
+        LABEL <- "RR"
+    } else {
+        stop("Not logistic or Poisson model")
+    }
+
+    COEF      <- stats::coef(GLM.RESULT)
+    CONFINT   <- stats::confint(GLM.RESULT)
+    TABLE     <- cbind(coef=COEF, CONFINT)
+    TABLE.EXP <- round(exp(TABLE), digits)
+
+    colnames(TABLE.EXP)[1] <- LABEL
+
+    TABLE.EXP
+}
+```
+
+```{r  GLM-0407, cache=TRUE,  message=FALSE}
+glm.RR(m1)
+```
+
+## 過度離散 overdispersion
+
+泊松分佈的前提條件之一是，方差和均值相等。這是一個**非常強的假設**，很多計數型數據其實是無法滿足這個條件的。許多時候 (包括上面的例子也是) 方差要大於或者小於均值：
+
+```{r  GLM-0408, cache=TRUE}
+epiDisplay::summ(p$num_awards[p$prog == "Academic"], graph = FALSE)
+epiDisplay::summ(p$num_awards[p$prog == "General"], graph = FALSE)
+epiDisplay::summ(p$num_awards[p$prog == "Vocational"], graph = FALSE)
+```
+
+試想一下，實際的數據中其實是經常出現這樣的違反泊松分佈前提的計數型數據的。例如某兩個觀測對象，如果他們二者的線性預測方程給出相等的結果 (他們各自的預測變量可以完全不同)，會被認爲服從相同均值，相同方差的泊松分佈，這顯然是不合理的。例如本章用到的學校學生獲獎的例子，有的學生成績好，那麼獲得學術類獎的平均次數 (及其方差) 自然和成績排在後面的學生不同，強制這樣的兩個學生服從相同均值，相同方差的泊松分佈顯然是不合情理的。手工好的學生，可能更傾向於獲得更多得技能類獎。實際情況下，還有許許多多其他的未知因素會影響學生獲獎的次數，例如家庭教育背景的不同，有些學生鋼琴獲獎多，因爲他每天都去練習彈鋼琴等等，這些都是沒有被收集到的數據。
+
+真實情況應該是這樣的，當有其他的我們不知道的因素存在時，這些因素會導致某些人的均值高於其他人。如果對象 $i$ 的因變量 $Y_i$ 服從均值爲 $\mu_i$ 的泊松分佈，那麼對於所有的 $\mu_i$，其均值 (overall mean) 是 $\mu$，方差 (overall variance) 是 $\sigma^2$。這是一個典型的隨機效應模型 random effect model，我們會在後面的 hierarchical data analysis 再深入討論，但是這裏的重點是，每個觀測對象自己的均值 $\mu_i$，是我們在普通泊松迴歸中忽略掉的隨機共變量 (the effects of omitted covariates)。
+
+所以樣本數據來自的人羣如果共同均值 (或者叫邊際效應均值，marginal mean) 爲 $\mu$：
+
+$$
+E(Y_i) = E(E(Y_i | \mu_i)) = E(\mu_i) = \mu
+$$
+
+和共同方差 (邊際效應方差) ，需要用到 [總體方差法則 (Law of total variance)](https://en.wikipedia.org/wiki/Law_of_total_variance) 概念：
+
+$$
+\begin{aligned}
+\text{Var}(Y_i) & = E(\text{Var}(Y_i | \mu_i)) + \text{Var}(E(Y_i | \mu_i)) \\
+                & = E(\mu_i) + \text{Var}(\mu_i) \\
+                & = \mu + \sigma^2
+\end{aligned}
+$$
+
+### 過度離散怎麼查？
+
+
+如果，我們的泊松回歸模型中的共變量全部都是分類型變量，我們可以把觀測值 $Y$ 對每一個分類變量分別作簡單的數據總結，觀察其均值和方差是否可以認為大致相同。但是許多時候模型中不會只有分類型變量。
+
+R 輸出的結果中的 模型偏差 deviance，可以用來初步判斷整體模型的擬合優度。如果模型偏差除以殘差獲得的殘差偏差 (residual deviance) 足夠小，說明擬合的模型跟數據本身比較接近，也就是模型和數據擬合程度較好，反之則提示模型本身具有較高的過度離散 overdispersion。另外，模型偏差由於在個人數據 (individual data) 情況下不適用 (因為模型偏差值就不再服從卡方分佈了)，下面的檢驗結果僅僅只能作為極為微弱的參考證據。此時應該推薦使用 Pearson 的模型擬合檢驗。如果 Pearson 統計量，除以殘差的自由度獲得的值遠大於 1，就提示存在過度離散。
+
+
+
+```{r  GLM-0409, cache=TRUE}
+with(m1, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+Goodness of fit 檢驗結果 提示本模型**可能存在過度離散**，數據擬合度不理想。值得注意的是如果樣本很大時，模型偏差的檢驗統計量**將不再服從卡方分佈**，應用的時候一定要慎重。
+
+### 負二項式分佈模型 negative binomial model
+
+如果普通泊松迴歸模型擬合數據時，發現數據本身有過度離散的嫌疑，那麼建議使用負二項式分佈模型來重新擬合數據。負二項式分佈模型其實是泊松分佈的擴展版本，即考慮了個體的方差和均值的隨機效應 subject-specific random effect。如果設每個觀測對象的隨機效應部分爲 $a_i$，預測變量爲向量 $\mathbf{x_i} = (x_{i1}, \cdots, x_{ip})$，那麼因變量 $Y_i$ 服從均值爲 $\text{exp}(\beta^T\mathbf{x_i}+a_i)$ 泊松分佈。在負二項式分佈中，個體的隨機效應部分的自然底數的指數 $e^{a_i}$ 其實是服從均值爲 1， 方差爲 $\alpha$ 的[伽馬分佈 (gamma distribution)](https://cosx.org/2013/01/lda-math-gamma-function/)。$\alpha$ 越大，说明过度离散越明显。
+
+接下來用相同的數據，使用負二項式分佈模型在 R 裏作模型的擬合，你就會看到差別：
+
+R 裏擬合負二項式分佈模型的函數 `glm.nb` 在基本包 `MASS` 裏。
+
+```{r  GLM-0410, cache=TRUE, message=FALSE , eval = TRUE}
+m1 <- glm.nb(num_awards ~ prog, data = p)
+m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
+summary(m1)
+summary(m2)
+```
+
+仔細比較普通泊松分佈迴歸和負二項式分佈迴歸的輸出結果，你會發現
+
+1. 迴歸係數的計算是完全相同的 (由於我們只放了一個簡單的分類型變量作爲預測變量，一般來說泊松迴歸和負二項式分佈迴歸計算的迴歸係數會有些許不同)；
+2. 另外一個變化是標準誤的估計量在負二項式分佈模型中明顯變大了，這就是我們放寬了前提條件，允許模型考慮個體的隨機效應的體現。如果泊松模型被數據本身的過度離散影響顯著，那麼泊松迴歸計算獲得的參數標準無是偏低的；
+3. 負二項式分佈迴歸的結果最底下出現的 `Theta:  1.723` 部分，它的倒數是前面提到的個體的隨機效應部分 $a_i$ 服從的伽馬分佈的方差 $\alpha$。它是關鍵的離散程度參數 (dispersion parameter)。**在 STATA 裏，如果用 `nbreg` 擬合負二項式分佈迴歸的模型，輸出的結果最底下會有 $\alpha$ 值的報告，注意它和 R 輸出的 `Theta` 結果互爲倒數**。另外，STATA 的輸出結果還會對 $\alpha = 0$ 直接進行檢驗。在 R 裏面則需要給兩個模型分別進行擬合優度檢驗，多數情況下你會發現負二項式分佈迴歸的模型更加擬合數據：
+
+```{r  GLM-0411, cache=TRUE, eval = TRUE}
+with(m1, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+with(m2, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+另一種獲取沒有被低估的迴歸係數的標準誤的方法來自穩健統計學手段。在 R 裏，擬合完普通泊松迴歸以後，用 `sandwich` 包裏的 `vcovHC()` 命令進行穩健的參數誤差估計 (具體說是夾心方差矩陣估計 sandwich estimator of variance)：
+
+
+```{r  GLM-0412, cache=TRUE, eval = TRUE}
+m2 <- glm(num_awards ~ prog, family=poisson(link = log), data=p)
+cov.m2 <- vcovHC(m2, type = "HC0")
+std.err <- sqrt(diag(cov.m2))
+robust.est <- cbind(Estimate= coef(m2), "Robust SE" = std.err,
+"Pr(>|z|)" = 2 * pnorm(abs(coef(m2)/std.err), lower.tail=FALSE),
+LL = coef(m1) - 1.96 * std.err,
+UL = coef(m1) + 1.96 * std.err)
+robust.est
+```

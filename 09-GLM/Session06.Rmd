@@ -1,0 +1,175 @@
+
+## 醫學中的率
+
+前章介紹的事件發生次數，使用的是泊松迴歸。本章介紹同樣利用泊松迴歸，對事件發生率類型數據的泊松迴歸模型。常見的率的數據例如：
+
+- 肺癌發病率
+- 工廠職工的死亡率
+- 術後後遺症的發生率
+
+下列數據來自英國醫生調查 (British doctors study)，研究的是男性醫生中吸菸與否和冠心病死亡之間的關係。最後一列是每組觀測對象被追蹤的人年 (person-year)。
+
+```{r  GLM-0501, echo=FALSE, cache = TRUE}
+agegrp <- c("35-44","45-54","55-64","65-74","75+","35-44","45-54","55-64","65-74","75+")
+smokes <- c(rep("Smoker",5), rep("Non-smoker",5))
+deaths <- c(32,104,206,186,102,2,12,28,28,31)
+pyrs <- c(52407, 43248, 28612, 12663, 5317, 18790, 10673, 5710, 2585, 1462)
+BritishD <- data.frame(agegrp, smokes, deaths, pyrs)
+print(BritishD)
+```
+
+這是一個已經被整理過的數據，我們沒有辦法從這樣的數據還原到每個觀察對象的個人水平數據。冠心病的粗死亡率 (crude death rate) 可以被計算如下表 (忽略年齡分組)，此時默認的前提是死亡事件在追蹤的過程中發生的概率不發生改變。
+
+
+```{r PoissonRates, echo=FALSE, cache=TRUE}
+dt <- read.csv("../backupfiles/PoissonRates.csv", header = T)
+names(dt) <- c("Group", "Person-years of follow-up", "CHD deaths", "Death Rate per 1000 person-years", "Rate Ratios")
+kable(dt, "html",  align = "c", caption = "Death rates due to CHD in smokers and non-smokers, collapsed over age group") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+## 泊松過程
+
+設 $Y$ 是代表某段時間 $t$ 內**事件發生次數 (死亡)** 的隨機變量。如果可以假設：
+
+- 每次事件的發生，是互相獨立的，即在沒有重疊的時間線上，每個事件的發生是隨機的。
+- 在一個無限小的時間段 $\delta t$ 內，事件發生的概率是 $\lambda\times\delta t$，其中 $\delta t \rightarrow 0$。
+
+那麼根據泊松分佈 (Section \@ref(poisson)) 的定義，在這個時間段內，隨機變量 $Y$ 事件發生次數服從泊松分佈：
+
+$$
+\begin{aligned}
+Y & \sim \text{Po}(\mu) \\
+\text{Where } \mu & = \lambda t, \text{ and } \lambda \text{ is the Rate}
+\end{aligned}
+$$
+
+所以，從泊松過程可以看到，我們關心的參數是事件發生率 $\lambda$。
+
+## 率的模型
+
+既然關心的參數只是發生率，且我們已知泊松分佈是指數分佈的家族成員，可以用廣義線性模型的概念來建模。
+
+1. 因變量分佈，distribution of dependent variable $$Y_i \sim \text{Po}(\mu_i), \text{ where } \mu_i = \lambda_i t_i$$
+2. 線性預測方程，linear predictor $$\eta_i = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}$$
+3. 標準鏈接方程，canonical link function $$\text{log}(\lambda_i) = \text{log}(\frac{\mu_i}{t_i})$$
+
+所以，將率的模型整理一下，就變成了
+
+$$
+\begin{aligned}
+\text{log}(\mu_i) - \text{log}(t_i) & = \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip} \\
+\text{log}(\mu_i) & = \text{log}(t_i) + \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}
+\end{aligned}
+$$
+
+你可以看到，時間項的對數部分 $\text{log}(t_i)$ 其實是被移到線性預測方程的右邊跟參數放在一起的，只是**它的迴歸係數被強制爲 $1$**。這個時間項被叫做 **補償項 (offset)**。這樣我們就成功地擬合了用於求事件發生率的一個泊松迴歸模型。在 R 裏，你可以用 `glm()` 命令的 `offset = ` 選項功能，也可以把 `offset(log(Person-year))` 作爲線性預測方程的一部分把時間項取對數以後放進模型裏面。
+
+## 率的 GLM
+
+所以我們一起來把率的 GLM 正式定義一下，它包含三個部分：
+
+1. 可被認爲互相獨立的因變量觀測值的分佈服從泊松分佈  $$Y_i \sim \text{Po}(\mu_i)$$ <br> 其中 $E(Y_i) = \mu_i = \lambda_i t_i$，$t_i$ 是第 $i$ 個觀察對象 (或者觀察組) 的追蹤人年 (person-time)。
+2. 線性預測方程 $$\eta_i = \text{log}(t_i) + \alpha + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}$$
+3. 鏈接方程是均值的對數方程 $$\text{log}(\mu_i) = \eta_i$$
+
+和分組型二項分佈數據相似，如果泊松 GLM 擬合的數據也是分組型數據，如本章開頭的英國醫生隊列數據。那麼模型偏差值 (deviance) 可以用來衡量模型擬合的好壞。在零假設條件下，模型偏差值服從自由度爲 $n-p$ 的卡方分佈 (這裏的 $n$ 是分組型數據中的“組的數量”，也就是飽和模型中參數的數量，$p$ 是擬合的線性預測方程中參數的數量)。
+
+## 分析實例 Example: British doctors study
+
+數據是本章開頭使用的英國醫生隊列
+
+```{r  GLM-0502, echo=FALSE, cache=TRUE}
+print(BritishD)
+```
+
+- 每組的死亡人數用 $y_i, i=1,\cdots,10$ 標記；
+- 每組追蹤的人年用 $t_i$ 標記；
+- $x_{i1} = 0$ 時對象是吸菸者，$x_{i1} = 1$ 時對象是非吸菸者；
+- $x_{i2}, x_{i3}, x_{i4}, x_{i5}$ 作爲5個年齡組的啞變量。
+
+
+分析目的是：
+
+1. 調查吸菸與冠心病死亡率的關係 (不調整年齡)；
+2. 調查吸菸與冠心病死亡率的年齡調整後關係；
+3. 調查年齡是否對吸菸與冠心病死亡率的關係起到交互作用。
+
+### 模型 1: 吸菸
+
+第一個模型可以用下面的數學表達式：
+
+$$
+\text{log}(\mu_i)  = \text{log}(t_i) + \alpha + \beta_1 x_{i1}
+$$
+
+在 R 裏面用下面的代碼來擬合這個模型，仔細閱讀輸出的結果：
+
+```{r  GLM-0503, cache=TRUE}
+# the following 2 models are equivalent
+Model1 <- glm(deaths ~ smokes + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
+Model1 <- glm(deaths ~ smokes, offset = log(pyrs), family = poisson(link = "log"), data = BritishD)
+summary(Model1); jtools::summ(Model1, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+輸出報告中的參數估計部分 `Estimate` 就是我們擬合模型中參數的估計 $\hat\alpha, \hat\beta_1$，他們各自的含義是：
+
+- $\hat\alpha = -5.96$：非吸菸者的冠心病估計死亡率的對數 (the estimated log rate for non-smokers)；
+- $\hat\beta_1 = 0.547$：非吸菸者和吸菸者兩組之間冠心病死亡率對數之差 (the estimated difference in log rate between non-smokers and smokers)。
+
+注意看報告中間部分模型偏差部分的數字 `Residual deviance: 905.98  on 8  degrees of freedom`，如果對 模型 1 進行擬合優度檢驗：
+
+
+```{r  GLM-0504, cache=TRUE}
+with(Model1, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+擬合優度檢驗結果提示，這個模型對數據的擬合非常差 (poor fit)。可能的原因是，模型 1 中忽略了“年齡”這一重要的因素，使得當僅僅使用 吸菸與否 的信息擬合的泊松迴歸模型的擬合值和觀察值之間的差異的波動非常大，大到很可能無法滿足泊松分佈的前提假設。
+
+### 模型 2: 吸菸 + 年齡
+
+第二個模型的線性預測方程可以寫作：
+
+$$
+\text{log}(\mu_i) = \text{ln}(t_i) + \alpha + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5}
+$$
+
+在 R 裏面用下面的代碼來擬合這個模型，仔細閱讀輸出的結果：
+
+```{r  GLM-0505, cache=TRUE}
+Model2 <- glm(deaths ~ smokes + agegrp + offset(log(pyrs)), family = poisson(link = "log"), data = BritishD)
+summary(Model2); jtools::summ(Model2, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+此時可以計算吸菸者與非吸菸者相比時，年齡調整後冠心病死亡率的比爲：
+
+$$
+\begin{aligned}
+e^{0.3545} & = 1.43 \text{ with } 95\% \text{ CI: } \\
+(e^{0.3545 - 1.96\times0.1074}, & e^{0.3545 + 1.96\times0.1074}) = (1.16, 1.76)
+\end{aligned}
+$$
+
+報告中還包含了對吸菸項迴歸係數的 Wald 檢驗結果 `smokesSmoker   0.3545     0.1074   3.302  0.00096 ***`，從這一結果來看，數據提供了強有力的證據證明了年齡調整以後，吸菸會引起冠心病死亡率的顯著升高。再利用模型擬合報告中模型偏差部分的數據 `Residual deviance: 905.98  on 8  degrees of freedom`，模型的擬合優度檢驗結果爲：
+
+```{r  GLM-0506, cache=TRUE}
+with(Model2, cbind(res.deviance = deviance, df = df.residual,
+  p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+結果依然提示，即使把年齡組放入這個泊松迴歸，模型對數據的擬合程度依然非常的不好。所以，到這裏，在即使調整了年齡之後模型擬合度依然不理想的情況下 (這是需要加交互作用項的證據)，我們需要在模型中加入年齡和吸菸的交互作用項 (結果是加入交互作用項的模型就變成了飽和模型)。
+
+
+### 模型 3: 吸菸 + 年齡 + 吸菸與年齡的交互作用項
+
+
+```{r  GLM-0507, cache=TRUE}
+Model3 <- glm(deaths ~ smokes*agegrp + offset(log(pyrs)), 
+              family = poisson(link = "log"), data = BritishD)
+summary(Model3); jtools::summ(Model3, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+此時你會看到模型的偏差已經幾乎接近於零，因爲這已經是一個飽和模型。你能根據這個模型的結果描述吸菸與冠心病發病率之間的關係及其如何隨着年齡變化而變化的嗎？
+
+根据上述模型的结果，相對於非吸菸人羣，吸菸人羣的年齡調整後的冠心病發病率比 (rate ratio)，隨着年齡的增加而呈現下降趨勢。在最低年齡組 "35-44歲" 中，吸菸與非吸菸相比冠心病發病率比的估計值是 $e^{1.747} = 5.74$。 在 "45-54歲" 年齡組中，吸菸與非吸菸相比冠心病發病率比的估計值是 $e^{1.747 - 0.987} = 2.14$。。。。

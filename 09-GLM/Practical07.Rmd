@@ -1,0 +1,132 @@
+
+
+在本次練習中，我們用一個計算機模擬的有5000名高血壓患者的RCT實驗數據。該數據只有三個隨機產生的二分類變量：
+
+- `treat` 表示患者是接收了新療法 (1 = new)，或者繼續維持現有的療法 (0 = current)；
+
+- `basecontrol` 表示患者在剛進入實驗時 (baseline) 血壓原本控制的狀態 (0 = bad; 1 = good)；
+
+- `fupcontrol` 表示患者在實驗過程的隨訪結果中 (followup) 血壓原本控制的狀態 (0 = bad; 1 = good)；
+
+
+### 使用你熟悉的統計學軟件擬合一個由 `fupcontrol` 作爲結果變量，`treat` 作爲唯一預測變量的廣義線性回歸模型。 根據報告的結果，寫一段適用於醫學/流行病學文獻雜誌的報告。
+
+```{r GLM-prac07-01, cache=TRUE}
+highbp <- read_dta("../backupfiles/highbp.dta")
+
+m0 <- glm(fupcontrol ~ treat, data = highbp, 
+          family = binomial(link = logit))
+summary(m0); jtools::summ(m0, exp = TRUE, confint = TRUE, digits = 7)
+```
+
+There was strong evidence (p < 0.001) that treatment is associated with the probability of having BP controlled at followup, with patients randomised to the treatment having odds of BP controlled of 2.28 (95%CI 2.04 to 2.56) higher than those randomised to the current treatment. 
+
+### 分析 `treat` 和 `basecontrol` 之間的關係，結果是否如你的預期那樣？
+
+
+```{r GLM-prac07-02, cache=TRUE}
+m1 <- glm(basecontrol ~ treat, data = highbp, 
+          family = binomial(link = logit))
+summary(m1); jtools::summ(m1, exp = TRUE, confint = TRUE, digits = 7)
+```
+
+這個分析結果提示我們無證據表明該數據中 `basecontrol` 與治療方案有關。模型比值比十分接近 1。這與完全符合預期，因爲如何選擇治療方案在這個實驗中是完全隨機分配的，它不應與基線時的血壓控制情況有任何關聯。隨機過程把基線血壓控制的情況在兩個治療組之間平衡了。
+
+### 已知模型中如果增加調整基線變量可能對 `fupcontrol` 有一定的預測效果。 在你的模型中增加基線血壓控制情況的變量。與 `m0` 的結果 (治療效果 treatment effect；參數標準誤 standard error；和 p 值)。重新修改之前用於發表在醫學雜誌上關於這個分析結果的報告描述。
+
+```{r GLM-prac07-03, cache=TRUE}
+m2 <- glm(fupcontrol ~ treat + basecontrol, data = highbp, 
+          family = binomial(link = logit))
+summary(m2); jtools::summ(m2, exp = TRUE, confint = TRUE, digits = 7)
+```
+
+
+After adjusting for baseline BP control, the estimated log OR for the new vs current treatment is 1.00 (95%CI 0.87 to 1.13). This is quite a bit larger than the corresponding estimate from part 1, which was 0.83 (0.71, 0.94). The standard error has, perhaps contrary to expectation, increased from 0.059 to 0.067. The p-values are highly significant from both analyses, but the z-statistics is larger in the baseline adjusted analysis, which indicates this result is more statistically significant. 
+
+The increase in the log OR estimate is due to the fact that the baseline adjusted analysis is estimating a different parameter. This is because, although there is no confounding, odds ratios are not collapsible - **a conditional odds ratio has a different interpretation from a marginal one**. The baseline adjusted analyses estimates the odds ratio for two patients who have the same value of baseline BP control, and this differs from the unconditional OR. 
+
+### 你更推薦使用哪個模型作爲最終主要結果的彙報？
+
+都可以。取決於你想拿這結果用於怎樣的解釋。因爲他們回答的是不同的問題。條件比值比 (conditional OR) 的一個缺點是，它的解釋需要考慮這個比值比究竟調整了哪些變量（有哪些條件）。這就帶來一個缺點，如果相同的治療方法選取了不同的條件，也就是調整了不同的變量的話，他們就會完全不同。因爲條件比值比回答的問題更加關心的是病人個體水平的層面 (individual level characteristics) 的問題，也就是說他/她在基線時是否是血壓控制的良好的，或者增加其他的變量 (性別或者年齡等)。相反的，無條件，或者粗比值比回答的問題是更加廣泛的人羣水平的治療效果而不拘泥與究竟調整了哪些變量。後者對於需要採納針對整體人羣政策的決策者來說更加有參考價值。前者對於有（或沒有）某些具體特徵的病人（或非病人）來說則更加有意義。
+
+### 實驗研究者更想知道新的治療方案是否由於基線時患者的血壓控制情況而有不同。爲了回答這個問題，請擬合對應的廣義線性回歸模型。根據結果回答這個問題。
+
+```{r GLM-prac07-04, cache=TRUE}
+m3 <- glm(fupcontrol ~ treat + basecontrol + treat*basecontrol, 
+          data = highbp, family = binomial(link = logit))
+summary(m3); jtools::summ(m3, exp = TRUE, confint = TRUE, digits = 7)
+lrtest(m3, m2)
+```
+
+從模型本身的交互作用項結果(p = 0.54)和兩個模型的似然比檢驗結果 (p = 0.54) 來看，均無證據表示基線時的血壓控制情況和療效之間存在有意義的交互作用。
+
+### 換一個模型，先不考慮 `basecontrol`，使用危險度比 (risk ratio) 來評價不同治療方案之間的療效。
+
+```{r GLM-prac07-05, cache=TRUE}
+m4 <- glm(fupcontrol ~ treat, 
+          data = highbp, family = binomial(link = log))
+summary(m4); jtools::summ(m4, exp = TRUE, confint = TRUE, digits = 7)
+```
+
+鏈接方程換爲對數而非邏輯方程的廣義線性回歸模型時，新治療方案和現行治療方案的血壓控制 RR 是 1.64 (95%CI: 1.52, 1.76)
+
+### 在前一模型`m4`中加入 `basecontrol`，與未加入該變量時模型的輸出結果相比，有什麼不同？
+
+```{r GLM-prac07-06, cache=TRUE}
+m5 <- glm(fupcontrol ~ treat + basecontrol, 
+          data = highbp, family = binomial(link = log))
+summary(m5); jtools::summ(m5, exp = TRUE, confint = TRUE, digits = 7)
+```
+
+由於對數鏈接方程和邏輯鏈接方程不同，是具有可壓縮性的 (collapisble)。所以如果增加的預測變量和結果變量是無關的，那麼我們應該認爲評價治療效果的危險度比在加入無關變量前後不會有太大的變化。但實際結果我們看見危險度比略微減少了一些。這主要是因爲這裏的模型本身是有問題的。
+
+### 給上述模型增加交互作用項。對於危險度比作爲指標時的交互作用分析結果，和使用比值比時相比，你有怎樣的思考和結論？
+
+```{r GLM-prac07-07, cache=TRUE}
+m6 <- glm(fupcontrol ~ treat + basecontrol + treat*basecontrol, 
+          data = highbp, family = binomial(link = log))
+summary(m6); jtools::summ(m6, exp = TRUE, confint = TRUE, digits = 7)
+lrtest(m6, m5)
+```
+
+
+我們發現當我們把評價指標換成危險度比之後，治療方案和基線血壓控制情況之間的交互作用變得高度有統計學意義 (p < 0.0001)。這和之前使用邏輯鏈接函數的模型大相徑庭。這個結果提示我們交互作用存在與否是取決於你使用的評價指標的 (scale dependent)。這裏我們發現本數據中 log risk ratio 的尺度上交互作用存在且有意義， log odds ratio 的尺度上則並不存在有意義的交互作用。所以，採用危險度比作爲評價指標時，我們發現之前我們作出的結論應該需要被修正。
+
+### 如果說不考慮一個RCT的統計分析不能在收集完數據之後修改這一事實，你認爲危險度比模型和比值比模型更應該使用哪一個來總結本數據的結果呢？
+
+Since there is no interaction on the log odds scale, using a logisitic regression is probably preferable, as it **gives a simpler model which correctly models the data**. Whether the unadjusted or baseline adjusted results are presented is a question which is still hotly debated. The latter has increased power to detect a treatment effect, but as we have seen it estimates a different parameter to the marginal unadjusted OR. 
+
+### 證明危險度比模型是可以壓縮的。Prove that the log-link models are collapsible.
+
+令 $Y$ 爲結果變量，$X$ 爲主要暴露變量 (main exposure)，$Z$ 爲與 $X$ 相互獨立的變量，也就是 $Z$ 本身並不是一個 $X$ 的混雜因子。那麼爲了計算 $E(Y|X)$，我們可以使用期望的數學算法來證明：
+
+$$
+\begin{aligned}
+\text{Assume that } E(Y | X, Z) & = \exp(\beta_0 + \beta_X X + \beta_Z Z) \\
+\text{then }        E(Y|X)      & = E(E(Y | X,Z) | X)  \text{ by the law of total expectation}\\
+                                & = E(e^{\beta_0}e^{\beta_XX}e^{\beta_ZZ} | X) \\
+                                & = e^{\beta_0}e^{\beta_XX}E(e^{\beta_ZZ} |X) \\
+\because X \perp \!\!\! \perp Z & \therefore E(e^{\beta_ZZ} |X) = E(e^{\beta_ZZ}) \text{ is a constant}\\
+                                & = e^{\beta_0}e^{\beta_XX} \times k \\
+      \Rightarrow \log(E(Y|X))  & = \beta_0 + \beta_XX + \log(k)
+\end{aligned}
+$$
+
+由此，我們證明了在危險度比的對數鏈接方程的廣義線性回歸模型中，增加非混雜因子變量並不會改變主要暴露變量的回歸係數的參數估計。log risk ratio without adjusting for $Z$ is $\beta_X$, the same value as in the adjusted value. Therefore, a GLM with a log-link do possess the collapsibility property. 
+
+如果你覺得上面的證明你看不懂，我下面自己寫的這個證明可能相對容易一些：
+
+假定 $Z$ 也是二分類變量。
+
+$$
+\begin{aligned}
+E(Y | X) & =  \text{Pr}(Y = 1 | X) \\
+         & = \text{Pr}(Y = 1 | X, Z = 1) \text{Pr}(Z = 1| X) + \text{Pr}(Y = 1 | X, Z = 0)\text{Pr}(Z = 0 | X) \\
+         & = \sum_Z \text{Pr}(Y = 1 | X,Z) \text{Pr}(Z | X) \\
+         & = \exp(\beta_0 + \beta_XX + \beta_Z) \text{Pr}(Z = 1 | X) + \exp(\beta_0 + \beta_XX ) \text{Pr}(Z = 0 | X) \\
+         & = \exp(\beta_0 + \beta_XX) \color{red}{\{\exp(\beta_Z)\text{Pr}(Z = 1 | X) +\text{Pr}(Z = 0 | X)  \}} \\
+         & \text{the part in red color is a constant denote as }k \\
+         & = \exp(\beta_0 + \beta_XX +  \log(k)) \\
+\Rightarrow & \beta_X \text{ was not affected with or without adjusting for }Z
+\end{aligned}
+$$

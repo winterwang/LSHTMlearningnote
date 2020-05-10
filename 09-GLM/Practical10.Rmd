@@ -1,0 +1,168 @@
+
+繼續沿用 NHANES 數據，此次練習我們把重點放在收集到的收縮期血壓數據上。定義收縮期血壓大於 140 $\text{mmHg}$ 者爲高血壓患者。
+
+
+```{r NHANEhyt, cache=TRUE}
+# 1. load the data and define a binary variable indicating whether
+#    each observation has hypertension (1) or not (0)
+NHANES <- read_dta("../backupfiles/nhanesglm.dta")
+NHANES <- NHANES %>%
+  mutate(Gender = ifelse(gender == 1, "Male", "Female")) %>%
+    mutate(Gender = factor(Gender, levels = c("Male", "Female")))
+NHANES <- mutate(NHANES, hypertension = sbp >= 140)
+tab1(NHANES$hypertension, graph = FALSE)
+```
+
+
+
+```{r loesslogit, cache=TRUE, echo=TRUE, fig.width=7, fig.height=5, fig.cap="The loess plot of the observed proportin with hypertension against age. Span = 0.6", fig.align='center', out.width='100%'}
+# 2. Bearing in mind that we know blood pressure increases with age
+#    we begin by including age into a logistic regression for the
+#    the binary hypertension variable. We can use a lowess smoother
+#    plot to examine how the probability of hypertension varies with
+#    age.
+pi <- with(NHANES, predict(loess(hypertension ~ ageyrs)))
+
+with(NHANES, scatter.smooth(ageyrs, logit(pi), pch = 20, span = 0.6, lpars =
+                 list(col = "blue", lwd = 3, lty = 1), col=rgb(0,0,0,0.004),
+                 xlab = "Age in years",
+                 ylab = "Logit(probability) of Hypertension",
+                 frame = FALSE))
+```
+
+Lowess 平滑曲線圖提示，高血壓患病的可能性的 $\text{logit}$，和年齡之間的關係似乎不是簡單直線關係。我們可能需要把**年齡本身**和**年齡的平方**放入邏輯迴歸模型中去看看。
+
+```{r NHANEhyt1, cache=TRUE}
+# 3. Include age into the logistic regression in the way suggested by the lowess plot.
+#    do your results support your findings from the previous graph?
+NHANES <- mutate(NHANES, agesq = ageyrs^2)
+Model_NH5 <- glm(hypertension ~ ageyrs + agesq, data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH5) ; summary(Model_NH5)
+```
+
+正如同 Lowess 平滑曲線建議的那樣，數據提供了極強的證據證明年齡和患有高血壓概率的對數比值 $(\text{log-odds})$ 之間呈現的是拋物線關係。
+
+```{r NHANEhyt2, cache=TRUE, echo=TRUE, fig.width=7, fig.height=5, fig.cap="Standardized Pearson residuals (by covariate pattern) vs. age. Logistic mdoel with linear and quadratic age as covariates.", fig.align='center', out.width='100%', warning=FALSE, message=FALSE}
+# 4. Generate Pearson residuals and investigate whether the way in
+#    which you have included age in the logistic regression in the
+#    previous part is correct.
+
+# obtain the standardized Pearson residuals by covariate pattern
+Diag <- LogisticDx::dx(Model_NH5)
+ggplot(Diag, aes(x = ageyrs, y = sPr)) +  geom_point() +
+  geom_smooth(span = 0.9, se = FALSE) +  theme_bw()  +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age in years", y = "standardised Pearson residual")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+
+標準化 Pearson 殘差 (共變量模式) 和年齡之間的散點圖 \@ref(fig:NHANEhyt2) 提示此時的殘差和年齡之間再無明顯的關係。也就是說，年齡作爲連續變量和高血壓患病概率的對數比值之間的關係，用拋物線 (二次方程) 擬合**並非不合理 (not unreasonable)**。
+
+```{r NHANEhyt3, cache=TRUE, echo=TRUE, fig.width=7, fig.height=5, fig.cap="Standardized Pearson residuals vs. BMI. Logistic mdoel with **just** linear and quadratic age as covariates.", fig.align='center', out.width='100%', warning=FALSE, message=FALSE}
+# 5. Next, use individual level residuals to examine whether BMI ought to be
+#    included in the model, and depending on what you find, continue with you
+#    previous model or add BMI. In the latter case, generate new residuals and
+#    assess if you have included BMI using the most appropriate functional form.
+NHANES$stresPearson <- boot::glm.diag(Model_NH5)$rp
+ggplot(NHANES, aes(x = bmi, y = stresPearson)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(span = 0.8, se = FALSE) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Body Mass Index", y = "Standardized Pearson residual")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+圖 \@ref(fig:NHANEhyt3)，提示，標準化 Pearson 殘差和連續型 BMI 值之間應該存在相關性，也就是該圖提示需要加入連續型變量 BMI 進入邏輯迴歸模型中去！
+
+```{r NHANEhyt4, cache=TRUE}
+Model_NH6 <- glm(hypertension ~ ageyrs + agesq + bmi, data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH6) ; summary(Model_NH6)
+```
+
+加入連續型變量 BMI 進入模型後，`bmi` 項的 Wald 檢驗結果果然證實了 之前殘差圖提示的 BMI 和高血壓患病概率之間存在相關性。再對 `Model_NH6` 的殘差和 `bmi` 作殘差散點圖：
+
+
+```{r NHANEhyt5, cache=TRUE, echo=FALSE, fig.width=7, fig.height=5, fig.cap="Standardized Pearson residuals vs. BMI. Logistic mdoel with **linear and quadratic age and BMI** as covariates.", fig.align='center', out.width='100%', warning=FALSE, message=FALSE}
+NHANES$stresPearson_bmi <- boot::glm.diag(Model_NH6)$rp
+ggplot(NHANES, aes(x = bmi, y = stresPearson_bmi)) +
+  geom_point() +
+  theme_bw() +
+  geom_smooth(span = 0.8, se = FALSE) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Body Mass Index", y = "Standardized Pearson residual")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+現在的殘差散點圖提示殘差和 `bmi` 之間不再有關係，所以之前把 `bmi` 加入邏輯迴歸模型是個**並非不合理 (not unreasonable)**的選擇。
+
+```{r NHANEhyt6, cache=TRUE}
+# 6. So far we have ingored gender. Explore whether gender should be included
+#    in the model. including whether or not the other covariates included
+#    already interact with gender with their effects on hypertension.
+Model_NH7 <- glm(hypertension ~ ageyrs + agesq + bmi + Gender,
+                 data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH7) ; summary(Model_NH7)
+lmtest::lrtest(Model_NH6, Model_NH7)
+# some evidence of an effect of gender.
+# the Wald test and the likelihood ratio test are both borderline
+# statistically significant.
+Model_NH8 <- glm(hypertension ~ ageyrs + agesq + bmi*Gender,
+                 data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH8)
+lmtest::lrtest(Model_NH7, Model_NH8)
+# no strong evidence of an interaction between BMI and gender
+# from both wald test and likelihood ratio test.
+Model_NH9 <- glm(hypertension ~ ageyrs*Gender + agesq + bmi,
+                 data = NHANES, family = binomial(link = "logit"))
+logistic.display(Model_NH9)
+lmtest::lrtest(Model_NH7, Model_NH9)
+# strong evidence of an interaction between gender and age
+lmtest::lrtest(Model_NH6, Model_NH9)
+# joint test of gender and its interaction with age is also significant
+```
+
+增加性別項進入邏輯迴歸模型以後，數據提供了臨界有意義證據 $(p = 0.070)$ 證明了調整了年齡和 BMI 以後，高血壓的患病概率依然和性別有關係。增加了 BMI 和性別的交互作用項之後發現，無證據證明性別和 BMI 之間存在有意義的交互作用 $(p=0.139)$。但是，增加了年齡和性別的交互作用項以後，發現了有很強的證據證明性別和年齡之間存在交互作用 $(p=0.004)$。增加性別以及性別和年齡的交互作用項，顯著提升了模型對數據的擬合度 $(p = 0.0028)$。此處，我們可以下結論認爲，雖然加入年齡本身，對模型擬合程度提升有有限的幫助，但是當模型考慮了年齡和性別的交互作用之後，擬合數據的程度得到極爲顯著的改善。
+
+當然，想要繼續下去也是可以的，例如 `Model_NH9` 的前提下，再加入年齡平方與性別的交互作用項，會發現其 Wald 檢驗結果提示年齡平方，和性別的交互作用是沒有意義的 $(p=0.58)$。
+
+```{r  NHANEhyt7, cache=TRUE}
+# 7. Based on your final model, calculate fitted probabilities for an individual
+#    aged 60 years, at BMI values from 20 to 40 in increments of 5, separately
+#    for men and women, and plot the resulting values.
+
+a <- data.frame(bmi = seq(20, 40, 5), ageyrs = rep(60, 5), agesq = rep(3600, 5), Gender = factor(rep("Male", 5)))
+b <- data.frame(bmi = seq(20, 40, 5), ageyrs = rep(60, 5), agesq = rep(3600, 5), Gender = factor(rep("Female", 5)))
+
+Predict_men <- predict(Model_NH9, a, se.fit = TRUE)$fit
+Predict_men_se <- predict(Model_NH9, a, se.fit = TRUE)$se.fit
+Point_pred_men <- exp(Predict_men)/(1+exp(Predict_men))
+PredictCI_men_L <- exp(Predict_men - 1.96*Predict_men_se)/(1+exp(Predict_men- 1.96*Predict_men_se))
+PredictCI_men_U <- exp(Predict_men + 1.96*Predict_men_se)/(1+exp(Predict_men+ 1.96*Predict_men_se))
+cbind(Point_pred_men, PredictCI_men_L, PredictCI_men_U)
+
+
+
+Predict_women <- predict(Model_NH9, b, se.fit = TRUE)$fit
+Predict_women_se <- predict(Model_NH9, b, se.fit = TRUE)$se.fit
+Point_pred_women <- exp(Predict_women)/(1+exp(Predict_women))
+PredictCI_women_L <- exp(Predict_women - 1.96*Predict_women_se)/(1+exp(Predict_women- 1.96*Predict_women_se))
+PredictCI_women_U <- exp(Predict_women + 1.96*Predict_women_se)/(1+exp(Predict_women+ 1.96*Predict_women_se))
+cbind(Point_pred_women, PredictCI_women_L, PredictCI_women_U)
+```
