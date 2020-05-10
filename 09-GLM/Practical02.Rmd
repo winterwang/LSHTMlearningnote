@@ -1,0 +1,234 @@
+### 思考本章中指數分布家族的參數設置。假如，有一個觀測值 $y$ 來自指數家族。試求證:
+
+1. MLE $\hat\theta$ 是 $b^\prime(\theta) = y$ 的解;
+2. $\theta$ 的 MLE 的方差是 $\frac{\phi}{b^{\prime\prime}(\theta)}$;
+3. 如果 $Y\sim N(\mu, \sigma^2)$，試進一步證明 $b^\prime(\theta) = \mu$ 且 $\frac{\phi}{b^{\prime\prime}(\theta)} = \sigma^2$
+
+1. 當數據來自指數分布家族，它的對數似然可以寫作:
+
+$$
+\frac{y\cdot\theta - b(\theta)}{\phi} - c(y, \phi)
+$$
+
+對這個對數似然方程取 $\theta$ 的偏微分方程可得:
+
+$$
+\frac{\partial}{\partial\theta}\ell(\theta,\phi) = \frac{y - b^\prime(\theta)}{\phi}
+$$
+
+令此偏微分方程等於零，那麼我們可以知道 $\hat\theta$ 是 $b^\prime(\theta) = y$ 的解。
+
+
+2. MLE 的方差可以用 Fisher information 來推導。
+
+$$
+S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}} \\
+\text{Because } \ell^{\prime\prime}(\theta) = -\frac{b^{\prime\prime}(\theta)}{\phi} \\
+\Rightarrow  S^2 = \frac{\phi}{b^{\prime\prime}(\theta)}
+$$
+
+3. 如果 $Y\sim N(\mu, \sigma^2)$, 那麼，根據正態分布數據屬於指數家族的性質，
+
+$$
+\phi = \sigma^2,\theta = \mu, b(\theta =\mu) = \frac{\mu^2}{2} \\
+\Rightarrow b^\prime(\theta) = \mu \\
+\Rightarrow S^2 = \frac{\phi}{b^{\prime\prime}(\theta)} = \sigma^2
+$$
+
+### R 練習
+
+數據來自一個RCT臨牀試驗，比較嗎啡，海洛因和安慰劑在患者精神狀態評分上的影響，試分析數據回答下面的問題:
+
+1. 三組治療組之間注射後的評分均值不同嗎？
+2. 調整基線時精神狀態評分對你的模型結果有什麼影響？
+3. 基線時精神狀態評分的高低會影響不同藥物的效果嗎？
+
+#### 數據讀入 R，作初步分析
+```{r  GLM-0207, cache=TRUE}
+Mental <- read.table("backupfiles/MENTAL.DAT", header =  FALSE, sep ="", col.names = c("treatment", "prement", "mentact"))
+Mental$treatment[Mental$treatment == 1] <- "placebo"
+Mental$treatment[Mental$treatment == 2] <- "morphine"
+Mental$treatment[Mental$treatment == 3] <- "heroin"
+Mental$treatment <- factor(Mental$treatment, levels = c("placebo", "morphine", "heroin"))
+head(Mental)
+```
+
+
+```{r pre-score, echo=TRUE, fig.asp=.7, fig.width=7, fig.cap='Histogram and plots ', fig.align='center', out.width='90%', cache=TRUE}
+# Use hsitograms and plots to look at the distributions of the pre- and post- injection scores.
+# with(Mental, hist(prement, breaks = 14, freq = F))
+# qplot(prement, data = Mental, binwidth = 1)
+hist1 <- ggplot(Mental, aes(x = prement, y = ..density..)) + geom_histogram(binwidth = 1) + theme_bw()
+hist2 <- ggplot(Mental, aes(x = mentact, y = ..density..)) + geom_histogram(binwidth = 1) + theme_bw()
+Scatter <- ggplot(Mental, aes(x = prement, y = mentact)) + geom_point()+ theme_bw()
+grid.arrange(hist1, hist2, Scatter, ncol=2)
+```
+
+可以看到柱狀圖暗示我們實驗前後的得分本身都不服從正態分布。但是這並不妨礙我們使用回歸模型來做推斷。畢竟，**線性回歸模型只要求殘差服從正態分布**。另外，散點圖提示實驗前後的得分之間可能呈正相關。
+
+```{r loess1, echo=TRUE, fig.width=5, fig.height=10, fig.cap="Lowess smoother, with bandwith/span set to 0.8, for the mental data", fig.align='center', out.width='100%', cache=TRUE}
+ggplot(Mental, aes(prement, mentact)) + geom_point() +
+  geom_smooth(method = "loess",  span = 0.8, se = FALSE) +
+  facet_grid(treatment ~ .) + theme_bw()
+```
+
+對於每組實驗組來說，觀測值數量都很少，姑且可以認爲線性模型是合理的。
+
+```{r GLM-exer-tab1, echo=FALSE, cache=TRUE}
+my_tbl <- tibble::tribble(
+                      ~Terms.fitted,     ~RSS, ~Residual.df,
+                     "1. Overall mean", 1117.875,           71,
+                            "2. Drugs",  980.625,           69,
+                          "3. Pre-inj", 884.3277,           70,
+                  "4. Drugs + Pre-inj",  752.055,           68,
+  "5. Drugs + Pre-inj + Drugs×Pre-inj",  733.127,           66
+  )
+names(my_tbl) <- c("Terms fitted", "RSS", "Residuals df")
+require(knitr)
+require(kableExtra)
+
+
+kable(my_tbl, digits = 3, row.names = FALSE, align = "l",
+              format = "html", caption = "Residual sums of squares and degress of freedom from five different models for post-injection mental activity scores (pre-inj = preinjection score)") %>%
+ kable_styling(
+        bootstrap_options = c("striped", "hover", "condensed"),
+        position = "center", full_width = FALSE)
+
+
+# kable(dt, "html",  align = "c", caption = "Death rates due to CHD in smokers and non-smokers, collapsed over age group") %>%
+#   kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+#### 寫下表格 \@ref(tab:GLM-exer-tab1) 中五個線性回歸模型的數學表達式，在 R 裏面擬合這5個模型，在第二列第三列分別填寫各模型的統計信息 (殘差平方和 residuals sum of squares，和 殘差自由度 reiduals degrees of freedom)。利用該表格填寫完整以後的內容，用筆和紙正式地比較模型 3 和 4; 4 和 5 的擬合優度。然後和 R 的輸出結果比較確認。你會作出怎樣的結論？另外，爲什麼相似的比較模型的方法不適用於比較模型 2 和 3？
+
+**解**
+
+用 $z_i, y_i$ 分別標記第 $i$ 名患者在藥物注射前，後兩次測量的精神醫學指徵評分。使用線性回歸模型的前提假設是 $y_i \sim N(\mu_i, \sigma^2)$ 且互相獨立。另外，預測變量的標記爲:
+
+$$
+x_{1i} = \left\{ \begin{array}{ll}  0 \text{ placebo or heroin }\\  1 \text{ morphine}\\ \end{array} \right.
+x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ heroin}\\ \end{array} \right. \\
+$$
+
+1. Overall mean model
+
+鏈接方程部分: $\eta_i = \beta_0$
+
+```{r GL-exer-2-c1, echo=TRUE, cache=TRUE}
+#1.  Overall mean model
+Overall <- lm(mentact ~ 1, data = Mental)
+summary(Overall)
+anova(Overall)
+```
+
+2. Drugs model
+
+鏈接方程部分: $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i}$
+
+```{r GL-exer-2-c2, echo=TRUE, cache=TRUE}
+#2.  Drugs model
+Drugs <- lm(mentact ~ treatment, data = Mental)
+summary(Drugs)
+anova(Drugs)
+```
+
+3. Pre-inj model
+
+鏈接方程部分 $\eta_i = \beta_0 + \beta_3 z_i$
+
+
+```{r GL-exer-2-c3, echo=TRUE, cache=TRUE}
+#3.  Pre-inj model
+Pre_inj <- lm(mentact ~ prement, data = Mental)
+summary(Pre_inj)
+anova(Pre_inj)
+```
+
+4. Drugs + pre-inj model
+
+鏈接方程部分: $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3z_i$
+
+```{r GL-exer-2-c4, echo=TRUE, cache=TRUE}
+#4.  Drugs + Pre-inj model
+Drug_Pre_inj <- lm(mentact ~ treatment + prement, data = Mental)
+summary(Drug_Pre_inj)
+anova(Drug_Pre_inj)
+```
+
+5. Drug + Pre-inj + Drug×Pre-inj
+
+鏈接方程部分: $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3 z_i + \beta_{13}x_{1i}z_i + \beta_{23}x_{2i}z_i$
+
+```{r GL-exer-2-c5, echo=TRUE, cache=TRUE}
+#5.  Drugs + Pre-inj + Drug×Pre-inj model
+Model5 <- lm(mentact ~ treatment*prement, data = Mental)
+summary(Model5)
+anova(Model5)
+```
+
+
+比較模型 3 和 4 可以使用相關的 F 統計量 (Partial F tests)
+
+$$
+F=\frac{(844.328 - 752.055)/(70-68)}{752.055/68} = 5.98
+$$
+
+自由度爲 (2,68) 時 F 統計量爲 5.98 的概率是:
+
+```{r GL-exer-2-c6, echo=TRUE, cache=TRUE}
+1-pf(5.98, 2, 68)
+```
+
+所以我們有極強的證據證明這兩個模型顯著不同，且模型 4 擬合數據更好，且該證據也證明了注射藥物後三組之間的精神醫學指徵的分顯著不同。用 R 進行偏 F 檢驗如下，可見我們的計算是完全正確的:
+
+```{r GL-exer-2-c7, echo=TRUE, cache=TRUE}
+anova(Pre_inj, Drug_Pre_inj)
+```
+
+
+比較模型 4 和 5:
+
+```{r GL-exer-2-c8, echo=TRUE, cache=TRUE}
+anova(Drug_Pre_inj, Model5)
+```
+
+所以，模型 4 和 5 比較的結果告訴我們沒有證據證明實驗前的精神醫學指徵得分和不同治療組之間有交互作用。但是由於模型 2 和 3 本身不是互爲嵌套式結構的，所以他們無法通過相似的偏 F 檢驗來比較模型。
+
+#### 用 `glm` 命令擬合模型 4，試比較其輸出結果和 `lm` 之間的異同:
+
+```{r  GL-exer-2-c9, echo=TRUE, cache=TRUE}
+Model4 <- glm(mentact ~ treatment + prement, family = gaussian(link = "identity"), data = Mental)
+summary(Model4)
+```
+
+可以看出各個參數估計和標準誤估計都是完全相同的。但是當你使用 STATA 的 `glm` 命令時，它默認的高斯鏈接方程使用的不是 t 檢驗結果而是 z 檢驗結果，所以會給出略微不同的 95% 信賴區間。
+
+#### 使用相關模型的結果填寫下列表格
+
+```{r GLM-exer-tab2, echo=FALSE, cache=TRUE}
+my_tbl <- tibble::tribble(
+         ~X1, ~Mean, ~Mean.diff.with.Placebo,   ~SE1, ~Adj.mean.diff.with.Placebo,   ~SE2,
+   "Placebo", 5.542,                       0,   "--",                           0,   "--",
+  "Morphine", 3.667,                  -1.875, "1.08",                      -1.761, "0.96",
+    "Heroin", 2.167,                  -3.375, "1.08",                       -3.31, "0.96"
+  )
+names(my_tbl) <- c(" ","Mean", "Mean diff with Placebo", "SE", "Adj. mean diff with Placebo", "SE")
+
+kable(my_tbl, digits = 3, row.names = FALSE, align = "c",
+              format = "html", caption = "Comparison of mean post-injection mental activity scores.") %>%
+ kable_styling(
+        bootstrap_options = c("striped", "hover", "condensed"),
+        position = "center", full_width = FALSE)
+
+```
+
+#### 對分析的結果做簡短的總結
+
+在模型 2 (drug model) 中，F 檢驗給出的 p = 0.0109，提供了較爲有力的證據證明每個治療組治療後的精神醫學指徵得分是不同的。但是，觀察每個回歸系數的檢驗結果，發現嗎啡組和安慰劑組之差其實沒有達到 5% 統計學意義 (p = 0.089)，海洛因組和安慰劑組之間的得分差則達到了 5% 的統計學意義 (p = 0.003)。
+
+模型加入對實驗前精神醫學指徵得分的調整之後，組與組之間的估計差發生了些許(但是並不大)的變化。這其實也是我們事先估計的結果，因爲對於RCT來說，沒有混雜因素，之所以調整基線值，主要爲的是提升參數估計的精確度 (減小 SE，從而使95% 信賴區間更小)。
+
+對交互作用實施了偏 F 檢驗得到的結果 (p = 0.43) 提示，沒有證據反對零假設 -- 藥物作用效果不因爲實驗前患者的精神醫學指徵得分不同而不同。
+
+最後，`glm` 和 `lm` 的模型結果輸出在 R 裏是幾乎完全相同的，在 STATA 裏面則有計算方法的不同導致不同的95%CI。
+
