@@ -833,8 +833,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul></li>
 <li class="chapter" data-level="55.3" data-path="條件邏輯迴歸-conditional-logistic-regression.html"><a href="條件邏輯迴歸-conditional-logistic-regression.html#條件邏輯回歸模型的一般化"><i class="fa fa-check"></i><b>55.3</b> 條件邏輯回歸模型的一般化</a></li>
 </ul></li>
-<li class="chapter" data-level="56" data-path="multinomial-logistic-regression.html"><a href="multinomial-logistic-regression.html"><i class="fa fa-check"></i><b>56</b> Multinomial Logistic Regression</a></li>
-<li class="chapter" data-level="57" data-path="ordinal-logistic-regression.html"><a href="ordinal-logistic-regression.html"><i class="fa fa-check"></i><b>57</b> Ordinal Logistic Regression</a></li>
+<li class="chapter" data-level="56" data-path="多項邏輯回歸-multinomial-logistic-regression.html"><a href="多項邏輯回歸-multinomial-logistic-regression.html"><i class="fa fa-check"></i><b>56</b> 多項邏輯回歸 Multinomial Logistic Regression</a></li>
+<li class="chapter" data-level="57" data-path="順序邏輯回歸-ordinal-logistic-regression.html"><a href="順序邏輯回歸-ordinal-logistic-regression.html"><i class="fa fa-check"></i><b>57</b> 順序邏輯回歸 Ordinal Logistic Regression</a></li>
 <li class="part"><span><b>IX 等級線性迴歸模型 analysis of hierarchical and other dependent data</b></span></li>
 <li class="chapter" data-level="58" data-path="Hierarchical.html"><a href="Hierarchical.html"><i class="fa fa-check"></i><b>58</b> 相互依賴數據及簡單的應對方案</a><ul>
 <li class="chapter" data-level="58.1" data-path="Hierarchical.html"><a href="Hierarchical.html#相互依賴的數據"><i class="fa fa-check"></i><b>58.1</b> 相互依賴的數據</a></li>
@@ -2360,7 +2360,7 @@ smokesSmoker:agegrp75+
 <p>在這個練習題中，我們將學會擬合，並能夠解釋多個不同的泊松回歸模型的分析結果，研究對象來自兩家橡膠製造工廠的男性職員。其中一家工廠在製造過程中對員工施加了保護的獨立設備，然而另一家工廠的工人則較多的暴露在製造橡膠過程中產生的粉塵和污染物中。該研究是爲了分析兩家工廠職工的死亡率是否有不同，需要考慮的已知的混雜因素是職工年齡。</p>
 <div id="將數據導入-r-環境中初步計算每個工廠不同年齡組工人的死亡人數和追蹤人年數據" class="section level3">
 <h3><span class="header-section-number">48.6.1</span> 將數據導入 R 環境中，初步計算每個工廠不同年齡組工人的死亡人數，和追蹤人年數據。</h3>
-<div class="sourceCode" id="cb619"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb619-1" data-line-number="1">Rubber &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;backupfiles/RUBBER.RAW&quot;</span>, <span class="dt">header =</span> <span class="ot">FALSE</span>, </a>
+<div class="sourceCode" id="cb619"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb619-1" data-line-number="1">Rubber &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;../backupfiles/RUBBER.RAW&quot;</span>, <span class="dt">header =</span> <span class="ot">FALSE</span>, </a>
 <a class="sourceLine" id="cb619-2" data-line-number="2">                     <span class="dt">sep =</span><span class="st">&quot;&quot;</span>, <span class="dt">col.names =</span> <span class="kw">c</span>(<span class="st">&quot;Agegrp&quot;</span>, <span class="st">&quot;Factory&quot;</span>, </a>
 <a class="sourceLine" id="cb619-3" data-line-number="3">                                            <span class="st">&quot;n_deaths&quot;</span>, <span class="st">&quot;Pyears&quot;</span>))</a>
 <a class="sourceLine" id="cb619-4" data-line-number="4">Rubber &lt;-<span class="st"> </span>Rubber <span class="op">%&gt;%</span><span class="st"> </span></a>
@@ -2395,7 +2395,7 @@ smokesSmoker:agegrp75+
 <p>上面的代碼計算了每個工廠不同年齡組的死亡人數 (總人數 160) ，以及追蹤的人年 (總人年 19345)。</p>
 <p>在 Stata 裏面的代碼更簡單(嗎？)</p>
 <pre><code>## 
-## . infile agegrp factory deaths pyrs using &quot;backupfiles/RUBBER.RAW&quot;, cl(8 observations read)
+## . infile agegrp factory deaths pyrs using &quot;../backupfiles/RUBBER.RAW&quot;, cl(8 observations read)
 ## 
 ## . 
 ## . label var agegrp &quot;Age group (1:5-59; 2:60-69; 3: 70-79; 4: 80-89)&quot;
@@ -2846,111 +2846,18 @@ Agegrp80-89
 <p>你可以比較加入年齡和沒加入年齡時的兩個模型，如上面使用的似然比檢驗法 (likelihood ratio test)。</p>
 <p>在 Stata 你可以這樣做上面相同的事：</p>
 <pre><code>## 
-## . infile agegrp factory deaths pyrs using &quot;backupfiles/RUBBER.RAW&quot;, cl(8 observations read)
+## . infile agegrp factory deaths pyrs using &quot;backupfiles/RUBBER.RAW&quot;, clfile backupfiles/RUBBER.RAW not found
+## r(601);
 ## 
-## . 
-## . gen lpyrs = log(pyrs)
-## 
-## . 
-## . glm deaths, family(poisson) offset(lpyrs) link(log)
-## 
-## Iteration 0:   log likelihood =  -76.82037  
-## Iteration 1:   log likelihood = -70.363937  
-## Iteration 2:   log likelihood = -70.362666  
-## Iteration 3:   log likelihood = -70.362666  
-## 
-## Generalized linear models                         No. of obs      =          8
-## Optimization     : ML                             Residual df     =          7
-##                                                   Scale parameter =          1
-## Deviance         =  103.8826147                   (1/df) Deviance =   14.84037
-## Pearson          =  103.4540571                   (1/df) Pearson  =   14.77915
-## 
-## Variance function: V(u) = u                       [Poisson]
-## Link function    : g(u) = ln(u)                   [Log]
-## 
-##                                                   AIC             =   17.84067
-## Log likelihood   =  -70.3626661                   BIC             =   89.32652
-## 
-## ------------------------------------------------------------------------------
-##              |                 OIM
-##       deaths |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
-## -------------+----------------------------------------------------------------
-##        _cons |  -4.795015   .0790569   -60.65   0.000    -4.949964   -4.640067
-##        lpyrs |          1  (offset)
-## ------------------------------------------------------------------------------
-## 
-## . est store A
-## 
-## . 
-## . glm deaths i.agegrp, family(poisson) offset(lpyrs) link(log)
-## 
-## Iteration 0:   log likelihood = -19.667375  
-## Iteration 1:   log likelihood = -19.277924  
-## Iteration 2:   log likelihood = -19.276748  
-## Iteration 3:   log likelihood = -19.276748  
-## 
-## Generalized linear models                         No. of obs      =          8
-## Optimization     : ML                             Residual df     =          4
-##                                                   Scale parameter =          1
-## Deviance         =  1.710778974                   (1/df) Deviance =   .4276947
-## Pearson          =  1.704679988                   (1/df) Pearson  =     .42617
-## 
-## Variance function: V(u) = u                       [Poisson]
-## Link function    : g(u) = ln(u)                   [Log]
-## 
-##                                                   AIC             =   5.819187
-## Log likelihood   = -19.27674826                   BIC             =  -6.606987
-## 
-## ------------------------------------------------------------------------------
-##              |                 OIM
-##       deaths |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
-## -------------+----------------------------------------------------------------
-##       agegrp |
-##           2  |   1.582834   .2950484     5.36   0.000     1.004549    2.161118
-##           3  |   2.302963   .2946408     7.82   0.000     1.725477    2.880448
-##           4  |   2.554674   .3609046     7.08   0.000     1.847314    3.262034
-##              |
-##        _cons |  -6.315874   .2672612   -23.63   0.000    -6.839697   -5.792052
-##        lpyrs |          1  (offset)
-## ------------------------------------------------------------------------------
-## 
-## . est store B
-## 
-## . 
-## . lrtest A B
-## 
-## Likelihood-ratio test                                 LR chi2(3)  =    102.17
-## (Assumption: A nested in B)                           Prob &gt; chi2 =    0.0000</code></pre>
+## end of do-file
+## r(601);</code></pre>
 <p>其實Stata裏面還可以用簡化的 <code>Poisson</code> 命令</p>
 <pre><code>## 
-## . infile agegrp factory deaths pyrs using &quot;backupfiles/RUBBER.RAW&quot;, cl(8 observations read)
+## . infile agegrp factory deaths pyrs using &quot;backupfiles/RUBBER.RAW&quot;, clfile backupfiles/RUBBER.RAW not found
+## r(601);
 ## 
-## . 
-## . gen lpyrs = log(pyrs)
-## 
-## . 
-## . poisson deaths i.agegrp, e(pyrs)
-## 
-## Iteration 0:   log likelihood = -19.280832  
-## Iteration 1:   log likelihood = -19.276746  
-## Iteration 2:   log likelihood = -19.276745  
-## 
-## Poisson regression                              Number of obs     =          8
-##                                                 LR chi2(3)        =     102.17
-##                                                 Prob &gt; chi2       =     0.0000
-## Log likelihood = -19.276745                     Pseudo R2         =     0.7260
-## 
-## ------------------------------------------------------------------------------
-##       deaths |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
-## -------------+----------------------------------------------------------------
-##       agegrp |
-##           2  |   1.582833   .2950484     5.36   0.000     1.004549    2.161118
-##           3  |   2.302962   .2946408     7.82   0.000     1.725477    2.880448
-##           4  |   2.554674   .3609046     7.08   0.000     1.847314    3.262034
-##              |
-##        _cons |  -6.315874   .2672612   -23.63   0.000    -6.839697   -5.792052
-##     ln(pyrs) |          1  (exposure)
-## ------------------------------------------------------------------------------</code></pre>
+## end of do-file
+## r(601);</code></pre>
 </div>
 <div id="計算下列兩組年齡組對比之下的模型估計死亡率比-rate-ratios" class="section level4">
 <h4><span class="header-section-number">48.6.3.2</span> 計算下列兩組年齡組對比之下的模型估計死亡率比 (rate ratios)</h4>
@@ -3193,23 +3100,11 @@ Agegrp180-89
 </table>
 <p>但是在 Stata 裏面可以使用靈活無比的 <code>lincom</code> 命令：</p>
 <pre><code>## 
-## . infile agegrp factory deaths pyrs using &quot;backupfiles/RUBBER.RAW&quot;, cl(8 observations read)
+## . infile agegrp factory deaths pyrs using &quot;backupfiles/RUBBER.RAW&quot;, clfile backupfiles/RUBBER.RAW not found
+## r(601);
 ## 
-## . 
-## . gen lpyrs = log(pyrs)
-## 
-## . 
-## . quietly: poisson deaths i.agegrp, e(pyrs)
-## 
-## . lincom 4.agegrp - 3.agegrp, eform
-## 
-##  ( 1)  - [deaths]3.agegrp + [deaths]4.agegrp = 0
-## 
-## ------------------------------------------------------------------------------
-##       deaths |     exp(b)   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
-## -------------+----------------------------------------------------------------
-##          (1) |   1.286225   .3503829     0.92   0.355     .7541189    2.193786
-## ------------------------------------------------------------------------------</code></pre>
+## end of do-file
+## r(601);</code></pre>
 </div>
 </div>
 <div id="接下來的模型中在前面的基礎上加入工廠編號你認爲是否有證據證明工廠之間的工人的死亡率在調整了年齡之後依然有差異計算年齡調整過後的兩工廠之間死亡率之比和95ci" class="section level3">

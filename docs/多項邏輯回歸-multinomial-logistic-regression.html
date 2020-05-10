@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 74 章 Cox 比例風險模型 | 醫學統計學</title>
+  <title>第 56 章 多項邏輯回歸 Multinomial Logistic Regression | 醫學統計學</title>
   <meta name="description" content="在LSHTM的學習筆記" />
   <meta name="generator" content="bookdown 0.18 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 74 章 Cox 比例風險模型 | 醫學統計學" />
+  <meta property="og:title" content="第 56 章 多項邏輯回歸 Multinomial Logistic Regression | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 74 章 Cox 比例風險模型 | 醫學統計學" />
+  <meta name="twitter:title" content="第 56 章 多項邏輯回歸 Multinomial Logistic Regression | 醫學統計學" />
   
   <meta name="twitter:description" content="在LSHTM的學習筆記" />
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="生存數據中的回歸模型.html"/>
-<link rel="next" href="分析策略和模型檢查-model-checking-survival-analysis.html"/>
+<link rel="prev" href="條件邏輯迴歸-conditional-logistic-regression.html"/>
+<link rel="next" href="順序邏輯回歸-ordinal-logistic-regression.html"/>
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook/css/plugin-table.css" rel="stylesheet" />
@@ -1345,62 +1345,16 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="cox-比例風險模型" class="section level1">
-<h1><span class="header-section-number">第 74 章</span> Cox 比例風險模型</h1>
-<p><span class="math display">\[
-h(t|x) = h_0(t)e^{\beta^Tx}
-\]</span></p>
-<p>其中，<span class="math inline">\(h_0(t)\)</span> 是被比較的基線組成員(baseline individual)的風險度 (hazard)，在 Weibull 模型或者指數模型中，這個基線風險 (baseline hazard) 是需要被模型根據數據來進行參數估計的 (parameterized)。但是，1972年，神一樣的人物 Cox <span class="citation">(Cox <a href="#ref-Cox1972b">1972</a>)</span> 提出，其實我們不需要對這個基線風險進行“無謂”的估計，可以無視它在模型中的存在。正因為如此，這個模型被冠以發明者的名字 Cox proportional hazards model。因為此模型不對基線風險進行任何估計，但是對預測變量對於風險的效果 (effect of the explanatory variable) 用模型中的 <span class="math inline">\(\beta\)</span> 進行參數估計，所以，它又是一種典型的半參數化模型 (semi-parametric model)。</p>
-<p>Cox 比例風險模型下的似然：</p>
-<p><span class="math display">\[
-L= \prod_{i=1}^n\{ h_0(t)e^{\beta^Tx_i}\exp(-\int_0^{t_i} h_0(u)e^{\beta^Tx_i}du) \}^{\delta_i}\{ \exp(-\int_0^{t_i} h_0(u)e^{\beta^Tx_i}du) \}^{1-\delta_i}
-\]</span></p>
-<p>是無法估計的，此時要用到偏似然 (partial likelihood)，</p>
-<p>思考這樣一個問題，在一組用 <span class="math inline">\(R_j\)</span> 標記的患者集合中，當我們已知它們同時都存活到了時間點 <span class="math inline">\(t_j\)</span>，且沒有發生刪失，那麼這組患者中的某個 <span class="math inline">\(i_j\)</span>，他/她有一個解釋變量 <span class="math inline">\(x_i\)</span>，他在這個時間點恰好發生事件的條件概率該怎麼計算：</p>
-<p><span class="math display">\[
-\frac{h_0(t_j)\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}h_0(t_j)\exp(\beta^Tx_k)} = \frac{\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}\exp(\beta^Tx_k)}
-\]</span></p>
-<p>是的，你沒有看錯，基線風險被完美的消除掉了，這就是它不需要被參數估計的原因。此時，我們用偏似然來計算這樣的模型似然：</p>
-<p><span class="math display">\[
-L_p = \prod_j \frac{\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}\exp(\beta^Tx_k)}
-\]</span></p>
-<p>模型的假設：</p>
-<p><span class="math display">\[
-h(t|x) = h_0(t)e^{\beta^Tx}
-\]</span></p>
-<ol style="list-style-type: decimal">
-<li>Proportional hazards assumption - explanatory variables act <strong>multiplicatively</strong> on the hazard and their effect on the hazard does not change over time;</li>
-<li>We have correctly specified the form for how continuous explanatory variables act on the hazard;</li>
-<li>We have included all relevant explanatory variables including possbile interactions;</li>
-<li>Uninformative censoring;</li>
-<li>Individuals are independent.</li>
-</ol>
-<div id="該用半參數模型還是用全參數模型" class="section level2">
-<h2><span class="header-section-number">74.1</span> 該用半參數模型還是用全參數模型</h2>
-<ul>
-<li>如果說指數模型或者 Weibull 模型是合理的，通常此時用 Cox 半參數模型也是合理的；</li>
-<li>如果指數模型或者 Weibull 模型都是合理的，那麼 Cox 半參數模型給出的估計，其實不會和指數模型或者 Weibull 模型相差甚遠。指數模型或者 Weibull 模型可能給出的估計會相對更精確 (更小的標準誤)，但是實際應用中這種更加精確的程度其實十分有限；</li>
-<li>另外，使用指數模型或者 Weibull 模型，重要的基線風險是否被模型擬合正確將會是關鍵 (baseline hazard mis-specified?)，但是使用 Cox 模型，就可以避免這個假設，忽略掉基線風險；</li>
-<li>2002 年，<span class="citation">(Royston and Parmar <a href="#ref-Royston2002">2002</a>)</span> 提出第三種生存數據模型，“flexible parametric survival models”，結合了參數和半參數模型的長處，正在變得流行起來。在這個新型靈活參數生存模型中，使用了三次方程平滑曲線 (cubic splines modelled smoothly) 擬合對數基線累積風險 (log cumulative baseline hazard)。</li>
-</ul>
-</div>
-</div>
-<h3>References</h3>
-<div id="refs" class="references">
-<div id="ref-Cox1972b">
-<p>Cox, David R. 1972. “Models and Life-Tables Regression.” <em>JR Stat. Soc. Ser. B</em> 34: 187–220.</p>
-</div>
-<div id="ref-Royston2002">
-<p>Royston, Patrick, and Mahesh KB Parmar. 2002. “Flexible Parametric Proportional-Hazards and Proportional-Odds Models for Censored Survival Data, with Application to Prognostic Modelling and Estimation of Treatment Effects.” <em>Statistics in Medicine</em> 21 (15). Wiley Online Library: 2175–97.</p>
-</div>
+<div id="多項邏輯回歸-multinomial-logistic-regression" class="section level1">
+<h1><span class="header-section-number">第 56 章</span> 多項邏輯回歸 Multinomial Logistic Regression</h1>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="生存數據中的回歸模型.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="分析策略和模型檢查-model-checking-survival-analysis.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="條件邏輯迴歸-conditional-logistic-regression.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="順序邏輯回歸-ordinal-logistic-regression.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1431,7 +1385,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/11-Survival-analysis.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/09-GLM.Rmd",
 "text": "編輯"
 },
 "history": {
