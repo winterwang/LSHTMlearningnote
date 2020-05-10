@@ -1361,7 +1361,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>到這裏，如果你還沒暈，恭喜你應該能理解爲什麼說<strong>病例對照研究研究的是 “結果的原因/causes of effect”</strong>；<strong>隊列研究研究的是 “原因導致的結果/effect of causes”</strong>。二者的終極目標卻是一致的 – 尋找暴露和結果二者之間的關係/To investigate the association between exposures and the outcomes – 只是手段不同而已。</p>
 <p>觀察性研究 (不論是隊列還是病例對照研究)，除了我們一定會測量並收集的暴露變量數據，在分析過程中還不可避免地需要把混雜效應考慮進來，也就是我們還必須測量並收集那些潛在的混雜因子的數據 <span class="math inline">\((W)\)</span>。圖 <a href="流行病學中的邏輯迴歸.html#fig:cohort-case-control">50.1</a> 用簡單示意圖總結了 <span class="math inline">\(W (\text{ confounders }), X (\text{ exposures }), D (\text{ outcomes })\)</span> 之間，在不同實驗設計下的關係。</p>
 <div class="figure" style="text-align: center"><span id="fig:cohort-case-control"></span>
-<img src="../img/Selection_114.png" alt="Path diagrams showing relationships between variables in the underlying population and selection to a cohort study and a case-control study." width="90%" />
+<img src="img/Selection_114.png" alt="Path diagrams showing relationships between variables in the underlying population and selection to a cohort study and a case-control study." width="90%" />
 <p class="caption">
 圖 50.1: Path diagrams showing relationships between variables in the underlying population and selection to a cohort study and a case-control study.
 </p>
@@ -1776,7 +1776,7 @@ L_{\text{case-control}} \propto \prod_{i=1}^n(\frac{e^{\alpha^* + \beta_1 x_{i1}
 <div id="流行病學研究中變量的調整策略" class="section level2">
 <h2><span class="header-section-number">50.4</span> 流行病學研究中變量的調整策略</h2>
 <div class="figure" style="text-align: center"><span id="fig:epi-adjustment"></span>
-<img src="../img/Selection_115.png" alt="relationships between three variables in an underlying population of interest" width="90%" />
+<img src="img/Selection_115.png" alt="relationships between three variables in an underlying population of interest" width="90%" />
 <p class="caption">
 圖 50.2: relationships between three variables in an underlying population of interest
 </p>
@@ -1794,8 +1794,589 @@ L_{\text{case-control}} \propto \prod_{i=1}^n(\frac{e^{\alpha^* + \beta_1 x_{i1}
 <div id="part-1" class="section level3">
 <h3><span class="header-section-number">50.5.1</span> Part 1</h3>
 <p>在第一部分的數據分析中，我們會使用邏輯回歸模型來分析來自病例對照研究設計的數據，並獲取比值比 (odds ratios)。</p>
-<p>該病例對照研究數據來自一項關於食道癌的研究。病例是200名被診斷爲患有食道癌的法國男性。對照組則來自176名健康男性。你可以從作者的<a href="http://faculty.washington.edu/norm/datasets.html">個人網站</a>下載原始數據。</p>
+<p>該病例對照研究數據來自一項關於食道癌的研究 <span class="citation">(Breslow, Day, and research <a href="#ref-breslow1980volume">1980</a>)</span>。病例是200名被診斷爲患有食道癌的法國男性。對照組則來自176名健康男性。</p>
+<p>數據包含的變量及其解釋描述如下：</p>
+<table>
+<colgroup>
+<col width="16%" />
+<col width="83%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable Name</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>case</code></td>
+<td>1 = case, 0 = control</td>
+</tr>
+<tr class="even">
+<td><code>age_group</code></td>
+<td>age group [1: 25-34; 2: 35-44; 3: 45-54; 4: 55-64; 5: 65-74; 6: 75+]</td>
+</tr>
+<tr class="odd">
+<td><code>tobacco_group</code></td>
+<td>tobacco intake group [0: None; 1: 1-9 g/d; 2: 10-19 g/d; 3: 20-29 g/day; 4: 30+ g/d]</td>
+</tr>
+<tr class="even">
+<td><code>alcohol_grp</code></td>
+<td>alcohol intake group [0: 0-39 g/d; 1: 40-79 g/d; 80-119 g/d; 3: 120+ g/d]</td>
+</tr>
+</tbody>
+</table>
+<p>該研究的主要目的是分析吸菸量 <code>tobacco_group</code> 與飲酒量 <code>alcohol_grp</code> 是否是食道癌的危險因子。變量中的年齡 <code>age_group</code> 則作爲唯一已知的混雜因子。</p>
+<div id="簡單初步總結各個解釋變量的分佈及特徵思考吸菸量和飲酒量吸菸量和年齡之間有怎樣的關係" class="section level4">
+<h4><span class="header-section-number">50.5.1.1</span> 簡單初步總結各個解釋變量的分佈及特徵。思考吸菸量和飲酒量，吸菸量和年齡之間有怎樣的關係。</h4>
+<div class="sourceCode" id="cb678"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb678-1" data-line-number="1">Oesophageal &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;../backupfiles/oesophageal_data-1.dta&quot;</span>)</a>
+<a class="sourceLine" id="cb678-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb678-3" data-line-number="3">tab &lt;-<span class="st"> </span><span class="kw">stat.table</span>(<span class="dt">index=</span><span class="kw">list</span>(<span class="dt">Tobacco_gr =</span> tobacco_group, </a>
+<a class="sourceLine" id="cb678-4" data-line-number="4">                             <span class="dt">Alcohol_gr =</span> alcohol_grp),</a>
+<a class="sourceLine" id="cb678-5" data-line-number="5">                   <span class="dt">contents=</span><span class="kw">list</span>(<span class="kw">count</span>(), </a>
+<a class="sourceLine" id="cb678-6" data-line-number="6">                                 <span class="kw">percent</span>(alcohol_grp)), </a>
+<a class="sourceLine" id="cb678-7" data-line-number="7">                  <span class="dt">data=</span>Oesophageal, <span class="dt">margins=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb678-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb678-9" data-line-number="9"><span class="kw">print</span>(tab, <span class="dt">digits =</span> <span class="dv">2</span>)</a></code></pre></div>
+<pre><code>##  ----------------------------------------------------- 
+##              ---------------Alcohol_gr---------------- 
+##  Tobacco_gr         0       1       2       3   Total  
+##  ----------------------------------------------------- 
+##  0             148.00   83.00   27.00    6.00  264.00  
+##                 56.06   31.44   10.23    2.27  100.00  
+##                                                        
+##  1             112.00   97.00   35.00   18.00  262.00  
+##                 42.75   37.02   13.36    6.87  100.00  
+##                                                        
+##  2              84.00   85.00   49.00   18.00  236.00  
+##                 35.59   36.02   20.76    7.63  100.00  
+##                                                        
+##  3              42.00   62.00   16.00   12.00  132.00  
+##                 31.82   46.97   12.12    9.09  100.00  
+##                                                        
+##  4              28.00   29.00   12.00   13.00   82.00  
+##                 34.15   35.37   14.63   15.85  100.00  
+##                                                        
+##                                                        
+##  Total         414.00  356.00  139.00   67.00  976.00  
+##                 42.42   36.48   14.24    6.86  100.00  
+##  -----------------------------------------------------</code></pre>
+<div class="sourceCode" id="cb680"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb680-1" data-line-number="1">tab &lt;-<span class="st"> </span><span class="kw">stat.table</span>(<span class="dt">index=</span><span class="kw">list</span>(<span class="dt">Tobacco_gr =</span> tobacco_group, </a>
+<a class="sourceLine" id="cb680-2" data-line-number="2">                             <span class="dt">Age_gr =</span> age_group),</a>
+<a class="sourceLine" id="cb680-3" data-line-number="3">                   <span class="dt">contents=</span><span class="kw">list</span>(<span class="kw">count</span>(), </a>
+<a class="sourceLine" id="cb680-4" data-line-number="4">                                 <span class="kw">percent</span>(age_group)), </a>
+<a class="sourceLine" id="cb680-5" data-line-number="5">                  <span class="dt">data=</span>Oesophageal, <span class="dt">margins=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb680-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb680-7" data-line-number="7"><span class="kw">print</span>(tab, <span class="dt">digits =</span> <span class="dv">2</span>)</a></code></pre></div>
+<pre><code>##  --------------------------------------------------------------------- 
+##              -------------------------Age_gr-------------------------- 
+##  Tobacco_gr         1       2       3       4       5       6   Total  
+##  --------------------------------------------------------------------- 
+##  0              50.00   69.00   56.00   50.00   26.00   13.00  264.00  
+##                 18.94   26.14   21.21   18.94    9.85    4.92  100.00  
+##                                                                        
+##  1              21.00   40.00   48.00   67.00   73.00   13.00  262.00  
+##                  8.02   15.27   18.32   25.57   27.86    4.96  100.00  
+##                                                                        
+##  2              19.00   46.00   57.00   65.00   38.00   11.00  236.00  
+##                  8.05   19.49   24.15   27.54   16.10    4.66  100.00  
+##                                                                        
+##  3              11.00   27.00   33.00   38.00   20.00    3.00  132.00  
+##                  8.33   20.45   25.00   28.79   15.15    2.27  100.00  
+##                                                                        
+##  4              16.00   17.00   19.00   22.00    4.00    4.00   82.00  
+##                 19.51   20.73   23.17   26.83    4.88    4.88  100.00  
+##                                                                        
+##                                                                        
+##  Total         117.00  199.00  213.00  242.00  161.00   44.00  976.00  
+##                 11.99   20.39   21.82   24.80   16.50    4.51  100.00  
+##  ---------------------------------------------------------------------</code></pre>
+<p>似乎在吸菸量和飲酒量之間存在正關係，吸菸較多的人，飲酒量也呈現較多的趨勢。另外，不吸菸的人中，以及吸菸量最多的人中，都有較多的年輕人。吸菸量和飲酒量也許都和患有食道癌相關。而且上述簡單的表格總結也提示，吸菸量同時和飲酒量和年齡相關。</p>
 </div>
+<div id="我們先從分析吸菸習慣着手將研究對象根據吸菸習慣分爲吸菸者-tobacco_group-14-與非吸菸者-tobacco_group-0使用2-times-2表格分析吸菸與否和患有食道癌與否之間的關係使用公式手頭計算比值比-0dds-ratio和它的-95-信賴區間用統計軟件確認你的計算結果是否正確" class="section level4">
+<h4><span class="header-section-number">50.5.1.2</span> 我們先從分析吸菸習慣着手。將研究對象根據吸菸習慣分爲吸菸者 (<code>tobacco_group = 1~4</code>) 與非吸菸者 (<code>tobacco_group = 0</code>)。使用2 <span class="math inline">\(\times\)</span> 2表格分析吸菸與否和患有食道癌與否之間的關係。使用公式手頭計算比值比 0dds ratio，和它的 95% 信賴區間。用統計軟件確認你的計算結果是否正確。</h4>
+<div class="sourceCode" id="cb682"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb682-1" data-line-number="1">Oesophageal &lt;-<span class="st"> </span>Oesophageal <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb682-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Tobacco_2 =</span> <span class="kw">as.factor</span>(tobacco_group)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb682-3" data-line-number="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Tobacco_2 =</span> <span class="kw">fct_collapse</span>(Tobacco_<span class="dv">2</span>, </a>
+<a class="sourceLine" id="cb682-4" data-line-number="4">                                  <span class="dt">NonSMker =</span> <span class="st">&quot;0&quot;</span>,</a>
+<a class="sourceLine" id="cb682-5" data-line-number="5">                                  <span class="dt">SMker =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>, <span class="st">&quot;3&quot;</span>, <span class="st">&quot;4&quot;</span>)))</a>
+<a class="sourceLine" id="cb682-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb682-7" data-line-number="7">tab &lt;-<span class="st"> </span><span class="kw">stat.table</span>(<span class="dt">index=</span><span class="kw">list</span>(<span class="dt">Case =</span> case, </a>
+<a class="sourceLine" id="cb682-8" data-line-number="8">                             <span class="dt">Tobacco_gr =</span> Tobacco_<span class="dv">2</span>),</a>
+<a class="sourceLine" id="cb682-9" data-line-number="9">                   <span class="dt">contents=</span><span class="kw">list</span>(<span class="kw">count</span>(),</a>
+<a class="sourceLine" id="cb682-10" data-line-number="10">                                 <span class="kw">percent</span>(Tobacco_<span class="dv">2</span>)), </a>
+<a class="sourceLine" id="cb682-11" data-line-number="11">                  <span class="dt">data=</span>Oesophageal, <span class="dt">margins=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb682-12" data-line-number="12"></a>
+<a class="sourceLine" id="cb682-13" data-line-number="13"><span class="kw">print</span>(tab, <span class="dt">digits =</span> <span class="dv">2</span>)</a></code></pre></div>
+<pre><code>##  --------------------------------- 
+##         --------Tobacco_gr-------- 
+##  Case    NonSMker   SMker   Total  
+##  --------------------------------- 
+##  0         255.00  521.00  776.00  
+##             32.86   67.14  100.00  
+##                                    
+##  1           9.00  191.00  200.00  
+##              4.50   95.50  100.00  
+##                                    
+##                                    
+##  Total     264.00  712.00  976.00  
+##             27.05   72.95  100.00  
+##  ---------------------------------</code></pre>
+<p>手動計算比值比和95%信賴區間：</p>
+<div class="sourceCode" id="cb684"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb684-1" data-line-number="1">OR &lt;-<span class="st"> </span>(<span class="dv">255</span><span class="op">*</span><span class="dv">191</span>)<span class="op">/</span>(<span class="dv">9</span><span class="op">*</span><span class="dv">521</span>)</a>
+<a class="sourceLine" id="cb684-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb684-3" data-line-number="3">Var &lt;-<span class="st"> </span><span class="dv">1</span><span class="op">/</span><span class="dv">255</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span><span class="op">/</span><span class="dv">191</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span><span class="op">/</span><span class="dv">9</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span><span class="op">/</span><span class="dv">521</span> </a>
+<a class="sourceLine" id="cb684-4" data-line-number="4">Var</a></code></pre></div>
+<pre><code>## [1] 0.12218767</code></pre>
+<div class="sourceCode" id="cb686"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb686-1" data-line-number="1">OR_L &lt;-<span class="st"> </span>OR<span class="op">*</span><span class="kw">exp</span>(<span class="op">-</span><span class="fl">1.96</span><span class="op">*</span><span class="kw">sqrt</span>(Var))</a>
+<a class="sourceLine" id="cb686-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb686-3" data-line-number="3">OR_U &lt;-<span class="st"> </span>OR<span class="op">*</span><span class="kw">exp</span>(<span class="fl">1.96</span><span class="op">*</span><span class="kw">sqrt</span>(Var))</a>
+<a class="sourceLine" id="cb686-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb686-5" data-line-number="5"><span class="kw">c</span>(OR, OR_L, OR_U)</a></code></pre></div>
+<pre><code>## [1] 10.3870761  5.2353696 20.6081631</code></pre>
+<p>所以，從表格推算的比值比 OR = 10.39；該比值比的對數對應的分佈方差估算爲 0.122。據此，該比值比的 95% CI爲 (5.24, 20.61)。有很強的證據表明，吸菸習慣的有無和患有食道癌之間有正關係。</p>
+<p>用R驗證你的計算結果：</p>
+<div class="sourceCode" id="cb688"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb688-1" data-line-number="1"><span class="kw">with</span>(Oesophageal, epiDisplay<span class="op">::</span><span class="kw">cc</span>(Tobacco_<span class="dv">2</span>, case, </a>
+<a class="sourceLine" id="cb688-2" data-line-number="2">                                 <span class="dt">graph =</span> <span class="ot">FALSE</span>))</a></code></pre></div>
+<pre><code>## 
+##           case
+## Tobacco_2    0   1 Total
+##   NonSMker 255   9   264
+##   SMker    521 191   712
+##   Total    776 200   976
+## 
+## OR =  10.39 
+## 95% CI =  5.24, 20.61  
+## Chi-squared = 64.82, 1 d.f., P value = 0
+## Fisher&#39;s exact test (2-sided) P value = 0</code></pre>
+<p>用 Stata 做一樣的事情：</p>
+<pre><code>## 
+## . use &quot;../backupfiles/oesophageal_data-1.d. 
+## . gen tobacco_2 = .
+## (976 missing values generated)
+## 
+## . replace tobacco_2 = 0 if tobacco_group == 0
+## (264 real changes made)
+## 
+## . replace tobacco_2 = 1 if tobacco_group &gt;= 1
+## (712 real changes made)
+## 
+## . 
+## . mhodds case tobacco_2
+## 
+## Maximum likelihood estimate of the odds ratio
+## Comparing tobacco_2==1 vs. tobacco_2==0
+## 
+##     ----------------------------------------------------------------
+##      Odds Ratio    chi2(1)        P&gt;chi2        [95% Conf. Interval]
+##     ----------------------------------------------------------------
+##       10.387076      64.75        0.0000         5.109681  21.115085
+##     ----------------------------------------------------------------</code></pre>
+<p>值得注意的是，Stata 裏面的 <code>mhodds</code> 用的是不同於R的方法計算 95% 信賴區間的。</p>
+</div>
+<div id="考慮使用邏輯回歸模型來獲取我們感興趣的比值比請用數學語言寫下下列兩個模型的表達式" class="section level4">
+<h4><span class="header-section-number">50.5.1.3</span> 考慮使用邏輯回歸模型來獲取我們感興趣的比值比。請用數學語言寫下下列兩個模型的表達式：</h4>
+<ol style="list-style-type: decimal">
+<li>吸菸與否爲結果變量，病例和對照的標記爲預測變量。</li>
+</ol>
+<p>令 <span class="math inline">\(X\)</span> 爲吸菸與否變量，<span class="math inline">\(D\)</span> 爲病例/對照標記變量。</p>
+<p><span class="math display">\[
+\text{Pr}(X = 1 | D = d) = \frac{e^{\alpha^* + \beta d}}{1 + e^{\alpha^* + \beta d}}
+\]</span></p>
+<ol start="2" style="list-style-type: decimal">
+<li>病例和對照的標記爲結果變量，吸菸與否爲預測變量。</li>
+</ol>
+<p>使用相同的標記來表達這個模型，另外，用 <span class="math inline">\(S = 1\)</span> 表示該對象被選做本次研究的病例-對照樣本。所以，在下面的模型中，不要忘記我們還有一個條件變量，也就是該對象被選入本次實驗中。</p>
+<p><span class="math display">\[
+\text{Pr}(D = 1|X = x, S = 1) = \frac{e^{\lambda^* + \beta x}}{1 + e^{\lambda^* + \beta x}}
+\]</span></p>
+</div>
+<div id="用你熟悉的統計軟件分別擬合上述兩個邏輯回歸模型比較兩個解析報告的結果並試着解釋他們各自的截距估計量的含義用概率的數學表達式來說明二者的不同" class="section level4">
+<h4><span class="header-section-number">50.5.1.4</span> 用你熟悉的統計軟件分別擬合上述兩個邏輯回歸模型。比較兩個解析報告的結果，並試着解釋他們各自的截距估計量的含義。用概率的數學表達式來說明二者的不同。</h4>
+<div class="sourceCode" id="cb691"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb691-1" data-line-number="1">M1 &lt;-<span class="st"> </span><span class="kw">glm</span>(Tobacco_<span class="dv">2</span> <span class="op">~</span><span class="st"> </span>case, </a>
+<a class="sourceLine" id="cb691-2" data-line-number="2">          <span class="dt">data =</span> Oesophageal, </a>
+<a class="sourceLine" id="cb691-3" data-line-number="3">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb691-4" data-line-number="4"><span class="kw">summary</span>(M1); jtools<span class="op">::</span><span class="kw">summ</span>(M1, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = Tobacco_2 ~ case, family = binomial(link = logit), 
+##     data = Oesophageal)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -2.49042  -1.49190   0.89264   0.89264   0.89264  
+## 
+## Coefficients:
+##             Estimate Std. Error z value  Pr(&gt;|z|)    
+## (Intercept) 0.714486   0.076426  9.3487 &lt; 2.2e-16 ***
+## case        2.340562   0.349515  6.6966 2.133e-11 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 1139.47  on 975  degrees of freedom
+## Residual deviance: 1056.12  on 974  degrees of freedom
+## AIC: 1060.12
+## 
+## Number of Fisher Scoring iterations: 5</code></pre>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+976
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+Tobacco_2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(1)
+</td>
+<td style="text-align:right;">
+83.357682
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.118838
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.073154
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+1060.117214
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+1069.884140
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+2.043137
+</td>
+<td style="text-align:right;">
+1.758910
+</td>
+<td style="text-align:right;">
+2.373294
+</td>
+<td style="text-align:right;">
+9.348719
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+case
+</td>
+<td style="text-align:right;">
+10.387076
+</td>
+<td style="text-align:right;">
+5.235833
+</td>
+<td style="text-align:right;">
+20.606336
+</td>
+<td style="text-align:right;">
+6.696606
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb693"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb693-1" data-line-number="1">M2 &lt;-<span class="st"> </span><span class="kw">glm</span>(case <span class="op">~</span><span class="st"> </span>Tobacco_<span class="dv">2</span>, </a>
+<a class="sourceLine" id="cb693-2" data-line-number="2">          <span class="dt">data =</span> Oesophageal, </a>
+<a class="sourceLine" id="cb693-3" data-line-number="3">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb693-4" data-line-number="4"><span class="kw">summary</span>(M2); jtools<span class="op">::</span><span class="kw">summ</span>(M2, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = case ~ Tobacco_2, family = binomial(link = logit), 
+##     data = Oesophageal)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -0.79035  -0.79035  -0.79035  -0.26338   2.59951  
+## 
+## Coefficients:
+##                Estimate Std. Error z value  Pr(&gt;|z|)    
+## (Intercept)    -3.34404    0.33916 -9.8596 &lt; 2.2e-16 ***
+## Tobacco_2SMker  2.34056    0.34955  6.6959 2.144e-11 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 989.947  on 975  degrees of freedom
+## Residual deviance: 906.590  on 974  degrees of freedom
+## AIC: 910.59
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+976
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+case
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(1)
+</td>
+<td style="text-align:right;">
+83.357682
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.128443
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.084204
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+910.589629
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+920.356554
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.035294
+</td>
+<td style="text-align:right;">
+0.018155
+</td>
+<td style="text-align:right;">
+0.068612
+</td>
+<td style="text-align:right;">
+-9.859637
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Tobacco_2SMker
+</td>
+<td style="text-align:right;">
+10.387076
+</td>
+<td style="text-align:right;">
+5.235437
+</td>
+<td style="text-align:right;">
+20.607897
+</td>
+<td style="text-align:right;">
+6.695866
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<p>你看到兩個模型計算出的比值比結果是完全一致的。這符合我們的預期。</p>
+<p>其中，第一個模型的截距 <span class="math inline">\(\exp(\hat{\alpha*}) = 2.043\)</span>。用概率的數學表達式表達爲： <span class="math inline">\(\exp(\hat{\alpha*}) =\text{Pr}(X=1 | D=0)/\text{Pr}(X = 0 | D = 0)\)</span>。</p>
+</div>
+</div>
+</div>
+</div>
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-breslow1980volume">
+<p>Breslow, NE, NE Day, and Statistical methods in cancer research. 1980. <em>Volume 1: The Analysis of Case-Control Studies (Iarc Scientific Publications No. 32)</em>. International Agency for Research on Cancer, Lyon, France.</p>
 </div>
 </div>
             </section>
