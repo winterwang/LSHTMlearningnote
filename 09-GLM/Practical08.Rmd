@@ -137,5 +137,81 @@ summary(M2); jtools::summ(M2, digits = 6, confint = TRUE, exp = TRUE)
 
 你看到兩個模型計算出的比值比結果是完全一致的。這符合我們的預期。
 
-其中，第一個模型的截距 $\exp(\hat{\alpha*}) = 2.043$。用概率的數學表達式表達爲： $\exp(\hat{\alpha*}) =\text{Pr}(X=1 | D=0)/\text{Pr}(X = 0 | D = 0)$。
+其中，第一個模型的截距 $\exp(\hat{\alpha*}) = 2.043$。用概率的數學表達式表達爲： $\exp(\hat{\alpha*}) =\text{Pr}(X=1 | D=0)/\text{Pr}(X = 0 | D = 0)$。我們可以從原始的表格中的數據直接計算來獲得驗證：
 
+$$
+\text{Pr}(X=1|D=0) = 521/776 = 0.6714 \\
+\text{Pr}(X=0|D=0) = 255/776 = 0.3286 \\
+\Rightarrow \frac{\text{Pr}(X=1|D=0)}{\text{Pr}(X=0|D=0)} = \frac{0.6714}{0.3286} = 2.043
+$$
+
+在另外一個模型中的截距 $\exp(\hat{\lambda}) = 0.035$。從該模型的數學表達式出發，不難知道：
+
+$$
+\begin{aligned}
+\exp(\lambda^*) & = \frac{\text{Pr}(D = 1 | X = 0, S = 1)}{\text{Pr}(D = 0 | X = 0, S = 1)} \\ 
+&  = \frac{9 / 264}{255 / 264} = 0.03529
+\end{aligned}
+$$
+
+#### 接下來我們將要分析酒精攝入量對上述關係可能存在的影響。請嘗試使用 Mantel-Haenszel 法來計算酒精攝入量調整後的吸菸與食道癌的比值比。調整了飲酒量之後的比值比發生了多大的變化？
+
+```{r GLM-prac08-07, engine='stata', echo=FALSE}
+use "../backupfiles/oesophageal_data-1.dta"
+
+gen tobacco_2 = .
+replace tobacco_2 = 0 if tobacco_group == 0
+replace tobacco_2 = 1 if tobacco_group >= 1
+
+mhodds case tobacco_2, by(alcohol_grp)
+```
+
+調整酒精攝入量之後，可見吸菸與食道癌的比值比 OR 從 10.39 略微降低到 8.59。與第一步的問題相結合，當時我們發現吸菸與飲酒之間有關聯，所以綜合以上信息可以認爲飲酒量是吸菸與食道癌關係的混雜因子 (confounder)。但是吸菸者與食道癌之間的強正關係 (strong positive association) 在調整了飲酒量之後依然是有統計學意義的。調整了飲酒量之後，吸菸者患有食道癌的比值 (odds) 高過不吸菸的人8倍以上。
+
+
+#### 請擬合合適的模型重複上述的分析，根據模型報告的結果尋找能夠評價調整了飲酒量以後的吸菸與患有食道癌之間關係的比值比及其信賴區間。解釋該模型的截距的含義是什麼。
+
+```{r GLM-prac08-08, cache=TRUE}
+M3 <- glm(case ~ Tobacco_2 + as.factor(alcohol_grp), 
+          data = Oesophageal, 
+          family = binomial(link = logit))
+summary(M3); jtools::summ(M3, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+結論其實是一樣的。調整了飲酒量之後，吸菸者患有食道癌的比值高於非吸菸者 8 倍以上。另外，飲酒量的增加也與食道癌呈正相關。調整了吸菸量之後，飲酒量最多的人患有食道癌的比值比飲酒量最少的人高22倍以上。這個模型裏的截距可以用下列的數學表達式來解釋：
+
+$$
+\exp(\hat{\lambda^*}) = \frac{\text{Pr}(D = 1 | X = 0, \text{ alcohol } < 40 \text{ g/d}, S = 1)}{\text{Pr}(D = 0 | X = 0, \text{ alcohol } < 40 \text{ g/d}, S = 1)}
+$$
+
+#### Mantel-Haenszel法計算的95%信賴區間和邏輯回歸模型給出的95%信賴區間估計相比有什麼不同？
+
+二者不完全一樣。使用Mantel-Haenszel法計算的信賴區間範圍更寬。
+
+#### 接下來嘗試使用Mantel-Haenszel法和邏輯回歸模型各自進一步調整年齡。請觀察年齡對吸菸和患有食道癌之間的關係有何影響。比較兩種方法獲得的信賴區間估計。
+
+- Mantel-Haenszel法
+
+```{r GLM-prac08-09, engine='stata', echo=FALSE}
+use "../backupfiles/oesophageal_data-1.dta"
+
+gen tobacco_2 = .
+replace tobacco_2 = 0 if tobacco_group == 0
+replace tobacco_2 = 1 if tobacco_group >= 1
+
+mhodds case tobacco_2, by(alcohol_grp age_group)
+```
+
+- 邏輯回歸模型
+
+```{r GLM-prac08-10, cache=TRUE}
+M4 <- glm(case ~ Tobacco_2 + as.factor(alcohol_grp) + 
+            as.factor(age_group), 
+          data = Oesophageal, 
+          family = binomial(link = logit))
+summary(M4); jtools::summ(M4, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+從模型計算的結果來看，兩種方法其實點估計和信賴區間的估計值都很接近。不會有相互矛盾的結果。另外，Mantel-Haenszel法的計算在即使有些表格沒有人數的情況下也能穩健地給出計算結果。事實上我們可以認爲當存在數據分佈過於稀少 (sparse data issue) 的時候，Mantel-Haenszel法可能會更加可靠。
+
+計算結果也表明，調整了年齡和飲酒量之後，吸菸者和食道癌的比值比又略降至7.14。年齡對酒精攝入和食道癌的比值比影響似乎較小，年齡本身與食道癌呈極強的正相關。
