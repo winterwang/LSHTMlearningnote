@@ -215,3 +215,99 @@ summary(M4); jtools::summ(M4, digits = 6, confint = TRUE, exp = TRUE)
 從模型計算的結果來看，兩種方法其實點估計和信賴區間的估計值都很接近。不會有相互矛盾的結果。另外，Mantel-Haenszel法的計算在即使有些表格沒有人數的情況下也能穩健地給出計算結果。事實上我們可以認爲當存在數據分佈過於稀少 (sparse data issue) 的時候，Mantel-Haenszel法可能會更加可靠。
 
 計算結果也表明，調整了年齡和飲酒量之後，吸菸者和食道癌的比值比又略降至7.14。年齡對酒精攝入和食道癌的比值比影響似乎較小，年齡本身與食道癌呈極強的正相關。
+
+#### 其實飲酒量和年齡本身是可以作爲連續型預測變量放入模型裏。重新加載含有連續變量的數據 `oesophageal_data-2.dta`後，把分類變量至換成連續型變量重新擬合前一個問題的模型.嘗試理解兩種策略的不同及相同之處。
+
+```{r GLM-prac08-11, cache=TRUE}
+Oesophageal2 <- read_dta("../backupfiles/oesophageal_data-2.dta")
+Oesophageal2 <- Oesophageal2 %>% 
+  mutate(Tobacco_2 = as.factor(tobacco_group)) %>% 
+  mutate(Tobacco_2 = fct_collapse(Tobacco_2, 
+                                  NonSMker = "0",
+                                  SMker = c("1", "2", "3", "4")))
+M5 <- glm(case ~ Tobacco_2 + age + alcohol, 
+          data = Oesophageal2, 
+          family = binomial(link = logit))
+summary(M5); jtools::summ(M5, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+相同之處是，這兩種分析手法都在說明一件事，吸菸本身和患食道癌是高度相關的，這個關係在調整了年齡，和飲酒量之後依然存在。不同之處在與比值比在年齡和飲酒量使用連續變量時似乎又縮水了一些。值得注意的是，在回歸模型中決定使用連續型變量的時候，需要特別小心如何處理這些連續型預測變量。上面的模型其實還增加了另一個默認的前提條件，就是年齡，飲酒量在這個模型中默認和患有食道癌的比值的對數 (log-odds of being a case) 呈線性關係。但是，現實情況下這樣的默認前提可能不能得到滿足。也就是說在現實中，預測變量和結果變量的對數比值的關係很可能不是線性的。事實上你看 `M4` 的分析結果，飲酒量最多的那組的比值比飆得非常高。飲酒量的變量很可能就不適合用簡單地連續型變量模式放入模型中。但是使用連續型變量的另一個潛在的優點是模型中需要估計的參數個數相對較少。後面的章節會仔細討論連續型變量的處理。
+
+### Part 2
+
+#### 在這部分的練習中，我們使用一個計算機模擬數據來觀察一下比值比的特徵。該數據只有三個二進制變量：`x, y, w`。
+
+#### 運用簡單的表格分析三個二進制變量之間可能存在的關係。
+
+```{r GLM-prac08-12, cache=TRUE}
+Log_prac <- read_dta("../backupfiles/logistic_data_part2.dta")
+
+tab <- stat.table(index=list(y = y, 
+                             x = x),
+                   contents=list(count(), 
+                                 percent(x)), 
+                  data=Log_prac, margins=TRUE)
+
+print(tab, digits = 2)
+
+tab <- stat.table(index=list(y = y, 
+                             w = w),
+                   contents=list(count(), 
+                                 percent(w)), 
+                  data=Log_prac, margins=TRUE)
+
+print(tab, digits = 2)
+
+tab <- stat.table(index=list(x = x, 
+                             w = w),
+                   contents=list(count(), 
+                                 percent(w)), 
+                  data=Log_prac, margins=TRUE)
+
+print(tab, digits = 2)
+```
+
+`y` 和 `x, w` 兩者都有較強的相關性，但是 `x, w` 之間好像相互獨立沒有關係。
+
+#### 計算下列比值比：
+
+1. `y` 的 `x` 條件邊際比值比 (marginal odds ratio for `y` given `x`)。
+
+```{r GLM-prac08-13, cache=TRUE}
+M6 <- glm(y ~ x, 
+          data = Log_prac, 
+          family = binomial(link = logit))
+jtools::summ(M6, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+
+2. 把數據分成兩個部分，一部分是 `w = 0`，令一部分 `w = 1`。分別計算各個部分數據裏 `y` 的 `x` 條件邊際比值比。
+
+```{r GLM-prac08-14, cache=TRUE}
+M7 <- glm(y ~ x, 
+          data = Log_prac[Log_prac$w == 0,], 
+          family = binomial(link = logit))
+jtools::summ(M7, digits = 6, confint = TRUE, exp = TRUE)
+M8 <- glm(y ~ x, 
+          data = Log_prac[Log_prac$w == 1,], 
+          family = binomial(link = logit))
+jtools::summ(M8, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+數據在 `w` 變量分組中都得到了 OR = 9，的結果，說明 `w` 並非 `x` 與 `y` 之間關係的交互作用變量。
+
+3. `y` 的 `x` 和 `w` 的條件比值比
+
+```{r GLM-prac08-15, cache=TRUE}
+M9 <- glm(y ~ x + w, 
+          data = Log_prac, 
+          family = binomial(link = logit))
+jtools::summ(M9, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+`M9` 的結果和預期的相同，調整了 `w` 之後，模型估計的 `x` 的比值比 `OR = 9`。和他們在 `w` 變量的各個分組數據的結果相同。
+
+可以清楚的看到，沒調整 `w` 時，`x` 的比值比 `OR = 5.44`。但是 `w` 既不是 `x, y` 之間關係的混雜因子，也沒有有意義的交互作用。但是想要正確估計 `x, y` 之間的關係的話，不調整 `w` 計算獲得的比值比是錯誤的，這就是體現比值比不可壓縮性質的極好的例子。
