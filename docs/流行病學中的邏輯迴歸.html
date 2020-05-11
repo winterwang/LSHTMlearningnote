@@ -772,6 +772,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="50.4" data-path="流行病學中的邏輯迴歸.html"><a href="流行病學中的邏輯迴歸.html#流行病學研究中變量的調整策略"><i class="fa fa-check"></i><b>50.4</b> 流行病學研究中變量的調整策略</a></li>
 <li class="chapter" data-level="50.5" data-path="流行病學中的邏輯迴歸.html"><a href="流行病學中的邏輯迴歸.html#glm-practical-08"><i class="fa fa-check"></i><b>50.5</b> GLM Practical 08</a><ul>
 <li class="chapter" data-level="50.5.1" data-path="流行病學中的邏輯迴歸.html"><a href="流行病學中的邏輯迴歸.html#part-1"><i class="fa fa-check"></i><b>50.5.1</b> Part 1</a></li>
+<li class="chapter" data-level="50.5.2" data-path="流行病學中的邏輯迴歸.html"><a href="流行病學中的邏輯迴歸.html#part-2"><i class="fa fa-check"></i><b>50.5.2</b> Part 2</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="51" data-path="分析策略.html"><a href="分析策略.html"><i class="fa fa-check"></i><b>51</b> 分析策略</a><ul>
@@ -3108,6 +3109,1011 @@ as.factor(age_group)6
 </table>
 <p>從模型計算的結果來看，兩種方法其實點估計和信賴區間的估計值都很接近。不會有相互矛盾的結果。另外，Mantel-Haenszel法的計算在即使有些表格沒有人數的情況下也能穩健地給出計算結果。事實上我們可以認爲當存在數據分佈過於稀少 (sparse data issue) 的時候，Mantel-Haenszel法可能會更加可靠。</p>
 <p>計算結果也表明，調整了年齡和飲酒量之後，吸菸者和食道癌的比值比又略降至7.14。年齡對酒精攝入和食道癌的比值比影響似乎較小，年齡本身與食道癌呈極強的正相關。</p>
+</div>
+<div id="其實飲酒量和年齡本身是可以作爲連續型預測變量放入模型裏重新加載含有連續變量的數據-oesophageal_data-2.dta後把分類變量至換成連續型變量重新擬合前一個問題的模型.嘗試理解兩種策略的不同及相同之處" class="section level4">
+<h4><span class="header-section-number">50.5.1.9</span> 其實飲酒量和年齡本身是可以作爲連續型預測變量放入模型裏。重新加載含有連續變量的數據 <code>oesophageal_data-2.dta</code>後，把分類變量至換成連續型變量重新擬合前一個問題的模型.嘗試理解兩種策略的不同及相同之處。</h4>
+<div class="sourceCode" id="cb701"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb701-1" data-line-number="1">Oesophageal2 &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;../backupfiles/oesophageal_data-2.dta&quot;</span>)</a>
+<a class="sourceLine" id="cb701-2" data-line-number="2">Oesophageal2 &lt;-<span class="st"> </span>Oesophageal2 <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb701-3" data-line-number="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Tobacco_2 =</span> <span class="kw">as.factor</span>(tobacco_group)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb701-4" data-line-number="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Tobacco_2 =</span> <span class="kw">fct_collapse</span>(Tobacco_<span class="dv">2</span>, </a>
+<a class="sourceLine" id="cb701-5" data-line-number="5">                                  <span class="dt">NonSMker =</span> <span class="st">&quot;0&quot;</span>,</a>
+<a class="sourceLine" id="cb701-6" data-line-number="6">                                  <span class="dt">SMker =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>, <span class="st">&quot;3&quot;</span>, <span class="st">&quot;4&quot;</span>)))</a>
+<a class="sourceLine" id="cb701-7" data-line-number="7">M5 &lt;-<span class="st"> </span><span class="kw">glm</span>(case <span class="op">~</span><span class="st"> </span>Tobacco_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>alcohol, </a>
+<a class="sourceLine" id="cb701-8" data-line-number="8">          <span class="dt">data =</span> Oesophageal2, </a>
+<a class="sourceLine" id="cb701-9" data-line-number="9">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb701-10" data-line-number="10"><span class="kw">summary</span>(M5); jtools<span class="op">::</span><span class="kw">summ</span>(M5, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = case ~ Tobacco_2 + age + alcohol, family = binomial(link = logit), 
+##     data = Oesophageal2)
+## 
+## Deviance Residuals: 
+##       Min         1Q     Median         3Q        Max  
+## -2.091909  -0.587340  -0.308824  -0.098386   2.751818  
+## 
+## Coefficients:
+##                  Estimate Std. Error  z value  Pr(&gt;|z|)    
+## (Intercept)    -8.2302252  0.6511441 -12.6396 &lt; 2.2e-16 ***
+## Tobacco_2SMker  1.9275819  0.3663570   5.2615 1.429e-07 ***
+## age             0.0646601  0.0081722   7.9122 2.528e-15 ***
+## alcohol         0.0259834  0.0025424  10.2201 &lt; 2.2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 989.947  on 975  degrees of freedom
+## Residual deviance: 702.994  on 972  degrees of freedom
+## AIC: 710.994
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+976
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+case
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(3)
+</td>
+<td style="text-align:right;">
+286.953775
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.399678
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.289868
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+710.993536
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+730.527386
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.000266
+</td>
+<td style="text-align:right;">
+0.000074
+</td>
+<td style="text-align:right;">
+0.000955
+</td>
+<td style="text-align:right;">
+-12.639638
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Tobacco_2SMker
+</td>
+<td style="text-align:right;">
+6.872871
+</td>
+<td style="text-align:right;">
+3.351927
+</td>
+<td style="text-align:right;">
+14.092297
+</td>
+<td style="text-align:right;">
+5.261485
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+age
+</td>
+<td style="text-align:right;">
+1.066796
+</td>
+<td style="text-align:right;">
+1.049845
+</td>
+<td style="text-align:right;">
+1.084021
+</td>
+<td style="text-align:right;">
+7.912217
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+alcohol
+</td>
+<td style="text-align:right;">
+1.026324
+</td>
+<td style="text-align:right;">
+1.021222
+</td>
+<td style="text-align:right;">
+1.031451
+</td>
+<td style="text-align:right;">
+10.220096
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<p>相同之處是，這兩種分析手法都在說明一件事，吸菸本身和患食道癌是高度相關的，這個關係在調整了年齡，和飲酒量之後依然存在。不同之處在與比值比在年齡和飲酒量使用連續變量時似乎又縮水了一些。值得注意的是，在回歸模型中決定使用連續型變量的時候，需要特別小心如何處理這些連續型預測變量。上面的模型其實還增加了另一個默認的前提條件，就是年齡，飲酒量在這個模型中默認和患有食道癌的比值的對數 (log-odds of being a case) 呈線性關係。但是，現實情況下這樣的默認前提可能不能得到滿足。也就是說在現實中，預測變量和結果變量的對數比值的關係很可能不是線性的。事實上你看 <code>M4</code> 的分析結果，飲酒量最多的那組的比值比飆得非常高。飲酒量的變量很可能就不適合用簡單地連續型變量模式放入模型中。但是使用連續型變量的另一個潛在的優點是模型中需要估計的參數個數相對較少。後面的章節會仔細討論連續型變量的處理。</p>
+</div>
+</div>
+<div id="part-2" class="section level3">
+<h3><span class="header-section-number">50.5.2</span> Part 2</h3>
+<div id="在這部分的練習中我們使用一個計算機模擬數據來觀察一下比值比的特徵該數據只有三個二進制變量x-y-w" class="section level4">
+<h4><span class="header-section-number">50.5.2.1</span> 在這部分的練習中，我們使用一個計算機模擬數據來觀察一下比值比的特徵。該數據只有三個二進制變量：<code>x, y, w</code>。</h4>
+</div>
+<div id="運用簡單的表格分析三個二進制變量之間可能存在的關係" class="section level4">
+<h4><span class="header-section-number">50.5.2.2</span> 運用簡單的表格分析三個二進制變量之間可能存在的關係。</h4>
+<div class="sourceCode" id="cb703"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb703-1" data-line-number="1">Log_prac &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;../backupfiles/logistic_data_part2.dta&quot;</span>)</a>
+<a class="sourceLine" id="cb703-2" data-line-number="2"></a>
+<a class="sourceLine" id="cb703-3" data-line-number="3">tab &lt;-<span class="st"> </span><span class="kw">stat.table</span>(<span class="dt">index=</span><span class="kw">list</span>(<span class="dt">y =</span> y, </a>
+<a class="sourceLine" id="cb703-4" data-line-number="4">                             <span class="dt">x =</span> x),</a>
+<a class="sourceLine" id="cb703-5" data-line-number="5">                   <span class="dt">contents=</span><span class="kw">list</span>(<span class="kw">count</span>(), </a>
+<a class="sourceLine" id="cb703-6" data-line-number="6">                                 <span class="kw">percent</span>(x)), </a>
+<a class="sourceLine" id="cb703-7" data-line-number="7">                  <span class="dt">data=</span>Log_prac, <span class="dt">margins=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb703-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb703-9" data-line-number="9"><span class="kw">print</span>(tab, <span class="dt">digits =</span> <span class="dv">2</span>)</a></code></pre></div>
+<pre><code>##  -------------------------------- 
+##         ------------x------------ 
+##  y             0       1   Total  
+##  -------------------------------- 
+##  0       1400.00  600.00 2000.00  
+##            70.00   30.00  100.00  
+##                                   
+##  1        600.00 1400.00 2000.00  
+##            30.00   70.00  100.00  
+##                                   
+##                                   
+##  Total   2000.00 2000.00 4000.00  
+##            50.00   50.00  100.00  
+##  --------------------------------</code></pre>
+<div class="sourceCode" id="cb705"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb705-1" data-line-number="1">tab &lt;-<span class="st"> </span><span class="kw">stat.table</span>(<span class="dt">index=</span><span class="kw">list</span>(<span class="dt">y =</span> y, </a>
+<a class="sourceLine" id="cb705-2" data-line-number="2">                             <span class="dt">w =</span> w),</a>
+<a class="sourceLine" id="cb705-3" data-line-number="3">                   <span class="dt">contents=</span><span class="kw">list</span>(<span class="kw">count</span>(), </a>
+<a class="sourceLine" id="cb705-4" data-line-number="4">                                 <span class="kw">percent</span>(w)), </a>
+<a class="sourceLine" id="cb705-5" data-line-number="5">                  <span class="dt">data=</span>Log_prac, <span class="dt">margins=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb705-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb705-7" data-line-number="7"><span class="kw">print</span>(tab, <span class="dt">digits =</span> <span class="dv">2</span>)</a></code></pre></div>
+<pre><code>##  -------------------------------- 
+##         ------------w------------ 
+##  y             0       1   Total  
+##  -------------------------------- 
+##  0        600.00 1400.00 2000.00  
+##            30.00   70.00  100.00  
+##                                   
+##  1       1400.00  600.00 2000.00  
+##            70.00   30.00  100.00  
+##                                   
+##                                   
+##  Total   2000.00 2000.00 4000.00  
+##            50.00   50.00  100.00  
+##  --------------------------------</code></pre>
+<div class="sourceCode" id="cb707"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb707-1" data-line-number="1">tab &lt;-<span class="st"> </span><span class="kw">stat.table</span>(<span class="dt">index=</span><span class="kw">list</span>(<span class="dt">x =</span> x, </a>
+<a class="sourceLine" id="cb707-2" data-line-number="2">                             <span class="dt">w =</span> w),</a>
+<a class="sourceLine" id="cb707-3" data-line-number="3">                   <span class="dt">contents=</span><span class="kw">list</span>(<span class="kw">count</span>(), </a>
+<a class="sourceLine" id="cb707-4" data-line-number="4">                                 <span class="kw">percent</span>(w)), </a>
+<a class="sourceLine" id="cb707-5" data-line-number="5">                  <span class="dt">data=</span>Log_prac, <span class="dt">margins=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb707-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb707-7" data-line-number="7"><span class="kw">print</span>(tab, <span class="dt">digits =</span> <span class="dv">2</span>)</a></code></pre></div>
+<pre><code>##  -------------------------------- 
+##         ------------w------------ 
+##  x             0       1   Total  
+##  -------------------------------- 
+##  0       1000.00 1000.00 2000.00  
+##            50.00   50.00  100.00  
+##                                   
+##  1       1000.00 1000.00 2000.00  
+##            50.00   50.00  100.00  
+##                                   
+##                                   
+##  Total   2000.00 2000.00 4000.00  
+##            50.00   50.00  100.00  
+##  --------------------------------</code></pre>
+<p><code>y</code> 和 <code>x, w</code> 兩者都有較強的相關性，但是 <code>x, w</code> 之間好像相互獨立沒有關係。</p>
+</div>
+<div id="計算下列比值比" class="section level4">
+<h4><span class="header-section-number">50.5.2.3</span> 計算下列比值比：</h4>
+<ol style="list-style-type: decimal">
+<li><code>y</code> 的 <code>x</code> 條件邊際比值比 (marginal odds ratio for <code>y</code> given <code>x</code>)。</li>
+</ol>
+<div class="sourceCode" id="cb709"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb709-1" data-line-number="1">M6 &lt;-<span class="st"> </span><span class="kw">glm</span>(y <span class="op">~</span><span class="st"> </span>x, </a>
+<a class="sourceLine" id="cb709-2" data-line-number="2">          <span class="dt">data =</span> Log_prac, </a>
+<a class="sourceLine" id="cb709-3" data-line-number="3">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb709-4" data-line-number="4">jtools<span class="op">::</span><span class="kw">summ</span>(M6, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+4000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+y
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(1)
+</td>
+<td style="text-align:right;">
+658.263028
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.202317
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.118709
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+4890.914416
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+4903.502516
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.428571
+</td>
+<td style="text-align:right;">
+0.389483
+</td>
+<td style="text-align:right;">
+0.471582
+</td>
+<td style="text-align:right;">
+-17.364447
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+x
+</td>
+<td style="text-align:right;">
+5.444444
+</td>
+<td style="text-align:right;">
+4.755707
+</td>
+<td style="text-align:right;">
+6.232927
+</td>
+<td style="text-align:right;">
+24.557037
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<ol start="2" style="list-style-type: decimal">
+<li>把數據分成兩個部分，一部分是 <code>w = 0</code>，令一部分 <code>w = 1</code>。分別計算各個部分數據裏 <code>y</code> 的 <code>x</code> 條件邊際比值比。</li>
+</ol>
+<div class="sourceCode" id="cb710"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb710-1" data-line-number="1">M7 &lt;-<span class="st"> </span><span class="kw">glm</span>(y <span class="op">~</span><span class="st"> </span>x, </a>
+<a class="sourceLine" id="cb710-2" data-line-number="2">          <span class="dt">data =</span> Log_prac[Log_prac<span class="op">$</span>w <span class="op">==</span><span class="st"> </span><span class="dv">0</span>,], </a>
+<a class="sourceLine" id="cb710-3" data-line-number="3">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb710-4" data-line-number="4">jtools<span class="op">::</span><span class="kw">summ</span>(M7, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+2000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+y
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(1)
+</td>
+<td style="text-align:right;">
+406.996900
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.261072
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.166566
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+2040.460308
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+2051.662113
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+1.000000
+</td>
+<td style="text-align:right;">
+0.883416
+</td>
+<td style="text-align:right;">
+1.131969
+</td>
+<td style="text-align:right;">
+-0.000000
+</td>
+<td style="text-align:right;">
+1.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+x
+</td>
+<td style="text-align:right;">
+9.000000
+</td>
+<td style="text-align:right;">
+7.073152
+</td>
+<td style="text-align:right;">
+11.451755
+</td>
+<td style="text-align:right;">
+17.875268
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<div class="sourceCode" id="cb711"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb711-1" data-line-number="1">M8 &lt;-<span class="st"> </span><span class="kw">glm</span>(y <span class="op">~</span><span class="st"> </span>x, </a>
+<a class="sourceLine" id="cb711-2" data-line-number="2">          <span class="dt">data =</span> Log_prac[Log_prac<span class="op">$</span>w <span class="op">==</span><span class="st"> </span><span class="dv">1</span>,], </a>
+<a class="sourceLine" id="cb711-3" data-line-number="3">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb711-4" data-line-number="4">jtools<span class="op">::</span><span class="kw">summ</span>(M8, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+2000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+y
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(1)
+</td>
+<td style="text-align:right;">
+406.996900
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.261072
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.166566
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+2040.460308
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+2051.662113
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.111111
+</td>
+<td style="text-align:right;">
+0.090373
+</td>
+<td style="text-align:right;">
+0.136608
+</td>
+<td style="text-align:right;">
+-20.846420
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+x
+</td>
+<td style="text-align:right;">
+9.000000
+</td>
+<td style="text-align:right;">
+7.073152
+</td>
+<td style="text-align:right;">
+11.451755
+</td>
+<td style="text-align:right;">
+17.875268
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<p>數據在 <code>w</code> 變量分組中都得到了 OR = 9，的結果，說明 <code>w</code> 並非 <code>x</code> 與 <code>y</code> 之間關係的交互作用變量。</p>
+<ol start="3" style="list-style-type: decimal">
+<li><code>y</code> 的 <code>x</code> 和 <code>w</code> 的條件比值比</li>
+</ol>
+<div class="sourceCode" id="cb712"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb712-1" data-line-number="1">M9 &lt;-<span class="st"> </span><span class="kw">glm</span>(y <span class="op">~</span><span class="st"> </span>x <span class="op">+</span><span class="st"> </span>w, </a>
+<a class="sourceLine" id="cb712-2" data-line-number="2">          <span class="dt">data =</span> Log_prac, </a>
+<a class="sourceLine" id="cb712-3" data-line-number="3">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb712-4" data-line-number="4">jtools<span class="op">::</span><span class="kw">summ</span>(M9, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+4000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+y
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(2)
+</td>
+<td style="text-align:right;">
+1472.256829
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.410570
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.265502
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+4078.920616
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+4097.802765
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+1.000000
+</td>
+<td style="text-align:right;">
+0.890953
+</td>
+<td style="text-align:right;">
+1.122394
+</td>
+<td style="text-align:right;">
+-0.000000
+</td>
+<td style="text-align:right;">
+1.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+x
+</td>
+<td style="text-align:right;">
+9.000000
+</td>
+<td style="text-align:right;">
+7.590288
+</td>
+<td style="text-align:right;">
+10.671532
+</td>
+<td style="text-align:right;">
+25.279446
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+w
+</td>
+<td style="text-align:right;">
+0.111111
+</td>
+<td style="text-align:right;">
+0.093707
+</td>
+<td style="text-align:right;">
+0.131747
+</td>
+<td style="text-align:right;">
+-25.279446
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<p><code>M9</code> 的結果和預期的相同，調整了 <code>w</code> 之後，模型估計的 <code>x</code> 的比值比 <code>OR = 9</code>。和他們在 <code>w</code> 變量的各個分組數據的結果相同。</p>
+<p>可以清楚的看到，沒調整 <code>w</code> 時，<code>x</code> 的比值比 <code>OR = 5.44</code>。但是 <code>w</code> 既不是 <code>x, y</code> 之間關係的混雜因子，也沒有有意義的交互作用。但是想要正確估計 <code>x, y</code> 之間的關係的話，不調整 <code>w</code> 計算獲得的比值比是錯誤的，這就是體現比值比不可壓縮性質的極好的例子。</p>
 </div>
 </div>
 </div>
