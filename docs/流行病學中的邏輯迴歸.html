@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-05-10" />
+<meta name="date" content="2020-05-11" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2368,7 +2368,746 @@ Tobacco_2SMker
 </tfoot>
 </table>
 <p>你看到兩個模型計算出的比值比結果是完全一致的。這符合我們的預期。</p>
-<p>其中，第一個模型的截距 <span class="math inline">\(\exp(\hat{\alpha*}) = 2.043\)</span>。用概率的數學表達式表達爲： <span class="math inline">\(\exp(\hat{\alpha*}) =\text{Pr}(X=1 | D=0)/\text{Pr}(X = 0 | D = 0)\)</span>。</p>
+<p>其中，第一個模型的截距 <span class="math inline">\(\exp(\hat{\alpha*}) = 2.043\)</span>。用概率的數學表達式表達爲： <span class="math inline">\(\exp(\hat{\alpha*}) =\text{Pr}(X=1 | D=0)/\text{Pr}(X = 0 | D = 0)\)</span>。我們可以從原始的表格中的數據直接計算來獲得驗證：</p>
+<p><span class="math display">\[
+\text{Pr}(X=1|D=0) = 521/776 = 0.6714 \\
+\text{Pr}(X=0|D=0) = 255/776 = 0.3286 \\
+\Rightarrow \frac{\text{Pr}(X=1|D=0)}{\text{Pr}(X=0|D=0)} = \frac{0.6714}{0.3286} = 2.043
+\]</span></p>
+<p>在另外一個模型中的截距 <span class="math inline">\(\exp(\hat{\lambda}) = 0.035\)</span>。從該模型的數學表達式出發，不難知道：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\exp(\lambda^*) &amp; = \frac{\text{Pr}(D = 1 | X = 0, S = 1)}{\text{Pr}(D = 0 | X = 0, S = 1)} \\ 
+&amp;  = \frac{9 / 264}{255 / 264} = 0.03529
+\end{aligned}
+\]</span></p>
+</div>
+<div id="接下來我們將要分析酒精攝入量對上述關係可能存在的影響請嘗試使用-mantel-haenszel-法來計算酒精攝入量調整後的吸菸與食道癌的比值比調整了飲酒量之後的比值比發生了多大的變化" class="section level4">
+<h4><span class="header-section-number">50.5.1.5</span> 接下來我們將要分析酒精攝入量對上述關係可能存在的影響。請嘗試使用 Mantel-Haenszel 法來計算酒精攝入量調整後的吸菸與食道癌的比值比。調整了飲酒量之後的比值比發生了多大的變化？</h4>
+<pre><code>## 
+## . use &quot;../backupfiles/oesophageal_data-1.d. 
+## . gen tobacco_2 = .
+## (976 missing values generated)
+## 
+## . replace tobacco_2 = 0 if tobacco_group == 0
+## (264 real changes made)
+## 
+## . replace tobacco_2 = 1 if tobacco_group &gt;= 1
+## (712 real changes made)
+## 
+## . 
+## . mhodds case tobacco_2, by(alcohol_grp)
+## 
+## Maximum likelihood estimate of the odds ratio
+## Comparing tobacco_2==1 vs. tobacco_2==0
+## by alcohol_grp
+## 
+## -------------------------------------------------------------------------------
+##  alcoho~p | Odds Ratio        chi2(1)         P&gt;chi2       [95% Conf. Interval]
+## ----------+--------------------------------------------------------------------
+##  0-39 gra |          .          17.31         0.0000               .          .
+##  40-79 gr |   9.552239          19.77         0.0000         2.82084   32.34690
+##  80-119 g |   3.066667           4.73         0.0296         1.05865    8.88347
+##  120+ gra |  12.941176           7.51         0.0061         1.20415  139.08120
+## -------------------------------------------------------------------------------
+## 
+##     Mantel-Haenszel estimate controlling for alcohol_grp
+##     ----------------------------------------------------------------
+##      Odds Ratio    chi2(1)        P&gt;chi2        [95% Conf. Interval]
+##     ----------------------------------------------------------------
+##        8.587244      46.47        0.0000         4.079007  18.078115
+##     ----------------------------------------------------------------
+## 
+## Test of homogeneity of ORs (approx): chi2(3)   =    6.09
+##                                      Pr&gt;chi2   =  0.1073</code></pre>
+<p>調整酒精攝入量之後，可見吸菸與食道癌的比值比 OR 從 10.39 略微降低到 8.59。與第一步的問題相結合，當時我們發現吸菸與飲酒之間有關聯，所以綜合以上信息可以認爲飲酒量是吸菸與食道癌關係的混雜因子 (confounder)。但是吸菸者與食道癌之間的強正關係 (strong positive association) 在調整了飲酒量之後依然是有統計學意義的。調整了飲酒量之後，吸菸者患有食道癌的比值 (odds) 高過不吸菸的人8倍以上。</p>
+</div>
+<div id="請擬合合適的模型重複上述的分析根據模型報告的結果尋找能夠評價調整了飲酒量以後的吸菸與患有食道癌之間關係的比值比及其信賴區間解釋該模型的截距的含義是什麼" class="section level4">
+<h4><span class="header-section-number">50.5.1.6</span> 請擬合合適的模型重複上述的分析，根據模型報告的結果尋找能夠評價調整了飲酒量以後的吸菸與患有食道癌之間關係的比值比及其信賴區間。解釋該模型的截距的含義是什麼。</h4>
+<div class="sourceCode" id="cb696"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb696-1" data-line-number="1">M3 &lt;-<span class="st"> </span><span class="kw">glm</span>(case <span class="op">~</span><span class="st"> </span>Tobacco_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="kw">as.factor</span>(alcohol_grp), </a>
+<a class="sourceLine" id="cb696-2" data-line-number="2">          <span class="dt">data =</span> Oesophageal, </a>
+<a class="sourceLine" id="cb696-3" data-line-number="3">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb696-4" data-line-number="4"><span class="kw">summary</span>(M3); jtools<span class="op">::</span><span class="kw">summ</span>(M3, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = case ~ Tobacco_2 + as.factor(alcohol_grp), family = binomial(link = logit), 
+##     data = Oesophageal)
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.58458  -0.78012  -0.46294  -0.16370   2.53054  
+## 
+## Coefficients:
+##                         Estimate Std. Error  z value  Pr(&gt;|z|)    
+## (Intercept)             -4.30590    0.38538 -11.1731 &lt; 2.2e-16 ***
+## Tobacco_2SMker           2.12652    0.35884   5.9260 3.103e-09 ***
+## as.factor(alcohol_grp)1  1.14562    0.23664   4.8412 1.290e-06 ***
+## as.factor(alcohol_grp)2  1.91822    0.26815   7.1535 8.459e-13 ***
+## as.factor(alcohol_grp)3  3.09942    0.33503   9.2511 &lt; 2.2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 989.947  on 975  degrees of freedom
+## Residual deviance: 786.564  on 971  degrees of freedom
+## AIC: 796.564
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+976
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+case
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(4)
+</td>
+<td style="text-align:right;">
+203.383008
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.295141
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.205448
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+796.564303
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+820.981616
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.013489
+</td>
+<td style="text-align:right;">
+0.006338
+</td>
+<td style="text-align:right;">
+0.028708
+</td>
+<td style="text-align:right;">
+-11.173058
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Tobacco_2SMker
+</td>
+<td style="text-align:right;">
+8.385601
+</td>
+<td style="text-align:right;">
+4.150364
+</td>
+<td style="text-align:right;">
+16.942686
+</td>
+<td style="text-align:right;">
+5.926028
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(alcohol_grp)1
+</td>
+<td style="text-align:right;">
+3.144379
+</td>
+<td style="text-align:right;">
+1.977466
+</td>
+<td style="text-align:right;">
+4.999894
+</td>
+<td style="text-align:right;">
+4.841238
+</td>
+<td style="text-align:right;">
+0.000001
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(alcohol_grp)2
+</td>
+<td style="text-align:right;">
+6.808843
+</td>
+<td style="text-align:right;">
+4.025526
+</td>
+<td style="text-align:right;">
+11.516593
+</td>
+<td style="text-align:right;">
+7.153511
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(alcohol_grp)3
+</td>
+<td style="text-align:right;">
+22.185079
+</td>
+<td style="text-align:right;">
+11.504870
+</td>
+<td style="text-align:right;">
+42.779944
+</td>
+<td style="text-align:right;">
+9.251133
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<p>結論其實是一樣的。調整了飲酒量之後，吸菸者患有食道癌的比值高於非吸菸者 8 倍以上。另外，飲酒量的增加也與食道癌呈正相關。調整了吸菸量之後，飲酒量最多的人患有食道癌的比值比飲酒量最少的人高22倍以上。這個模型裏的截距可以用下列的數學表達式來解釋：</p>
+<p><span class="math display">\[
+\exp(\hat{\lambda^*}) = \frac{\text{Pr}(D = 1 | X = 0, \text{ alcohol } &lt; 40 \text{ g/d}, S = 1)}{\text{Pr}(D = 0 | X = 0, \text{ alcohol } &lt; 40 \text{ g/d}, S = 1)}
+\]</span></p>
+</div>
+<div id="mantel-haenszel法計算的95信賴區間和邏輯回歸模型給出的95信賴區間估計相比有什麼不同" class="section level4">
+<h4><span class="header-section-number">50.5.1.7</span> Mantel-Haenszel法計算的95%信賴區間和邏輯回歸模型給出的95%信賴區間估計相比有什麼不同？</h4>
+<p>二者不完全一樣。使用Mantel-Haenszel法計算的信賴區間範圍更寬。</p>
+</div>
+<div id="接下來嘗試使用mantel-haenszel法和邏輯回歸模型各自進一步調整年齡請觀察年齡對吸菸和患有食道癌之間的關係有何影響比較兩種方法獲得的信賴區間估計" class="section level4">
+<h4><span class="header-section-number">50.5.1.8</span> 接下來嘗試使用Mantel-Haenszel法和邏輯回歸模型各自進一步調整年齡。請觀察年齡對吸菸和患有食道癌之間的關係有何影響。比較兩種方法獲得的信賴區間估計。</h4>
+<ul>
+<li>Mantel-Haenszel法</li>
+</ul>
+<pre><code>## 
+## . use &quot;../backupfiles/oesophageal_data-1.d. 
+## . gen tobacco_2 = .
+## (976 missing values generated)
+## 
+## . replace tobacco_2 = 0 if tobacco_group == 0
+## (264 real changes made)
+## 
+## . replace tobacco_2 = 1 if tobacco_group &gt;= 1
+## (712 real changes made)
+## 
+## . 
+## . mhodds case tobacco_2, by(alcohol_grp age_group)
+## 
+## Maximum likelihood estimate of the odds ratio
+## Comparing tobacco_2==1 vs. tobacco_2==0
+## by alcohol_grp age_group
+## 
+## note: only 17 of the 24 strata formed in this analysis contribute
+##       information about the effect of the explanatory variable
+## 
+## -------------------------------------------------------------------------------
+##  alcoho~p  age_gr~p | Odds Ratio     chi2(1)      P&gt;chi2   [95% Conf. Interval]
+## --------------------+----------------------------------------------------------
+##  0-39 gra         1 |          .           .          .           .          .
+##  0-39 gra         2 |          .        0.74      0.3897           .          .
+##  0-39 gra         3 |          .        0.53      0.4669           .          .
+##  0-39 gra         4 |          .        5.97      0.0145           .          .
+##  0-39 gra         5 |          .        3.44      0.0637           .          .
+##  0-39 gra         6 |          .        3.11      0.0779           .          .
+##  40-79 gr         1 |          .           .          .           .          .
+##  40-79 gr         2 |          .        1.52      0.2172           .          .
+##  40-79 gr         3 |   8.595238        5.47      0.0194     0.98028   75.36422
+##  40-79 gr         4 |          .        7.06      0.0079           .          .
+##  40-79 gr         5 |   2.500000        1.10      0.2946     0.42406   14.73848
+##  40-79 gr         6 |          .        1.10      0.2943           .          .
+##  80-119 g         1 |          .           .          .           .          .
+##  80-119 g         2 |          .           .          .           .          .
+##  80-119 g         3 |   4.631579        2.07      0.1504     0.46444   46.18758
+##  80-119 g         4 |   0.368421        0.73      0.3943     0.03362    4.03739
+##  80-119 g         5 |   1.714286        0.17      0.6778     0.13070   22.48431
+##  80-119 g         6 |          .           .          .           .          .
+##  120+ gra         1 |          .        0.25      0.6171           .          .
+##  120+ gra         2 |          .        0.67      0.4142           .          .
+##  120+ gra         3 |          .           .          .           .          .
+##  120+ gra         4 |          .        7.34      0.0068           .          .
+##  120+ gra         5 |   0.000000        0.33      0.5637           .          .
+##  120+ gra         6 |          .           .          .           .          .
+## -------------------------------------------------------------------------------
+## 
+##     Mantel-Haenszel estimate controlling for alcohol_grp and age_group
+##     ----------------------------------------------------------------
+##      Odds Ratio    chi2(1)        P&gt;chi2        [95% Conf. Interval]
+##     ----------------------------------------------------------------
+##        6.973912      31.04        0.0000         3.146924  15.454919
+##     ----------------------------------------------------------------
+## 
+## Test of homogeneity of ORs (approx): chi2(16)  =   21.16
+##                                      Pr&gt;chi2   =  0.1725</code></pre>
+<ul>
+<li>邏輯回歸模型</li>
+</ul>
+<div class="sourceCode" id="cb699"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb699-1" data-line-number="1">M4 &lt;-<span class="st"> </span><span class="kw">glm</span>(case <span class="op">~</span><span class="st"> </span>Tobacco_<span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="kw">as.factor</span>(alcohol_grp) <span class="op">+</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb699-2" data-line-number="2"><span class="st">            </span><span class="kw">as.factor</span>(age_group), </a>
+<a class="sourceLine" id="cb699-3" data-line-number="3">          <span class="dt">data =</span> Oesophageal, </a>
+<a class="sourceLine" id="cb699-4" data-line-number="4">          <span class="dt">family =</span> <span class="kw">binomial</span>(<span class="dt">link =</span> logit))</a>
+<a class="sourceLine" id="cb699-5" data-line-number="5"><span class="kw">summary</span>(M4); jtools<span class="op">::</span><span class="kw">summ</span>(M4, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">confint =</span> <span class="ot">TRUE</span>, <span class="dt">exp =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<pre><code>## 
+## Call:
+## glm(formula = case ~ Tobacco_2 + as.factor(alcohol_grp) + as.factor(age_group), 
+##     family = binomial(link = logit), data = Oesophageal)
+## 
+## Deviance Residuals: 
+##       Min         1Q     Median         3Q        Max  
+## -2.064050  -0.552410  -0.246922  -0.059923   2.877670  
+## 
+## Coefficients:
+##                         Estimate Std. Error z value  Pr(&gt;|z|)    
+## (Intercept)             -7.67141    1.10729 -6.9281 4.266e-12 ***
+## Tobacco_2SMker           1.96635    0.37410  5.2562 1.471e-07 ***
+## as.factor(alcohol_grp)1  1.34978    0.24982  5.4029 6.557e-08 ***
+## as.factor(alcohol_grp)2  1.86788    0.28402  6.5766 4.813e-11 ***
+## as.factor(alcohol_grp)3  3.51255    0.38314  9.1679 &lt; 2.2e-16 ***
+## as.factor(age_group)2    1.58061    1.08758  1.4533 0.1461325    
+## as.factor(age_group)3    3.36320    1.04676  3.2130 0.0013138 ** 
+## as.factor(age_group)4    3.83362    1.04188  3.6795 0.0002337 ***
+## as.factor(age_group)5    4.19618    1.04877  4.0010 6.306e-05 ***
+## as.factor(age_group)6    4.37550    1.10517  3.9591 7.522e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 989.947  on 975  degrees of freedom
+## Residual deviance: 686.554  on 966  degrees of freedom
+## AIC: 706.554
+## 
+## Number of Fisher Scoring iterations: 7</code></pre>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Observations
+</td>
+<td style="text-align:right;">
+976
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Dependent variable
+</td>
+<td style="text-align:right;">
+case
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Type
+</td>
+<td style="text-align:right;">
+Generalized linear model
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Family
+</td>
+<td style="text-align:right;">
+binomial
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Link
+</td>
+<td style="text-align:right;">
+logit
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+𝛘²(9)
+</td>
+<td style="text-align:right;">
+303.392825
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (Cragg-Uhler)
+</td>
+<td style="text-align:right;">
+0.419209
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Pseudo-R² (McFadden)
+</td>
+<td style="text-align:right;">
+0.306474
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+AIC
+</td>
+<td style="text-align:right;">
+706.554486
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+BIC
+</td>
+<td style="text-align:right;">
+755.389112
+</td>
+</tr>
+</tbody>
+</table>
+<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+exp(Est.)
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+<th style="text-align:right;">
+z val.
+</th>
+<th style="text-align:right;">
+p
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+(Intercept)
+</td>
+<td style="text-align:right;">
+0.000466
+</td>
+<td style="text-align:right;">
+0.000053
+</td>
+<td style="text-align:right;">
+0.004082
+</td>
+<td style="text-align:right;">
+-6.928093
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+Tobacco_2SMker
+</td>
+<td style="text-align:right;">
+7.144524
+</td>
+<td style="text-align:right;">
+3.431918
+</td>
+<td style="text-align:right;">
+14.873381
+</td>
+<td style="text-align:right;">
+5.256174
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(alcohol_grp)1
+</td>
+<td style="text-align:right;">
+3.856561
+</td>
+<td style="text-align:right;">
+2.363465
+</td>
+<td style="text-align:right;">
+6.292907
+</td>
+<td style="text-align:right;">
+5.402894
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(alcohol_grp)2
+</td>
+<td style="text-align:right;">
+6.474554
+</td>
+<td style="text-align:right;">
+3.710671
+</td>
+<td style="text-align:right;">
+11.297108
+</td>
+<td style="text-align:right;">
+6.576602
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(alcohol_grp)3
+</td>
+<td style="text-align:right;">
+33.533519
+</td>
+<td style="text-align:right;">
+15.825306
+</td>
+<td style="text-align:right;">
+71.056883
+</td>
+<td style="text-align:right;">
+9.167852
+</td>
+<td style="text-align:right;">
+0.000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(age_group)2
+</td>
+<td style="text-align:right;">
+4.857925
+</td>
+<td style="text-align:right;">
+0.576369
+</td>
+<td style="text-align:right;">
+40.944982
+</td>
+<td style="text-align:right;">
+1.453329
+</td>
+<td style="text-align:right;">
+0.146132
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(age_group)3
+</td>
+<td style="text-align:right;">
+28.881558
+</td>
+<td style="text-align:right;">
+3.712057
+</td>
+<td style="text-align:right;">
+224.712149
+</td>
+<td style="text-align:right;">
+3.212957
+</td>
+<td style="text-align:right;">
+0.001314
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(age_group)4
+</td>
+<td style="text-align:right;">
+46.229816
+</td>
+<td style="text-align:right;">
+5.998900
+</td>
+<td style="text-align:right;">
+356.264618
+</td>
+<td style="text-align:right;">
+3.679524
+</td>
+<td style="text-align:right;">
+0.000234
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(age_group)5
+</td>
+<td style="text-align:right;">
+66.431757
+</td>
+<td style="text-align:right;">
+8.504718
+</td>
+<td style="text-align:right;">
+518.909462
+</td>
+<td style="text-align:right;">
+4.001039
+</td>
+<td style="text-align:right;">
+0.000063
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+as.factor(age_group)6
+</td>
+<td style="text-align:right;">
+79.479504
+</td>
+<td style="text-align:right;">
+9.110343
+</td>
+<td style="text-align:right;">
+693.386792
+</td>
+<td style="text-align:right;">
+3.959127
+</td>
+<td style="text-align:right;">
+0.000075
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; border: 0;" colspan="100%">
+<sup></sup> Standard errors: MLE
+</td>
+</tr>
+</tfoot>
+</table>
+<p>從模型計算的結果來看，兩種方法其實點估計和信賴區間的估計值都很接近。不會有相互矛盾的結果。另外，Mantel-Haenszel法的計算在即使有些表格沒有人數的情況下也能穩健地給出計算結果。事實上我們可以認爲當存在數據分佈過於稀少 (sparse data issue) 的時候，Mantel-Haenszel法可能會更加可靠。</p>
+<p>計算結果也表明，調整了年齡和飲酒量之後，吸菸者和食道癌的比值比又略降至7.14。年齡對酒精攝入和食道癌的比值比影響似乎較小，年齡本身與食道癌呈極強的正相關。</p>
 </div>
 </div>
 </div>
