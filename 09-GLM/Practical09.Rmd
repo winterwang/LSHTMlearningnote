@@ -1,0 +1,137 @@
+在本次練習中，我們將嘗試使用多個不同的分析策略分析前文中使用過的低體重數據。
+
+### Part 1
+
+第一部分，假設我們的主要研究目的是想要知道，在儘可能多的考慮所有潛在的混雜因子之後，患有孕期高血壓的孕婦是否和低出生體重嬰兒的誕生有關。
+
+#### 在你熟悉的統計分析軟件中載入該數據，重複前文中做過的分析，即調查母親的體重是否對主要分析的高血壓和低出生體重嬰兒之間關係造成混雜。在模型中加入他們的交互作用項試以分析。
+
+```{r GLM-prac09-01, cache=TRUE}
+lbw <- read_dta("backupfiles/lbw.dta")
+
+a <- Epi::stat.table(list("Birthweight <2500g" = low, "History of hypertension"=ht), list(count(),percent(low)), data = lbw, margins = TRUE)
+# We first tabulate the data
+print(a, digits = c(percent = 2))
+
+# get the un-adjusted odds ratios for the association
+# between maternal hypertension and low birth weight
+
+M0 <- glm(low ~ ht, data = lbw, family = binomial(link = "logit"))
+summary(M0); jtools::summ(M0, digits = 6, confint = TRUE, exp = TRUE)
+
+# get the association between maternal weight and hypertension
+
+M.linear <- lm(lwt ~ ht, data = lbw)
+summary(M.linear); jtools::summ(M.linear, confint = TRUE, digits = 6)
+
+# get the association between maternal weight and low birth weight
+
+M1 <- glm(low ~ lwt, data = lbw, family = binomial(link = "logit"))
+summary(M1); jtools::summ(M1, digits = 6, confint = TRUE, exp = TRUE)
+
+# get the association between maternal hypertension and 
+# low birth weight adjusted for maternal weight
+
+M2 <- glm(low ~ lwt + ht, data = lbw, family = binomial(link = "logit"))
+summary(M2); jtools::summ(M2, digits = 6, confint = TRUE, exp = TRUE)
+
+
+lrtest(M2, M0)
+
+    ## we see that odds ratio for the association between
+    ## maternal hypertension and low birth weight after 
+    ## adjustment for mother's weight. Clear evidence of 
+    ## confounding. 
+
+# fit the model with interaction term
+
+M3 <- glm(low ~ lwt*ht, data = lbw, family = binomial(link = "logit"))
+summary(M3); jtools::summ(M3, digits = 6, confint = TRUE, exp = TRUE)
+
+    ## No evidence of an interaction. 
+```
+
+#### 把前一步中擬合過的模型的母親體重變量替換爲母親的年齡。你有怎樣的結論？
+
+```{r  GLM-prac09-02, cache=TRUE}
+
+# get the association between age and hypertension
+
+M.linear <- lm(age ~ ht, data = lbw)
+summary(M.linear); jtools::summ(M.linear, confint = TRUE, digits = 6)
+
+M1.1 <- glm(low ~ age, data = lbw, family = binomial(link = "logit"))
+summary(M1.1); jtools::summ(M1.1, digits = 6, confint = TRUE, exp = TRUE)
+
+M1.2 <- glm(low ~ age + ht, data = lbw, family = binomial(link = "logit"))
+summary(M1.2); jtools::summ(M1.2, digits = 6, confint = TRUE, exp = TRUE)
+
+lrtest(M0, M1.2)
+
+M1.3 <- glm(low ~ age*ht, data = lbw, family = binomial(link = "logit"))
+summary(M1.3); jtools::summ(M1.3, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+並無證據提示年齡是孕期高血壓和低出生體重之間的關係的混雜因子
+(confounder)，也沒有證據表明年齡對該關係有交互作用。
+
+#### 分析吸菸史是否對孕期高血壓和低出生體重之間的關係有混雜作用 (confounding effect)。注意這裏吸菸史是一個二進制變量。
+
+```{r  GLM-prac09-03, cache=TRUE}
+M2.1 <- glm(ht ~ smoke, data = lbw, family = binomial(link = "logit"))
+summary(M2.1); jtools::summ(M2.1, digits = 6, confint = TRUE, exp = TRUE)
+
+    ## here both the exposure of interest and the potential confounder
+    ## are confounder are binary, so we need to use logistic regression
+    ## (not linear regression) to explore the relationship between them.
+    ## In the logistic regression model either of the two variables 
+    ## could be the dependent variable.
+
+M2.2 <- glm(low ~ smoke, data = lbw, family = binomial(link = "logit"))
+summary(M2.2); jtools::summ(M2.2, digits = 6, confint = TRUE, exp = TRUE)
+
+M2.3 <- glm(low ~ smoke + ht, data = lbw, family = binomial(link = "logit"))
+summary(M2.3); jtools::summ(M2.3, digits = 6, confint = TRUE, exp = TRUE)
+
+lrtest(M2.3, M0)
+
+M2.4 <- glm(low ~ smoke*ht, data = lbw, family = binomial(link = "logit"))
+summary(M2.4); jtools::summ(M2.4, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+模型結果和似然比檢驗的結果提示孕婦的吸菸史與低出生體重有關。但是調整了吸菸史並不太改變孕期高血壓和低出生體重之間的比值比
+OR。這主要是因爲吸菸史和孕期高血壓之間沒有太多關係。所以，孕婦的吸菸史似乎不太需要被認定爲混雜因子，也沒有明顯的交互作用。
+
+#### 分析人種 (race) 是否有混雜效應。注意這裏人種變量的分類多於兩個。
+
+```{r GLM-prac09-04, cache=TRUE}
+M3.1 <- glm(ht ~ as.factor(race), data = lbw, 
+            family = binomial(link = "logit"))
+summary(M3.1); jtools::summ(M3.1, digits = 6, confint = TRUE, exp = TRUE)
+
+    ## Here the potential confounder is a 3-level categorical
+    ## variable so we need to treat this as the predictor 
+    ## variable when exploring its relationship with the 
+    ## exposure of interest. The exposure of interest is 
+    ## binary, so we need to use logistic regression. 
+
+M3.2 <- glm(low ~ as.factor(race), data = lbw, 
+            family = binomial(link = "logit"))
+summary(M3.2); jtools::summ(M3.2, digits = 6, confint = TRUE, exp = TRUE)
+
+M3.3 <- glm(low ~ as.factor(race) + ht, data = lbw, 
+            family = binomial(link = "logit"))
+summary(M3.3); jtools::summ(M3.3, digits = 6, confint = TRUE, exp = TRUE)
+
+lrtest(M3.3, M0)
+
+M3.4 <- glm(low ~ as.factor(race)*ht, data = lbw, 
+            family = binomial(link = "logit"))
+summary(M3.4); jtools::summ(M3.4, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+我們發現一些比較弱的證據似乎認爲不同人種可能和低出生體重有關，儘管這個關係並無統計學意義。調整了人種之後，孕期高血壓的比值比
+OR 變小了一點點 (從3.37 降到
+3.21)。所以，調整人種恐怕並沒有太多的意義。也應該沒有交互作用。
