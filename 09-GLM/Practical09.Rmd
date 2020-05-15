@@ -9,7 +9,9 @@
 ```{r GLM-prac09-01, cache=TRUE}
 lbw <- read_dta("../backupfiles/lbw.dta")
 
-a <- Epi::stat.table(list("Birthweight <2500g" = low, "History of hypertension"=ht), list(count(),percent(low)), data = lbw, margins = TRUE)
+a <- Epi::stat.table(list("Birthweight <2500g" = low, 
+                          "History of hypertension"=ht), 
+                     list(count(),percent(low)), data = lbw, margins = TRUE)
 # We first tabulate the data
 print(a, digits = c(percent = 2))
 
@@ -135,3 +137,122 @@ summary(M3.4); jtools::summ(M3.4, digits = 6, confint = TRUE, exp = TRUE)
 我們發現一些比較弱的證據似乎認爲不同人種可能和低出生體重有關，儘管這個關係並無統計學意義。調整了人種之後，孕期高血壓的比值比
 OR 變小了一點點 (從3.37 降到
 3.21)。所以，調整人種恐怕並沒有太多的意義。也應該沒有交互作用。
+
+#### 用相似的方法試分析子宮痙攣 (uterine irritability) 是否是混雜因子，有沒有可疑的交互作用？
+
+
+
+```{r GLM-prac09-05, cache=TRUE}
+a <- stat.table(list("History of Hypertension" = ht, "Uterine Irritability" = ui), 
+                     list(count(),percent(low)), data = lbw, margins = TRUE)
+# We first tabulate the data
+# There is a strong observed association here. 
+# The Zero in the contingency table means 
+# that fitting a logistic regression model 
+# will be uninformative, with subjects in one 
+# predictor variable category being dropped
+print(a, digits = c(percent = 2))
+
+M4.1 <- glm(low ~ ui, data = lbw, 
+            family = binomial(link = "logit"))
+summary(M4.1); jtools::summ(M4.1, digits = 6, confint = TRUE, exp = TRUE)
+
+M4.2 <- glm(low ~ ht + ui, data = lbw, 
+            family = binomial(link = "logit"))
+summary(M4.2); jtools::summ(M4.2, digits = 6, confint = TRUE, exp = TRUE)
+
+lrtest(M4.2, M0)
+```
+有一些證據提示子宮痙攣應該對孕期高血壓和低出生體重之間有一定的混雜因子效應。表示子宮痙攣和孕期高血壓，及其與低出生體重之間關係的比值比 OR 發生了顯著的變化 (OR changed materially from 3.37 to 4.09)。
+
+但是由於沒有一位母親同時有孕期高血壓且有子宮痙攣，我們並沒有辦法分析他們之間是否存在交互作用。
+
+#### 根據目前爲止建立過的模型和他們之間體現的可能存在的關係，你會怎樣建立關於有效評價孕期高血壓和低出生體重之間關係的邏輯回歸模型？
+
+我們認爲目前爲止對數據中的變量之間關係的評價，我們應該考慮在最終模型中加入母親的體重，以及子宮痙攣作爲混雜因子 (共變量, covariates)。
+
+```{r GLM-prac09-06, cache=TRUE}
+
+M5 <- glm(low ~ ht + ui + lwt, data = lbw, 
+            family = binomial(link = "logit"))
+summary(M5); jtools::summ(M5, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+此時，模型估計的孕期高血壓和低出生體重之間關係的比值比爲 7.10。接下來，重新把另外幾個數據中的變量一一逐個加入上面的 `M5` 模型中去，觀察孕期高血壓和低出生體重之間關係的比值比是否有本質變化。
+
+```{r GLM-prac09-07, cache=TRUE}
+M5.1 <- glm(low ~ ht + ui + lwt + age, data = lbw, 
+            family = binomial(link = "logit"))
+summary(M5.1); jtools::summ(M5.1, digits = 6, confint = TRUE, exp = TRUE)
+
+M5.2 <- glm(low ~ ht + ui + lwt + as.factor(smoke), data = lbw, 
+            family = binomial(link = "logit"))
+summary(M5.2); jtools::summ(M5.2, digits = 6, confint = TRUE, exp = TRUE)
+
+M5.3 <- glm(low ~ ht + ui + lwt + as.factor(race), data = lbw, 
+            family = binomial(link = "logit"))
+summary(M5.3); jtools::summ(M5.3, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+可見，除了母親體重，和子宮痙攣兩個變量之外，增加任何一個變量並不再實質改變孕期高血壓和低出生體重之間關係的比值比。
+
+### Part 2
+
+#### 想象另外一個研究者的分析目的是要使用相同的數據來建立一個預測式的模型。預測一名孕婦會產下一位低出生體重胎兒的危險度。
+
+#### 使用下面的Stata代碼，試用逐步選擇法尋找模型：
+
+```{r GLM-prac09-08, engine='stata', echo=FALSE}
+use "../backupfiles/lbw.dta"
+
+* the brackets (i.race) ensure that the race indicator variables are considered
+* as a group, not individually
+
+xi: stepwise, forward pe(0.05): logistic low i.ht lwt age (i.race) i.smoke i.ui
+
+```
+
+
+逐步篩選的過程是先加入和母親的體重，其次是孕期高血壓，最後保留了子宮痙攣作爲了低出生體重的預測變量。這和我們在第一部分最終保留的，模型完全一樣。
+
+
+```{r GLM-prac09-09, engine='stata', echo=FALSE}
+use "../backupfiles/lbw.dta"
+
+xi: stepwise, forward pe(0.1): logistic low i.ht lwt age (i.race) i.smoke i.ui
+
+```
+
+
+這裏設定了 `pe(0.1)` 之後，我們發現又增加了吸菸習慣，和種族兩個變量。
+
+```{r GLM-prac09-10, engine='stata', echo=FALSE}
+use "../backupfiles/lbw.dta"
+
+xi: stepwise, pe(0.1): logistic low i.ht lwt age (i.race) i.smoke i.ui
+
+```
+
+這時，只有年量被移出了最終模型，獲得了和逐步加入變量法 (`forward`) 相同的模型。但是實際上在很多現實數據中，這種情況很少見。
+
+
+```{r  GLM-prac09-11, engine='stata', echo=FALSE}
+
+xi: stepwise, pe(0.05): logistic low i.ht lwt age (i.race) i.smoke i.ui
+```
+
+這時，逐步刪除法即使使用了更加嚴格的p值標準，留下的變量和逐步增加法的模型也不同。所以，分析者採用逐步刪除或者逐步增加變量的方法，可能獲得截然不同的最終保留模型。
+
+#### 建立一個包含全部變量的模型。解釋其提示的孕期高血壓和低出生體重之間的關係。
+
+```{r GLM-prac09-12, cache=TRUE}
+M6 <- glm(low ~ ht + ui + lwt + as.factor(race) + 
+              age + as.factor(smoke), data = lbw, 
+            family = binomial(link = "logit"))
+summary(M6); jtools::summ(M6, digits = 6, confint = TRUE, exp = TRUE)
+
+```
+
+放入了全部的變量之後，調整後的孕期高血壓和低出生體重之間關係的比值比變成了 6.40 ，它的95%信賴區間是 (1.66, 24.69)。這個結果和逐步變量篩選法，以及第一部分中逐個分析變量之間關係之後建立起來的模型所估算的比值比結果其實十分接近。在彙報這些結果的時候，無論分析者選用了哪種方法，最終獲得接近的答案，會讓讀者相信結果是穩定可靠的。分析者也應該在論文中提示使用不同的策略分析選擇變量和模型之後獲得的比值比都很接近。當然，有些人會樂意展示所有分析策略的過程和結果。另外值得注意的是，保留不同變量的模型所估計的各自的比值比之間嚴格來說是不同的條件比值比，由於邏輯回歸的不可壓縮型，他們不適宜直接拿來比較。
