@@ -1,0 +1,212 @@
+
+```{r Surv-prac-03-01, cache=TRUE}
+whitehall <- read_dta("backupfiles/whitehall.dta")
+whitehall <- whitehall %>%
+                mutate(timein = as.numeric(timein),
+                       timeout = as.numeric(timeout),
+                       timebth = as.numeric(timebth)) %>%
+                mutate(time = (timeout - timein)/365.25)
+
+with(whitehall, tabpct(grade, chd, graph = FALSE))
+
+#### median time
+Median_t <- ddply(whitehall,c("grade","chd"),summarise,Median=median(time))
+Median_t
+```
+
+
+```{r Surv-prac-03-02, cache=TRUE, fig.asp=.8, fig.width=6, fig.cap='Rplots of the Kaplan-Meier survivor functions', fig.align='center', out.width='70%'}
+whl.km <- survfit(Surv(time = time, event = chd) ~ as.factor(grade), data = whitehall)
+plot(whl.km, conf.int = T, col = c("blue", "red"), mark.time = F, xlab = "Time", ylab = "Survivor function", ylim = c(0.8, 1))
+legend(1, 0.85, c("Grade 1", "Grade 2"), col = c("blue", "red"), lty = 1)
+```
+
+ "Grade 1" 患者的生存概率明顯好於 "Grade 2"。而且，95% 信賴區間沒有重疊，提示這兩組之間的生存概率曲線應該有統計學上的顯著不同。
+
+```{r Surv-prac-03-03, cache=TRUE}
+# How many individuals survived 5, 10, 15 years of follow-up in each job grade?
+summary(whl.km, times = c(5, 10, 15))
+# Log rank test to compare the estimated survivor functions in the two job grades
+survdiff(Surv(time=time, event = chd) ~ as.factor(grade), data = whitehall)
+# Fit an exponential model
+whl.exp <- survreg(Surv(time, chd) ~ as.factor(grade), dist = "exponential", data = whitehall)
+summary(whl.exp)
+```
+
+這裏 R 的輸出結果和 STATA 的結果略有不同:
+
+```
+. streg i.grade, d(exp) nohr
+
+         failure _d:  chd
+   analysis time _t:  (timeout-origin)/365.25
+             origin:  time timein
+
+Iteration 0:   log likelihood = -627.95275
+Iteration 1:   log likelihood = -620.09818
+Iteration 2:   log likelihood = -619.57374
+Iteration 3:   log likelihood = -619.57209
+Iteration 4:   log likelihood = -619.57209
+
+Exponential PH regression
+
+No. of subjects =        1,677                  Number of obs    =       1,677
+No. of failures =          154
+Time at risk    =  27605.37066
+                                                LR chi2(1)       =       16.76
+Log likelihood  =   -619.57209                  Prob > chi2      =      0.0000
+
+------------------------------------------------------------------------------
+          _t |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+     2.grade |   .6885037   .1635118     4.21   0.000     .3680264    1.008981
+       _cons |  -5.420525   .1054093   -51.42   0.000    -5.627123   -5.213926
+------------------------------------------------------------------------------
+```
+
+
+在 R 裏面，指數分布模型的回歸系數中，常數項 `(Intercept)` 等同於 STATA 裏的 `_cons`，但是，它在 R 裏估計的是 $-\log \lambda$。`grade` 的回歸系數 $\beta$ 也一樣，在 R 裏它估計的是 $-\beta$。所以你會發現 R 的輸出結果和 STATA 的結果符號相反，但是殊途同歸。
+
+```{r Surv-prac-03-04, cache=TRUE}
+# Change the time scale to age time and fit the models again
+
+#The survreg function does not allow delayed entry times, so we can't use it with age as the time scale and entry at 'timein'
+#But we can fit the same model using an alternative function called 'weibreg' which is in the 'eha' package. You will need to install this package.
+# install.packages("eha") # install and loading this package by uncomment these two lines
+# library(eha)
+
+whl.exp2<-weibreg(Surv(timein/365.25, timeout/365.25,event=chd,origin=timebth/365.25)~as.factor(grade), data = whitehall,
+                  shape = 1)
+summary(whl.exp2)
+
+#Another alternative is the flexsurv package
+# install.packages("flexsurv") # install and loading this package by uncomment these two lines
+# library(flexsurv)
+whl.exp3<-flexsurvreg(Surv(timein/365.25, timeout/365.25,event=chd,origin=timebth/365.25)~as.factor(grade), data = whitehall,dist = "exponential",inits = rep(0.1,2))
+whl.exp3
+```
+
+在指數分布模型下，我們默認事件發生率不會隨着時間變化，所以，改變了時間尺度，對生存分析估計的參數結果沒有影響。
+
+```{r Surv-prac-03-05, cache=TRUE}
+whitehall <- whitehall %>%
+  mutate(agecat = cut(agein, breaks = c(40, 50, 55, 60, 65, 70),right = F, labels = F))
+whl.exp <- survreg(Surv(time, chd) ~ as.factor(grade) + as.factor(agecat), dist = "exponential", data = whitehall)
+summary(whl.exp)
+
+# Fit the Weibull model in R, keep job grade and age category
+
+whl.weibull <- survreg(Surv(time, chd) ~ as.factor(grade) + as.factor(agecat), dist = "weibull", data = whitehall)
+
+summary(whl.weibull)
+```
+
+這個結果和 STATA 的結果也有些許不同:
+
+```
+streg i.grade i.agecat, d(weib) nohr
+
+         failure _d:  chd
+   analysis time _t:  (timeout-origin)/365.25
+             origin:  time timein
+
+Fitting constant-only model:
+
+Iteration 0:   log likelihood = -627.95275
+Iteration 1:   log likelihood = -621.65709
+Iteration 2:   log likelihood = -621.54148
+Iteration 3:   log likelihood = -621.54144
+
+Fitting full model:
+
+Iteration 0:   log likelihood = -621.54144
+Iteration 1:   log likelihood = -591.43979
+Iteration 2:   log likelihood = -580.27283
+Iteration 3:   log likelihood =  -579.9356
+Iteration 4:   log likelihood = -579.93477
+Iteration 5:   log likelihood = -579.93477
+
+Weibull PH regression
+
+No. of subjects =        1,677                  Number of obs    =       1,677
+No. of failures =          154
+Time at risk    =  27605.37066
+                                                LR chi2(5)       =       83.21
+Log likelihood  =   -579.93477                  Prob > chi2      =      0.0000
+
+------------------------------------------------------------------------------
+          _t |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+     2.grade |    .285431   .1753856     1.63   0.104    -.0583184    .6291805
+             |
+      agecat |
+          2  |   .9690825   .2581668     3.75   0.000      .463085     1.47508
+          3  |    1.47402   .2416534     6.10   0.000     1.000388    1.947652
+          4  |   1.524436   .2707669     5.63   0.000     .9937422    2.055129
+          5  |   2.546185   .3759036     6.77   0.000     1.809428    3.282943
+             |
+       _cons |  -7.406372   .3705694   -19.99   0.000    -8.132675   -6.680069
+-------------+----------------------------------------------------------------
+       /ln_p |   .3462011   .0767777     4.51   0.000     .1957195    .4966827
+-------------+----------------------------------------------------------------
+           p |   1.413687   .1085397                      1.216186    1.643261
+         1/p |   .7073702   .0543103                      .6085461    .8222428
+------------------------------------------------------------------------------
+```
+
+- STATA裏的 `ln_p` (就是$\kappa$形狀參數 shape parameter)，在 R 裏的名字是 `-log(scale)`。
+- STATA報告對數風險度比 `2.grade |.285431` ，R 裏面的回歸系數 `as.factor(grade)2  -0.2019` 其實是對數風險度比除以形狀參數之後變更符號，所以 $-\frac{0.2854}{\exp(0.346)} = 0.202$
+- 所以在 R 中實際上輸出的結果是: $-\log\kappa, -\frac{\beta}{\kappa}$。
+
+
+```{r Surv-prac-03-06, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Non-paramatric plot to investigate whether the Weibull model fit the data appropriate', fig.align='center', out.width='70%'}
+whl.km.agecat1 <- survfit(Surv(time=time,event=chd)~grade,data=subset(whitehall,agecat==1))
+plot(whl.km.agecat1,conf.int=T,col=c("red","black"),mark.time=F,xlab="log time", ylab="log(-log S(t))",fun="cloglog")
+```
+
+
+用 Weibull 分布模型的結果，繪制兩個 job grade 在 5 個不同年齡層次的估計生存概率曲線:
+
+```{r Surv-prac-03-07, cache=TRUE, fig.asp=.8, fig.width=6, fig.cap='The estimated survivor curves from the Weibull model in each job and age-at-entry category', fig.align='center', out.width='70%'}
+whl.weibull <- survreg(Surv(time, chd) ~ as.factor(grade) + as.factor(agecat), dist = "weibull", data = whitehall)
+plot(predict(whl.weibull, newdata = list(grade = 1, agecat = 1),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, col = "red",
+     xlab = "Time", ylab = "Survivor function: S(t)", xlim = c(0,20), ylim = c(0.5, 1))
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 1),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "red")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 2),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "green")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 2),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "green")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 3),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "black")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 3),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "black")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 4),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "orange")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 4),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "orange")
+
+lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 5),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "blue")
+lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 5),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "blue")
+```
+
+下面把隨訪時間按照 5 到 20 年每間隔五年的方法把所有患者的追蹤時間截斷成4個部分。然後用指數分布回歸模型擬合數據，這也是一種放鬆**恆定事件發生率**這一前提條件的方法:
+
+```{r Surv-prac-03-08, cache=TRUE, warning=FALSE}
+whl.split <- survSplit(Surv(time, chd) ~ ., whitehall, cut = c(0, 5, 10, 15, 20), start = "time0", episode = "fuband")
+
+with(whitehall, whitehall[id == 5038,])
+
+with(whl.split, whl.split[id == 5038,])
+
+whl.split.exp <- flexsurvreg(Surv(time0, time, chd) ~ as.factor(grade) + as.factor(agecat) +
+                               as.factor(fuband), dist = "exponential", data = whl.split)
+
+whl.split.exp
+```
+
+
+我們用指數分布回歸擬合的生存時間模型，其實還可以用泊鬆回歸模型來做，結果也是一樣的:
+
+```{r Surv-prac-03-09, cache=TRUE, warning=FALSE}
+whl.poi <- glm(chd ~ as.factor(grade), family = poisson(link = log), offset = log(time), data = whitehall)
+summary(whl.poi)
+```
+
+你可以回頭去和指數分布回歸的模型結果做個比較，他們的回歸系數估計和標準誤完全是一樣的。
