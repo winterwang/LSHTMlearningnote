@@ -2,7 +2,7 @@
 
 
 
-# Causal Languages 因果推斷的語法
+# Causal Languages 因果推斷的語法 {#grama-causal-infer}
 
 > All models are wrong, but some are useful. 
 > ~ George E. P. Box
@@ -394,7 +394,7 @@ $$
 $$
 
 
-# Graphical Models 因果推斷的圖形模型
+# Graphical Models 因果推斷的圖形模型 {#graphical-models}
 
 條件可置換性 (conditional exchangeability) 是因果推斷中最重要的前提假設。
 
@@ -596,7 +596,7 @@ plot(g)
 
 
 
-# Regression Methods with continuous outcomes 結果變量爲連續型變量
+# Regression Methods with continuous outcomes 結果變量爲連續型變量 {#reg-cont}
 
 ## 用於對連續型結果變量做因果推斷的被估計量 
 
@@ -853,8 +853,8 @@ Cat_mod5 <- lm(bweight ~ factor(mbsmoke) + mage*factor(mbsmoke) + I(mage^2)*fact
 
 summary(Cat_mod5)
 
-with(cattaneo2, summ(mage, graph = F))
-with(cattaneo2, summ(mage^2, graph = F))
+with(cattaneo2, epiDisplay::summ(mage, graph = F))
+with(cattaneo2, epiDisplay::summ(mage^2, graph = F))
 
 
 Y <- cattaneo2$bweight
@@ -918,8 +918,10 @@ POmean                 |
 
 數據還是吸煙和新生兒體重的關系的數據: 
 
-```{r description, engine='stata', echo=FALSE}
+
+```{r , engine='stata', echo=FALSE}
 use "backupfiles/cattaneo2.dta"
+
 describe
 tab mbsmoke
 
@@ -933,21 +935,26 @@ regress bweight i.mbsmoke
 *b) 
 
 regress bweight i.mbsmoke i.fbaby
+```
 
-*2. 調整了 `fbaby` 之後，暴露和結果之間的關系發生了怎樣的變化？
-//說明 `fbaby` 是什麼類型的混雜因子？
+2. 調整了 `fbaby` 之後，暴露和結果之間的關系發生了怎樣的變化？
+說明 `fbaby` 是什麼類型的混雜因子？
+看兩個結果的報告，吸煙的線性回歸系數從調整 `fbaby` 前的 `-275.25`，
+ 絕對值變大爲 `-281.06`，這是一種負方向混雜 (negative confounding)。
+ 這種混雜可以分析 `fbaby` 和 `mbsmoke` 以及 `bweight`
+ 各自的關系看出，懷第一胎的母親比較少吸煙，且第一胎嬰兒的出生體重
+ 均值比不是第一胎嬰兒的出生體重要低: 
 
-*看兩個結果的報告，吸煙的線性回歸系數從調整 `fbaby` 前的 `-275.25`，
-// 絕對值變大爲 `-281.06`，這是一種負方向混雜 (negative confounding)。
-// 這種混雜可以分析 `fbaby` 和 `mbsmoke` 以及 `bweight`
-// 各自的關系看出，懷第一胎的母親比較少吸煙，且第一胎嬰兒的出生體重
-// 均值比不是第一胎嬰兒的出生體重要低: 
+```{r , engine='stata', echo=FALSE}
+use "backupfiles/cattaneo2.dta"
 
 tab fbaby mbsmoke, row
 
 tabstat bweight, by(fbaby)
 
 tabstat bweight, by(mbsmoke)
+```
+
 
 // 這裏需要重新強調的是，通過比較調整新變量前後的回歸系數的變化，
 // 能且僅僅只能在線性回歸模型 (可壓縮模型) 時使用，邏輯回歸中不適用。
@@ -985,96 +992,124 @@ tabstat bweight, by(mbsmoke)
 //     E{Y(1) | C = c} - E{Y(0) | C = c} = 281.0638
 
 *5 用 STATA 的 `teffects ra` 命令擬合相同的模型: 
-  
+
+```{r  engine='stata', echo=FALSE}
+use "backupfiles/cattaneo2.dta"
+
+
 teffects ra (bweight fbaby) (mbsmoke)
+```
 
 // 因果均差 (ACE) 的估計在 STATA 被叫做 `ATE`，但是估計的結果略低於
 // 模型 (b) 的結果: -273.1552 vs. -281.0638。
 
 *6 在線性回歸模型中加入 `i.mbsmoke##i.fbaby` 的交互作用項，試着計算
 // `fbaby` 爲 0/1 時各自的 `mbsmoke` 回歸系數: 
-  
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
+
 regress bweight i.mbsmoke##i.fbaby
-est store a
 
 *to get the stratum specific effects: 
 
 lincom 1.mbsmoke  // when baby is not first born 
 
 lincom 1.mbsmoke + 1.mbsmoke#1.fbaby // when baby is first born
+```
+
+
 
 *7 計算 `fbaby` 各組所佔的百分比: (爲了計算孕期吸煙導致的新生兒體重下降
-// 的邊際效應 marginal effect)
+* 的邊際效應 marginal effect)
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
 
 tab fbaby
 
 *8 用 6, 7 的結果，手動計算一下 ACE 的估計量: 
   
 
-*now restore model estimates
-est restore a 
+
+regress bweight i.mbsmoke##i.fbaby
 
 lincom 0.562*1.mbsmoke  + 0.438*(1.mbsmoke + 1.mbsmoke#1.fbaby)
 
-margins, dydx(mbsmoke) // 你也可以用這個 margins 的命令，很方便，但是它估計的標準誤不使用穩健統計學方法，所以略有不同。
+margins, dydx(mbsmoke) 
+* 你也可以用這個 margins 的命令，很方便，但是它估計的標準誤不使用穩健統計學方法，所以略有不同。
+```
 
-*9 爲什麼沒有加交互作用項的模型 (b) 給出的回歸系數估計和 `teffects ra`
-// 的結果相差很大？
 
-//   這是因爲如果給模型 (b) 的回歸系數賦予因果關系的解釋的話，第四個前提假設
-//   -- 模型選擇正確且變量在模型中的形式也是正確 -- 太過樂觀了。這個前提假設
-//   認爲沒有交互作用，但是，如果你看加交互作用項的第三個模型中，交互作用項
-//   的回顧系數其實是有意義的 (有證據顯示交互作用存在): 
-  
-// mbsmoke#|
-//       fbaby |
-// smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5142  
+*9 爲什麼沒有加交互作用項的模型 (b) 給出的回歸系數估計和 `teffects ra`  的結果相差很大？
+
+*   這是因爲如果給模型 (b) 的回歸系數賦予因果關系的解釋的話，第四個前提假設
+*   -- 模型選擇正確且變量在模型中的形式也是正確 -- 太過樂觀了。這個前提假設
+*   認爲沒有交互作用，但是，如果你看加交互作用項的第三個模型中，交互作用項
+*   的回顧系數其實是有意義的 (有證據顯示交互作用存在): 
+* mbsmoke#|
+*       fbaby |
+* smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5142  
 
 *10 現在給模型中加入更多的共變量，用兩種命令分別擬合，比較其結果:
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
   
 regress bweight mbsmoke fbaby mmarried alcohol fedu mage
 
 
 teffects ra (bweight fbaby mmarried alcohol fedu mage) (mbsmoke)
+```
 
-
-//   此時我們發現，簡單現行回歸估計的因果均值差(ATE)總是和考慮了更復雜關系的模型相比
-//   相差較多。
+*   此時我們發現，簡單現行回歸估計的因果均值差(ATE)總是和考慮了更復雜關系的模型相比相差較多。
 
 *11 你可以用下面的非 teffects 代碼還原上面的計算: 
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
   
- qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==0
- predict Y0
+qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==0
+predict Y0
+
+qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==1
+predict Y1
+
+sum Y0
+gen E0=r(mean) 
+
+sum Y1
+gen E1=r(mean)
+
+gen ACE = E1-E0 
+sum ACE 
+```
+
+*或者使用方便的 margins
  
- qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==1
- predict Y1
- 
- sum Y0
- gen E0=r(mean) 
- 
- sum Y1
- gen E1=r(mean)
- 
- gen ACE = E1-E0 
- sum ACE 
- 
- // 或者使用方便的 margins
- 
-qui regress bweight i.mbsmoke fbaby mmarried alcohol fedu mage ///
-		i.mbsmoke#i.fbaby i.mbsmoke#i.mmarried i.mbsmoke#i.alcohol i.mbsmoke#c.fedu ///
-		i.mbsmoke#c.mage
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
+
+qui regress bweight i.mbsmoke fbaby mmarried alcohol fedu mage 		i.mbsmoke#i.fbaby i.mbsmoke#i.mmarried i.mbsmoke#i.alcohol i.mbsmoke#c.fedu 		i.mbsmoke#c.mage
 		
 margins, dydx(mbsmoke)
-
-// 值得注意的是，即使是使用 `teffects ra` 我們可能對模型形式的指定還是過於簡
-// 單，例如上面的模型中加入了許多變量，但是 STATA 其實並沒有考慮有三個或者三
-// 個以上變量之間發生交互作用的情況，而且， `fedu, mage` 被認爲和結果變量 
-// `bweight` 呈簡單一次的線性關系。
 ```
 
 
+* 值得注意的是，即使是使用 `teffects ra` 我們可能對模型形式的指定還是過於簡
+* 單，例如上面的模型中加入了許多變量，但是 STATA 其實並沒有考慮有三個或者三
+* 個以上變量之間發生交互作用的情況，而且， `fedu, mage` 被認爲和結果變量 
+* `bweight` 呈簡單一次的線性關系。
 
-# Regression Methods with binary outcomes 結果變量爲二分類變量 
+
+
+
+# Regression Methods with binary outcomes 結果變量爲二分類變量  {#regre-binary}
 
 ## 二分類結果變量的因果被估計量 (causal estimand): 
 
@@ -1436,7 +1471,7 @@ tab coag rfa, col chi
 
 但是一個患者如果沒有凝血功能障礙，那麼他/她接受哪種療法就變得不受 `coag` 的影響。而此時我們使用 `etat` 估算的是所有接受 RFA 療法的患者中的療效。這裡受到模型變量共線性影響就較小。
 
-# Prospensity Score 傾向性評分
+# Prospensity Score 傾向性評分 {#prop-score}
 
 在前兩個章節中我們探討了如何使用標準的統計學回歸模型作爲工具來獲得實驗的因果效應(causal effects)的估計值。我們同樣也注意到使用標準統計學模型時可能遇到的種種限制，特別是當我們想要控制的變量個數非常多的時候，遇到違反前提條件(violation of positivity, finite sample bias)。本章我們探討非標準統計學模型的工具 -- 傾向性評分在因果推斷中的應用。
 
@@ -1812,9 +1847,8 @@ addmargins(table(ExtractSmd(tabUnmatched) > 0.08))
 
 ```{r CI-05-exe07,  engine='stata', cache=TRUE, echo=FALSE}
 use "backupfiles/RFAcat.dta" 
-/*  Question 10  */
-teffects psmatch (dodp) (rfa i.agecat gender i.smoke i.hospital ///
-			i.nodcat i.mets i.durcat i.diacat i.primary i.position, logit)
+*  Question 10  
+teffects psmatch (dodp) (rfa i.agecat gender i.smoke i.hospital i.nodcat i.mets i.durcat i.diacat i.primary i.position, logit)
 ```
 
  
@@ -1839,10 +1873,10 @@ newdata1 <- subset(RFAcat, select = c(rfanew, Score))
 RFAcat$Po0 <- predict(Log_ps, newdata1, type = "response")
 
 
-with(RFAcat, summ(Po1, graph = F))
-with(RFAcat, summ(Po0, graph = F))
+with(RFAcat, epiDisplay::summ(Po1, graph = F))
+with(RFAcat, epiDisplay::summ(Po0, graph = F))
 
-with(RFAcat, summ(Po1 - Po0, graph = F))
+with(RFAcat, epiDisplay::summ(Po1 - Po0, graph = F))
 ```
 
 

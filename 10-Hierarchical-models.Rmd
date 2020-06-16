@@ -870,7 +870,7 @@ sd(Reg1$coefficients)
 ```
 
 
-# 隨機截距模型 random intercept model
+# 隨機截距模型 random intercept model {#random-intercept}
 
 最簡單的隨機效應模型 -- 隨機截距模型 random intercept model。
 
@@ -1129,7 +1129,6 @@ ghq_long %>%
   summarise(OverallMean = mean(GHQ), SD = sd(GHQ), Min = min(GHQ), Max = max(GHQ))
 
 # between groups mean sd and min
-summ(ghq_long[!duplicated(ghq_long$id), ]$mean, graph = FALSE)
 
 ghq_long %>% 
   distinct(id, .keep_all= TRUE) %>% 
@@ -1142,7 +1141,9 @@ ghq_long <- ghq_long %>%
   mutate(dif_GHQ = mean(GHQ) - (GHQ - mean))
 
 ghq_long %>% 
-  summarise(Wit_mean = mean(dif_GHQ), Wit_sd = sd(dif_GHQ), Wit_min = min(dif_GHQ), Wit_max = max(dif_GHQ))
+  summarise(N = n(),
+            Wit_mean = mean(dif_GHQ), Wit_sd = sd(dif_GHQ), 
+            Wit_min = min(dif_GHQ), Wit_max = max(dif_GHQ))
 ```
 
 GHQ 的分佈並不左右對稱。
@@ -1267,7 +1268,7 @@ summary(Fixed_reml)
 由於該數據樣本量足夠大 (混合效應模型中等同於說數據的層數足夠多)，你可以看到其實 ML 法和 REML 法估計的參數結果十分地接近。
 
 
-# 隨機截距模型中加入共變量 random intercept model with covariates
+# 隨機截距模型中加入共變量 random intercept model with covariates {#random-inter-cov}
 
 這一章我們來把隨機截距模型加以擴展，在固定效應部分增加想要調整的共變量。
 
@@ -1694,8 +1695,12 @@ hsb <- hsb_selected[!duplicated(hsb_selected$schoolid), ]
 with(hsb, tab1(sector, graph = FALSE, decimal = 2))
 
 ## among all the schools, average school size is 1098
-with(hsb, summ(size, graph = FALSE, decimal = 2))
-
+hsb %>% 
+  summarise(N = n(),
+            Mean = mean(size),
+            sd_size = sd(size),
+            min_size = min(size),
+            max_size = max(size))
 
 ## among all the pupils, about 53% are females
 with(hsb_selected, tab1(female, graph = FALSE, decimal = 2))
@@ -1905,7 +1910,13 @@ qqnorm(hsb_selected$ehat,  ylab = "Standardized level 1 (pupil) residuals"); qql
 ### 通過剛剛所求的隨機效應方差的殘差，確認哪個學校存在相對極端的值。
 
 ```{r hierex3-10, echo=TRUE, cache=TRUE}
-summ(hsb$uhat_st, graph = FALSE)
+# summ(hsb$uhat_st, graph = FALSE)
+hsb %>% 
+  summarise(n = n(),
+            mean_uhatst = mean(uhat_st),
+            sd_uhatst = sd(uhat_st),
+            min_uhatst = min(uhat_st),
+            max_uhatst = max(uhat_st))
 hsb[with(hsb, which(uhat_st > 2.5)),  c(7, 5, 6, 12)]
 hsb[with(hsb, which(uhat_st < -2.5)), c(7, 5, 6, 12)]
 ```
@@ -1942,7 +1953,7 @@ anova(Extend_reml, mod2)
 ```
 
 
-# 隨機回歸系數模型  random coefficient model 
+# 隨機回歸系數模型  random coefficient model {#random-coefficient}
 
 這一章節我們把隨機截距模型進一步擴展，在隨機效應部分增加隨機斜率成分 (random slope)。這樣的模型又稱隨機系數模型 (random coefficient model) 或 隨機斜率模型 (random slope model)。
 
@@ -2007,7 +2018,7 @@ ggplot( gcse_selected[gcse_selected$school != 48, ], aes(x = lrt, y = gcse, grou
 實際上這麼多學校學生的成績前後回歸線，其截距和斜率各不相同 (圖\@ref(fig:hier04-fig2))。這些斜率和截距的總結歸納如下: 
 
 ```{r hie04-2, cache=TRUE, warning=FALSE, message=FALSE}
-summ(Coefs[-48,])
+summ.data.frame(Coefs[-48,])
 ```
 
 ```{r hier04-fig3, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='School specific slopes and intercepts', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
@@ -2316,11 +2327,11 @@ $$
 ```{r hie04-8, cache=TRUE} 
 MIX_coef <- lmer(gcse ~ lrt + (lrt | school), data = gcse_selected[gcse_selected$school != 48, ], REML = TRUE)
 School_res0 <- HLMdiag::HLMresid(MIX_coef, level = "school", type = "EB", standardize = FALSE)
-summ(School_res0)
+summ.data.frame(School_res0)
 
 School_res1 <- HLMdiag::HLMresid(MIX_coef, level = "school", type = "EB", standardize = TRUE)
 
-summ(School_res1)
+summ.data.frame(School_res1)
 ```
 
 
@@ -2394,7 +2405,7 @@ gcse <- gcse_selected[gcse_selected$school != 48, ]
 MIX_coef <- lme(fixed = gcse ~ lrt, random = ~ lrt | school, data = gcse, method = "REML")
 
 gcse$ehat <-  residuals(MIX_coef, level = 1, type = "normalized")
-summ(gcse$ehat, graph = FALSE)
+epiDisplay::summ(gcse$ehat, graph = FALSE)
 
 hist <- ggplot(gcse, aes(x = ehat)) +
     geom_histogram(colour = "black", 
@@ -2462,7 +2473,7 @@ Mean_gcse_lrt <- ddply(gcse_selected,~school,summarise,mean_gcse=mean(gcse),mean
 # 整體來說，GCSE 分數的分布比起入學前 LRT 分數的分布更加寬泛，標準差更大。
 # 意味着入學時學生閱讀成績的差異，比起畢業時成績的差異要小。
 # 或者反過來說，畢業時成績差異，比起入學時閱讀成績的差異要大。
-summ(Mean_gcse_lrt[,2:4])
+epiDisplay::summ(Mean_gcse_lrt[,2:4])
 ```
 
 
@@ -2616,7 +2627,7 @@ summary(Fixed_reml2)
 
 ```{r hierex4-11, echo=TRUE, cache=TRUE}
 School_res <- HLMdiag::HLMresid(Fixed_reml2, level = "school")
-summ(School_res)
+epiDisplay::summ(School_res)
 School_res[48, ] 
 ```
 
@@ -2661,7 +2672,7 @@ ggarrange(plot1, plot2,
 Fixed_reml2 <- lme(fixed = gcse ~ lrt + schgend, random = ~  lrt | school, data = gcse_selected, method="REML") # for extracting standardized level 2 error
 
 gcse_selected$ehat <- residuals(Fixed_reml2, level = 1, type = "normalized")
-with(gcse_selected, summ(ehat, graph = FALSE))
+with(gcse_selected, epiDisplay::summ(ehat, graph = FALSE))
 #  48 號學校的標準化殘差並不顯得異常
 gcse_selected$ehat[gcse_selected$school == 48]
 ```
@@ -2694,7 +2705,7 @@ ggarrange(hist, plot2,
 
 
 
-# 縱向研究數據 longitudinal data 1
+# 縱向研究數據 longitudinal data 1 {#longitudinal1}
  
 本章我們來把目前爲止了解的混合效應 (截距/斜率) 模型應用到一種特殊形態的數據 -- 縱向研究數據 -- 中去。
 
@@ -2789,7 +2800,7 @@ $$
 
 ```{r hier05-01, cache=TRUE}
 height <- read_dta("backupfiles/height.dta")
-summ(height[, 2:5])
+epiDisplay::summ(height[, 2:5])
 ```
 
 
@@ -3242,7 +3253,7 @@ G +  facet_wrap( ~ id, ncol = 2) +
 ## Practical 05-Hier
 
 
-# 縱向研究數據 longitudinal data 2
+# 縱向研究數據 longitudinal data 2 {#longitudinal2}
 
 本章沒有代碼，學會如何用矩陣標記法寫下你的多元混合效應模型。
 
@@ -3481,7 +3492,7 @@ $$
 ## Practical 06-Hier
 
 
-# 縱向研究數據 longitudinal data 3
+# 縱向研究數據 longitudinal data 3 {#longitudinal3}
 
 ## 第一層級的異質性 level 1 heterogeneity
 
@@ -3572,7 +3583,7 @@ anova(M_growth_l2, M_growth)
 
 # Generalized Estimating Equation
  
-# Cluster analysis/unsupervised learning 聚類分析
+# Cluster analysis/unsupervised learning 聚類分析 {#cluster-ana}
 
 目前爲止，在等級回歸模型部分中，我們接觸到的回歸模型和可能存在相互依賴性的數據，都是建立在我們能夠觀察到或者實驗設計上已知的數據層級結構的前提下的。這樣的層級可以是空間上的，或者時間上的。處在相同層級的研究對象之間存在相關性，換句話說就是：層級內部的對象之間，比起層級之間的對象具有更多的相似性。
 
@@ -3753,7 +3764,7 @@ plot(hc, cex = 0.8, hang = -1,
 
 # Missing data 1
 
-# Principal Component Analysis 主成分分析 
+# Principal Component Analysis 主成分分析  {#PCA}
 
 > A big computer, a complex algorithm and a long time does not equal science.
 > ~ Robert Gentleman
@@ -4237,7 +4248,7 @@ p
 plant <- read_dta("backupfiles/plant.dta")
 plant <- plant[, 1:4]
 head(plant)
-summ(plant)
+epiDisplay::summ(plant)
 psych::describe(plant)
 ```
 
