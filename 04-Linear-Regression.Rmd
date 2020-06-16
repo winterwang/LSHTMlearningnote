@@ -2064,15 +2064,19 @@ vitC <- read_dta("backupfiles/vitC.dta")
 # Recoding the categorical variables     #
 ##########################################
 
-vitC$sex[vitC$sex == 0] <- "Men"
-vitC$sex[vitC$sex == 1] <- "Women"
-vitC$sex <- as.factor(vitC$sex)
-vitC$cigs[vitC$cigs == 0] <- "Non-smoker"
-vitC$cigs[vitC$cigs == 1] <- "Smoker"
-vitC$cigs <- as.factor(vitC$cigs)
-vitC$ctakers[vitC$ctakers == 0] <- "No"
-vitC$ctakers[vitC$ctakers == 1] <- "Yes"
-vitC$ctakers <- as.factor(vitC$ctakers)
+vitC <- vitC %>% 
+  mutate(sex = as.factor(sex)) %>% 
+  mutate(sex = fct_recode(sex, 
+                          Men = "0",
+                          Women = "1")) %>% 
+  mutate(cigs = as.factor(cigs)) %>% 
+  mutate(cigs = fct_recode(cigs,
+                           "Non-smoker" = "0",
+                           "Smoker" = "1")) %>% 
+  mutate(ctakers = as.factor(ctakers)) %>% 
+  mutate(ctakers = fct_recode(ctakers, 
+                              No = "0",
+                              Yes = "1"))
 
 ############################################
 # End of recoding the categorical variables#
@@ -2082,8 +2086,7 @@ summary(vitC) #Basic summary without any package
 head(vitC) #See the first 6 observations
 library(psych) #some detailed summary function from this package
 describe(vitC)
-library(epiDisplay) #some STATA-like simple summary function
-summ(vitC)
+
 vitC$serial[which(is.na(vitC$height))]
 vitC$serial[which(is.na(vitC$weight))]
 ```
@@ -2091,10 +2094,6 @@ vitC$serial[which(is.na(vitC$weight))]
 從初步的熟悉數據結構和歸納結果可以看出，身高體重兩個數據有出現缺損值 (編號 24 的患者)。
 
 ```{r LM30, cache=TRUE}
-summ(vitC$seruvitc, by=vitC$sex, graph = FALSE) # From package "epiDisplay"
-summ(vitC$seruvitc, by=vitC$cigs, graph = FALSE)
-summ(vitC$seruvitc, by=vitC$ctakers, graph = FALSE)
-
 # You can also get similar detailed descriptive statistics by groups from package "psych"
 describeBy(vitC$seruvitc, group = vitC$sex)
 describeBy(vitC$seruvitc, group = vitC$cigs)

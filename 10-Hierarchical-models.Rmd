@@ -67,7 +67,7 @@ ggplot(pefr_long, aes(x = id, y = wm, fill = occasion)) +
 
 ```{r Hier01-3, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='GCSE by LRT in all 65 schools', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
 gcse_selected <- read_dta("backupfiles/gcse_selected.dta")
-ggthemr('fresh')
+ggthemr::ggthemr('fresh')
 
 ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_point(size = 2.5) + 
   geom_smooth(method = "lm", se = FALSE) +
@@ -792,8 +792,9 @@ ggplot(pefr_long, aes(x = id, y = wp, fill = occasion)) +
 
 ```{r hierex1-11, cache=TRUE}
 # the means range from 171.5 to 644.5
-
-with(pefr_long, summ(wp, by = id, graph = FALSE))
+pefr_long %>% 
+  group_by(id) %>% 
+  summarise(mean_wp = mean(wp))
 ```
 
 ### 在 R 裏先用 ANOVA 分析個人的 `wp` 變異。再用 `lme4::lmer` 擬合用 `id` 作隨機效應的混合效應模型。確認後者報告的 `Std.Dev for id effect` 其實可以用 ANOVA 結果的 $\sqrt{\frac{\text{MMS-MSE}}{n}}$ (n 是每個個體重複測量值的個數)。
@@ -863,7 +864,9 @@ $$
 # the individual level intercepts have mean zero and SD = 117.47, larger than the estimated
 # Std.Dev for id effect.
 Reg1$coefficients
-summ(Reg1$coefficients, graph = FALSE)
+
+mean(Reg1$coefficients)
+sd(Reg1$coefficients)
 ```
 
 
@@ -1102,7 +1105,8 @@ ghq <- ghq %>%
 # each student has 2 observations (i.e. n_j = n = 2)
 # and therefore the data are balanced.
 # the overall mean is 10.167 and its SD is 6.073
-with(ghq, summ(mean, graph = FALSE))
+ghq %>% 
+  summarise(OverallMean = mean(mean), SD = sd(mean))
 ```
 
 ### 把數據從寬 (wide) 改變成長 (long) 的形式
@@ -1120,15 +1124,25 @@ ghq_long
 
 # after reshaping there are 24 records. the summary statistics are
 # overall mean sd and min max
-with(ghq_long, summ(GHQ, graph = FALSE))
+
+ghq_long %>% 
+  summarise(OverallMean = mean(GHQ), SD = sd(GHQ), Min = min(GHQ), Max = max(GHQ))
+
 # between groups mean sd and min
 summ(ghq_long[!duplicated(ghq_long$id), ]$mean, graph = FALSE)
+
+ghq_long %>% 
+  distinct(id, .keep_all= TRUE) %>% 
+  summarise(Bet_mean = mean(mean), Bet_sd = sd(mean), Bet_min = min(mean), Bet_max = max(mean))
+
 # within groups mean sd and min (came from the difference between
 # the overall mean and the within difference) observations for
 # each group = 2
 ghq_long <- ghq_long %>%
   mutate(dif_GHQ = mean(GHQ) - (GHQ - mean))
-with(ghq_long, summ(dif_GHQ, graph = FALSE))
+
+ghq_long %>% 
+  summarise(Wit_mean = mean(dif_GHQ), Wit_sd = sd(dif_GHQ), Wit_min = min(dif_GHQ), Wit_max = max(dif_GHQ))
 ```
 
 GHQ 的分佈並不左右對稱。
@@ -1198,7 +1212,8 @@ summary(Fixed_reg)
 ### 計算這些隨機截距的均值和標準差
 
 ```{r hierex2-7, cache=TRUE, message=FALSE}
-summ(Fixed_reg$coefficients, graph = FALSE)
+mean(Fixed_reg$coefficients)
+sd(Fixed_reg$coefficients)
 ```
 
 這裏僅僅用固定效應模型時，不同羣截距的均值雖然和用混合效應模型估計的一樣爲零，但是其估計的標準差要大於無論是 REML (5.92) 或者是 ML (5.65) 估計值的大小，其實這裏簡單線性迴歸給出的截距均值，就是本練習一開始讓你計算的樣本均值的標準差 (between group sd)。這是因爲**簡單線性迴歸 (固定效應模型) 忽視了這些不同組的均值的不確定性**。
@@ -1416,7 +1431,8 @@ $$
 那麼最簡單的方法就是計算了這個隨機效應成分的混合體之後，對其取平均值，作爲 $u_j$ 的簡單估計: 
 
 ```{r Hier03-03, cache=TRUE, message=FALSE}
-M_full <- lme(fixed = birwt ~ c_gestat + male + smoke + c_mage, random  = ~ 1 | momid, data = siblings, method = "REML")
+M_full <- lme(fixed = birwt ~ c_gestat + male + smoke + c_mage, random  = ~ 1 | momid, 
+              data = siblings, method = "REML")
 
 siblings$yhat <- M_full$fitted[,1]
 siblings <- siblings %>%
@@ -1431,7 +1447,11 @@ siblings[siblings$momid == 14,c(1,5,6,15,16)]
 我們可以對每個母親的擬合偏差做總結歸納: 
 
 ```{r Hier03-04, cache=TRUE, message=FALSE}
-summ(Mean_siblings$uhat, graph = FALSE)
+Mean_siblings %>% 
+  summarise(Mean_uhat = mean(uhat),
+            sd_uhat = sd(uhat),
+            min_uhat = min(uhat),
+            max_uhat = max(uhat))
 ```
 
 可見這 3978 名母親總體的擬合偏差的均值爲 -0.511，接近零。且它的標準差接近 400。這樣一種直接利用觀測值和擬合值之差做曾內平均的方法被叫做極大似然法 ML，這樣計算獲得的平均偏差被標記爲 $\hat u_j^{\text{ML}}$

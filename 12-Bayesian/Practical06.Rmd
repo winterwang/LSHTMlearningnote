@@ -1,0 +1,732 @@
+### The GREAT Trial
+
+在第一個章節，貝葉斯入門和回顧基礎知識的時候，我們介紹過GREAT臨牀試驗，這是一個雙盲對照試驗。比較阿尼普酶，一種血栓溶解藥物的兩種治療方案：
+
+- 治療組：當患者被家庭醫生 (General Practitioners) 發現心肌梗塞時(myocardial infarctin, MI)，在家中立刻給予阿尼普酶藥物，等到患者被救護車帶到醫院以後給患者服用安慰劑。
+- 對照組：同樣情況下，家庭醫生在家中發現患者有心肌梗塞時先不給予藥物治療，而是先讓患者服用安慰劑，等救護車帶患者抵達醫院之後再讓患者服用真正的阿尼普酶藥物。
+
+這項試驗的主要觀察結果 (primary outcome) 是30天死亡率。
+
+該項試驗獲得的觀察數據如下：
+
+- 治療組163人，13例死亡；
+- 對照組148人，23例死亡。
+
+利用這個簡單的臨牀試驗設定，我們來實際的體驗不同的先驗概率分佈對貝葉斯分析結果的影響。
+
+
+我們用BUGS語言先描述這個模型的設定：
+
+```
+model {
+	for (i in 1:2) {
+		deaths[i] ~ dbin(p[i],n[i])
+		logit(p[i]) <- alpha + beta*treat[i]
+	}
+	alpha ~ dunif(-100,100)
+	beta ~ dunif(-100,100)
+	OR <- exp(beta)
+}
+```
+
+其中，
+
+```
+treat[i] 是一個指示变量 (indicator variable)，i = 1 時表示對照組，i = 0 時表示治療組；
+death[i] 是第 i 組對象的死亡病例數；
+n[i]     是第 i 組對象的總人數；
+p[i]     是第 i 組試驗組患者死亡的概率。
+```
+
+- 解釋上面模型語句中 `alpha, beta` 的含義是什麼。
+
+ `alpha` 是治療組的對數比值 (log odds for the treatment arm) <br>
+ `beta`  是對照組和治療組相比較的死亡比值比 (log odds ratio of death in the control arm compared to the treatment arm)，當 `beta` 大於1時，說明對照組死亡比值高，結果對治療組有利。
+
+- 用兩組起始值文件來跑這個貝葉斯模型。
+
+
+
+```{r BayesianPractical0601, cache=FALSE, fig.width=7, fig.height=10, fig.cap='History plots for iterations 1-1000 for the GREAT trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+# Data file for the model
+Dat <- list(
+  n = c(163, 148), 
+  deaths = c(13, 23), 
+  treat = c(0, 1)
+)
+
+# initial values for the model
+# the choice is arbitrary
+
+inits <- list(
+ list(alpha = 1, beta = -1),
+ list(alpha = -1, beta = 1)
+)
+
+# fit the model in jags
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/great-model1.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "alpha", "beta", "p"),
+                     n.iter = 1000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 0,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+# Show the trace plot
+Simulated <- coda::as.mcmc(jagsModel)
+ggSample <- ggs(Simulated)
+ggSample %>% 
+  filter(Parameter %in% c("OR", "alpha", "beta", "p[1]", "p[2]")) %>% 
+  ggs_traceplot()
+```
+
+
+```{r BayesianPractical0603, cache=FALSE, fig.width=7, fig.height=9, fig.cap='Gelman-Rubin convergence statistic for the GREAT trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+gelman.diag(Simulated)
+gelman.plot(Simulated)
+```
+
+
+
+
+
+你會發現這個模型很快就能達到收斂，所以，我們選擇刨除前1000次採樣能夠滿足要求，我們另外再進行每條 MCMC 鏈各 25000 次樣本採集：
+
+- 記錄這時候我們獲得的比值比 OR，迴歸係數，及兩組實驗組的事後死亡概率。
+
+
+```{r BayesianPractical0604, cache=FALSE, message=TRUE, echo=TRUE}
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/great-model1.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "alpha", "beta", "p"),
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     n.burnin = 1000,
+                     n.thin = 1,
+                     inits = inits,
+                    progress.bar = "none")
+print(jagsModel)
+```
+
+
+- 現在我們把先驗概率分佈修改成：
+
+$$
+\begin{aligned}
+\alpha & \sim \text{Logistic}(0,1) \\
+\beta  & \sim \text{Normal}(0, 0.33)\; 0.33 \text{ is the precision}\\ 
+\end{aligned}
+$$
+
+其中，邏輯分佈方程的BUGS語言是 `dlogis`；這個先驗概率給予 `beta` 的指定信息是基於想要給它一個沒有太多信息量的先驗概率分佈，其中對數比值比(log odds ratio)服從均值爲 0, 精確度(precision)爲 0.33 的正態分佈時，其對應的比值比 (odds ratio) 的95%則分佈在 1/30 至 30 之間。$(\text{sd} = \frac{\log30 - \log(1/30)}{2*1.96}) = 1.735 \rightarrow \tau^2 = (1/1.735)^2 \approx 0.33$。
+
+用相似的過程試着跑完這個貝葉斯模型：
+
+
+```{r BayesianPractical0605, cache=FALSE, message=TRUE}
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/great-model1_alt.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "alpha", "beta", "p"),
+                     n.iter = 1000,
+                     n.chains = 2, 
+                     n.burnin = 0,
+                     n.thin = 1,
+                     inits = inits,
+                    progress.bar = "none")
+# Show the trace plot
+Simulated <- coda::as.mcmc(jagsModel)
+ggSample <- ggs(Simulated)
+ggSample %>% 
+  filter(Parameter %in% c("OR", "alpha", "beta", "p[1]", "p[2]")) %>% 
+  ggs_traceplot()
+```
+
+
+
+
+
+```{r BayesianPractical0607, cache=FALSE, fig.width=7, fig.height=9, fig.cap='Gelman-Rubin convergence statistic for the GREAT trial with alternative priors for alpha and beta.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+gelman.diag(Simulated)
+gelman.plot(Simulated)
+```
+
+
+```{r BayesianPractical0608, cache=FALSE, message=TRUE, echo=TRUE}
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/great-model1_alt.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "alpha", "beta", "p"),
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     n.burnin = 1000,
+                     n.thin = 1,
+                     inits = inits,
+                    progress.bar = "none")
+print(jagsModel)
+```
+
+- 對改變了先驗概率前後的貝葉斯分析結果，你有什麼看法？
+
+我們發現改變先驗概率前的模型得到的事後比值比的結果有更大的均值，及更不穩定的估計(較高的事後樣本標準差，及較寬的事後樣本95%可信區間)。
+
+- 爲了分析改變先驗概率分佈前後到底哪種給予了模型更多的信息，我們可以把兩個模型改寫成不含數據，只有預測模型的語句，從而可以看到只有先驗概率分佈時的結果是怎樣的。這時候我們把數據加載這一步省略掉，然後對 `alpha, beta, p` 進行軌跡檢測，繪製他們的預測分佈密度曲線。
+
+
+
+
+```{r BayesianPractical0609, cache=FALSE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in GREAT trial first prior.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+library(runjags)
+library(rjags)
+library(R2jags)
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/great-model1_forward.txt", sep = ""), 
+                        data = list(treat = c(0, 1)),
+                        n.chains = 2)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 25000, progress.bar="none")
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = c("alpha", "beta", "p[1]", "p[2]"),
+            n.iter = 25000, progress.bar="none")
+
+# Show density plot
+
+
+mcmcplots::denplot(codaSamples)
+
+# ggSample <- ggs(codaSamples)
+# ggSample %>% 
+#   filter(Parameter %in% c("alpha", "beta", "p[1]", "p[2]")) %>% 
+#   ggs_density() 
+
+```
+
+對於這個模型來說，儘管我們給兩個邏輯迴歸的參數 `alpha, beta` 兩個"沒有信息"的均一分佈 (uniform distribution) 作爲先驗概率分佈，但是事實上，從 `p[1], p[2]` 的預測概率密度分佈圖來看，其實我們不經意竟然告訴模型另外的信息：就是我們認爲這兩組患者中死亡率要麼很高，接近1，要麼很低很低，接近於0。所以，我們自認爲給了模型無信息的先驗概率分佈，但是事實上卻給了模型大量的信息。
+
+
+```{r BayesianPractical0610, cache=FALSE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in GREAT trial second prior.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/great-model1_altforward.txt", sep = ""), 
+                        data = list(treat = c(0, 1)),
+                        n.chains = 2)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 25000, progress.bar="none")
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = c("alpha", "beta", "p[1]", "p[2]"),
+            n.iter = 25000, progress.bar="none")
+
+# Show density plot
+
+
+mcmcplots::denplot(codaSamples)
+```
+
+第二次修改過後的先驗概率明顯就安全得多了。因爲我們看到兩組的死亡概率基本可以認爲不再像前一個模型那樣含有太多不實際的信息。
+
+2. 作爲替代方案，我們可以把上述模型重新用對數比值比(Log odds ratio, LOR)作爲未知參數來重新建模：
+
+$$
+LOR = \log(\frac{p[1]/(1 - p[1])}{p[2]/(1 - p[2])}) = \text{logit}(p[1]) - \text{logit}(p[2]) 
+$$
+
+這時候我們需要給 `p[2], LOR` 賦予先驗概率分布：
+
+```
+model {
+	for (i in 1:2) {
+		deaths[i] ~ dbin(p[i],n[i])		
+	}
+	logit(p[1]) <- logit(p[2]) + LOR
+	p[2] ~ dbeta(1,1) 
+	LOR ~ dnorm(0,0.33) 
+	OR <- exp(LOR)
+}
+```
+
+
+- 再看一遍上面寫好的模型，確定你能夠理解其含義，請確認先驗概率分布的實際意義。
+
+注意我們用beta 分布來描述 `p[2]` 的先驗概率分布。
+
+
+```{r BayesianPractical0611, cache=FALSE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in GREAT trial second prior.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+
+jagsModel <- jags(data = list(n = c(148, 163), deaths = c(23, 13)),
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/great-model2.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "p"),
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     n.burnin = 1000,
+                     n.thin = 1,
+                     inits = list(list(LOR = 0.5, p = c(NA, 0.2)),
+                                  list(LOR = 5, p = c(NA, 0.8))),
+                    progress.bar = "none")
+print(jagsModel)
+```
+
+- 修改模型的代碼使之用於向前採集樣本用於預測：
+
+```
+model {
+#	for (i in 1:2) {
+#		deaths[i] ~ dbin(p[i],n[i])		
+#	}
+	logit(p[1]) <- logit(p[2]) + LOR
+	p[2] ~ dbeta(1,1) 
+	LOR ~ dnorm(0,0.33) 
+	OR <- exp(LOR)
+}
+```
+
+```{r BayesianPractical0612, cache=FALSE, fig.width=7, fig.height=3.5, fig.cap='Density plots for parameters prediction in GREAT trial second prior.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/great-model2_forward.txt", sep = ""), 
+                        n.chains = 2)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 25000, progress.bar="none")
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = c("p[1]", "p[2]"),
+            n.iter = 25000, progress.bar="none")
+
+# Show density plot
+
+
+mcmcplots::denplot(codaSamples)
+```
+這時候先驗概率分布給出的兩組死亡率的密度分布和之前提出的第二個模型沒有什麼兩樣。
+
+### 吸煙與癌症
+
+在這道題中，你將練習自己使用和描述一個隊列研究設計，及一個病例對照研究設計的貝葉斯模型，同時學習如何把兩個試驗的數據和模型通過共同的未知參數連接起來。在整道題目中，癌症作爲發病結果 (disease of interest)，吸煙作爲暴露因素 (exposure of interest)。
+
+#### 隊列研究設計
+
+在一個隊列研究中，2000名非吸煙者，和1000名吸煙者被跟蹤隨訪20年。在非吸煙者中和非吸煙者中分別觀察到100例，及150例新發生的癌症患者。我們關心的是和非吸煙者相比，吸煙者患癌症的比值比是多少。這個實驗的貝葉斯模型可以寫作：
+
+```
+model{ 
+	# Data model for non-smokers   
+	Y0c ~ dbin(r0, X0c) 
+	logit(r0) <- lr0
+			
+	 # Data model for smokers
+	 Y1c ~ dbin(r1, X1c) 
+	 logit(r1) <- lr1  
+			
+	lr1 <- lr0 + lor   # lor is log(OR)
+	OR <- exp(lor)  # comparison statistic
+			
+	# Priors
+	lr0 ~ dnorm(0, 0.3)  # priors for logit of non-smokers	
+	lor ~ dnorm(0, 0.33)  # prior for log(OR)
+}
+
+
+# Y0c number of non-smokers developed cancer  
+# X0c number of nonpsmokers 
+# Y1c number of smokers developed cancer 
+# X1c number of smokers 
+```
+
+數據文件可以寫作：
+
+```
+list(X0c = 2000, 
+     Y0c = 100,
+     X1c = 1000, 
+     Y1c = 150) 
+```
+
+未知參數 `lor, lr0` 的起始值可以選定爲：
+
+```
+list(lr0 = -1, lor = 0)
+list(lr0 = -5, lor = 5)
+```
+
+對這個模型進行50000次事後樣本採集，獲取比值比 OR 的事後概率分布描述：
+
+
+```{r BayesianPractical0613, cache=FALSE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in smoking and cancer cohort study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+# Data file for the model
+Dat <- list(
+  X0c = 2000,
+  Y0c = 100,
+  X1c = 1000, 
+  Y1c = 150
+)
+
+# initial values for the model
+# the choice is arbitrary
+
+inits <- list(
+ list(lr0 = -1, lor = 0),
+ list(lr0 = -5, lor = 5)
+)
+
+# fit the model in jags
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/cohort-model.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "lor"),
+                     n.iter = 1000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 0,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+# Show the trace plot
+Simulated <- coda::as.mcmc(jagsModel)
+ggSample <- ggs(Simulated)
+ggSample %>% 
+  filter(Parameter %in% c("OR", "lor")) %>% 
+  ggs_traceplot()
+
+```
+
+
+```{r BayesianPractical0614, cache=FALSE, fig.width=7, fig.height=5, fig.cap='Gelman-Rubin convergence statistic for smoking and cancer cohort study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+gelman.diag(Simulated)
+gelman.plot(Simulated)
+```
+
+
+
+```{r BayesianPractical0615, cache=FALSE, message=TRUE, echo=TRUE}
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/cohort-model.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "lor"),
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 1000,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+# Summary Statistics
+print(jagsModel)
+```
+
+
+
+#### 病例對照研究設計下的模型
+
+在病例對照研究設計下，研究者收集了1000名癌症患者(病例組)，和2000名對照組志願者。研究者對這兩組研究對象分別調查了他們各自過去20年的吸煙史，發現：
+
+- 病例組中600人過去20年中有過吸煙史；
+- 對照組中800人過去20年中有過吸煙史。
+
+同樣地，我們關心的是兩組之間吸煙習慣的比值比 (Odds ratio)。這個實驗設計的模型可以用BUGS語言寫作(保存爲`case-control-model.txt`)：
+
+```
+model{ 
+	# Data model for non-cancer controls   
+	X0cc ~ dbin(p0, Y0cc) 
+	logit(p0) <- lp0
+			
+	# Data model for cancer cases   
+	 X1cc ~ dbin(p1, Y1cc) 
+	logit(p1) <- lp1  
+	
+	lp1 <- lp0 + lor # lor is log(OR)
+	OR <- exp(lor)  # comparison statistic
+			
+	 # Priors
+	 lp0 ~ dnorm(0, 0.3)  # prior for logit of probability of exposure for controls 	 			
+	 lor ~ dnorm(0, 0.33) # prior for log(OR)
+	}
+	
+	
+	# X0cc indicates number of smokers among controls (without cancer)
+	# Y0cc indicates number of controls 
+	# X1cc is the number of smokers among cancer cases 
+	# Y1cc is the number of cancer cases 
+```
+
+其中，
+
+- `X0cc` 表示對照組中有吸煙史的人數；
+- `Y0cc` 表示對照組的總人數；
+- `X1cc` 表示癌症患者組中有吸煙史的人數；
+- `Y1cc` 表示癌症患者組的總人數。
+
+
+數據文件可以描述爲（保存爲`dataforcasecontrol.txt`）：
+
+```
+list(X0cc = 800, 
+     Y0cc = 2000, 
+     X1cc = 600, 
+     Y1cc = 1000)
+```
+
+模型擬合過程和結果分別羅列如下：
+
+
+
+
+```{r BayesianPractical0616, cache=FALSE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in smoking and cancer case-control study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+
+# Data file for the model
+Dat <- list(X0cc = 800, 
+            Y0cc = 2000, 
+            X1cc = 600, 
+            Y1cc = 1000)
+
+# initial values for the model
+# the choice is arbitrary
+
+inits <- list(
+ list(lp0 = -2, lor = 0),
+ list(lp0 = 2, lor = 5)
+)
+
+# fit the model in jags
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/case-control-model.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "lor"),
+                     n.iter = 1000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 0,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+# Show the trace plot
+Simulated <- coda::as.mcmc(jagsModel)
+ggSample <- ggs(Simulated)
+ggSample %>% 
+  filter(Parameter %in% c("OR", "lor")) %>% 
+  ggs_traceplot()
+
+```
+
+
+```{r BayesianPractical0617, cache=FALSE, fig.width=7, fig.height=5, fig.cap='Gelman-Rubin convergence statistic for smoking and cancer cohort study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+gelman.diag(Simulated)
+gelman.plot(Simulated)
+```
+
+
+
+```{r BayesianPractical0618, cache=FALSE, message=TRUE, echo=TRUE}
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/case-control-model.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "lor"),
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 1000,
+                     n.thin = 1,
+                    progress.bar = "none")
+print(jagsModel)
+```
+
+#### 聯合模型 joint model
+
+把兩個甚至多個不同的研究獲得的數據聯合起來的方法主要有兩種，一是使用其中一個或者多個的研究結果作爲有信息的先驗概率分布，放到之後的研究模型中去，二是把多個不同的研究用共同的位置變量聯通起來 (link sub-models for different data sources through common parameter(s))。在這個吸煙和癌症的研究話題中，我們發現隊列研究，和病例對照研究兩者之間有共同的未知變量-比值比 (OR)，如果這個比值比有這相同的含義，那麼我們可以通過它把兩個獨立的研究連接起來。
+
+我們提供一個聯合模型的例子如下（保存爲`jointmodel.txt`）：
+
+```
+# Joint model
+
+model{
+		# cohort sub-model
+		Y0c ~ dbin(r0, X0c) # data model for non-smokers
+		logit(r0) <- lr0 
+		Y1c ~ dbin(r1, X1c) # data model for smokers 
+		logit(r1) <- lr1 
+		lr1 <- lr0 + lor # lor is log(OR)
+		# prior for cohort sub-model
+		lr0 ~ dnorm(0, 0.3) # prior for logOdds of nonsmokers 
+		
+		# case-control sub-model 
+		X0cc ~ dbin(p0, Y0cc) # data model for non-cancer controls
+		logit(p0) <- lp0
+		X1cc ~ dbin(p1, Y1cc) # data model for cancer cases 
+		logit(p1) <- lp1
+		lp1 <- lp0 + lor # lor is log(OR)
+		# prior for case-control sub-model 
+		lp0 ~ dnorm(0, 0.3) # prior for logOdds of exposure for controls 
+		
+		# Common code 
+		lor ~ dnorm(0, 0.33) # prior for common log(OR)
+		OR <- exp(lor) # comparison statistic
+}
+```
+
+把兩個獨立研究的數據合並成爲一個（保存成爲`dataforjoint.txt`）：
+
+
+```
+list(X0c  = 2000, 
+		 Y0c  = 100, 
+		 X1c  = 1000, 
+		 Y1c  = 150,
+		 X0cc = 800, 
+		 Y0cc = 2000, 
+		 X1cc = 600,
+		 Y1cc = 1000
+)
+```
+
+接下來是對聯合模型的擬合及對OR值事後樣本的採集過程：
+
+
+
+
+```{r BayesianPractical0619, cache=FALSE, fig.width=7, fig.height=6, fig.cap='Density plots for parameters prediction in smoking and cancer joint model.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=TRUE}
+
+# Data file for the model
+Dat <- list(X0c  = 2000, 
+		        Y0c  = 100, 
+		        X1c  = 1000, 
+		        Y1c  = 150,
+		        X0cc = 800, 
+		        Y0cc = 2000, 
+		        X1cc = 600,
+		        Y1cc = 1000)
+
+# initial values for the model
+# the choice is arbitrary
+
+inits <- list(
+ list(lr0 = -1, lp0 = -2, lor = 0),
+ list(lr0 = -5, lp0 = 2, lor = 5)
+)
+
+# fit the model in jags
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/jointmodel.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "lor"),
+                     n.iter = 1000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 0,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+# Show the trace plot
+Simulated <- coda::as.mcmc(jagsModel)
+ggSample <- ggs(Simulated)
+ggSample %>% 
+  filter(Parameter %in% c("OR", "lor")) %>% 
+  ggs_traceplot()
+```
+
+
+```{r BayesianPractical0620, cache=FALSE, fig.width=7, fig.height=5, fig.cap='Gelman-Rubin convergence statistic for smoking and cancer cohort study.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+gelman.diag(Simulated)
+gelman.plot(Simulated)
+```
+
+
+
+```{r BayesianPractical0621, cache=FALSE, message=TRUE, echo=TRUE}
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/jointmodel.txt",
+                                  sep = ""),
+                    parameters.to.save = c("OR", "lor"),
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 1000,
+                     n.thin = 1,
+                    progress.bar = "none")
+print(jagsModel)
+```
+
+可以看到，聯合模型給出的事後OR均值(2.513)是位於兩個獨立研究給出的OR均值(3.356, 2.273)的中間。但是它更加靠近病例對照研究的結果，暗示我們兩個研究中病例對照研究給出的信息量相對權重較大。另外，事後OR分布的標準差本身比兩個獨立研究估計的事後OR分布標準差都要小，說明充分利用兩個研究的數據時，事後估計的精確度得到了提升。精確度提升的原因很容易理解，因爲聯合模型把二者獲得的數據都包含了進來，信息量比兩個獨立研究都要大。
+
+#### 你是否能證明兩個研究的比值比是相同的？
+
+
+對於隊列研究來說，我們估計其比值比所用的表格可以寫作：
+
+|         	|   	| Cancer 	|    	|    	|
+|---------	|---	|--------	|----	|----	|
+|         	|   	| Y      	| N  	|    	|
+| Smoking 	| Y 	|        	|    	| S  	|
+|         	| N 	|        	|    	| NS 	|
+|         	|   	| C      	| NC 	|    	|
+
+那麼這個研究中的比值比計算式就是：
+
+$$
+\text{OR}_{\text{cohort}} = \frac{\text{Pr}(C|S)\times\text{Pr}(NC|NS)}{\text{Pr}(C|NS)\times\text{Pr}(NC|S)}
+$$
+
+對於病例對照研究來說，其比值比估計時使用的表格是：
+
+|        	|   	| Smoking 	|    	|    	|
+|--------	|---	|---------	|----	|----	|
+|        	|   	| Y       	| N  	|    	|
+| Cancer 	| Y 	|         	|    	| C  	|
+|        	| N 	|         	|    	| NC 	|
+|        	|   	| S       	| NS 	|    	|
+
+
+其比值比的計算式可以寫作：
+
+
+$$
+\text{OR}_{\text{case-control}} = \frac{\text{Pr}(S|C)\times\text{Pr}(NS|NC)}{\text{Pr}(S|NC)\times\text{Pr}(NS|C)}
+$$
+
+可以證明兩者相同（反復使用貝葉斯定理）：
+
+$$
+\begin{aligned}
+\text{OR}_{\text{cohort}} & = \frac{\text{Pr}(C|S)\times\text{Pr}(NC|NS)}{\text{Pr}(C|NS)\times\text{Pr}(NC|S)} \\ 
+                          & = \frac{\frac{\text{Pr}(S|C)\text{Pr}(C)}{\text{Pr}(S)}\times\frac{\text{Pr}(NS|NC)\text{Pr}(NC)}{\text{Pr}(NS)}}{\frac{\text{Pr}(NS|C)\text{Pr}(C)}{\text{Pr}(NS)}\times\frac{\text{Pr}(S|NC)\text{Pr}(NC)}{\text{Pr}(S)}} \\
+                          & = \frac{\text{Pr}(S|C)\times\text{Pr}(NS|NC)}{\text{Pr}(S|NC)\times\text{Pr}(NS|C)} \\
+                          & = \text{OR}_{\text{case-control}} 
+\end{aligned}
+$$
+
+

@@ -1,0 +1,417 @@
+本章節我們將要學習和探索如何給不同的實驗設計方法寫相對應的 BUGS 貝葉斯模型，用於比較不同組之間的差異。根據不同的試驗設計，模型也會跟着發生變化。例如病例對照研究的數據和模型結構，一定和隊列研究，或者是簡單的橫斷面研究的模型和數據結構差別甚遠。
+
+爲不同的實驗設計寫下正確的貝葉斯模型的關鍵是，要深刻理解不同實驗設計時的樣本採集過程：實驗對象的哪些特徵，哪些變量是確定的，哪些被認爲是隨機變量。我們要爲那些被認爲是隨機變量的部分採集事後概率分佈樣本。
+
+貫穿本章節，我們默認：
+
+1. $Y$ 是要研究的疾病，$X$ 是要研究的暴露因素；
+2. 給概率 (probabilities)，和患病率 (prevalences)提供均一先驗概率分佈 (uniform priors)。給作用效果的評價指標例如危險度比 (risk ratios, RR)，危險度差 (risk difference, RD)，或者是比值比 (odds ratios, OR)提供中性的，圍繞着無效爲中心的先驗概率分佈 ("neutral" priors centred on no effect)。
+
+
+## 隊列研究設計時的貝葉斯模型
+
+假如我們徵集兩組觀察對象，一組爲2000名非吸菸者，另一組爲1000名吸菸者。他們年齡均爲30歲，之後我們隨訪這兩組研究對象20年，觀察到非吸菸者癌症發病人數爲100人，吸菸者癌症發病人數爲150人。這個實驗設計的目的是比較兩組觀察對象的20年癌症發病危險度。在這個實驗設計條件下，癌症發病是隨機變量，但是暴露組（吸菸）和非暴露組（非吸菸）的人數，是一開始已經定下來不會改變的數值。
+
+需要強調的是，BUGS語言十分靈活，同一個模型，不同的人寫可能會給出完全不同，結果卻十分相近的代碼。給模型中的未知參數指定先驗概率分布時的方法也不盡相同。本隊列研究的實例中，比較癌症發病危險度 (risk) 的模型之一，可以寫作：
+
+```
+model{
+    Y0 ~ dbin(r0, X0) # Data model for unexposed
+    Y1 ~ dbin(r1, X1) # Data model for exposed
+    
+    # Priors for risks of exposed and unexposed
+    r0 ~ dbeta(a.unexp, b.unexp)
+    r1 ~ dbeta(a.exp, b.exp)
+    
+    # Computation of comparison statistics
+    rd <-  r1 - r0   # for Risk Difference 
+    rr <- r1 / r0    # for Risk Ratio
+}
+```
+
+數據文件可以寫作：
+
+```{r 12-Bayesian-stats-17, eval=FALSE}
+list(X0 = 2000, 
+     X1 = 1000, 
+     Y0 = 100, 
+     Y1 = 150, 
+     a.unexp = 1, b.unexp = 1, 
+     a.exp   = 1, b.exp   = 1)
+```
+
+在上面的BUGS模型代碼中，我們需要給暴露組和非暴露組的發病危險度 (risks) 指定先驗概率分布。但是更常見的是直接給出危險度差，或者危險度比本身的先驗概率分布。這時候你可以把上面的 BUGS 模型加以修改：
+
+```
+model{
+    Y0 ~ dbin(r0, X0) # Data model for unexposed
+    Y1 ~ dbin(r1, X1) # Data model for exposed
+    
+    # define r1 as the unexposed risk plus an effect "rd"
+    r1 <- r0 + rd
+    
+    # Priors for risks of exposed and unexposed
+    r0 ~ dbeta(a.unexp, b.unexp)
+    rd ~ dunif(min.rd, max.rd)
+    
+    # Computation of comparison statistics
+    rr <- r1 / r0    # for Risk Ratio
+}
+```
+
+對於這個模型代碼來說，你需要給出的數據文件中，對於 `r1` 的部分可以省去，但是需要給出 `rd` 的先驗概率分布中均一分布的兩個超參數 (hyper parameters)：
+
+```{r 12-Bayesian-stats-18, eval=FALSE}
+list(X0 = 2000, 
+     X1 = 1000, 
+     Y0 = 100, 
+     Y1 = 150, 
+     a.unexp = 1, b.unexp = 1, 
+     min.rd = -30, max.rd = 30)
+```
+
+
+如果你又改變主意，對相對危險度比 (risk ratio, RR) 的模型更加感興趣，建議你使用 `logit` 來把百分比放入模型中，因爲 $\log \text{OR}$ 通常更加符合正態分布，便於給出先驗概率分布。這時候模型又可以變形成爲：　
+
+```
+model{
+    Y0 ~ dbin(r0, X0)   # Data model for unexposed
+    logit(r0) <- lr0    # define the logit of r0
+    Y1 ~ dbin(r1, X1)   # Data model for exposed
+    logit(r1) <- lr1    # define the logit of r1
+    
+    # define lr1 as the unexposed logit(risk) plus log(OR):
+    lr1 <- lr0 + lor
+    
+    # priors for the logit of risk of unexposed and of log(OR): 
+    lr0 ~ dnorm(mean.lr0, pr.lr0) 
+    lor ~ dnorm(mean.lor, pr.lor)
+    
+    # computations of comparison statistics: 
+    rd <- r1 - r0      # For risk difference
+    rr <- r1 / r0      # For risk ratio
+}
+```
+
+這個模型中要給 `r0` 一個均一分布的先驗概率，又希望給 `or` 指定一個95%可信區間在 (1/30, 30) 範圍內的先驗概率。那麼合適的數據文件可以寫作：
+
+
+```{r 12-Bayesian-stats-19, eval=FALSE}
+list(X0 = 2000, 
+     X1 = 1000, 
+     Y0 = 100, 
+     Y1 = 150, 
+     mean.lr0 = 0, pr.lr0 = 0.3, 
+     mean.lor = 0, pr.lor = 0.33)
+```
+
+
+## 病例對照研究設計時的貝葉斯模型
+
+假設試驗設計改成了病例對照研究，我們找到了1000名癌症患者，2000名無癌症的研究對象作爲對照。之後我們讓這兩羣研究對象回憶自己過去20年的吸煙史。假設數據收集到的是，在癌症患者組，有100名是吸煙者，在無癌症的對照組中吸煙人數有800人。在這個實驗設計的條件下，隨機會發生變化的就再也不是癌症的發病概率，或者危險度，而是吸煙於非吸煙的暴露，非暴露的變量 (smokers, non-smokers)。這時候我們來把模型中的變量用 `logit` 刻度(scale)來表示就是：
+
+```
+model{
+    X0 ~ dbin(p0, Y0) # data model for CONTROLS 
+    logit(p0) <- lp0  # define the logit of p0
+    X1 ~ dbin(p1, Y1) # data model for CASES
+    logit(p1) <- lp1  # define the logit of p1
+    
+    # define lp1 as the unexposed logit(exposure) plus log(OR)
+    lp1 <- lp0 + lor
+    
+    # Priors for logit of exposure and of log(OR)
+    lp0 ~ dnorm(mean.lp0, pr.lp0)
+    lor ~ dnorm(mean.lor, pr.lor)
+    
+    # Computation of comparison statistics
+    or <- exp(lor)    # For Odds Ratio
+}
+```
+
+
+這時候合適的數據文件，及先驗概率分布的超參數的指定可以寫作：
+
+
+```{r 12-Bayesian-stats-20, eval=FALSE}
+list(Y0 = 2000, 
+     Y1 = 1000, 
+     X0 = 800, 
+     X1 = 600, 
+     mean.lp0 = 0, pr.lp0 = 0.3, 
+     mean.lor = 0, pr.lor = 0.33)
+```
+
+從這裏的代碼也可以看出，此時我們能獲得的評價指標只能是比值比 OR，它直接從對數比值比$\log \text{OR}$獲得。在病例對照研究的實驗設計下，我們無法計算危險度差(risk difference)，或者危險度比(risk ratio)，因爲我們獲得的只有在病例組，和對照組中暴露和非暴露的百分比 (we only have probabilities of exposure in disease categories)。
+
+## 橫斷面研究設計時的貝葉斯模型
+
+思考橫斷面研究時，我們的數據是怎樣構成的？
+
+此時我們採集400名實驗對象作爲橫斷面研究的樣本，然後在這個樣本中我們觀察他們的癌症患病與否，及吸煙習慣。假設數據是這樣的：
+
+- 25名吸煙者患有癌症；
+- 15名非吸煙者患有癌症；
+- 150名吸煙者無癌症；
+- 剩餘210名非吸煙者無癌症。
+
+
+此時，這四個數據全部都是隨機變量。唯一一個固定不變的數字是總的樣本量 400 名研究對象。我們用 $N_{ij}$ 來標記疾病狀態爲 $i$，吸煙習慣爲 $j$ 的實驗對象人數。其中 $i, j = 0 \text{(absent) or } 1\text{(present)}$，那麼此時我們的數據就是 $N=[N_{11}, N_{10}, N_{01}, N_{00}] = [25, 15, 150, 210]$。
+
+這四個數字是隨機，但不獨立的，因爲它們的總和400是已知的。這時可以想象這四個數字是按照一定的比例，從總體爲 1 的樣本中抽取，其參數分別是 $\theta_{ij}, i, j = 0, 1$，且滿足 $\sum_{ij}\theta_{ij} = 1$。滿足這樣實驗設計的數學模型叫做多項式分布 (multinomial distribution)：
+
+$$
+N \sim \text{Multinomial}([\theta_{11}, \theta_{10}, \theta_{01}, \theta_{00}], 400)
+$$
+
+這樣的多項式分布中，我們感興趣的是其多個參數組成的一個互相有關系的向量 $\mathbf{\theta}$。由於這個向量中的參數之間並非相互獨立，所以我們無法分別一一給予先驗概率分布。（這很容易理解，因爲當某些參數很高時，其餘參數取值就必須是低的）這時候我們需要給整個向量 $\mathbf{\theta}$ 提供一個綜合的先驗概率分布。
+
+能給一個元素都是百分比的向量提供合適先驗概率的合理分布叫做[**狄利克雷 (Dirichlet) 分布**](https://en.wikipedia.org/wiki/Dirichlet_distribution)。狄利克雷分布可以被認爲是 Beta 分布的多維擴展分布(multi-dimensional generalization of the beta distribution)。它是易於參數化(parameterize)的一個很靈活的分布，其組成元素就是一個由正數組成的向量 (a positive numbers)：
+
+$$
+\mathbf{\theta} \sim \text{Dirichlet}(\alpha_1, \alpha_2, \dots. \alpha_k) \text{ where } \alpha_i >0, \text{ and we denote } \sum_{i = 1}^k \alpha_i = \alpha
+$$
+
+一個滿足狄利克雷分布的向量，它有如下的特徵：
+
+1. 狄利克雷分布中的任意一個分類的(category)邊際先驗概率分布(marginal prior distribution)是一個Beta分布：$\theta_i \sim \text{Beta}(\alpha_i, \alpha - \alpha_i)$；
+2. 狄利克雷分布中的任意一個分類的參數 $\theta_i$ 的均值（期望）是：$E(\theta_i) = \frac{\alpha_i}{\alpha}$；
+3. 狄利克雷分布中的任意一個分類的參數 $\theta_i$ 的方差是：$V(\theta_i) = \frac{E(\theta_i)(1-E(\theta_i))}{\alpha + 1}$
+
+另外有意思的一個特點是，當一個狄利克雷分布的所有元素 $\alpha_i$ 同時乘以一個正數 $w$ (positive number)，產生的新的狄利克雷分布中的每個元素的參數均值（期望）與之前的狄利克雷分布均值相同，但是方差約等於之前狄利克雷分布元素的參數方差除以 $w$。利用這個性質，我們可以認爲 $\alpha$ 相當於樣本量大小：
+
+- 狄利克雷分布$\text{Dirichlet}(1,2,1)$，其實是樣本量爲$\alpha = 4$，均值是 $\text{Means}[0.25, 0.5, 0.25]$的分布；
+- 狄利克雷分布$\text{Dirichlet}(1,2,1)$，其實是樣本量爲$\alpha = 40$，均值也是$\text{Means}[0.25, 0.5, 0.25]$的分布。
+
+
+利用狄利克雷分布作爲橫斷面研究設計的先驗概率分布，我們把本節的實驗設計用BUGS語言總結出它的合適的模型：
+
+```
+model{
+    N[1:4] ~ dmulti(p[], S)  # data model for sample
+    p[1:4] ~ ddirch(alpha[]) # Dirichlet prior for vector of probabilities
+    
+    # Computation of comparison statistics: 
+    px0 <- p[2] + p[4]       # proportion of non-exposed
+    px1 <- 1 - px0           # proportion of exposed 
+    r0 <- p[2] / px0         # risk in the non-exposed
+    r1 <- p[1] / px1         # risk in the exposed
+    rr <- r1 / r0            # risk ratio, RR
+    rd <- r1 - r0            # risk difference, RD
+    or <- (p[1]*p[4]) / (p[2]*p[3])   # odds ratio, OR
+    p.crit <- step(or - 1)   # =1 if or >= 1, 0 otherwise
+    
+    # calculate the total sample size
+    S <- sum(N[])
+}
+```
+
+
+這個模型的數據文件則應該寫作：
+
+
+```{r 12-Bayesian-stats-21, eval=FALSE}
+list(N = c(25, 15, 150, 210), 
+     alpha = c(1, 1, 1, 1)) # uniform prior for p_ij
+```
+
+模型的最後一行我們定義了總樣本量，且我們在橫斷面研究的實驗設計下，可以同時計算危險度差，危險度比，以及比值比等指標。另外我們還利用方便的`step`命令計算比值比大於1的概率。和其他任何一個貝葉斯模型一樣，我們需要給模型中的未知參數 `p[1:4]` 合理且分散的起始值 (initial values)。
+
+這個模型的結果展示如下：
+
+```
+Iterations = 1001:26000
+Thinning interval = 1 
+Number of chains = 2 
+Sample size per chain = 25000 
+
+1. Empirical mean and standard deviation for each variable,
+   plus standard error of the mean:
+
+             Mean       SD  Naive SE Time-series SE
+deviance 18.81623 2.453005 1.097e-02      1.105e-02
+or        2.43862 0.861082 3.851e-03      3.886e-03
+p[1]      0.06436 0.012207 5.459e-05      5.459e-05
+p[2]      0.03959 0.009694 4.335e-05      4.335e-05
+p[3]      0.37378 0.024005 1.074e-04      1.078e-04
+p[4]      0.52227 0.024829 1.110e-04      1.110e-04
+p.crit    0.99372 0.078998 3.533e-04      3.630e-04
+r0        0.07046 0.016980 7.594e-05      7.593e-05
+r1        0.14689 0.026570 1.188e-04      1.188e-04
+rd        0.07643 0.031454 1.407e-04      1.407e-04
+rr        2.21362 0.703480 3.146e-03      3.172e-03
+
+2. Quantiles for each variable:
+
+             2.5%      25%      50%      75%    97.5%
+deviance 16.04000 17.02000 18.19000 19.92000 25.11000
+or        1.18700  1.83300  2.29700  2.88600  4.52103
+p[1]      0.04272  0.05571  0.06368  0.07215  0.09039
+p[2]      0.02285  0.03268  0.03880  0.04563  0.06050
+p[3]      0.32720  0.35750  0.37360  0.38980  0.42150
+p[4]      0.47350  0.50560  0.52240  0.53890  0.57060
+p.crit    1.00000  1.00000  1.00000  1.00000  1.00000
+r0        0.04094  0.05839  0.06914  0.08114  0.10730
+r1        0.09882  0.12820  0.14570  0.16410  0.20270
+rd        0.01569  0.05514  0.07586  0.09718  0.13970
+rr        1.16700  1.71900  2.10500  2.58700  3.90200
+```
+
+可以看到，所有的監測指標的95%可信區間的下限都超過了零假設值 (null value)。且 OR 大於1的概率超過99%，由於我們使用的是無實際信息的先驗概率分布，所以這個分析結果是十分接近概率論模型的結果的。
+
+假如我們現在有充分的理由相信，在本次研究對象中無癌症的對象中的吸煙者的百分比是被嚴重低估的，且我們有充足的理由認爲，這些人中有大約60%其實是吸煙者，但是對於癌症患者中吸煙者的百分比我們沒有太多的概念。那麼這樣的知識可以被翻譯到先驗概率分布的超參數裏面去：`alpha = c(1,1,600,400)`
+
+這時候結果變成了下面這樣：
+
+```
+Iterations = 1001:26000
+Thinning interval = 1 
+Number of chains = 2 
+Sample size per chain = 25000 
+
+1. Empirical mean and standard deviation for each variable,
+   plus standard error of the mean:
+
+             Mean       SD Naive SE Time-series SE
+deviance 86.75869 10.43878 4.67e-02       4.67e-02
+or        1.41233  0.48014 2.15e-03       2.15e-03
+p[1]      0.01854  0.00361 1.61e-05       1.61e-05
+p[2]      0.01141  0.00283 1.27e-05       1.28e-05
+p[3]      0.53491  0.01330 5.95e-05       5.92e-05
+p[4]      0.43514  0.01325 5.93e-05       5.96e-05
+p.crit    0.81588  0.38759 1.73e-03       1.74e-03
+r0        0.02554  0.00630 2.82e-05       2.86e-05
+r1        0.03350  0.00646 2.89e-05       2.89e-05
+rd        0.00796  0.00901 4.03e-05       4.03e-05
+rr        1.39672  0.46134 2.06e-03       2.06e-03
+
+2. Quantiles for each variable:
+
+             2.5%      25%      50%     75%    97.5%
+deviance 67.64000 79.50000 86.26000 93.5700 108.5000
+or        0.70919  1.07600  1.33600  1.6600   2.5680
+p[1]      0.01216  0.01598  0.01833  0.0208   0.0262
+p[2]      0.00654  0.00940  0.01118  0.0132   0.0176
+p[3]      0.50880  0.52600  0.53480  0.5439   0.5611
+p[4]      0.40930  0.42620  0.43510  0.4440   0.4613
+p.crit    0.00000  1.00000  1.00000  1.0000   1.0000
+r0        0.01473  0.02106  0.02504  0.0294   0.0393
+r1        0.02205  0.02894  0.03313  0.0376   0.0472
+rd       -0.01009  0.00205  0.00804  0.0140   0.0255
+rr        0.71649  1.07400  1.32400  1.6360   2.5040
+```
+
+這時候我們通過先驗概率分布給模型中加入和較大的信息量，事實上，我們加入的先驗概率代表的"樣本量"：`alpha = c(1,1,600,400)`，甚至比本次試驗本身的數據樣本量還要大。這時候各項指標 OR, RD, RR 的95%可信區間下限都包含了零假設值 (Null value)。甚至於此時OR大於1的概率已經降到了只有82%左右。
+
+## 把不同實驗設計的數據用貝葉斯模型連接起來
+
+通過使用不同的先驗概率分布，我們可以有效地利用實驗數據收集之前已經有的關於相似，或者相同實驗的重要結果（而不是僅僅做相互比較和討論）。比方說，我們計算獲得的某個模型某次實驗數據之後獲得的參數的事後概率分佈可以用作下一次類似研究時需要使用的先驗概率分佈信息。另外一種提高數據利用率的方法是，我們通過兩個試驗(可以是設計相同也可以是設計不同，但是討論相同研究問題的試驗)的共同參數把兩次甚至多次試驗的模型連接起來，如此既能提高事後概率分佈估計的精確度，也提高了數據的合理利用率。
+
+### Linking sub-models throug common parameters
+
+在本章節的語境下，我們假設對一個相同的疾病結果$(Y)$，和相同的暴露因素$(X)$之間的關係做了兩次不同的研究。數據分別收集自一個隊列研究，和一個病例對照研究。
+
+對於隊列研究來說，我們用 $X0c, X1c$ 分別標記非暴露組，及暴露組的總觀察人數；用 $Y0c, Y1c$ 分別標記非暴露組和暴露組的新發病例人數。那麼和這個隊列研究數據分析相匹配的貝葉斯模型的 BUGS 代碼是：
+
+```
+model{
+    # Data model for unexposed group 
+    Y0c ~ dbin(r0, X0c) 
+    logit(r0) <- lr0 
+    
+    # Data model for exposed group 
+    Y1c ~ dbin(r1, X1c)
+    logit(r1) <- lr1 
+    
+    # lor is log(OR)
+    lr1 <- lr0 + lor
+    
+    # Prior for logit of unexposed risk 
+    lr0 ~ dnorm(0, 0.3) 
+    # Prior for log(OR) 
+    lor ~ dnorm(0, 0.33)
+}
+```
+
+該模型也可以用 DAG 有向無環圖 (\@ref(fig:DAG0601)) 來表示：
+
+
+```{r DAG0601, cache=FALSE, echo=FALSE, fig.height=5, fig.width=6, fig.cap='DAG for model for data from the cohort study', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/DAG6-1.png")
+```
+
+
+至於病例對照設計的研究數據，用 $Y0cc$ 來標記收集到的病例組人數，$Y1cc$ 來標記收集到的對照組人數。用 $X0cc, X1cc$ 分別標記對照組和病例組中有暴露的人數。那麼此時，該病例對照研究的實驗設計對應的BUGS語言描述的貝葉斯統計學模型可以寫作：
+
+```
+model{
+    # Data model for controls 
+    X0cc ~ dbin(p0, Y0cc)
+    logit(p0) <- lp0 
+    
+    # Data model for cases 
+    X1cc ~ dbin(p1, Y1cc)
+    logit(p1) <- lp1 
+    
+    # lor is log(OR)
+    lp1 <- lp0 + lor
+    
+    # Prior for logit of probability of exposure for controls 
+    lp0 ~ dnorm(0, 0.3)
+    # Prior for log(OR)
+    lor ~ dnorm(0, 0.33)
+}
+```
+
+這個病例對照模型的 DAG 圖可以表示爲：
+
+```{r DAG0602, cache=FALSE, echo=FALSE, fig.height=5, fig.width=6, fig.cap='DAG for model for data from the case-control study', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/DAG0602.png")
+```
+
+從這兩個DAG圖我們也能一眼看出，這兩個模型裏面有一個共同的未知參數 `lor`。就是這個共同的參數可以讓我們把兩個模型連在一起，提高數據的利用效率。現在，我們把這兩個模型通過共同參數連起來的模型的DAG圖繪製出來：
+
+```{r DAG0603, cache=FALSE, echo=FALSE, fig.width=7, fig.cap='DAG for JOINT model for data from the cohort study and the case-control study combined through log(OR)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/DAG0603.png")
+```
+
+此時，對應 DAG 圖 \@ref(fig:DAG0603) 的合併模型的聯合模型，其BUGS語言描述的貝葉斯模型如下：
+
+
+```
+model{
+# Cohort sub-model
+   # Data model for unexposed group 
+    Y0c ~ dbin(r0, X0c) 
+    logit(r0) <- lr0 
+    
+    # Data model for exposed group 
+    Y1c ~ dbin(r1, X1c)
+    logit(r1) <- lr1 
+    
+    # lor is log(OR)
+    lr1 <- lr0 + lor
+    
+    # Prior for logit of unexposed risk 
+    lr0 ~ dnorm(0, 0.3) 
+# Case-control sub-model     
+   # Data model for controls 
+    X0cc ~ dbin(p0, Y0cc)
+    logit(p0) <- lp0 
+    
+    # Data model for cases 
+    X1cc ~ dbin(p1, Y1cc)
+    logit(p1) <- lp1 
+    
+    # lor is log(OR)
+    lp1 <- lp0 + lor
+    
+    # Prior for logit of probability of exposure for controls 
+    lp0 ~ dnorm(0, 0.3)
+    
+# Prior for common log(OR)
+    lor ~ dnorm(0, 0.33)
+}
+```
+
+其實，通過類似的辦法，你可以把無數多個研究，無論它們是相似的或者不同的實驗設計，只要你能找到它們有共同的未知參數，就可以通過貝葉斯模型連接起來，成爲一個首尾相接，數據聯通的大模型。這真是一件在概率論模型下永遠也無法做到的神奇的事情！

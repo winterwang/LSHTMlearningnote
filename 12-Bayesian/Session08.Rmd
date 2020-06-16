@@ -1,0 +1,347 @@
+## 關於等級迴歸模型
+
+等級迴歸模型，指的是是一大類模型的設定，它也有很多不同的名字，例如多層模型(multilevel models)，隨機效應模型(random effect models)，隨機係數模型(random coefficient models)，方差成分模型(variance-component models)，混合效應模型(mixed effect models)。等級迴歸模型的最主要特點在於，這一類模型爲我們提供了一種正式的統計學框架，允許我們對複雜結構的數據進行恰當的統計分析，做出合理推斷。
+
+等級迴歸模型最常見的情形可以是:
+
+1. 社會屬性上的：屬於相同家庭環境下的個人，成長於相似年代背景的一代人等各種社會網絡屬性；
+2. 地理屬性上的：在同一社區生活的人，同一城市，甚至是同一個國家生活的個體；
+3. 組織結構上的：如在同一個學校上學的學生，屬於同一個教育機構的工作人員等；
+4. 實驗設計上的：多中心，多地區合作的聯合臨牀實驗設計(mult-centre clinical trial)；
+5. 時間序列上的：相同個體在不同時間點接受相同指標的測量獲得的一系列隨着時間變化而變化的數據。
+
+另外，等級迴歸模型有幾個重要的概念需要澄清：
+
+1. 等級迴歸模型有助於考慮數據中的複雜結構 (modelling data with a complex structure) <br> 數據的各種各樣的嵌套式結構可以通過等級迴歸模型體現出來，例如從屬於不同學校的學生，或者是在不同街道的家庭。
+
+2. 等級迴歸模型有助於考慮數據的異質性 (heterogeneity) <br> 等級迴歸模型不僅可以告訴我們常見的一般均值信息 (averages, i.e. provides the general relationships)，等級迴歸模型還可以告訴我們不同等級之間的方差的異同 (variances)，例如有些街道和另一些街道相比房價的差異變化更大，或者更小。
+
+3. 等級迴歸模型又有助於考慮數據之間可能存在的非獨立性（依賴性，dependency）<br> 許多數據它們本質上都不是相互獨立的，這種內在的依存性(也許是時間上，空間上，或者是周圍的環境相關的)可以通過等級迴歸模型來克服。例如，相同街區內的房屋價格，有理由認爲應該是有內在相關性的，它們更傾向於接近彼此的報價。
+
+4. 等級迴歸模型可以幫助我們更加深刻的理解數據的內在的，微觀上的(micro)關係和外在結構上的，或者說宏觀 (macro) 層面上的關係。<br> 例如，每個房屋的價格它的決定因素既有內在的影響因子，如房屋本身的性質，特徵，年份，主人等等；另外，決定它價格的可能還有它所在的街區，街道，小區，甚至是城市的特徵決定了它的價格。
+
+正因爲我們所認知的數據本身，幾乎都可以有其內在的結構屬性，因此我們有理由使用理論和分析方法上更家貼近這種多層結構的統計學模型來瞭解這個世界。例如從國家層面上來說，可能有些國家的平均脂肪消費水平很高，有研究者發現這些國家比起另外脂肪消費量較低的國家來說，女性的乳腺癌發病率較高。但是，另外有些研究者可能發現，在一個國家內部，從個體與個體之間的脂肪攝入量上來觀察的話，又無法認可脂肪攝入量和乳腺癌發病呈現任何有意義的關係。
+
+許多標準的統計學模型，都需要默認數據與數據之間，觀察對象與**觀察對象之間有獨立性 (independent observation)**。然而現實之中這一點經常是無法做到的。許多實際數據中你會發現默認對象之間的獨立性本身，是不合理的。因爲觀察對象之間可能存在的內在相關性，決定了一些觀察對象可能比起另外一些觀察對象更加傾向於有同質性。
+
+那麼多層迴歸模型就是這樣一類能夠幫助我們理解數據結構的模型。它的靈活性體現在，
+
+1) 多層迴歸模型提供我們把相關性或者異質性部分的數據結構用模塊化的方法 (modular) 放入統計學模型中；
+2) 多層迴歸模型也會允許我們把數據中的缺失值，甚至是測量誤差給考慮進來，提供更加強有力（但是複雜的）統計學模型。
+
+## 多層數據在模型中可能要用到的前提條件
+
+在多層模型擬合多層數據時，有一個基本的問題就是如何正確地理解模型中各種各樣的回歸系數（參數, parameters）：例如 $J$ 個單位（可能是：個人，個體，子集 subset，區域，時間點，實驗組，等）的回歸參數 $\theta_1, \dots, \theta_J$。對這些回歸系數的正確理解，是要建立在對我們研究的問題，研究的數據的結構的理解之上的。
+
+舉幾個簡單的例子來說，$\theta_j$ 有可能有這樣的意義：
+
+1. 不同類型的患者（可以是不同的年齡組，疾病的分級，或者治療條件等）的治療效果；
+2. 在meta分析中則可以體現不同研究的研究效應(study effect)；
+3. 某疾病在不同地區，年齡組，時間段的相對危險度；
+3. 在某些生長曲線模型 (growth curves models) 中的個體效應 (subject effect)。
+
+綜上所述，我們可以發現，雖然多層回歸模型可能可以克服個體之間存在依賴性的問題，但是模型中的參數符合的前提條件可以有三種類別之分：
+
+- 參數是相同的 (identical parameters)；
+- 參數是獨立的 (independent parameters)；
+- 參數是可交換的 (exchangeable parameters)。
+
+下圖 \@ref(fig:Bayesian0801) 展示了個體從屬於家庭醫生，家庭醫生又接着從屬於 Primary Care Trusts (PCTs) 的數據結構示意圖。
+
+```{r Bayesian0801, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='GP example of multi-level structure: individuals within GPs within PCTs', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/Fig8_1P78Bayesian.png")
+```
+
+### 參數是相同的 (identical parameters)
+
+如果說參數相同的前提被認爲可以接受，那麼什麼 GP 什麼 PCT 的數據結構都可以被忽略，也就是每個個體都可以被視爲相互獨立的：
+
+
+
+```{r Bayesian0802, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='GP example assuming identical parameters', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/Fig8_2P78Bayesian.png")
+```
+
+但是，這意味着
+
+- 一個參數可以產生全部的觀察對象 (one parameter generates all the observations)；
+- 參數$\theta$的估計會很容易，因爲全部觀察對象都被用來估計一個未知參數；
+- 不能體現實際數據的層級結構情況 (it does not take into account differences in the PCT, GPs, etc.)
+
+### 參數是獨立的 (independent parameters)
+
+每一個參數如果要被認爲是全部沒有關聯（獨立）的話，如示意圖 \@ref(fig:Bayesian0803) 所展現的那樣，每個GP都被單獨對待，即使同處在一個 PCT 的 GP 之間也被認爲是沒有任何相關聯信息的。
+
+
+```{r Bayesian0803, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='GP example assuming independent parameters', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/Fig8_3P79Bayesian.png")
+```
+
+
+### 參數是可交換的 (exchangeable parameters)
+
+如果認爲參數是可置換的，那麼如圖 \@ref(fig:Bayesian0804) 所示，這樣需要我們
+
+- 對不同層級進行相應的分析；
+- 認爲從屬於一個 PCT 的 GP 們更加彼此相似/接近，且他們的參數 $\theta$ 通過共同的 $\mu$ 來產生；
+- 允許不同層級之間的參數信息可以相互交換，因爲他們通過數據結構互相鏈接。
+
+```{r Bayesian0804, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='GP example assuming exchangeable parameters', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/Fig8_4P79Bayesian.png")
+```
+
+在較爲廣義的條件下(broad conditions)，參數的可交換定義在數學上等價於認爲 $\theta_1, \dots, \theta_J$ 來自於一個共同的先驗概率分佈 (common prior distribution)，只是它的參數是**未知的** (with **unkown** parameters)。
+
+多層迴歸模型允許未知參數之間相互借鑑，取長補短 (borrowing of strength across units)。$\theta_i$的事後概率分佈事實上從全部的未知參數構成的似然中借取能量 (borrows stength from the likelihood function contributions for all the units, via their joint influence on the posterior estimates of the unknown hyper-parameters)。通過 MCMC 計算機模擬試驗的方法，加上多層迴歸模型對真實世界的模擬，統計估計的效率被大大提升了。別忘了, MCMC的靈活性同時讓我們可以放鬆對隨機效應要服從正態分佈這一前提條件。
+
+可見，這第三種情形，參數的可交換性是進行多層模型分析的基石，而不是認爲未知參數是相互獨立或者完全相同。
+
+構建多層迴歸模型本身提供了廣闊的視野，讓我們通過統計學工具一窺真實世界數據的複雜結構：
+
+- 我們可以在模型中加入2層甚至更多層的數據結構；
+- 允許加入非嵌套變量，交叉變量 (non-nested/cross-classified)，例如不同GP的病人，他們參加治療的醫院或許各不相同。
+- 同一對象的重複觀察值 (repeated observations)，可以出現在一部分未知參數，或者全部未知參數中，然後我們通過線性或者非線性（廣義線性）隨機效應模型來表達其關係。
+- 數據中的時間前後關係，甚至於是空間上的關係也可以通過多層迴歸模型來表達。
+- 當然，你也可以在不同層級水平上增加需要考慮的共變量。
+
+當我們在學習和建立複雜數據結構的模型時，貝葉斯統計學提供的強有力工具再一次印證了其高效且強大的分析效能。這裏我們僅有機會使用一個簡單的例子來展示如何在貝葉斯框架下構建擬合縱向研究數據的多層迴歸模型。
+
+## 抗抑鬱臨牀試驗實例
+
+### 縱向數據
+
+縱向數據常見於對同一(單元的)樣本個體經過不同的時間點重複多次收集獲得的數據。一般來說，從同一個體收集的觀察數據相互之間存在依存關係。分析縱向數據可以有很多方法，但是不論哪種方法，都必須考慮到這個存在依存關係的數據結構。其中兩種最常見的手段分別是隨機效應線性迴歸模型 (random effects/hierarchical linear model) 和自迴歸模型 (autoregressive model)。這裏的實例我們使用隨機效應模型。
+
+### HAMD example
+
+抗抑鬱臨牀試驗是一個有6個不同試驗中心，367名患者被隨機分配到3種治療方案。每名參加試驗的患者每週都會被使用 Hamilton depression score (HAMD) 評估打分，持續5周時間。其中 HAMD 分數範圍是 0-50 之間，分數越高，抑鬱症狀越嚴重。5周連續的HAMD打分過程是這樣的，第一次評分 (Week 0) 是在治療前，之後的4次打分是在治療開始之後 (Week 1-4)。這個數據之前曾經發表於文獻 [@diggle1994informative] 中。
+
+實際上該試驗中從第二週開始就有患者退出治療 (dropout)。我們在這裏暫且忽略掉有患者中途退出這件事，先分析246名從頭至尾都完成了試驗的患者的數據。圖 \@ref(fig:Bayesian0805) 展示的是完成全部試驗評分的患者中隨機選取50人的5次評分結果，按照時間的先後順序繪製的不同治療方案下每個人的分數變化軌跡，和每組治療方案的患者平均治療成績的軌跡。
+
+```{r Bayesian0805, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='HAMD data for complete cases', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/HAMD.png")
+```
+
+
+這個實驗中，我們關心的問題是**三種治療方案對抑鬱症患者 HAMD 分數的變化的影響是否存在不同？**
+
+此時數據中的變量有：
+
+- $y$ HAMD 分數
+- $t$ 治療組
+- $w$ 治療周
+
+這裏我們先暫且忽略掉試驗中心可能造成的不同療效，且假設HAMD評分隨着時間呈線性變化。那麼我們來思考或許可行的三個模型：
+
+- 標準的簡單線性迴歸，非多層迴歸模型 (standard linear regression)；
+- 多層線性迴歸模型，且允許有隨機截距 (hierarchical model with random intercepts)；
+- 多層線性迴歸模型，且允許同時有隨機截距和隨機斜率兩種模型 (hierarchical mdoel with random intercepts and random slopes)。
+
+### 貝葉斯簡單線性迴歸模型
+
+爲此 HAMD 數據設定簡單線性迴歸模型如下：
+
+- 患者的評分服從的概率分佈: $y_{iw} \sim \text{Normal}(\mu_{iw}, \sigma^2)$，其中，$y_{iw}$ 是第 $i$ 名患者
+在第 $w, w \in \{0, 1, 2, 3, 4\}$ 周時的 HAMD 評分。
+- 線性預測變量: $\mu_{iw} = \alpha + \beta_{\text{treat}(i)}w$，其中，$\text{treat}(i)$ 是第 $i$ 名患者的治療組編號，可以取值 $1,2,3$，$w$ 則是周數，治療前爲第 $w = 0$ 周，治療開始之後取 $w = 1,2,3,4$   周。
+
+在簡單線性迴歸模型中，重複測量數據嵌套於 (nested) 每個患者個體這一事實被忽略了，我們爲每個未知參數加以無信息的先驗概率分佈：
+
+$$
+\begin{aligned}
+\alpha, \beta_1, \beta_2, \beta_2 & \sim \text{Normal}(0, 10000)  \\
+\frac{1}{\sigma^2} & \sim \text{Gamma}(0.001, 0.001)
+\end{aligned}
+$$
+
+這個簡單線性迴歸模型對應的 BUGS 模型可以寫作：
+
+```
+for (i in 1:N){ # N individuals 
+    for (w in 1:W) { # W weeks
+        hamd[i, w] ~ dnorm(mu[i, w], tau)
+        mu[i, w] <- alpha + beta[treat[i]]*(w-1)
+    }
+# specification of priors
+  alpha ~ dnorm(0, 0.00001) 
+  for (i in 1:T){ # T treatments
+    beta[t]~dnorm(0, 0.00001)
+  }
+  tau ~ dgamma(0.001, 0.001)
+  sigma.sq<-1/tau # normal errors
+}
+```
+
+### 貝葉斯等級線性回歸--隨機截距模型
+
+對簡單線性回歸模型進行適當修改之後就能直接把它引申爲隨機截距模型。其中，每一名患者都有自己的截距:
+
+$$
+\begin{aligned}
+y_{iw}   & \sim \text{Normal}(\mu_{iw}, \sigma^2) \\
+\mu_{iw} & = \alpha_i + \beta_{treat(i)}w
+\end{aligned}
+$$
+
+此時模型中的前提是，以每名患者自己的截距 $\alpha_i$ 爲條件時 (conditional on)，患者的HAMD測試結果 $\{y_{iw}, w = 0, \dots, 4\}$ 會相互獨立。同時，我們還假設所有的隨機截距 $\alpha_i$ 服從**相同的（共同的）**先驗概率分佈。
+
+$$
+\alpha_i \sim \text{Normal}(\mu_\alpha, \sigma^2_\alpha) \;\; i = 1, \dots, 246
+$$
+
+這裏我們又假定了每個人的均值（截距）是來自相同分佈（可以互換的，exchangeability）。
+
+再接下來，對於人羣的截距這一數據設定非常模糊的先驗概率超參數 (hyperparameters):
+
+$$
+\begin{aligned}
+\mu_\alpha    & \sim \text{Normal}(0, 10000) \\ 
+\sigma_\alpha & \sim \text{Uniform}(0, 100) 
+\end{aligned}
+$$
+
+這是一個典型的多層線性回歸模型 (Hierarchical LM or Linear Mixed Model, LMM)，或者又叫做隨機截距模型(Random Intercepts model)。
+
+這個模型可以使用BUGS語言描述如下：
+
+
+```
+for (i in 1:N) { # N individuals 
+	for (w in 1:W) { # W weeks 
+		hamd[i, w] ~ dnorm(mu[i,w], tau)
+		mu[i,w] <- alpha[i] + beta[treat[i]]*(w-1)
+	}
+	alpha[i] ~ dnorm(alpha.mu, alpha.tau) # random intercepts
+}
+   # Specification of priors
+alpha ~ dnorm(0, 0.00001)
+alpha.mu ~ dnorm(0, 0.00001)
+alpha.sigma ~ dunif(0, 100)
+alpha.sigma.sq <- pow(alpha.sigma, 2)
+alpha.tau <- 1/alpha.sigma.sq
+
+for (t in 1:T){ # T treatments
+	beta[t] ~ dnorm(0, 0.00001)
+}
+tau ~ dgamma(0.001, 0.001)
+sigma.sq <- 1/tau  # Normal errors
+```
+
+無隨機截距的簡單線性回歸模型，和包括了隨機截距模型的多層線性回歸模型之間的差別，用 DAG 圖來表示可以直觀的展示如下：
+
+```{r Bayesian0806, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='DAGs for models for the HAMD example', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/DAGsHAMD.png")
+```
+
+### 貝葉斯等級線性回歸模型--隨機截距和隨機斜率模型
+
+與隨機截距模型相類似地，我們可以把該模型從隨機截距的基礎上再擴展到隨機斜率模型，也就是可以認爲每名患者的HAMD分數變化的直線的斜率可以因人而異。
+
+$$
+\begin{aligned}
+y_{iw}   & \sim \text{Normal}(\mu_{iw}, \sigma^2) \\ 
+\mu_{iw} & =    \alpha_i + \beta_{treat(i), i}w
+\end{aligned}
+$$
+
+模型中的隨機截距$\{\beta_{(1,i)}\}, \{\beta_{(2,i)}\}, \{\beta_{(3,i)}\}$, 同隨機截距 $\{\alpha_i\}$ 一樣我們都賦予其相同的且模糊的無有效信息的先驗概率分佈：
+
+這個隨機效應模型的BUGS模型代碼寫作如下：
+
+```
+for (i in 1:N) { # N individuals
+	for (w in 1:W) { # W weeks 
+		hamd[i, w] ~ dnorm(mu[i, w], tau)
+		mu[i, w] <- alpha[i] + beta[treat[i], i] * (w - 1)
+	}
+	alpha[i] ~ dnorm(alpha.mu, alpha.tau)
+	for(t in 1:T) {beta[t, i] ~ dnorm(beta.mu[t], beta.tau[t])}
+}
+
+# Priors
+for (t in 1:T) { # T treatments
+	beta.mu[t] ~ dnorm(0, 0.0001)
+	beta.sigma[t] ~ dunif(0, 100)
+	beta.sigma.sq[t] <- pow(beta.sigma[t], 2)
+	beta.tau[t] <- 1/beta.sigma.sq[t]
+}
+
+# specification of other priors as before in the random intercept model
+alpha ~ dnorm(0, 0.00001)
+alpha.mu ~ dnorm(0, 0.00001)
+alpha.sigma ~ dunif(0, 100)
+alpha.sigma.sq <- pow(alpha.sigma, 2)
+alpha.tau <- 1/alpha.sigma.sq
+
+for (t in 1:T){ # T treatments
+	beta[t] ~ dnorm(0, 0.00001)
+}
+tau ~ dgamma(0.001, 0.001)
+sigma.sq <- 1/tau  # Normal errors
+```
+
+### HAMD 數據不同模型結果的比較
+
+- 在非隨機效應模型（即簡單線性回歸模型）中，
+	- 一共有3條回歸直線被統計模型擬合，其中每個治療方案爲一條回歸直線；
+	- 每個治療方案獲得的回歸直線本身，具有相同的截距；
+	- 每個治療方案的回歸直線具有不同的斜率。
+
+- 在隨機截距模型中，
+	- 每名參加實驗的患者有自己的回歸直線；
+	- 每名患者的回歸直線只有自己的隨機截距，也就是HAMD的起始值被允許取不同的值。
+	
+- 再隨機截距隨機斜率模型中，
+	- 每名患者的回歸直線被允許擁有不同的斜率，和不同的截距。
+	
+下圖(表) \@ref(fig:Bayesian0807) 提供了三種不同模型分析 HAMD 數
+據結果的報告。可以注意到當模型中增加隨機效應時，明顯地，殘差方差
+(residual variance) $\sigma^2$ 大幅下降。因爲這些使用簡單線性回歸模型
+時只能被歸類到一個隨機殘差當中去的方差，分別被歸類到了隨機截距的方差，
+和隨機斜率的方差中去了。三個模型的 DIC 指標也提示我們，該數據更加支持
+隨機效應模型，且兩個隨機效應模型相比，隨機截距和隨機斜率都有的隨機效應
+模型更加貼合收集來的觀測數據。同時表格的最下面也列出了每個不同模型中實
+際使用到的有效變量個數 (effective number of parameters, $p_D$)，而且這
+個有效變量個數隨着隨機效應的增加而顯著增加。
+
+
+
+```{r Bayesian0807, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='Posterior mean (95% credible intervals) for the non-hierarchical and hierarchical models fitted to the HAMD data.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/DAGsHAMDhierresults.png")
+```
+
+### HAMD 數據實例結果的解釋
+
+值得注意的是，在 HAMD 數據中，我們關心的實驗問題其實是，"三種不同治療方案，對於HAMD分析得分的**變化（也就是回歸線的斜率）**，是否起到不同的作用。(whether there are any difference in the effects of the 3 treatments on the change in HAMD score over time)"。也就是說我們特別對斜率的不同感興趣。
+
+- $\beta_1 - \beta_2, \beta_1 - \beta_3, \beta_2 - \beta_3$；
+- 以及隨機斜率模型中的：$\mu_{\beta_1} - \mu_{\beta_2}, \mu_{\beta_1} - \mu_{\beta_3}, \mu_{\beta_2} - \mu_{\beta_3}$
+
+這些斜率差值其實可以通過 BUGS 代碼簡單方便的計算出來，便於我們進行樣本採集和統計推斷：
+
+```
+# calculate contrasts
+contrasts[1] <- beta[1] - beta[2]
+contrasts[2] <- beta[1] - beta[3]
+contrasts[3] <- beta[2] - beta[3]
+```
+
+或者寫成：
+
+```
+contrasts[1] <- beta.mu[1] - beta.mu[2]
+...
+```
+
+三個不同模型的斜率比較結果總結如下圖（表）\@ref(fig:Bayesian0808)，其中隨機即截距隨機斜率模型的三個斜率比較的事後概率分佈圖繪製如圖\@ref(fig:Bayesian0809)。由於 HAMD 得分越低表示抑鬱症症狀越輕，所以表格中的斜率差如果是負的，表示斜率比較中前者的療效更好（下降效果更顯著），如果斜率差是正的，那麼就是反過來證明斜率比較中後者的療效更好。所以很顯然，療法2比起療法1對於 HAMD 分數的下降更加有顯著效果。這個結果和之前對數據的粗略均值繪製圖\@ref(fig:Bayesian0805)提示的結果相一致。當然一個更加完整的貝葉斯統計學分析還要包括對模型進行擬合診斷，以及對模型進行更加仔細的推敲（例如對線性變量中心化，或者增加實驗設施這個層級的隨機效應，或者允許增加非線性的結果）。另外值得注意的是，我們之前介紹過的所有對於非多層回歸模型的擬合檢查在混合效應模型中都會變得更加複雜。還有值得提醒的一點在於，DIC在大部分模型擬合中都可以用於比較不同的模型，但是有時候也會出現 BUGS 軟件無法計算 DIC 的情況。先驗概率分佈的選擇也是混合效應模型擬合時需要慎重考慮的一點，這些內容這裏由於篇幅限制無法一一詳細介紹。
+
+
+
+
+```{r Bayesian0808, cache=FALSE, echo=FALSE, fig.width=5, fig.cap='Posterior mean (95% credible interval) for the contrasts (treatment comparisons) from models fitted to the HAMD data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/DAGsHAMDhiercontrast.png")
+```
+
+```{r Bayesian0809, cache=FALSE, echo=FALSE, fig.width=7, fig.cap='Density plots for the hierarchical model with random intercepts and random slopes.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/DAGsHAMDhierfig.png")
+```

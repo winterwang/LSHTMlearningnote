@@ -1,0 +1,35 @@
+
+## 兩種方法的不同點總覽
+
+嚴格來說，每個研究問題，都可以通過兩種統計學方法，要麼概率論手段，要麼貝葉斯思想，來描述及進行推斷。它們之間的不同，通過前面幾個章節的描述應該能夠切身體會得到：
+
+1. 貝葉斯思想利用的是事後概率分佈 $p(\theta|y) \propto p(y|\theta)p(\theta)$；而傳統概率論統計學只需要使用其中的似然(likelihood)部分。
+2. 貝葉斯思想需要使用者把進行實驗之前，已經有的知識和背景總結成爲先驗概率分佈 (prior distribution, $p(\theta)$)；而傳統概率論並無數學或者統計學的方案來考慮這些實驗進行之前已經有的背景知識，有的只是做完實驗之後，事後的討論，及對實驗結果的解讀，演繹時進行的描述。
+3. 貝葉斯思想一般是對噪音參數 (nuisance parameters) 進行取均值的做法；而傳統概率論是把這些參數也極大化 (maximise)。
+4. 貝葉斯統計學方法相對來說對計算能力要求較高，但是 MCMC 計算機模擬採樣過程使得現實中特別複雜的統計學模型也能變得直觀且易於獲得結果。
+
+下面我們來討論一下上面提到的這些不同點在常見的臨牀實驗，以及流行病學研究的統計學案例中如何啓示分析者作出選擇。
+
+## 亞組分析 subgroup analysis 
+
+很常見的一種現象是，一些藥物的治療效果，在總體中被發現具有顯著性的療效，但是當分析人員把研究對象根據一些特徵進行分層分析之後，卻發現這種顯著療效只存在與一部分亞組對象中，（如男性中有療效，但是女性中沒有療效等類似的現象）。同時，交互作用分析的結果又提示說分層變量和療效之間並沒有有意義的交互作用 (while an interaction analysis reveals that the effect is not significantly different for men and women)。
+
+例如，我們看這樣一個實際的例子，有一個臨牀實驗比較的是 sinvastatin 和安慰劑對患者血清膽固醇水平下降能力上的異同。實驗對象有男性也有女性，它們的共同點是(曾經)患有心絞痛，或者心肌梗塞。實驗組和對照組的五年死亡人數等數據總結如下：
+
+
+
+```{r Bayesian1001, cache=FALSE, echo=FALSE, fig.width=7, fig.cap='Five-year mortality for simvastatin vs. placebo trial.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/table10-1.png")
+```
+
+根據這個結果，就有人會提出尖銳的問題，到底女性患者是否應該使用該藥物來降低膽固醇？
+
+- 是。理由是總體（男女共同的）治療是有效果的，且交互作用並無提示療效有男女差異。
+- 否。理由是分層分析結果現實女性中療效是無顯著意義的，並且還甚至可能有害 (RR > 1)。
+
+如果使用貝葉斯思想來進行接下來的分析的話，貝葉斯統計學會要求給療效$\times$性別這一代表交互作用的變量的回歸係數加上有信息的先驗概率分佈 (informative prior)，但是給其他的回歸係數以不含信息的先驗概率分佈 (non-informative priors on all the other parameters.)。這樣的一種方法，可以從男性結果中借來 (borrowing information from men) 一些療效信息，因爲顯然上面這個實驗中女性患者的數量很少，只有男性患者的不到三分之一人數。同時把模型中男性相對女性患者的信息量比重下調 (down-weighting information from men compared with information from women)。
+
+## 多重比較問題 multiple comparisons
+
+臨牀實驗和流行病學研究同時都面對多重比較的問題。貝葉斯統計學方法提供了
+

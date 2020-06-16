@@ -1,0 +1,289 @@
+要點：
+
+- 學會用OpenBUGS跑貝葉斯邏輯回歸模型；
+- 懂得如何解讀，解釋貝葉斯廣義線性回歸模型結果中的參數估計；
+- 使用DIC比較不同的貝葉斯模型。
+
+數據來自研究 [@diggle2002childhood]，該研究設計是爲了評價 National Impregnated Bednet Programme 是否能減少岡比亞兒童瘧疾發病率，及由於瘧疾導致的死亡。當時研究者從2035名岡比亞兒童身上採集了血樣，用於化驗是否有瘧原蟲感染。同時收集的變量包括，兒童的年齡，兒童是否有規律地使用蚊帳，以及使用的蚊帳是否是經過 (permethrin insecticide) 殺蟲。另外還收集的兩個村莊水平 (village level) 的變量分別是，兒童生活的村莊是否受 Primary Health Care System 管轄，以及村莊環境中的植被情況 (greenness of the village environment)。
+
+該試驗數據除了對使用蚊帳和罹患瘧疾之間的關係進行評估之外，還希望能通過收集到的數據分析是否存在超二項變異 (extra-binomial variation)的證據。這裏，超二項變異的含義是，在調整了已測量的全部觀察變量以後，仍然存在其他未知或者是未測量的潛在因子，導致殘留的差異(residual differences)無法被解釋。
+
+原始數據是個人級別的 (1 record per child)。這裏爲了練習的需要，我們對數據進行了整理彙總，這樣的數據其實使用 MCMC 採集事後樣本效率也比較高。且我們的練習題用的數據只是研究地區西部25個村莊構成的局部數據。這樣，經過處理後的數據庫保存有805名兒童的數據，他們的彙總後的數據有149個二項變量 (binomial categories)。
+
+數據保存在 `malaria-data.txt` 文件中，使用的是方形格式 (rectangular format)，它有如下的幾個變量:
+
+
+```
+POP[] MALARIA[] AGE[] BEDNET[] GREEN[] PHC[] VILLAGE[] 
+3     2         2     1        40.85   1      1
+1     1         3     1        40.85   1      1
+2     2         4     1        40.85   1      1
+7     3         1     2        40.85   1      1
+5     1         2     2        40.85   1      1
+6     3         3     2        40.85   1      1
+... 
+END
+
+```
+
+- `POP` 是所有變量組合下兒童的人數；
+- `MALARIA` 是所有變量組合下兒童感染虐原蟲兒童的人數；
+- `AGE` 表示年齡分組 (1 = 0-2 歲，2 = 2-3 歲，3 = 3-4 歲，4 = 4-5 歲)；
+- `BEDNET` 表示使用蚊帳的情況分類 (1 = 不使用蚊帳，2 = 使用未經殺蟲劑處理過的蚊帳，3 = 使用經過殺蟲劑處理過的蚊帳)；
+- `GREEN` 是表示村莊植被環境的一個連續型指標；
+- `PHC` 是一個二分類數據，1/0 = 該村莊是/不是受到 Primary Health Care System 管轄。
+- `VILLAGE` 是村莊的代碼。
+
+1. 使用貝葉斯邏輯迴歸模型估計使用蚊帳與否和虐原蟲感染之間的關係。嘗試寫下這個貝葉斯模型的BUGS表達文件，並且注意計算:
+
+- 參照組(也就是未使用蚊帳組)兒童的瘧疾感染率 (百分比)
+- 每一個可能的共變量的比值比
+- 使用蚊帳和不使用蚊帳相比，能夠降低兒童患瘧疾的比值(odds)的概率；<br> 使用殺蟲劑處理過的蚊帳和使用未處理過的蚊帳相比，能夠降低兒童患瘧疾的比值的概率； <br>
+
+模型可以寫作:
+
+```
+# Logistic regression model for malaria data
+	
+model {
+   for(i in 1:149) {
+      MALARIA[i] ~ dbin(p[i], POP[i])
+      logit(p[i]) <- alpha + beta.age[AGE[i]] + beta.bednet[BEDNET[i]] +
+                                   beta.green*(GREEN[i] - mean(GREEN[])) + beta.phc*PHC[i]  
+   }
+  
+   # vague priors on regression coefficients
+   alpha ~ dnorm(0, 0.00001)
+   beta.age[1] <- 0          # set coefficient for baseline age group to zero (corner point constraint)
+   beta.age[2] ~ dnorm(0, 0.00001)     
+   beta.age[3] ~ dnorm(0, 0.00001)     
+   beta.age[4] ~ dnorm(0, 0.00001)     
+   beta.bednet[1] <- 0     # set coefficient for baseline bednet group to zero (corner point constraint)
+   beta.bednet[2] ~ dnorm(0, 0.00001)     
+   beta.bednet[3] ~ dnorm(0, 0.00001)     
+   beta.green ~ dnorm(0, 0.00001)     
+   beta.phc ~ dnorm(0, 0.00001)     
+ 
+   # calculate odds ratios of interest
+   OR.age[2] <- exp(beta.age[2]) # OR of malaria for age group 2 vs. age group 1
+   OR.age[3] <- exp(beta.age[3]) # OR of malaria for age group 3 vs. age group 1
+   OR.age[4] <- exp(beta.age[4]) # OR of malaria for age group 4 vs. age group 1
+   
+   OR.bednet[2] <- exp(beta.bednet[2]) # OR of malaria for children using untreated bednets vs. not using bednets
+   OR.bednet[3] <- exp(beta.bednet[3]) # OR of malaria for children using treated bednets vs. not using bednets
+   OR.bednet[4] <- exp(beta.bednet[3] - beta.bednet[2]) # OR of malaria for children using treated bednets vs. using untreated bednets 
+   OR.green <- exp(beta.green)  # OR of malaria per unit increase in greenness index of village
+   OR.phc <- exp(beta.phc)      # OR of malaria sfor children living in villages belonging to the primary health care system versus children living in villages not in the health care system 
+   logit(baseline.prev) <- alpha # baseline prevalence of malaria in baseline group (i.e. child in age group 1, sleeps without bednet, and lives in a village with average greenness index and not in the health care system) 
+   
+   PP.untreated <- step(1 - OR.bednet[2]) # probability that using untreated bed net vs. no bed net reduces odds of malaria
+   PP.treated <- step(1- OR.bednet[4]) # probability that using treated vs. untreated bednet reduces odds of malaria
+}
+```
+
+
+```{r BayesianPractical0701, cache=FALSE, fig.width=7, fig.height=15, fig.cap='Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+
+# Read in the data: 
+
+Data <- read_delim(paste(bugpath, "/backupfiles/malaria-data.txt", sep = ""), delim = " ")
+
+# Data file for the model
+Dat <- list(
+  POP = Data$POP, 
+  MALARIA = Data$MALARIA, 
+  AGE = Data$AGE, 
+  BEDNET = Data$BEDNET,
+  GREEN = Data$GREEN,
+  PHC = Data$PHC
+)
+
+
+# initial values for the model
+# the choice is arbitrary
+
+inits <- list(
+ list(alpha = -0.51, 
+     beta.age = c(NA, 0.83,  0.28, -1.68), 
+     beta.bednet = c(NA, -2.41,  0.68), 
+     beta.green = -0.23, 
+     beta.phc = 1.82),
+ list(alpha = 1.29, 
+      beta.age = c(NA, 0.49, -0.38, -0.04),  
+      beta.bednet = c(NA, 6.85,  0.09), 
+      beta.green = 2.66, 
+      beta.phc = -0.31)
+)
+
+
+
+# Set monitors on nodes of interest
+parameters <- c("OR.age", "OR.bednet", "OR.green", "OR.phc", "PP.treated", "PP.untreated", "baseline.prev")
+
+
+# fit the model in jags
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/malaria-model-editted.txt",
+                                  sep = ""),
+                    parameters.to.save = parameters,
+                     n.iter = 1000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 0,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+# Show the trace plot
+Simulated <- coda::as.mcmc(jagsModel)
+ggSample <- ggs(Simulated)
+ggSample %>% 
+  filter(Parameter %in% c("OR.age[2]", "OR.age[3]", "OR.age[4]", 
+                          "OR.bednet[2]", "OR.bednet[3]", "OR.bednet[4]",
+                          "OR.green", "baseline.prev")) %>% 
+  ggs_traceplot()
+```
+
+```{r BayesianPractical0702, cache=FALSE, fig.width=10, fig.height=8, fig.cap='Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+gelman.diag(Simulated)
+gelman.plot(Simulated)
+```
+
+
+基本可以認爲刨除前1000次取樣 (burn-in) 可以達到收斂。
+
+
+
+```{r BayesianPractical0703, cache=FALSE, message=TRUE, echo=TRUE}
+
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/malaria-model-editted.txt",
+                                  sep = ""),
+                    parameters.to.save = parameters,
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 1000,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+print(jagsModel)
+```
+
+
+參照組 (年齡小於2歲，不使用蚊帳，生活的村莊植被水平爲全部的平均值，且不在 PHC 管轄範圍內) 患瘧疾的百分比估計在 28.8% 左右 (`baseline.prev`)。極強的證據表明隨着年齡的增加，患瘧疾的危險度（比值）也升高。使用蚊帳可能可以降低一些些換瘧疾的危險度（比值），(`OR.bednet[2] = 0.88`) 但是其95%可信區間範圍是包括了1的 (0.605, 1.237)。使用未經殺蟲劑處理的蚊帳，也有79%的概率能夠降低兒童患瘧疾。和使用未經殺蟲劑處理的蚊帳相比，經過殺蟲劑處理的蚊帳也可能(有87.6%的概率)可以進一步降低兒童患瘧疾的危險 (`OR.bednet[4]` = 0.799, 95% 可信區間 0.51, 1.19)。和不在PHC管轄內的村莊相比，在PHC管轄的村莊可能可以降低兒童患瘧疾的危險 (`OR.phc` = 0.711，95% 可信區間 0.49, 0.99)。
+
+把模型中發現和兒童發生瘧疾無太大關係的變量從貝葉斯邏輯迴歸模型中拿掉以後重新跑新的模型，和之前包含了全部變量的而模型相比較，你覺得哪個模型更合適？
+
+由於植被指標變量和是否使用蚊帳的變量和是否發生瘧疾似乎關係不太大，我們把這兩個變量從模型中拿掉，再跑這個貝葉斯模型:
+
+```
+# Logistic regression model for malaria data
+	
+model {
+   for(i in 1:149) {
+      MALARIA[i] ~ dbin(p[i], POP[i])
+      logit(p[i]) <- alpha + beta.age[AGE[i]] + beta.phc*PHC[i]  
+   }
+  
+   # vague priors on regression coefficients
+   alpha ~ dnorm(0, 0.00001)
+   beta.age[1] <- 0          # set coefficient for baseline age group to zero (corner point constraint)
+   beta.age[2] ~ dnorm(0, 0.00001)     
+   beta.age[3] ~ dnorm(0, 0.00001)     
+   beta.age[4] ~ dnorm(0, 0.00001)     
+   beta.phc ~ dnorm(0, 0.00001)     
+ 
+   # calculate odds ratios of interest
+   OR.age[2] <- exp(beta.age[2]) # OR of malaria for age group 2 vs. age group 1
+   OR.age[3] <- exp(beta.age[3]) # OR of malaria for age group 3 vs. age group 1
+   OR.age[4] <- exp(beta.age[4]) # OR of malaria for age group 4 vs. age group 1
+   
+   OR.phc <- exp(beta.phc)      # OR of malaria sfor children living in villages belonging to the primary health care system versus children living in villages not in the health care system 
+   logit(baseline.prev) <- alpha # baseline prevalence of malaria in baseline group (i.e. child in age group 1, sleeps without bednet, and lives in a village with average greenness index and not in the health care system) 
+}
+```
+
+
+
+```{r BayesianPractical0704, cache=FALSE, fig.width=7, fig.height=10, fig.cap='Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, echo=TRUE}
+
+
+
+# Data file for the model
+Dat <- list(
+  POP = Data$POP, 
+  MALARIA = Data$MALARIA, 
+  AGE = Data$AGE, 
+  PHC = Data$PHC
+)
+
+
+# initial values for the model
+# the choice is arbitrary
+
+inits <- list(
+ list(alpha = -0.51, 
+     beta.age = c(NA, 0.83,  0.28, -1.68), 
+     beta.phc = 1.82),
+ list(alpha = 1.29, 
+      beta.age = c(NA, 0.49, -0.38, -0.04),  
+      beta.phc = -0.31)
+)
+
+
+
+# Set monitors on nodes of interest
+parameters <- c("OR.age", "OR.phc", "baseline.prev")
+
+# fit the model in jags
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/malaria-model-dropped.txt",
+                                  sep = ""),
+                    parameters.to.save = parameters,
+                     n.iter = 1000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 0,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+# Show the trace plot
+Simulated <- coda::as.mcmc(jagsModel)
+ggSample <- ggs(Simulated)
+ggSample %>% 
+  filter(Parameter %in% c("OR.age[2]", "OR.age[3]", "OR.age[4]", 
+                          "baseline.prev")) %>% 
+  ggs_traceplot()
+
+```
+
+
+```{r BayesianPractical0705, cache=FALSE, fig.width=6, fig.height=7, fig.cap='Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, echo=FALSE}
+gelman.diag(Simulated)
+gelman.plot(Simulated)
+```
+
+
+
+```{r BayesianPractical0706, cache=FALSE, message=TRUE, echo=TRUE}
+jagsModel <- jags(data = Dat,
+                  model.file = paste(bugpath, 
+                                  "/backupfiles/malaria-model-dropped.txt",
+                                  sep = ""),
+                    parameters.to.save = parameters,
+                     n.iter = 26000,
+                     n.chains = 2, 
+                     inits = inits,
+                     n.burnin = 1000,
+                     n.thin = 1,
+                    progress.bar = "none")
+
+print(jagsModel)
+```
+
+
+這個新模型的DIC和之間包含全部變量的模型相比降低了大概3左右，也就是去掉三個共變量對模型的影響。DIC的變化爲3時可認爲幾乎模型的擬合效果沒有太大的變化。出於簡約化模型的考慮，我們選擇這個新的變量較少的模型。
+

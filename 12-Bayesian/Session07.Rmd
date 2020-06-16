@@ -1,0 +1,272 @@
+
+
+第五章(Chapter \@ref(BayesianLM))中我們已經展示過如何在貝葉斯統計學語境下如何描述和運算簡單線性回歸模型的過程：
+
+- 描述預測變量和結果變量之間應有的關係；
+- 描述結果變量的概率分佈假設 (probability assumptions)：也就是在前一步指定的方程式描述的預測變量和相應的參數的條件下，結果變量的分佈。
+- 給每個回歸係數，以及其他未知的參數提供先驗概率分佈的信息。
+
+對於一個結果變量 $y_i$ 來說，如果有一個預測變量的向量 $x_1, \dots, x_p$，來描述它 $i = 1,\dots, n$ 個個體的話，標準的貝葉斯版本的線性回歸模型要寫作：
+
+$$
+\begin{aligned}
+y_i & \sim N(\mu_i, \sigma^2) \\ 
+\mu_i & = \beta_0 +  \sum_{i = 1}^p\beta_jx_{ji} \\ 
+(\beta_0, \beta_1, \dots, \beta_p) & \sim \text{ Prior distributions } \\
+\end{aligned}
+(\#eq:Bayesianchapter7eq01)
+$$
+
+用貝葉斯方法建立回歸模型的優點有很多。首先，你可以方便地對未知的回歸係數等參數加入相關的先驗概率分佈用來表達已有的知識，或者對回歸係數加以合理的限制。其次，你可以從容地對回歸模型的擬合效果，預測能力做出統計學推斷。再加上，使用貝葉斯方法也很容易讓我們把模型擴展到非線性回歸模型，處理並分析缺失值，以及分析共變量的測量誤差等等。
+
+更重要的是，MCMC方法讓我們人類也可以很容易地進行穩健的統計推斷 (robust inference)。例如上面的線性回歸模型中，如果有理由認為誤差服從的是自由度為4的 t 分佈，那就可以把第一行模型似然改寫成為：
+
+$$
+y_i \sim t_4(\mu_i, \sigma^2)
+$$
+
+使用t分佈作為模型似然的話，相比高斯模型(正態分佈)可以調低(downweight)離群值(outliers)的權重。(詳見 Chapter \@ref(tdreplacegaussian))
+
+實際上，貝葉斯廣義線性回歸模型(Bayesian GLM)直觀地可以被認為是貝葉斯線性回歸模型的擴展模型。記得在基礎的廣義線性回歸模型章節，我們學習過如何用一個**鏈接方程(link function)**把結果變量(outcome)，和解釋變量用數學表達式連接起來。廣義線性回歸模型中最常見的莫過於邏輯回歸模型，接下來我們就來看看如何在貝葉斯統計學框架下擬合我們想要的邏輯回歸模型。在這之前，我們先要學習如何在BUGS語言下描述一個分類型變量(categorical variable)。
+
+
+## 如何在BUGS語言中描述分類型變量
+
+雖然 BUGS 語言風格和 R 語言十分接近，但是二者並不完全通用。BUGS並無像R語言一樣有Factor因子型變量的概念來表述分類型數據。相似的概念在BUGS語言中可以有兩種方法來表達：
+
+- 人工把分類型變量編輯成為啞變量的方式，然後把啞變量輸入數據框中；
+- 利用BUGS語言方便的索引功能 (indexing facilities)。
+
+下面我們用簡單線性回歸模型來解釋這兩種方法的異同，其中一個分類型解釋變量 $x_i$，它有 $A,B,C$ 三種分型(例如ABO血型只有三種分類時的情況)，其中 A 是三個分類中的參照組(reference group)。
+
+### 啞變量的數據矩陣
+
+用啞變量矩陣的方式表達分類型變量是常用的手段，為一個有三個分類的變量生成啞變量我們需要給出兩個指示變量(indicator variable)，其中 $x2=1$ 時表示 $x_i = B$，$x2=0$時表示 $x_i\neq B$，$x3=1$ 時表示$x_i = C$，$x3=0$ 時表示 $x_i\neq C$：
+
+
+```
+y[]    x2[]    x3[]
+32     0       0        # x_i=A
+21     0       0
+...
+6      0       0
+15     1       0        # x_i=B
+24     1       0     
+...
+12     1       0
+7      0       1        # x_i=C
+26     0       1
+...
+19     0       1
+END
+
+```
+
+此時，這個模型的BUGS表達式可以寫作：
+
+
+```
+for (i in 1:n) {
+      y[i]  ~ dnorm(mu[i], tau) 
+      mu[i] <- alpha + beta2*x2[i] + beta3*x3[i]
+}
+
+alpha ~ dunif(-1000, 1000)
+beta2 ~ dunif(-1000, 1000)
+beta3 ~ dunif(-1000, 1000)
+tau   ~ dgamma(0.001, 0.001)
+```
+
+其中，
+
+- `alpha` 是參照組 $x_i = A$ 的結果變量的均值；
+- `beta2` 是和參照組相比，$x_i = B$ 的結果變量的均值和參照組之間結果變量均值的差；
+- `beta3` 是和參照組相比，$x_i = C$ 的結果變量的均值和參照組之間結果變量均值的差。
+
+### 雙重索引BUGS語言標記法
+
+與前面的啞變量矩陣描述相異的，我們可以利用BUGS語言中便捷的索引方法來描述一個分類型變量，例如用 $x = 1$ 表示 $x_i = A$，用 $x = 2$ 表示 $x_i = B$，用 $x = 3$ 表示 $x_i = C$：
+
+
+```
+y[]      x[]
+32       1               # x = A
+21       1 
+... 
+6        1
+15       2               # x = B
+24       2 
+...
+12       2
+7        3               # x = C
+26       3
+...
+19       3
+END
+
+```
+
+此時，相同的模型則需要被表達成爲：
+
+```
+for(i in 1:n) {
+    y[i] ~ dnorm(m[i], tau)
+    mu[i] <- alpha + beta[x[i]]
+}
+alpha ~ dunif(-1000, 1000)
+beta[1] <- 0   # fixed as baseline class
+beta[2] ~ dunif(-1000, 1000)
+beta[3] ~ dunif(-1000, 1000)
+tau ~ dgamma(0.001, 0.001)
+```
+
+可以注意到我們在這個模型中把參考組的回歸系數篤定在了 0。這時候，我們給起始值數據時，就不需要給 `beta[1]` 指定起始值了：
+
+```
+list(alpha = 10, beta = c(NA, -2, 4), tau = 1)
+```
+
+## 邏輯回歸 Bayesian Logistic Regression
+
+對於一個二分類的結果變量 (binary outcome variable) 來說，最自然的模型是使用邏輯回歸模型。
+
+假如每個個體都有一個二分類結果變量 $y_i = 0 \text{ or } 1$。那麼每個個體 $i$ 的結果 $y_i$ 可以用伯努利分布 (Chapter \@ref(bernoulli)) 來描述它：
+
+$$
+y_i \sim Bern(p_i)
+$$
+
+其中，$p_i$是第$i$個個體的結果變量取1時$(y_i = 1)$的概率。此時 $P(p_i = 1)$ 是我們想要知道的需要用貝葉斯模型來擬合的未知參數。邏輯回歸模型中我們使用的鏈接方程是 $\mathbf{logit}$：
+
+$$
+\theta_i = \text{logit}(p_i) = \log(\frac{p_i}{1-p_i})
+$$
+
+
+$\mathbf{logit}$鏈接方程允許我們把一個只能在 $(0,1)$ 之間取值的概率數據，映射到可以在 $(-\infty, +\infty)$ 之間取值的變量，之後我們再把這個變量和預測變量使用線性方程連接起來：
+
+$$
+\text{logit}(p_i)  = \alpha + \sum_k\beta_kx_{ki}
+(\#eq:GLMbayesian01)
+$$
+
+這個模型的似然方程，它的事後概率分布是無法獲得閉合解的 (closed form)，但是但是，MCMC強大的計算機模擬過程幫我們解決了這個棘手的問題。
+
+
+###　邏輯回歸模型中回歸系數的含義
+
+在表達式 \@ref(eq:GLMbayesian01) 中我們可以對每個回歸系數做出如下的定義：
+
+- $\alpha$ 是當所有的預測變量取值同時爲零時的結果變量的對數比值 (log odds)：
+
+$$
+\Rightarrow \text{logit}^{-1}(\alpha) = \frac{e^\alpha}{(1+e^\alpha)} = \text{ probability of the outcome when all covariates are set to zero}
+$$
+
+- $\beta_k$ 則是預測變量 $x_k$ 發生一個單位變化時，引起的結果變量的變化的對數比值比 (log odds ratio)：
+
+$$
+\Rightarrow e^{\beta_k} = \text{ odds ratio of outcome per unit change in } x_k
+$$
+
+### 低出生體重數據
+
+本例子中，我們關心的研究問題是，三氯甲烷 (trihalomethane, THM)濃度和生下的新生兒爲低出生體重之間是否相關。THM已知是使用氟化氫(chlorine)對飲用水消毒時可能產生副產品，被認爲可能對人類生殖系統造成一定的傷害。數據收集到931名新生兒體重數據，該數據包含的變量有：
+
+- `lbw` 是該新生兒出生時體重是否爲低體重的二分類變量。
+- `thm` 是一個指示變量，當它爲0時表示暴露的THM爲低水平，當它爲1時表示暴露的THM爲高水平。
+- `age` 是一個關於母親們年齡的分類型變量 (1 = $\leqslant$25歲，2 = 25-29歲，3 = 30-34 歲，4 = $\geqslant$ 35歲)。
+- `male` 表示新生兒的性別 (0 是女孩，1 是男孩)。
+- `car` 是一個表示貧困程度的指數。
+- `smoke` 是表示母親在懷孕期間是否有吸煙習慣的變量 (0 = 無吸煙習慣，1 = 有吸煙習慣)。
+
+要回答我們關心的研究問題，那麼這個數據中，
+
+- `lbw` 是結果變量；
+- `thm` 是暴露變量；
+- `age, male, car, smoke` 是可能影響暴露變量和結果之間關係的混雜因子 (confounders)。
+
+這時候，本例中的貝葉斯模型的數學表達式可以寫作：
+
+$$
+\begin{aligned}
+lbw_i & \sim Bernoulli(p_i) \;\; [\text{equivalent to } Binomial(p_i, 1)] \\ 
+\text{logit}(p_i) &  = \alpha + \beta_{thm}thm_i + \beta^T_C\mathbf{C}_i \\
+\alpha, \beta_{thm}, \dots & \sim \text{Normal}(0, 10000^2) \\
+e^{\beta_{thm}}& = \text{odds ratio of low birth weight for high v low thm exposure}
+\end{aligned}
+$$
+
+其中 $\mathbf{C}$ 是混雜因子組成的向量。也就是母親的年齡，新生兒的性別，貧困指數，以及母親孕期吸煙史。
+
+利用OpenBUGS的雙重索引功能來標記分類型變量的話，這個低體重數據可以被整理為：
+
+```
+lbw[] thm[] age[] male[] car[] smoke[]
+0     0     1     1      0.156   1
+0     0     3     0     -2.165   1
+0     1     1     0     -1.391   1
+1     1     4     0      0.156   1
+......
+0     1     3     1      0.930   0
+END
+
+```
+其對應的BUGS模型代碼為：
+
+```
+model{
+    ### MODEL ###
+    for (i in 1:931) { # loop through 931 individuals
+       y[i] ~ dbern(p[i])
+       logit(p[i]) <-  alpha+beta.thm*thm[i]+beta.age[age[i]]+beta.male*male[i]+
+       beta.car*car[i]+beta.smoke*smoke[i]
+    }
+    ### PRIORS ###
+    alpha ~ dnorm(0,0.00000001)
+    beta.thm ~ dnorm(0,0.00000001)
+    beta.age[1] ~ dnorm(0,0.00000001)
+    beta.age[2] <- 0 # alias second level of maternal age beta
+    beta.age[3] ~ dnorm(0,0.00000001)
+    beta.age[4] ~ dnorm(0,0.00000001)
+    beta.male ~ dnorm(0,0.00000001)
+    beta.car ~ dnorm(0,0.00000001)
+    beta.smoke ~ dnorm(0,0.00000001)
+    ### CALCULATE THE ODDS RATIOS ###
+    OR.thm <- exp(beta.thm)
+    OR.age1 <- exp(beta.age[1])
+}
+```
+
+OpenBUGS中刨除前5000次樣本採集之後，獲取30000個位置參數的事後樣本，我們獲得了如下的結果：
+
+```
+         mean   sd     MC_error val2.5pc median val97.5pc
+beta.thm 0.7587 0.4181 0.008799 -0.02731 0.7453 1.631
+OR.thm   2.337  1.074  0.02403  0.9731   2.107  5.107
+```
+
+所以，我們獲得事後比值比2.337的含義就是，孕期暴露高劑量THM和低劑量的THM相比，新生兒出生體重為低出生體重的比值是2.3 (95% 可信區間 credible intervals: 0.97, 5.11)。
+
+值得注意的是，我們上面獲得的事後`beta.thm`均值，並不等於`OR.thm`均值取對數：$0.7587 \neq log(2.337)$。
+
+
+## 貝葉斯泊鬆回歸 Bayesian Poisson Regression
+
+泊鬆回歸用於對計數型數據做回歸模型，例如死亡人數，住院人數，發病人數等。對計數型結果變量使用泊鬆模型時，我們對發生事件的次數的均值的對數加以數學模型：$\mu_i = E(y_i)$
+
+$$
+\begin{aligned}
+y_i & \sim Poi(\mu_i) \\
+\log (\mu_i) & = \alpha + \sum_k\beta_kx_{ki}
+\end{aligned}
+$$
+
+泊鬆模型的數學公式同時也暗示我們默認結果事件發生次數的均值，取對數以後和解釋變量之間呈線性關系。同樣地，高斯先驗概率分布(正態分布)長用於這樣廣義線性回歸模型中的未知參數。
+
+## GLM in a Bayesian way
+
+- 各種你學過的廣義線性回歸模型均可以使用貝葉斯統計學的方法來描述並分析，通過MCMC獲得模型中每個未知參數的事後概率分布描述。
+- 各種你學過的廣義線性回歸模型使用的標準鏈接方程，都可以照搬過來用在貝葉斯廣義線性會回歸模型中。
+- 因爲我們用 MCMC 方法對各個未知參數的事後概率分布進行樣本採集，我們有極其靈活的先驗概率分布描述手段。回歸系數的先驗概率分布通常可以使用高斯分布(正態分布)，一般來說會設定均值爲0，方差合適的正態分布作爲先驗概率分布。
+- 使用貝葉斯統計學框架，廣義線性回歸模型的右邊，可以被擴展至任何非線性回歸模型。強大的計算機模擬過程幫我們解決了無法獲得閉合解這一大難題。
