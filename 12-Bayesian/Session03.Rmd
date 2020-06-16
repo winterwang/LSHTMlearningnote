@@ -1,0 +1,449 @@
+本章節我們重溫一下最早在貝葉斯統計學入門部分(Chapter \@ref(intro-Bayes))介紹過的一些基本原則。特別是關於共軛先驗概率的概念，並提供一些使用BUGS模型的例子來展示如何運算這些模型。
+
+## 貝葉斯推斷的基礎
+
+在一個臨牀試驗中，作爲一名貝葉斯統計學者，必須清晰明瞭地闡述如下幾個問題:
+
+1. 合理地描述目前爲止，在瞭解本次試驗數據的結果之前，類似研究曾經給出過的療效差異的報告結果，可能的取值範圍 (the **prior distribution**)；
+2. 本次試驗數據得到的結果，支持怎樣的療效差異 (the **likelihood**)；<br>
+之後需要將上述兩個資源通過合理的數學模型結合在一起，用於產生
+3. 最終療效是否存在的意見和建議，證據的總結 (the **posterior distribution**)。
+
+最後第三步將先驗概率和似然相結合的過程，用到的是貝葉斯定理(Bayes Theorem)。通過貝葉斯定理把目前位置的經驗作爲先驗概率統合現階段試驗數據給出的似然的過程，其實是一個自我學習不斷更新知識的過程。經過貝葉斯推斷，給出事後概率分布之時，我們可以拿它來做什麼呢？
+
+- 估計和評價治療效果，治療差異。
+- 估計和評價模型中參數的不確定性。
+- 計算你感興趣的那個變量（可以是療效差異，可以是模型中的參數）達到或者超過某個特定目標值的概率。
+- 預測你感興趣的那個變量可能存在的範圍。
+- 作爲未來要進行的試驗設計階段的先驗概率分布。
+- 給決策者提供證據。
+
+你是否還記得貝葉斯定理的公式: 
+如果$A, B$分別標記兩個事件，那麼有
+
+$$
+p(A|B) = \frac{p(B|A)p(A)}{p(B)}
+$$
+
+如果$A_i$是一系列互斥不相交事件，也就是$p(\cup_iA_i) = \sum_ip(A_i) = 1$，貝葉斯定理可以被改寫成爲：
+
+$$
+p(A_i|B) = \frac{p(B|A_i)p(A_i)}{\sum_jp(B|A_j)p(A_j)}
+$$
+
+
+貝葉斯統計學推斷從根本上的特點在於嚴格區分：
+
+1. 觀測數據 $y$，也就是試驗獲得的數據。
+2. 未知參數 $\theta$，這裏，$\theta$可以用統計學工具來描述，它可以是統計學參數，可以是缺失值，可以是測量誤差數據等等。
+
+- 這裏貝葉斯統計學把未知參數當做一個可以變化的隨機變量(parameters are treated as random variables)；
+- 在貝葉斯統計學框架下，我們對參數的不確定性進行描述(we make probability statements about model parameters)。
+- 在概率論統計學框架下，統計學參數是未知，但是確實不變的。使用概率論統計學進行推斷時，我們只對數據進行不確定性的描述(**parameters are fixed non-random quantities** and the probability statements concern the data.)
+
+貝葉斯統計學推斷中，我們仍然需要建立模型用來描述 $p(y|\theta)$，這個也就是概率論統計學中常見的**似然(likelihood)**。似然是把各個變量關聯起來的完整的**概率模型(full probability model)**。
+
+從貝葉斯統計學推斷的觀點出發，
+
+- 在實施試驗，收集數據之前，參數($\theta$)是未知的，所以它需要由一個**概率分布(probability distribution)**來反應它的不確定性，也就是說，我們需要先對參數可能來自的分布進行描述，指定一個**先驗概率(prior distribution)**$p(\theta)$；
+- 試驗進行完了，數據整理分析之時，我們知道了$y$，這就是我們來和先驗概率結合的似然，使用貝葉斯定理，從而獲得給定了觀測數據之後(conditional on)，服從先驗概率的參數現在服從的概率分布，這被叫做**事後概率分布(posterior distribution)**。
+
+$$
+p(\theta|y) = \frac{p(\theta)p(y|\theta)}{\int p(\theta)p(y|\theta)d\theta} \propto p(\theta)p(y|\theta)
+$$
+
+總結一下就是，
+
+1. 先驗概率(prior distribution)，$p(\theta)$描述的是在**收集數據之前**參數的不確定性。
+2. 事後概率(posterior distribution)，$p(\theta | y)$ 描述的是在**收集數據之後**參數的不確定性。
+
+## 二項分布(似然)數據的共軛先驗概率
+
+沿用前一個章節新藥試驗的例子。我們在實施試驗之前對藥物的認知是，我們認爲它的藥效概率可能在 0.2-0.6 之間。我們把這個試驗前對藥物療效的估計認知翻譯成一個服從均值爲0.4，標準差爲0.1的Beta分布。這個Beta分布使用的參數(參數的參數被叫做**超參數, hyperparameter**)，是9.2, 13.8，寫作$\text{Beta}(9.2, 13.8)$。那麼現在我們假設試驗結束，收集的20名患者中15名療效顯著。接下來貝葉斯統計學家要回答的問題是，這個試驗結果對先驗概率分布產生了多大的影響(How should this trial change our opinion about the positive response rate)？
+
+在這個例子中，我們現在來詳細給出先驗概率和似然。
+
+- 似然 likelihood (distribution of the data)：<br>如果患者可以被認爲是相互獨立的，他們來自一個相同的總體，在這個總體中有一個未知的對藥物療效有效反應(positive response)的概率 $\theta$，這樣的數據可以用一個二項分布似然來描述 binomial likelihood:
+
+$$
+p(y | n, \theta) = \binom{n}{y}\theta^y(1-\theta)^{n-y} \propto \theta^y(1-\theta)^{n-y}
+$$
+
+- 描述試驗前我們對$\theta$的認知的先驗概率 prior distribution，這是一個連續型先驗概率分布。<br>對於百分比，我們用Beta分布來描述：
+
+$$
+\begin{aligned}
+\theta & \sim   \text{Beta}(a,b) \\ 
+p(\theta) & = \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)} \theta^{a-1}(1-\theta)^{b-1}\\
+\end{aligned}
+$$
+
+根據貝葉斯定理，我們來把先驗概率分布和似然相結合（相乘），來獲取事後概率分布：
+
+$$
+\begin{aligned}
+p(\theta | y, n) & \propto p(y|\theta, n)p(\theta) \\
+                 & \propto \theta^y(1-\theta)^{n-y}\theta^{a-1}(1-\theta)^{b-1} \\
+                 & = \theta^{y + a -1}(1-\theta)^{n - y + b -1}
+\end{aligned}
+$$
+眼尖的人立刻能看出來，這個事後概率分布本身也是一個Beta分布的概率方程，只是它的超參數和先驗概率相比發生了變化(更新)：
+
+$$
+p(\theta | y,n) = \text{Beta}(a + y, b + n -y)
+$$
+
+像這樣，先驗概率和事後概率兩個概率分布都來自相同分佈家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。
+
+
+```{r R-OpenBUGS07, cache=FALSE, fig.width=3.5, fig.height=6, fig.cap='Prior, likelihood, and posterior for Drug example', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+par(mfrow=c(3,1))
+# Plot exact prior probability density 
+# values of the hyperparameters
+a <- 9.2 
+b <- 13.8
+
+# prior function
+prior <- Vectorize(function(theta) dbeta(theta, a, b))
+# Plot 
+curve(prior, 0, 1, type = "l", main = "Prior for "~theta, ylim = c(0, 4.5), frame = F,
+      xlab = "Probability of positive response", ylab = "Density", lwd = 2, cex.axis = 1.5, cex.lab = 1.5)
+
+# binomial likelihood function (likelihood)
+
+Likelihood <- Vectorize(function(theta) dbinom(15, 20, theta))
+
+# Plot
+curve(Likelihood, 0, 1, type = "l", main = "Likelihood for the data", 
+      frame = FALSE, xlab = "Probability of positive response", ylab = "Density", 
+      lwd = 2, cex.axis =  1.5, cex.lab = 1.5)
+# n <- 0; r <- 0; a <- 9.2; b <- 13.8; np <- 20
+# plot(0:20, BetaBinom(0:20), type = "b", xlab = "r*", ylab = "P(R = r*)", 
+#      main = "Prior predictive: a = 9.2, b = 13.8")
+
+# Posterior function 
+
+posterior <- Vectorize(function(theta) dbeta(theta, a+15, b+20-15))
+
+# Plot
+
+curve(posterior, 0, 1, type = "l", main = "Posterior for "~theta, 
+      frame = FALSE, xlab = "Probability of positive response", ylab = "Density", 
+      lwd = 2, cex.axis = 1.5, cex.lab = 1.5)
+```
+
+本次試驗的模型，它的三個部分（先驗概率，似然，事後概率），分別從上到下繪制在圖 \@ref(fig:R-OpenBUGS07) 中。由於我們使用了共軛先驗概率，所以我們也可以通過數學的計算（甚至不需要計算機的輔助）也能算出事後概率分布。可是，並不是所有的模型都有共軛先驗概率分布供我們選擇，這時候，蒙特卡羅模擬試驗的算法就提供了強有力的工具。在BUGS/JAGS語言中，我們可以用蒙特卡羅算法，忽視掉那些無法在數學上推導出事後概率分布方程的模型。BUGS本身很厲害，它可以自動識別出我們給它的先驗概率分布是否和似然之間是共軛的，如果是，那麼它會計算出共軛的事後概率分布方程，然後從事後概率分布方程中選取蒙特卡羅樣本。這個新藥試驗的BUGS模型可以寫作：
+
+
+```
+#  Monte Carlo model for Drug example
+
+model{
+	theta   ~ dbeta(9.2,13.8)          # prior distribution
+	y       ~ dbin(theta,20)           # sampling distribution (likelihood)
+	y       <- 15                      # data
+}
+```
+
+你可以看到這個模型和我們在前一章做預測的模型只有第三行指令發生了變化。當時我們是打算要來做試驗結果的預測。此時，我們試驗完畢，觀察到15名患者的疼痛症狀得到了改善，所以試驗數據是15。BUGS/JAGS本身會自動識別出我們是否給似然增加了觀察數據。當它識別到我們不是用這個模型做結果預測時，它會自動明白並且切換到事後概率分布的計算。這個在似然裏面的數據，是它要拿來放到模型中做條件的(observed values, i.e. data needs to be conditioned on)。
+
+### 事後概率分布預測
+
+假如這個新藥的效果仍然無法讓人覺得信服，我們考慮再做一次試驗徵集更多的患者，如果在這個試驗中，40名患者中有25名或者更多的患者症狀得到緩解，可以考慮把該藥物加入下一次發展計劃當中。這時候，又一次回到了預測概率的問題上來，我們想知道，"再做40人的試驗時，有25名或者更多的患者的症狀可以得到緩解"這件事可能發生的概率。這時候的模型可以被擴展如下：
+
+$$
+\begin{split}
+\theta & \sim \text{Beta}(a,b) & \text{ Prior distribution} \\
+y      & \sim \text{Binomial}(\theta, n) & \text{ Sampling distribution} \\
+y_{\text{pred}} & \sim \text{Binomial}(\theta, m) & \text{ Predictive distribution} \\
+P_{\text{crit}} & \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) & \text{ Probability of exceeding critical threshold}
+\end{split}
+$$
+
+這段模型翻譯成BUGS語言可以描述爲：
+
+```
+model{
+  theta     ~ dbeta(a, b)                  # prior distribution
+  y         ~ dbin(theta, n)               # sampling distribution
+  y.pred    ~ dbin(theta, m)               # predictive distribution
+  P.crit   <- step(y.pred - mcrit + 0.5)   # = 1 if y.pred >= mcrit, 0 otherwise
+}
+```
+
+我們可以把數據寫在另一個txt文件/向量裏面：
+
+```
+list(a = 9.2,             # parameters of prior distribution 
+     b = 13.8, 
+     y = 15,              # number of successes in completed trial
+     n = 20,              # number of patients in completed trial
+     m = 40,              # number of patients in future trial 
+     mcrit = 25)          # critical value of future successes
+```
+
+
+當然這是一個很簡單的例子，你完全可以把數據和模型寫在一起：
+
+```
+model{
+  theta     ~ dbeta(9.2, 13.8)                  # prior distribution
+  y         ~ dbin(theta, 20)                   # sampling distribution
+  y.pred    ~ dbin(theta, 40)                   # predictive distribution
+  P.crit   <- step(y.pred - 24.5)               # = 1 if y.pred >= mcrit, 0 otherwise
+  y        <- 15
+}
+```
+
+
+```{r R-OpenBUGS08, cache=FALSE, fig.width=7, fig.height=3, fig.cap='Posterior and predictive distributions for Drug example', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+Dat <- list(a = 9.2,             # parameters of prior distribution 
+            b = 13.8, 
+            y = 15,              # number of successes in completed trial
+            n = 20,              # number of patients in completed trial
+            m = 40,              # number of patients in future trial 
+            mcrit = 25)          # critical value of future successes
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.crit", "theta", "y.pred"),
+  n.iter = 50100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/MCdrugP29.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 10,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+Simulated <- coda::as.mcmc(post.jags)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+ggSample <- ggmcmc::ggs(Simulated)
+
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+par(mfrow=c(1,2))
+
+Theta <- ggSample %>% 
+  filter(Parameter == "theta")
+Y <- ggSample %>% 
+  filter(Parameter == "y.pred")
+plot(density(Theta$value), main = "theta sample 50000", 
+     ylab = "P(theta)", xlab = "Probability of response", col = "red")
+hist(Y$value, main = "y.pred sample 50000", ylab = "P(y.pred)", 
+     xlab = "Number of success", col = "red", prob = TRUE,xlim = c(0, 40))
+# # Or simply use the denplot() function from the mcmcplots package
+# mcmcplots::denplot(post.jags, "theta")
+```
+
+
+
+圖\@ref(fig:R-OpenBUGS08)左邊的圖，是前一次試驗結果的事後概率分布，20名患者中觀察到15名患者症狀改善。右邊的圖則是對下一次40人的試驗的結果做的預測，平均22.5名患者可能會有症狀改善，這個均值的標準差是4.3。
+
+
+```{r MCMC00, cache=FALSE, fig.width=7, fig.height=3, fig.cap='Plot of the MCMC chain of the parameter, Drug example.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+mcmcplots::traplot(post.jags, "theta")
+```
+
+爲了比較，我們可以把精確計算獲得的答案和蒙特卡羅算法給出的預測做個比較：
+
+1. $\theta:$均值爲0.563，標準差是0.075；
+2. $y_{\text{pred}}:$均值22.51，標準差是4.31；
+3. 至少25名患者得到症狀改善的精確概率是 0.329。
+
+
+## 正態分布(似然)數據的共軛先驗概率
+
+例子：英國各地自來水公司依照法律規定，需要定期監測自己公司生產的自來水中三氯甲烷(trihalomethane, THM)的濃度。一年之中，每個公司都會在各個時期，不同的供水區域進行水樣的採集。假設現在我們需要來估計某個供水區域的自來水中三氯甲烷的濃度。
+
+已知已經進行了兩次取樣，監測到三氯甲烷濃度分別是 $y_1 = 128\mu g/l, y_2 = 132 \mu g/l$。兩次監測的均值爲 $130 \mu g/l$。如果，這一片固定供水區域監測三氯甲烷濃度時檢測值的標準差是已知的 $\sigma = 5\mu g/l$，那麼問題是，在這片固定供水區域的三氯甲烷濃度的估計值$(\theta)$能否計算？
+
+一個只有概率論知識的統計專家是這樣計算的：
+
+1. 樣本均值 $\bar y = 130 \mu g/l$是總體均值 $\theta$ 的一次估計；
+2. 它的標準誤是 $\frac{\sigma}{\sqrt{n}} = 5/\sqrt{2} = 3.5 \mu g/l$。
+3. 然後這兩次測量的結果告訴我們總體均值的點估計和95%信賴區間是: $\bar y \pm 1.96 \times \sigma/\sqrt{n} = 130 \pm 1.96\times3.5 = (123.1, 136.9) \mu g /l$
+
+但是一個擁有了貝葉斯統計學知識的統計專家則會是這樣思考的：
+
+這個模型中，我們知道**似然(likelihood)**是一個正態分布：$y_i \sim N(\theta, \sigma^2) (i = 1, \dots, n)$，且這裏的標準差是已知的 $\sigma = 5\mu g/l$。那麼我們給均值這個參數 $\theta$ 一個怎樣的先驗概率分布呢？
+
+$$
+\theta \sim N(\mu, \omega^2)
+$$
+
+- 先驗概率分布的方差 $\omega^2$ 常可以用數據的方差來表達：$\omega^2 = \sigma^2/n_0$。
+- 這裏的 $n_0$，可以被解釋爲隱藏的先驗概率樣本量(implicit prior sample size)。
+
+在 BUGS/JAGS 標記法中，正態分布的代碼是 `y ~ dnorm(theta, tau)`，其中 `tau` 是方差的倒數(又叫做精確度)。
+
+這時候我們需要一些過去同一家供水廠監測三氯甲烷時濃度的數據來給這個先驗概率分布一些提示。例如翻閱記錄我們發現來自**同一家自來水公司，在其他供水區域的**三氯甲烷濃度均值是 $120 \mu g/l$，標準差是 $10 \mu g/l$。這就提供了 $N(120, 10^2)$ 作爲 $\theta$ 的先驗概率分布。這時我們把先驗概率分布的標準差用觀測區域的標準差來表達: $\omega^2 = \sigma^2/n_0$，此時 $n_0 = \sigma^2/\omega^2 = 5^2/10^2 = 0.25$。那麼先驗概率分布可以被表達成 $\theta \sim N(120, \sigma^2/0.25)$。如果 $n_0$ 靠近 $0$，那麼根據這個方程我們知道先驗概率分布的方差就會變大，意味着先驗概率給出的信息越不精確，分布越"平坦(flatter)"。
+
+此時貝葉斯統計專家把似然和先驗概率分布結合起來，計算事後概率分布：
+
+$$
+\begin{aligned}
+\theta | \mathbf{y}  & \sim  N(\frac{n_0 + n\bar y}{n_0 + n}, \frac{\sigma^2}{n_0 + n})\\  
+                     & \sim N(\frac{0.25\times 120 + 2 \times 130}{0.25 + 2}, \frac{5^2}{0.25 + 2}) \\ 
+                     & = N(128.9, 3.33^2 )
+\end{aligned}
+$$
+
+貝葉斯算法給出的事後概率分布的95%可信區間則是 $(122.4, 135.4) \mu g/l$。
+
+- 事後概率分布的均值$\frac{n_0 + n\bar y}{n_0 + n}$其實是先驗概率均值，和觀測數據均值之間加權之後的綜合值，它們加的權重，分別是各自的精確度(相對樣本量 relative sample size)。這其實告訴我們，觀測數據和先驗概率二者結合之時，需要各自妥協。(a compromise between the likelihood and the prior)
+
+- 事後概率分布的方差也是和先前提到的先驗概率樣本量有密切關系。它是觀測數據的方差除以觀測樣本量和先驗概率樣本量之和。
+
+- 當然，當你的觀測數據樣本量趨向於無窮大時 $n \rightarrow \infty$，事後概率分布本身就接近與觀測數據的似然 $p(\theta | \mathbf{y}) \rightarrow N(\bar y, \sigma^2/n)$。也就是說觀測數據的信息量佔絕對主導，先驗概率分布，不再能提供太多有價值的信息，可以忽略不計了。
+
+
+```{r normalconjugate, cache=FALSE, fig.width=4.5, fig.height=4.5, fig.cap='PDF of Prior, likelihood and posterior for THM example.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# prior function
+xseq<-seq(80,180,.01)
+densities<-dnorm(xseq, 120,10)
+
+# Plot 
+plot(xseq, densities, col="darkgreen",xlab="mean THM concentration, ug/l (theta)", 
+     ylab="Density", type="l",lwd=2, cex=2, 
+     # main="PDF of Prior, likelihood, and posterior for THM example.", 
+     cex.axis=0.9, cex.lab = 1, ylim = c(0,0.12))
+
+# normal likelihood function (likelihood)
+
+Likelihood <- dnorm(xseq, 130, 5)
+
+# Plot
+points(xseq, Likelihood, col="darkred", type="l",lwd=2, cex=2)
+
+
+# Posterior function 
+
+posterior <-  dnorm(xseq, 128.9, 3.33)
+
+# Plot
+
+points(xseq, posterior, col="black", type="l",lwd=2, cex=2)
+
+legend("topright", c("Prior", "Likelihood", "Posterior"), bty = "n", lwd = 2,
+       lty = c(1,1,1), col = c("darkgreen", "darkred", "black"))
+```
+
+## 泊淞分布(似然)數據的共軛先驗概率
+
+接下來，我們把注意力轉到計數型數據的模型，泊淞分布上來。如果一組數據是計數型數據，$y_1, y_2, \dots. , y_n$，它們可以被認爲是服從泊淞分布的話，它們的總體均值是$\mu$，其似然(likelihood)方程可以寫作：
+
+$$
+p(\mathbf{y} | \mu) = \prod_i\frac{\mu^{y_i}e^{-\mu}}{y_i!}
+$$
+
+那麼，經過前輩探索，我們知道，泊淞分布的似然它也有一個共軛先驗概率分布，是伽馬分布(Gamma distribution)：
+
+$$
+p(\mu) = \text{Gamma}(a,b) = \frac{b^a}{\Gamma(a)}\mu^{a-1}e^{-b\mu}
+$$
+
+伽馬分布是一個十分靈活的分布，適用於要求數據嚴格爲正的模型(positive quantities)。如果 $\mu \sim \text{Gamma}(a,b)$：
+
+$$
+\begin{aligned}
+p(\mu | a,b) & = \frac{b^a}{\Gamma(a)}\mu^{a-1}e^{-b\mu}, \mu \in (0,\infty) \\ 
+\text{E}(\mu |a,b) & = \frac{a}{b} \\ 
+\text{V}(\mu |a,b) & = \frac{a}{b^2}
+\end{aligned}
+$$
+
+它的模型在BUGS語言可以用 `mu ~ dgamma(a,b)` 來表述。伽馬分布還有如下的一些有趣的特徵：
+
+- $\text{Gamma}(1,b)$ 是均值爲 $\frac{1}{b}$ 的指數分布。
+- $\text{Gamma}(\frac{v}{2},\frac{1}{2})$，其實是自由度爲 $v$ 的卡方分布 $\chi_v^2$。
+- $\mu \sim \text{Gamma}(0,0)$ 其實等價於 $p(\mu) \propto \frac{1}{\mu}$，或者 $\log \mu \sim \text{Uniform}$。
+- 伽馬分布同時也是正態分布數據（似然）的精確度（方差的倒數，inverse variance or precision）共軛先驗概率。
+- 伽馬分布也可以用於正向非對稱性分布(skewed positive valued quantities)的樣本分布。
+
+下圖展示了一些常見伽馬分布的形狀：
+
+```{r gammadistri, echo=FALSE, fig.height=5, fig.width=7.5, fig.cap='Shape of some Gamma distribution functions for various values of a, b', fig.align='center', out.width='90%', cache=FALSE}
+par(mfrow=c(2,3))
+pi <- Vectorize(function(theta) dgamma(theta, 0.1,0.1))
+curve(pi, xlab="", ylab="Density", main="Gamma(0.1, 0.1)", xlim = c(0,5),
+      frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 1,1))
+curve(pi, xlab="　", ylab="Density", main="Gamma(1,1)",xlim = c(0,5),
+      frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 3,3))
+curve(pi, xlab="　", ylab="Density", main="Gamma(3,3)",xlim = c(0,5),
+      frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 3,0.5))
+curve(pi, xlab="　", ylab="Density", main="Gamma(3,0.5)",xlim = c(0,15),
+      ylim = c(0, 0.4),frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 30,5))
+curve(pi, xlab="　", ylab="Density", main="Gamma(30,5)",xlim = c(0,15),
+      ylim = c(0, 0.4),frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dgamma(theta, 10,0.5))
+curve(pi, xlab="　", ylab="Density", main="Gamma(10, 0.5)",xlim = c(0,40),
+      ylim = c(0, 0.4),frame=FALSE, lwd=2)
+```
+
+將伽馬分布的概率方程和泊淞分布似然方程相結合，貝葉斯定理告訴我們，它會變成另外一個更新過後的伽馬分布：
+
+$$
+\begin{aligned}
+p(\mu | \mathbf{y}) & \propto p(\mu) p(\mathbf{y} | \mu) \\ 
+                    & = \frac{b^a}{\Gamma(a)}\mu^{a-1}e^{-b\mu} \prod_{i=1}^ne^{-\mu}\frac{\mu^{y_i}}{y_i!} \\
+                    & \propto \mu^{a + n\bar y -1} e^{-(b+n)\mu} \\ 
+                    & = \text{Gamma}(a + n\bar y, b+n)
+\end{aligned}
+$$
+
+這個新的伽馬分布的期望值是：
+
+$$
+E(\mu | \mathbf{y}) = \frac{a + n\bar y}{b + n} = \bar y (\frac{n}{n + b}) + \frac{a}{b}(1 - \frac{n}{n + b})
+$$
+
+也就是說事後概率分布的伽馬分布，它的均值（期望）是先驗概率分布的均值 $\frac{a}{b}$ 和數據樣本均值 $\bar y$ 相互妥協的結果。泊淞－伽馬分布的模型常常可以用於估計發病率(rate)，或者相對危險度(relative risk)，反而較少用於估計率數據的均值(mean of possion data)。
+
+## 共軛先驗概率分布的總結
+
+從這些共軛概率分布的結果和他們的特徵值的推導來看，我們發現：
+
+1. 事後概率分布的均值，總是將先驗概率分布均值和觀察數據的樣本均值相結合並且互相妥協之後的結果。
+2. 事後概率分布的標準差（方差），總是小於先驗概率分布的方差和觀察數據的樣本標準差的任何一個。
+
+而且，當樣本數據的樣本量很大， $n \rightarrow \infty$：
+
+1. 事後概率分布的均值都會無限接近觀察數據的樣本均值。$\text{The posterior mean } \rightarrow \text{ the sample mean}$；
+2. 事後概率分布的標準差會無限接近觀察數據的樣本標準誤。$\text{The posterior standard deviation } \rightarrow \text{ the standard error}$；
+3. 事後概率分布就不再依賴先驗概率分布了。
+
+當事後概率分布，和先驗概率分布恰好都來自相同分布家族時，我們稱這樣的分布具有**共軛性質(conjugacy)**。此時，先驗概率分布的參數常常可以被解讀成爲**先驗概率樣本(prior sample)**。
+
+這樣的分布我們總結一下常見的例子：
+
+
+```{r Conjugate, cache=FALSE, echo=FALSE}
+Examples <- tibble::tribble(
+  ~Likelihood,      ~Parameter,   ~Prior, ~Posterior,
+     "Normal",          "mean", "Normal",   "Normal",
+     "Normal",     "precision",  "Gamma",    "Gamma",
+   "Binomial", "success prob.",   "Beta",     "Beta",
+    "Poisson",  "rate or mean",  "Gamma",    "Gamma"
+  )
+# 
+# require(knitr)
+# require(kableExtra)
+kable_styling(
+              kable(Examples, digits = 3, row.names = FALSE, align = "c",
+              caption = "Examples of conjugate distributions and likelihood.", format = "html"),
+        bootstrap_options = c("striped", "hover", "condensed"),
+        position = "center", full_width = FALSE) 
+
+```
+
+
+共軛先驗概率分布在數學上是十分便利的，但是並不是所有的似然都能找到它的共軛概率分布做先驗概率。這時候我們就需要求助於計算機模擬試驗的威力，下一章我們會接觸到怎樣使用 Markov Chain Monte Carlo (MCMC)來克服我們找不到共軛先驗概率的似然時，後驗概率分布的計算。它的中文名被翻譯成馬爾可夫鏈蒙特卡羅。

@@ -1,0 +1,470 @@
+
+1. 拋擲硬幣試驗
+
+用BUGS語言描述拋擲硬幣的模型，把寫有下列模型代碼的文件保存爲`coinmodel.txt`: 
+
+```
+model{
+  y ~ dbin(0.5, 10) 
+  P8 <- step(y - 7.5) # = 1 if Y is 8 or more
+} 
+```
+
+下面的代碼展示了如何在 R 裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：
+
+```{r R-OpenBUGS00, cache=FALSE, fig.width=9, fig.cap='History of the iterations.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, eval=FALSE}
+library(BRugs)
+
+# Step 1 check model
+modelCheck(paste(bugpath, "/backupfiles/coinmodel.txt", sep = ""))
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest
+samplesSet(c("P8", "y"))
+# Generate 1000 iterations
+modelUpdate(1000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(P8 = samplesSample("P8"),
+                    y = samplesSample("y"))
+samplesHistory("*", mfrow = c(2,1), ask=FALSE)
+```
+
+
+
+下面的代碼展示了如何在R裏連接JAGS進行蒙特卡羅運算和調出其結果的過程：
+
+```{r JAGS00, cache=FALSE, fig.width=9, fig.cap='History of the iterations by JAGS.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+library(runjags)
+library(rjags)
+library(R2jags)
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel.txt", sep = ""), n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000, progress.bar="none")
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = c("P8", "y"),
+            n.iter = 1000, progress.bar="none")
+
+summary(codaSamples)
+
+# Show the trace plot
+library(mcmcplots)
+# ggSample <- ggs(codaSamples)
+# ggs_traceplot(ggSample)
+mcmcplots::traplot(codaSamples)
+```
+
+
+
+
+對模型進行修改，嘗試計算相同設計的試驗，在徵集了30名患者，新藥的有效率爲0.7時，15名或者以內的患者有顯著療效的事件發生的概率是多少？
+
+
+```
+model{
+  y ~ dbin(0.7, 30) 
+  P15 <- step(15.5 - y) # = 1 if Y is 15 or fewer
+} 
+```
+
+OpenBUGS Codes:
+
+```{r R-OpenBUGS01, cache=FALSE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=FALSE}
+
+# Step 1 check model
+modelCheck(paste(bugpath, "/backupfiles/coinmodel30.txt", sep = "")) 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("P15", "y")
+samplesSet(parameters)
+# Generate 1000 iterations
+modelUpdate(10000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(P15 = samplesSample("P15"),
+                    y = samplesSample("y"))
+#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
+## samplesDensity("*", 1,  mfrow = c(2,2), ask=NULL)
+
+for(p_ in parameters)
+  {
+    hist(chain[[p_]], main=p_,
+         ylab=NA, xlab=NA, #prob = TRUE,
+         nclas=50, col="red")
+  }
+```
+
+JAGS code: 
+
+```{r JAGS01, cache=FALSE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel30.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
+
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = c("P15", "y"),
+            n.iter = 10000, 
+            progress.bar="none")
+
+summary(codaSamples)
+#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
+ggSample <- ggs(codaSamples)
+ggs_histogram(ggSample, bins = 18)
+```
+
+
+
+
+所以此時少於或等於１５人得到症狀改善的事件發生的概率被推測爲1.8%。
+
+2. 藥物治療臨牀試驗
+
+藥物臨牀試驗的例子中，我們建立的模型如下：
+
+```
+#  Monte Carlo predictions for Drug example
+
+model{
+	theta   ~ dbeta(9.2,13.8)          # prior distribution
+	y         ~ dbin(theta,20)         # sampling distribution
+	P.crit   <- step(y-14.5)           # =1 if y >= 15, 0 otherwise
+}
+```
+
+把這個模型存儲成`drug-MC.txt`文件之後，可以使用OpenBUGS完成該模型的蒙特卡羅模擬試驗計算：
+
+```{r 12-Bayesian-stats-3, cache=FALSE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=FALSE}
+
+# Step 1 check model
+modelCheck(paste(bugpath, "/backupfiles/drug-MC.txt", sep = "")) 
+# there is no data so just compile the model
+modelCompile(numChains = 1) 
+# There is no need to provide initial values as this is 
+# a Monte Carlo forward sampling from a known distribution
+# but the program still requires initial values to begin
+# generate a random value.
+modelGenInits() #
+# Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+parameters <- c("theta", "y", "P.crit")
+samplesSet(parameters)
+# Generate 1000 iterations
+modelUpdate(10000)
+
+#### SHOW POSTERIOR STATISTICS
+sample.statistics <- samplesStats("*")
+print(sample.statistics)
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+chain <- data.frame(theta = samplesSample("theta"),
+                    y = samplesSample("y"),
+                    P.crit = samplesSample("P.crit"))
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+##1. samplesDensity("*", 1,  mfrow = c(2,2), ask=NULL)
+# or 2. by looping 
+# for(p_ in parameters)
+#   {
+#     hist(chain[[p_]], main=p_,
+#          ylab=NA, xlab=NA, #prob = TRUE,
+#          nclas=50, col="red")
+#   }
+par(mfrow=c(1,2))
+
+plot(density(chain$theta), main = "theta sample 10000", 
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(chain$y, main = "y sample 10000", ylab = "P(Y)", 
+     xlab = "y", col = "red", prob = TRUE)
+```
+
+
+也可以使用JAGS完成該模型的蒙特卡羅模擬試驗計算：
+
+
+```{r JAGS02, cache=FALSE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/drug-MC.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
+parameters <- c("theta", "y", "P.crit")
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 10000, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+# par(mfrow=c(1,2))
+# 
+ggSample <- ggs(codaSamples)
+# ggSample %>% 
+#   filter(Parameter == "theta") %>% 
+#   ggs_density()
+# 
+# ggSample %>% 
+#   filter(Parameter == "y") %>% 
+#   ggs_histogram(bin = 38)
+
+par(mfrow=c(1,2))
+Theta <- ggSample %>% 
+  filter(Parameter == "theta")
+Y <- ggSample %>% 
+  filter(Parameter == "y")
+plot(density(Theta$value), main = "theta sample 10000", 
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(Y$value, main = "y sample 10000", ylab = "P(Y)", 
+     xlab = "y", col = "red", prob = TRUE)
+```
+
+
+
+如果把藥物治療的臨牀試驗例子的先驗概率分布修改一下，修改成爲一個沒有信息的均一分布 $\text{Uniform}(0, 1)$，模型的結果會有怎樣的變化呢？嘗試繪制成功次數的預測概率分布，此時"20名患者中大於或者等於15名患者有療效"這一事件發生的概率是多少？
+
+```
+#  Monte Carlo predictions for Drug example
+#  with a uniform prior
+
+model{
+#	theta   ~ dbeta(9.2,13.8)          # prior distribution
+  theta   ~ dunif(0,1)               # prior distribution
+	y         ~ dbin(theta,20)         # sampling distribution
+	P.crit   <- step(y-14.5)           # =1 if y >= 15, 0 otherwise
+}
+```
+
+
+```{r 12-JAGS-stats-4, cache=FALSE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/drug-MCuniform.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 1000, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
+parameters <- c("theta", "y", "P.crit")
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 10000, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+ggSample <- ggs(codaSamples)
+
+par(mfrow=c(1,2))
+Theta <- ggSample %>% 
+  filter(Parameter == "theta")
+Y <- ggSample %>% 
+  filter(Parameter == "y")
+plot(density(Theta$value), main = "theta sample 10000", 
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(Y$value, main = "y sample 10000", ylab = "P(Y)", 
+     xlab = "y", col = "red", prob = TRUE)
+```
+
+這個條件下，"20名患者中大於或者等於15名患者有療效"這一事件發生的概率爲29.2%。
+
+3. 嘗試自己來寫一個模型。
+
+打開一個空白文檔，試着寫一個模型，它的先驗概率是一個標準正態分布，(OpenBUGS code: `x ~ dnorm(0,1)`)。值得注意的是，在OpenBUGS的環境下，標準正態分布的描述方式和平時概率論統計學有些不一樣：概率論的標準差或者方差，在貝葉斯統計學中被冠以另一種新的概念--精確度(precision, = 1/variance)。試着嘗試用蒙特卡羅模擬試驗的方法計算標準正態分布中取值低於-1.96，和-2.326的事件發生的概率各自是多少。（已知二者的理論值分別是0.025, 0.01）。
+
+
+```
+#  Monte Carlo predictions
+#  with a standard normal distribution prior
+
+model{
+  x        ~ dnorm(0, 1)             # prior distribution
+	p.1     <- step(-1.96 - x)         # = 1 if x <= -1.96, 0 otherwise
+	p.2     <- step(-2.32 - x)         # = 1 if x <= -2.32, 0 otherwise
+}
+```
+
+分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。
+
+```{r 12-Bayesian-stats-5, cache=FALSE, message=TRUE, warning=FALSE}
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/standardnormalMC.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 10, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
+parameters <- c("p.1", "p.2", "x")
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 100, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+# Generate 900 iterations
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 1000, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+
+# Generate 100000 iterations
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 100000, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+```
+
+
+我們知道理論上 $x\sim N(0,1^2)$，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到`p.1, p.2`的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，`MC_error`也在變得越來越小（越來越精確）。事實上，這個`Naive SE`本身約等於$\frac{\text{sd}}{\sqrt{\text{sample size}}}$。所以對$x$來說，經過1000次蒙特卡羅計算，$\text{sd}(x) = 1.009$，那麼此時的`Naive SE`$=\frac{1.009}{\sqrt{1000}} \approx 0.0319$，十分接近計算機給出的`Naive SE =   0.03244`。`Naive SE`本身可以作爲這個$x$均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值$\pm 2\times$ `Naive SE`範圍內。
+
+下面我們來探索一下 t分布。嘗試寫下一個BUGS模型，它的先驗概率分布是一個自由度爲4的t分布，`y ~ dt(0,1,4)`。然後進行10000次蒙特卡羅採樣計算，並給出概率密度分布圖。
+
+```
+#  Monte Carlo predictions
+#  with a t distribution prior with degree of freedom = 4
+
+model{
+  y ~ dt(0, 1, 4)
+}
+```
+
+```{r 12-Bayesian-stats-6, cache=FALSE, fig.width=3.5, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/MCt.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 10, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
+parameters <- c("y")
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 10000, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+ggSample <- ggs(codaSamples)
+
+
+Y <- ggSample %>% 
+  filter(Parameter == "y")
+
+plot(density(Y$value), main = "y sample 10000", 
+     ylab = "P(y)", xlab = "y", col = "red")
+
+
+```
+
+下面再嘗試計算一個來自均值爲1，標準差爲2的正態分布的隨機變量，它的三次方的期望值是多少。已知標準差$SD = 2$，那麼方差爲$Var = 4$，那麼翻譯成BUGS語言就是精確度爲 $\frac{1}{4} = 0.25$。
+
+```
+#  Monte Carlo predictions
+
+model{
+  y ~ dnorm(1, 0.25) 
+  ycubed <- pow(y, 3) # note how to write power in BUGS
+}
+```
+
+```{r 12-Bayesian-stats-7, cache=FALSE, fig.width=7, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+# Step 1 check model
+jagsModel <- jags.model(file = paste(bugpath, 
+                                     "/backupfiles/MCcube.txt", sep = ""),
+                        n.chains = 1)
+
+# Step 2 update 1000 iterations
+update(jagsModel, n.iter = 10, 
+        progress.bar="none")
+
+# Step 3 set monitor variables
+parameters <- c("y", "ycubed")
+codaSamples <- coda.samples(
+            jagsModel,
+            variable.names = parameters,
+            n.iter = 10000, 
+            progress.bar="none")
+
+summary(codaSamples)
+
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+ggSample <- ggs(codaSamples)
+
+par(mfrow=c(1,2))
+
+Y <- ggSample %>% 
+  filter(Parameter == "y")
+Ycubed <- ggSample %>% 
+  filter(Parameter == "ycubed")
+
+plot(density(Y$value), main = "y sample 10000", 
+     ylab = "P(y)", xlab = "y", col = "red")
+
+plot(density(Ycubed$value), main = "ycubed sample 100000", 
+     ylab = "P(ycubed)", xlab = "ycubed", col = "red")
+```
+
+所以，一個隨機變量如果它來自一個均值爲1，標準差爲2的正態分布，那麼它的三次方的期望值是13，注意`ycubed`右側的尾巴很長。

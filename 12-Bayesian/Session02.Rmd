@@ -1,0 +1,322 @@
+
+## 起源
+
+```{r Bayes-problem, cache=FALSE, echo=FALSE, fig.asp=.7, fig.width=5, fig.cap='Reproduction of part of the original printed Bayes paper.', fig.align='center', out.width='80%'}
+knitr::include_graphics("../img/BayesProblem.png")
+```
+
+一切都開始於1763年，英國東南地區叫做唐橋井 (Tunbridge Wells) 的地方有個叫做託馬斯貝葉斯的牧師死後，他的朋友將他遺留下的手稿發表於世。圖 \@ref(fig:Bayes-problem) 是他遺作論文的節選。這段話使用的當時的英文有點令人摸不着頭腦，但其實翻譯成現代文的意思是（這裏請在大腦中想象我們最長使用的投擲一枚可能有偏的硬幣的場景）：我們一共投擲硬幣 $n$ 次，這其中有 $y$ 次硬幣是正面朝上的（事件發生）。假定 $y$ 服從參數爲 $\theta$ 的二項分布：$y \sim \text{Binomial}(\theta, n)$，那麼$\theta$就是硬幣正面朝上的概率。
+
+貝葉斯牧師感興趣的是，參數$\theta$，落在某個範圍內 $\text{Pr}(\theta_1 < \theta < \theta_2 | y, n)$的**可能性(chance)**。這句話，在當年那個概率論持有者爲主流的社會中是極爲危險而且激進的 (radical) ，因爲貝葉斯牧師使用**可能性 (chance)**來描述一個參數的不確定性(uncertainty)。本質上說，貝葉斯牧師打算對一個無法直接觀測的參數用一個簡單直接的數學表達式來描述它的不確定性。這句話對於概率論觀點持有者佔主流的統計學領域來說，是一種明顯的異端邪說。因爲在概率論觀點持有者的語境下，概率是在無數次可重復實驗中事件發生的平均次數 (probability is interpreted in terms of a long run sequence of events)，這個無法觀測到的參數，是不會改變的 (the key idea is that the unknown parameter is considered to be a random variable under Bayesian theory, rather than fixed but unknown)。
+
+我們在第一章也看到了，貝葉斯牧師提出的理論有助於我們直接，正面地回答研究中我們想知道的問題。圖 \@ref(fig:Bayes-tinmouth) 提供了一個很好的例子，它節選自論文[@tinmouth2004low]中，該文的作者是這樣描述的："There is an 89% probability that the absolute increase in major bleeds is less than 10 percent with low-dose PLT transfusions. (使用低劑量PLT輸血時，患者大出血的出血量增加的絕對值小於10%的可能性是89%。)"
+
+
+```{r Bayes-tinmouth, cache=FALSE, echo=FALSE, fig.asp=.7, fig.width=6, fig.cap='Example of a direct expression about an unknown parameter.', fig.align='center', out.width='50%'}
+knitr::include_graphics("../img/tinmouthBayes.png")
+```
+
+像圖 \@ref(fig:Bayes-tinmouth) 這樣使用一個概率分布來描述我們想知道的參數有什麼好處呢？
+
+- 最重要的好處是，用概率分布描述這個未知參數可以直觀地告訴我們這個參數它本身可能分布的範圍，和在各自分布點時的可能性。
+- 沒有 p 值，因爲我們要計算整個參數可能分布的範圍，這是概率密度分布的面積。
+- 沒有(難以令人理解的)信賴區間的概念(confidence interval)，相反地，我們需要盡可能詳細地描述參數可能的分布，它的中位數，它的均值，它可能取值的範圍，它中間包含了95%可信範圍的參數(credible interval)
+- 方便地直接應用於預測。
+- 自然地適用於決策分析 (decision analysis)，經濟學的成本效益分析 (cost-effective analysis)等。
+- 貝葉斯理論讓我們從數學上把經驗（已經發表的實驗結果，以及已有的專家意見）納入到參數的估計上來，這是一個自我學習進化的過程。
+
+## 百分比的統計學推斷 inference on proportions
+
+我們先用一個新藥的臨牀試驗來作爲例子。
+
+### Example: New Drug
+
+有一種新研發的被用於治療慢性疼痛的藥物。爲了對其有效性進行科學客觀的評價，研究者需要組織一項評價其效用的小規模臨牀試驗。在實施這項臨牀試驗之前，我們自己心裏就會提出一個問題，這個新藥物用於治療慢性疼痛時有療效的百分比有可能會是多少（期望值，expectation）？
+
+假如經驗告訴我們，相似成分的藥物可能達到的有療效百分比是在0.2-0.6之間。那麼我們可以把這個經驗翻譯成爲，有效率的期望可能服從某個分布，其均值是0.4，標準差是 0.1，下一步就是用一個能夠具有這樣的均值和標準差特徵的分布來表達這個經驗。我們在數學的寶庫中發現了 Beta 分布這個可以用於描述百分比的分布。
+
+### Beta 分布
+
+Beta 分布的特徵是取值範圍嚴格限定在0, 1之間，這就滿足了百分比數值的取值範圍條件。它由兩個參數來決定分布的特徵。
+
+我們用 $\theta \sim \text{Beta}(a, b)$ 標記 Beta 分布。它的特徵值有：　
+
+$$
+\begin{aligned}
+p(\theta|a, b) & = \frac{\Gamma(a + b)}{\Gamma(a)\Gamma(b)}\theta^{a-1}(1-\theta)^{b-1}; \theta \in (0,1) \\
+\text{E}(\theta|a, b) & = \frac{a}{a+b} \\
+\text{V}(\theta|a, b) & = \frac{ab}{(a+b)^2(a + b + 1)}
+\end{aligned}
+$$
+
+其中 $\Gamma(a) = (a-1)!$ 是一個伽瑪方程。
+
+正如我們在貝葉斯入門的章節\@ref(beta-distribution-intro)也介紹過的那樣，Beta分布的一些形狀特徵總結如下：
+
+```{r beta-distr-bayes, echo=FALSE, fig.height=5, fig.width=7.5, fig.cap='Shape of some Beta distribution functions for various values of a, b', fig.align='center', out.width='90%', cache=FALSE}
+par(mfrow=c(2,3))
+pi <- Vectorize(function(theta) dbeta(theta, 0.5,0.5))
+curve(pi, xlab="Sucess Rate", ylab="Density", main="Beta prior: a=0.5, b=0.5", frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 1,1))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=1, b=1",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 5,1))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=5, b=0.3",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 5,5))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=5, b=5",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 5,20))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=5, b=20",frame=FALSE, lwd=2)
+pi <- Vectorize(function(theta) dbeta(theta, 50,200))
+curve(pi, xlab="Success Rate", ylab="Density", main="Beta prior: a=2, b=8",frame=FALSE, lwd=2)
+```
+
+回到新藥試驗的話題上來看，我們的經驗被翻譯成了均值爲0.4, 標準差0.1，那麼把它們帶入Beta分布的均值方差的特徵值公式中去，就可以求得相對應的Beta分布：$\text{Beta}(9.2, 13.8)$
+
+$$
+\begin{aligned}
+\theta & \sim \text{Beta}(9.2, 13.8) \\ 
+\text{E}(\theta) & = \frac{9.2}{9.2 + 13.8} = 0.4 \\
+\text{V}(\theta) & = \frac{9.2\times13.8}{(9.2 + 13.8)^2(9.2+13.8+1)} = 0.01 = 0.1^2
+\end{aligned}
+$$
+
+這個本來只是一句話的經驗，就被我們成功用Beta分布翻譯成了數學模型可以使用的分布方程，它的概率密度曲線如下，使用這個Beta分布的含義就是，經驗告訴我們相似成分的藥物可能達到的有療效百分比是在0.2-0.6之間：
+
+```{r beta-distr-drug, echo=FALSE, fig.height=5, fig.width=7.5, fig.cap='Prior distribution for Drug Example', fig.align='center', out.width='90%', cache=FALSE}
+pi <- Vectorize(function(theta) dbeta(theta, 9.2,13.8))
+curve(pi, xlab="Probabiltiy of response", ylab="Density", main="Beta(9.2, 13.8)", frame=FALSE, lwd=2)
+```
+
+### 作出預測
+
+在臨牀試驗觀測到有療效人數 $y$ 之前，我們可以通過把未知參數積分消除(intergrate out)的方法給出預測分布：
+
+$$
+p(y) = \int p(y|\theta)p(\theta)d\theta
+$$
+
+預測在很多領域都可以得到廣泛的應用，比如做天氣預報，經濟學上的成本效益分析，進行實驗設計，以及用於檢驗觀測數據是否和期望值相匹配，等等。
+
+### Example: 新藥表現預測
+
+我們再回到新藥治療慢性疼痛的臨牀試驗上來，假設我們設計接納20名患者進入這個臨牀試驗。那麼我們可能想根據已有的經驗，來預測一下這進來的20名患者中藥物有效的人數。
+
+我們已經知道用 Beta 分布來描述經驗（也就是先驗概率 prior distribution），此時，我們再加入用 $y$ 標記20名患者中有效人數的隨機變量。那麼很自然地，我們會使用二項分布作爲 $y$ 的理想模型：
+
+$$
+\begin{aligned}
+\theta & \sim \text{Beta} (a,b) \\
+y & \sim \text{Binomial}(\theta, n)
+\end{aligned}
+$$
+
+這個模型的預測模型能夠被計算得到（甚至不需要用到計算機），且它有個自己的專有名字 **Beta-Binomial**，它的概率方程是：
+
+$$
+\begin{aligned}
+p(y) & = \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}\binom{n}{y}\frac{\Gamma(a + y)\Gamma(b + n - y)}{\Gamma(a + b + n)} \\
+     & = \binom{n}{y}\frac{B(a + y, b + n -y)}{B(a,b)}
+\end{aligned}
+$$
+其中，$B(a,b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}$；
+
+均值是：
+
+$$
+\text{E}(Y) = n\frac{a}{a + b}
+$$
+
+那麼我們在進行這項試驗時我們可以預測，20名患者中有療效人數出現的概率，我們將它的預測概率分布圖和先驗概率分布放在一起：
+
+```{r Beta-binomial-def, echo=TRUE, fig.height=3.5, fig.width=8,fig.show='hold', fig.cap='Prior and predictive distribution for the drug example.', fig.align='center', out.width='90%', cache=FALSE}
+# # Beta Binomial Predictive distribution function
+# BetaBinom <- Vectorize(function(rp){
+# log.val <- lchoose(np, rp) + lbeta(rp+a+r,b+n-r+np-rp) - lbeta(a+r,b+n-r)
+# return(exp(log.val))
+# })
+par(mfrow=c(1,2))
+
+pi <- Vectorize(function(theta) dbeta(theta, 9.2,13.8))
+curve(pi, xlab="Probabiltiy of response", ylab="Density", main="(a) Prior distribution Beta(9.2, 13.8)", frame=FALSE, lwd=2)
+
+# or we can use the built-in function for beta-binomial distribution in package TailRank:
+library(TailRank)
+N <- 20; a <- 9.2; b <- 13.8; y <- 0:N
+yy <- dbb(y, N, a, b)
+barplot(yy, xlab = "Number of successes", names.arg = 0:20, axes = F,
+        ylim = c(0, 0.16), main = "(b) predictive distribution")
+axis(2,at=seq(0,0.16,0.02))
+```
+
+
+我們根據這個預測概率分布，或者預測概率方程，可以計算"20名患者中有15名或者更多的患者的症狀得到改善"這一事件出現的概率會是：
+
+$$
+P(y \geqslant 15) = \sum_{15}^{20}p(y) = 0.015
+$$
+
+
+## 蒙特卡羅估計
+
+但是在一般的情況下，像這個新藥臨牀試驗這樣能夠獲得一個閉環式 (closed-form) 概率預測概率方程的情況少之又少，有時候幾乎是不太可能完成的任務。假設我們本來也無法順利計算出上面的 Beta-Binomial概率公式，我們是否有其他的手段來獲得我們想要的預測概率結果呢？答案是，有的。人類發明的計算機，可以通過模擬試驗的方式(computer simulation)幫我們計算這個結果，它有個很酷的名字，叫做蒙特卡羅積分 (Monte Carlo integration)。
+
+### 用蒙特卡羅法估計概率分佈尾側累積概率(面積)
+
+假設要求一個很簡單的問題，一枚完美的硬幣，投擲10次中8次甚至更多次正面朝上的概率是多少？
+
+在概率數學上，我們會用正式的方法來求:
+
+$$
+\begin{aligned}
+y & \sim \text{Binomial}(0.5, 10), \text{Pr}(y \geqslant 8)? \\ 
+\text{Pr}(y\geqslant 8 \text{ heads}) & = \sum_{y = 8}^{10}p(y | \theta = 0.5, n = 10) \\ 
+& = \binom{10}{8}(0.5)^8(0.5)^2 + \binom{10}{9}(0.5)^9(0.5)^1 + \binom{10}{10}(0.5)^{10}(0.5^0) \\
+& = 0.0547
+\end{aligned}
+$$
+
+但是，如果有人很懶，他可以不這樣計算，而是真的拿那個硬幣過來不停的進行很多很多次投擲試驗，然後計算其中8次正面朝上出現的試驗的比例，那麼從長遠來說，就能夠無線接近理論計算的概率數值。
+
+那麼，計算機進行模擬試驗的過程 (simulation)，其實就是讓計算機代替我們進行投擲硬幣試驗的過程。圖 \@ref(fig:coin-tosses) 展示的是計算機模擬投擲硬幣(a) 100次 (b) 10,000 次時正面朝上次數的概率分佈，以及 (c) 真實的概率分佈。
+
+```{r coin-tosses, cache=FALSE, echo=FALSE, fig.width=7, fig.cap='Proportion of simulations with 8 or more "heads" in 10 tosses.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+knitr::include_graphics("../img/tosses10heads.png")
+```
+
+從中可以計算每種情況下硬幣正面朝上10次中出現8次或者更多的事件出現的概率分別是:
+
+- (a) 100次模擬試驗: 0.08
+- (b) 10000次模擬試驗: 0.0562 
+- (c) 真實的二項分佈累積概率: 0.0547
+
+可見，當模擬試驗的次數增加，計算想要的事件出現的比例，就越來越接近理論計算的真實值。蒙特卡羅積分法，用的也是類似計算機模擬試驗的方法來計算預測概率分佈的。
+
+### 用蒙特卡羅法計算預測概率分佈
+
+如果用蒙特卡羅法，也就是計算機模擬試驗的方法來計算預測概率分佈的話，那麼我們就不需要再通過 Beta-binomial 概率分佈的公式來進行計算了。取而代之的就是，蒙特卡羅積分法: 
+
+1. 從先驗概率分佈中隨機選取一個值 $\theta = \theta_1$
+2. 把從先驗概率分佈中隨機選取的 $\theta_1$ 作爲已知量放到二項分佈中再隨機選取一個服從 $n = 20, \theta = \theta_1$ 二項分佈數據中的 $y$。
+
+重複上面步驟1，2成千上萬次之後，獲得的新的概率分佈，就是 $y$ 的預測分佈的一個樣本。這樣獲得的樣本，我們就可以想進各種方法來描述它，可以是取均值，取方差，取四分位，等任何你可以用來描述的特徵值來作爲對預測概率分佈的描述。
+
+## 蒙特卡羅法分析軟件 OpenBUGS / JAGS
+
+本書中我們主要用 [JAGS 軟件](http://mcmc-jags.sourceforge.net/)進行貝葉斯統計分析。
+
+### 用 JAGS/BUGS 分析投擲硬幣數據
+ 
+回到投擲硬幣的簡單模型上來，我們的隨機變量 $y$ 服從的是二項分佈，$y \sim \text{Binomial}(0.5, 10)$，我們想要計算的是"8次或者更多次正面朝上"事件出現的概率: $P(y\geqslant 8)$。這一模型在 BUGS 語言下被描述爲: 
+
+
+```
+model{
+    y ~ dbin(0.5, 10)
+    P8 <- step(y - 7.5)
+}
+```
+
+其中`step`是一個能夠產生邏輯結果(True or False)的指示方程(indicator function)。`P8 <- step(y - 7.5)`這段BUGS語句的含義是，當`y - 7.5`的結果$\geqslant0$，`P8`將會取 1 (True)，反之將返回結果 0 (False)。意思就是使得當隨機選取的二項分布樣本 $y\geqslant8$ 時，`P8`會取值1，否則取0。
+
+將這一段計算機模擬拋擲硬幣的語句重復一萬次以上(iterations)，然後對獲得的所有10000個`P8`取均值，獲得的就會是 $y\geqslant8$ 這一事件將會出現的概率。
+
+### 用 JAGS 對藥物臨牀試驗的結果做預測
+
+還記得我們在藥物對慢性疼痛治療療效評價的這一臨牀試驗中使用的先驗概率是 $\theta \sim \text{Beta}(9.2, 13.8)$。我們再來思考一次，我們收集到20位志願者參加這個臨牀試驗，那麼"這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）"這件事發生的概率是多少？
+
+這時候，模型的先驗概率和似然，以及我們想要知道的問題，被數學語言寫成了下面的三句話：
+
+$$
+\begin{split}
+\theta & \sim \text{Beta}(9.2, 13.8) & \text{ Prior distribution} \\
+y      & \sim \text{Binomial}(\theta, 20) & \text{ Sampling distribution}  \\
+P_{crit} & = P(y \geqslant 15)           & \text{ Probability of exceeding critical threshold}
+\end{split}
+$$
+
+如果要把這三句話翻譯成爲JAGS的BUGS語言，可以這樣表達：
+
+```
+model{
+  theta ~ dbeta(9.2, 13.8) # Prior distribution
+  y ~ dbin(theta, 20)      # Sampling distribution
+  P.crit <- step(y - 14.5) # = 1 if y >= 15, 0 otherwise
+}
+```
+
+計算機模擬試驗10000次以後獲得的結果可能是下面這樣子的
+
+```
+Node statistics
+  		  mean	    sd	     MC_error	 val2.5pc	 median	 val97.5pc	start	sample
+P.crit 	0.015	   0.1216	   0.00121	 0.0	     0.0	   0.0	      1  	  10000
+theta   0.4008   0.09903	 9.683E-4	 0.2159	   0.3982	 0.5993	    1	    10000
+y       8.034    2.919	   0.02578	 3.0	     8.0	   14.0	      1	    10000
+```
+
+第一行我們可以看見顯示的是列的名稱，接下來每一行都是JAGS/OpenBUGS的軟件在進行計算機模擬試驗過程中監測的(monitor)變量的結果，以及它們的數據描述。值得注意的是其中`P.crit`這一行，除了第一列的均值`mean = 0.015`有實際意義意外，其餘的數值是沒有什麼含義的，可以忽略。這個`P.crit`均值的含義即是我們關心的問題【"這20位患者中，有15名或者更多的患者症狀得到改善（治療有效）"這件事發生的概率】的答案，是0.015。
+
+
+我們可以把蒙特卡羅算法給出的計算機模擬試驗的結果，和精確統計學計算法獲得的結果相比較：
+
+- $\theta:$ 均值0.4，標準差0.1；
+- $y:$ 均值8, 標準差2.93。
+- 20人中15人及以上治療有效的概率是0.015。
+
+由於這些樣本是互相獨立的，輸出結果中的 `MC_error` $=\frac{\text{SD}}{\sqrt{\text{n of iterations}}}$。如果你願意，完全可以爲了提高精確度再增加計算機模擬試驗的次數。
+
+OpenBUGS 同時可以輸出計算機模擬計算過後的圖片：
+
+```{r OpenBUGSfigs, cache=FALSE, echo=FALSE, fig.width=4, fig.cap='Example OpenBUGS plots from the drug example', fig.align='center', out.width='80%', message=FALSE, warning=FALSE,  out.width='70%'}
+knitr::include_graphics("../img/OpenBUGS01.png")
+knitr::include_graphics("../img/OpenBUGS02.png")
+```
+
+
+### 用蒙特卡羅法計算一個臨牀試驗的統計效能 allow uncertainty in power calculation
+
+假設有一個臨牀試驗是這樣設計的，計劃在治療組和對照組各徵集 $n$ 名患者，治療陽性反應率的標準差爲$\sigma = 1$。設計上希望達到一類錯誤 5%，和80%的效能。治療組和對照組的療效差異希望能達到 $\theta = 0.5$。計算樣本量爲$n$，療效差爲$\theta$的試驗的統計效能的數學公式已知爲：
+
+$$
+\text{Power} = \Phi(\sqrt{\frac{n\theta^2}{2\sigma^2}} - 1.96)
+$$
+
+再假設我們希望對$\theta,\sigma$同時描述其不確定性：
+
+$$
+\begin{aligned}
+\theta & \sim \text{Uniform}(0.3, 0.7) \\ 
+\sigma & \sim \text{Uniform}(0.5, 1.5) \\
+\end{aligned}
+$$
+
+接下來，我們可以利用這個公式和給出的先驗概率對統計效能的不確定性進行估計。
+
+1. 模擬從$\theta, \sigma$的先驗概率中各自選取相應的值；
+2. 把每次模擬試驗獲得的 $\theta, \sigma$ 代入上面計算效能的公式中計算每次可以獲得的統計效能；
+3. 重復步驟１，２許多次，獲取這個過程中計算得到的統計效能的預測分布(predictive distribution)。
+
+如果說每組患者人數是63人，那麼這個模型寫成BUGS語言就是：
+
+```
+model{
+  sigma ~ dunif(0.5, 1.5) 
+  theta ~ dunif(0.3, 0.7)
+  power <- phi(sqrt(63/2)*theta/sigma - 1.96)
+  prob70 <- step(power - 0.7) # is power >= 0.7
+}
+```
+
+該模型的輸出結果如下，預測的效能分布圖爲圖\@ref(fig:PowerBUGS)：
+
+```
+Node statistics
+         mean     sd       MC_error   val2.5pc   median   val97.5pc   start   sample
+power    0.7508   0.2249   0.00216    0.2846     0.8031   1.0         1       10000
+prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10000
+```
+
+當治療組對照組每組各只有６３人時，你會發現統計效能在電腦模擬１００００次試驗過後的中位數才勉強達到了80%，而且這麼寬的效能預測分布也提示我們６３人實在太少了，效能遠遠不能達到設計的要求。
+
+```{r PowerBUGS, cache=FALSE, echo=FALSE, fig.width=4, fig.cap='Predictive Distribution of Power', fig.align='center', out.width='80%', message=FALSE, warning=FALSE,  out.width='70%'}
+knitr::include_graphics("../img/PowerBUGS.png")
+```

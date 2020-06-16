@@ -1,0 +1,665 @@
+
+A. 新藥試驗模型
+
+新藥臨牀試驗的BUGS模型可以寫作:
+
+```
+# Drug example - model code
+
+model{
+   theta    ~ dbeta(a,b)               # prior distribution
+   y        ~ dbin(theta,n)            # sampling distribution
+   y.pred   ~ dbin(theta,m)            # predictive distribution
+   P.crit   <- step(y.pred-ncrit+0.5)  # =1 if y.pred >= ncrit, 0 otherwise
+}
+```
+
+這個模型中 `theta` 是藥物的陽性反應率(有效率, response rate)；`y.pred`是40名未來患者中可能出現陽性反應的人數(number of positive response in 40 future patients)。`P.crit` 是用來表示患者中有25名或者更多的人有陽性反應時的指示變量(indicator variable)。
+
+新藥試驗的數據則可以寫爲:
+
+```
+# Drug example - data
+# values for a, b, m, n, ncrit could alternatively have been given in model description
+
+list(
+a = 9.2,    # parameters of prior distribution
+b = 13.8,
+y = 15,     # number of successes
+n = 20,     # number of trials
+m = 40,     # future number of trials
+ncrit = 25) # critical value of future successes
+```
+
+把這裏的模型保存稱爲 `drug-model.txt`文件，把數據保存成 `drug-data.txt`文件，我們來試着用OpenBUGS/JAGS跑這個模型:
+
+```{r R-OpenBUGS09, cache=FALSE, message=TRUE, warning=FALSE}
+
+# Codes for OpenBUGS
+
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/drug-model.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/drug-data.txt", sep = ""))     
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.crit", "theta", "y.pred")
+# samplesSet(parameters)
+
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
+
+# Codes for R2JAGS
+
+
+Dat <- list(a = 9.2,             # parameters of prior distribution 
+            b = 13.8, 
+            y = 15,              # number of successes in completed trial
+            n = 20,              # number of patients in completed trial
+            m = 40,              # number of patients in future trial 
+            ncrit = 25)          # critical value of future successes
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.crit", "theta", "y.pred"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/drug-model.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+```
+
+此時我們獲得我們關心的各個事後概率分佈描述，其中陽性反應率的點估計是0.563，其95%可信區間是(0.412, 0.707)。40名患者中25人或者以上出現有療效反應的概率是32.4%。
+
+請繪製`theta`的事後概率分佈的密度曲線，以及`y.pred`的預測概率分佈:
+
+
+```{r R-OpenBUGS10, cache=FALSE, fig.width=7, fig.height=3, fig.cap='Posterior and predictive distributions for Drug example', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES
+par(mfrow=c(1,2))
+Theta <- ggSample %>% 
+  filter(Parameter == "theta")
+Y <- ggSample %>% 
+  filter(Parameter == "y.pred")
+plot(density(Theta$value), main = "theta sample 10000", 
+     ylab = "P(theta)", xlab = "Probability of response", col = "red")
+hist(Y$value, main = "y.pred sample 10000", ylab = "P(y.pred)", 
+     xlab = "Number of success", col = "red", prob = TRUE,xlim = c(0, 40))
+
+```
+
+
+比較一下這裏的模型和我們前一章的練習中的模型，
+
+- Model from Practical 2
+
+```
+#  Monte Carlo predictions for Drug example
+
+model{
+	theta   ~ dbeta(9.2,13.8)          # prior distribution
+	y         ~ dbin(theta,20)         # sampling distribution
+	P.crit   <- step(y-14.5)           # =1 if y >= 15, 0 otherwise
+}
+```
+
+- Model from Practical 3
+
+
+```
+# Drug example - model code
+
+model{
+   theta    ~ dbeta(a,b)               # prior distribution
+   y        ~ dbin(theta,n)            # sampling distribution
+   y.pred   ~ dbin(theta,m)            # predictive distribution
+   P.crit   <- step(y.pred-ncrit+0.5)  # =1 if y.pred >= ncrit, 0 otherwise
+# data
+y <- 15
+}
+```
+
+這兩個模型的構成基本上是相同的，最重要的不同點在於，Practical 2中的 MC分析中沒有關於該次試驗的觀測數據 `y`，也就是20名患者中陽性反應，療效顯著的患者人數。所以，該模型不能從試驗數據中"學習"，導致 OpenBUGS/JAGS 其實在進行 MC 模擬試驗時僅僅是從先驗概率分佈 $\text{Beta}(9.2, 13.8)$ 中隨機採樣對結果做出預測。在 Practical 3的模型裏，我們把試驗數據加入到了模型裏面 `y <- 15`，所以OpenBUGS/JAGS此時識別了本次試驗數據是20人中15人有效，接下來它就知道需要做事後概率分佈的計算而不是一個結果的預測。獲得事後概率分佈之後，OpenBUGS/JAGS也就開始從事後概率分佈當中獲取隨機樣本。然後我們需要在模型中加入新的變量來預測下一次如果做40人的研究時，可能出現的事後概率分佈。
+
+
+如果把模型中陽性反應率`theta`的先驗概率分佈改成一個沒有太多信息的，連續型均勻分佈(uniform distribution)，例如 $\text{Uniform}(0,1)$，或者是 $\text{Beta}(1,1)$。MC結果會變成怎樣呢？
+
+先驗概率爲連續型均勻分佈的BUGS模型和數據可以寫成是:
+
+```
+# Drug example - model code
+
+model{
+   theta    ~ dunif(0,1)               # prior distribution uniform distribution
+   y        ~ dbin(theta,n)            # sampling distribution for n observed patients
+   y.pred   ~ dbin(theta,m)            # predictive distribution for m new patients
+   P.crit   <- step(y.pred-ncrit+0.5)  # =1 if y.pred >= ncrit, 0 otherwise
+}
+```
+
+
+```
+list(
+y = 15,                                # number of successes
+n = 20,                                # number of trials 
+m = 40,                                # future number of trials 
+ncrit = 25                             # critical value of future successes
+)
+```
+
+```{r R-OpenBUGS11, cache=FALSE, message=TRUE, warning=FALSE}
+
+# Codes for OpenBUGS
+
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/drug-modeluniform.txt", sep = "")) 
+# # Load the data 
+# modelData(paste(bugpath, "/backupfiles/drug-datauniform.txt", sep = ""))     
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.crit", "theta", "y.pred")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
+
+
+# Codes for R2JAGS
+
+
+Dat <- list(
+y = 15,                                # number of successes
+n = 20,                                # number of trials 
+m = 40,                                # future number of trials 
+ncrit = 25                             # critical value of future successes
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.crit", "theta", "y.pred"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/drug-modeluniform.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+```
+
+這個結果則提示，如果使用連續型均勻分佈的先驗概率，新藥試驗的陽性反應率是0.73，95%可信區間是(0.53, 0.89)。根據這個試驗結果對下次40人的試驗做預測時，認爲40人中大於或者等於25人有顯著療效(陽性反應)的概率會有0.84。
+
+B. THM 三氯甲烷濃度實例
+
+在飲用水檢測三氯甲烷濃度這個試驗中，我們已知濃度的方差，希望通過貝葉斯方法推斷其均值。
+
+以下是我們需要思考的問題:
+
+1. 在這個供水區域內，三氯甲烷的濃度均值是多少？
+2. 兩次測量濃度的數據，它的似然是怎樣的？ 如果可以假定三氯甲烷濃度服從正態分佈，那麼似然就是正態分佈似然: `y[i] ~ N(theta, sigma^2)`。
+3. 在上面提到的正態分佈似然中，有哪些參數，哪個是已知的哪個是未知的？ `theta` 區域濃度的均值未知，`sigma`區域濃度的方差是給定的(已知的)。
+4. 哪個參數需要在模型中給出先驗概率分佈？該怎樣指定這個先驗概率分佈才合理？`theta`，區域濃度均值需要給它指定一個先驗概率分佈，正態分佈數據均值的先驗概率分佈可以使用正態分佈。
+
+
+
+```
+# THM model:
+model {
+   # data 
+   # y[1] <- 128
+   # y[2] <- 132
+   # tau <- 1/pow(5, 2)
+
+   for(i in 1:2) {
+      y[i] ~ dnorm(theta, tau)
+   }
+
+   # informative prior
+   theta ~ dnorm(120, prec)
+   prec <- 1/100
+
+   # vague prior 
+   # theta ~ dnorm(0, 0.000001)
+   # OR
+   # theta ~ dunif(-10000, 10000) 
+}
+```
+
+在BUGS語言中，正態分佈用 `dnorm(theta, tau)`，其中 `theta` 爲均值，`tau` 是精確度(precision = 1/variance)，它是方差的倒數。
+
+```{r R-OpenBUGS12, cache=FALSE, message=TRUE, warning=FALSE}
+
+# Codes for R2JAGS
+
+
+Dat <- list(
+y = c(128, 132),                       # observed 
+tau = 1/(5^2)
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("theta"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/thm-model.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# OpenBUGS code:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/thm-model.txt", sep = "")) 
+#   
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("theta")
+# samplesSet(parameters)
+
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
+```
+
+所以這個區域三氯甲烷的事後均值和95%可信區間分別是 128.9 (122.3, 135.4)。和我們之前用精確計算法給出的結果相同/相近。
+
+如果在這個模型中，我們嘗試沒有信息的先驗概率分佈，結果會怎樣呢？
+
+
+
+```{r R-OpenBUGS13, cache=FALSE, message=TRUE, warning=FALSE}
+
+
+# Codes for R2JAGS
+
+
+Dat <- list(
+y = c(128, 132),                       # observed 
+tau = 1/(5^2)
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("theta"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/THM-vaguemodel.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# OpenBUGS code:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/THM-vaguemodel.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("theta")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
+```
+
+MC試驗10000次給出的事後均值是129.9，它和樣本均值相同，因爲此時我們給模型一個幾乎不含有效信息的先驗概率分佈時，意味着我們讓試驗獲得的數據做完全主導作用，"data speak for themselves"。
+
+C. Disease risk in a small area
+
+下面的BUGS/JAGS模型代碼可以用來進行泊淞－伽馬分布似然的MC計算。在這個例子中，在某個區域我們觀察到５例白血病新病例，已知該區域的年齡性別標準化發病期望病例數是$E = 2.8$。注意看我們在代碼中加入了兩種不同類型的先驗概率分布，一個是沒有太多信息的(vague prior distribution)`dgamma(0.1, 0.1)`，一個則是有一定信息的(informative prior, stribution) `dgamma(48, 40)`。我們把兩個先驗概率分布同時加在一個模型裏，這是十分便於進行兩種先驗概率對結果的影響的比較的手段。你當然可以把它寫成兩個不同的模型。注意模型代碼是如何表示事後概率分布和計算相對危險度比(relative risk)大於1的概率的。
+
+
+```
+model {
+
+	lambda[1]  ~ dgamma(0.1, 0.1)   # vague prior distribution
+	lambda[2]  ~ dgamma(48, 40)     # informative prior distribution
+
+	y[1]  ~ dpois(mu[1])             # sampling distribution
+	mu[1] <- lambda[1] * 2.8
+
+	# repeat for second model
+	y[2] ~ dpois(mu[2])             # sampling distribution
+	mu[2] <- lambda[2] * 2.8
+  
+  # Is relative risk > 1
+  P.excess[1] <- step(lambda[1] - 1) 
+  P.excess[2] <- step(lambda[2] - 1)
+ 
+	# data
+	# y[1] <- 5
+	# y[2] <- 5             # replicate data to fit both models together
+
+}
+```
+
+```{r R-OpenBUGS14, cache=FALSE, message=TRUE, warning=FALSE}
+
+
+# Codes for R2JAGS
+
+
+Dat <- list(
+y = c(5, 5)                      # replicate data to fit both models together
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/disease-model.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/disease-model.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
+```
+
+在沒有信息的先驗概率(`dgamma(0.1, 0.1)`)分布條件下，該地區可能有較高白血病發病率的概率是85%，但是在有參考價值信息的先驗概率分布(`dgamma(48, 40)`)條件下，該地區可能有較高白血病發病率的概率是93%。所以，盡管相對危險度(relative risk)的事後均值在沒有信息的先驗概率分布條件下比較高(`lambda[1] = 1.770 > lambda[2] = 1.238`)，但是沒有信息的先驗概率分布條件下，這個相對危險度大於1的概率(85%)要比有信息的先驗概率分布條件下相對危險度大於1的概率要低(93%)。這是因爲在沒有信息的先驗概率分布條件下，相對危險度估計本身有太多的不確定性(uncertainty，圖\@ref(fig:R-OpenBUGS15))。
+
+
+```{r R-OpenBUGS15, cache=FALSE, fig.width=4, fig.height=4, fig.cap='Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2).', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+# 
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/disease-model.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+
+
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
+#                     P.excess2 = samplesSample("P.excess[2]"), 
+#                     lambda1 = samplesSample("lambda[1]"), 
+#                     lambda2 = samplesSample("lambda[2]"))
+Simulated <- coda::as.mcmc(post.jags)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+ggSample <- ggmcmc::ggs(Simulated)
+
+Lambda1 <- ggSample %>% 
+  filter(Parameter == "lambda[1]")
+Lambda2 <- ggSample %>% 
+  filter(Parameter == "lambda[2]")
+
+boxplot(Lambda1$value,Lambda2$value, col = "green", ylab = "lambda", 
+        outline=FALSE, main = "boxplot: lambda", ylim = c(0,4), 
+        names = c("1", "2")) 
+abline(h = 1.5)
+```
+
+圖 \@ref(fig:R-OpenBUGS15)的箱式圖也告訴我們，相對危險度的事後概率分布在有信息的先驗概率分布條件下要精確得多，其標準差`sd[2] = 0.17`也要小得多 `sd[1] = 0.78`。所以，此時，先驗概率分布對我們的事後概率分布推斷產生了較大的影響，有信息的先驗概率分布把相對危險度的估計值更加拉近了1的同時(more realistic)，也使得相對危險度的事後概率估計變得更加精確。
+
+
+接下來，假設我們在該區域進行了更長時間的觀察，收集到100個新的白血病病例，同時在這段時間內病例的期望值只有56例。據此，重新改寫這個模型，在兩種先驗概率分布條件下，此時由於觀察數據信息量的增加，相對危險度的事後估計有怎樣的變化？
+
+
+```
+model {
+
+	lambda[1]  ~ dgamma(0.1, 0.1)   # vague prior distribution
+	lambda[2]  ~ dgamma(48, 40)     # informative prior distribution
+
+	y[1]  ~ dpois(mu[1])             # sampling distribution
+	mu[1] <- lambda[1] * 56          # the expectation changed from 2.8 to 56
+
+	# repeat for second model
+	y[2] ~ dpois(mu[2])             # sampling distribution
+	mu[2] <- lambda[2] * 56         # the expectation changed from 2.8 to 56
+  
+  # Is relative risk > 1
+  P.excess[1] <- step(lambda[1] - 1) 
+  P.excess[2] <- step(lambda[2] - 1)
+ 
+	# data
+	# y[1] <- 100             # the observed new cases changed from 5 to 100
+	# y[2] <- 100             # replicate data to fit both models together
+
+}
+```
+
+
+```{r R-OpenBUGS16, cache=FALSE, message=TRUE, warning=FALSE}
+
+# Codes for R2JAGS
+
+
+Dat <- list(
+y = c(100, 100)                    # the observed new cases changed from 5 to 100
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]"),
+  n.iter = 10100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/disease-modelupdated.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# OpenBUGS codes:
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/disease-modelupdated.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.excess[1]", "P.excess[2]", "lambda[1]", "lambda[2]")
+# samplesSet(parameters)
+# 
+# # Generate 10000 iterations
+# modelUpdate(10000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
+```
+
+有了更多的觀察數據的模型，我們看到，相對危險度的事後估計`lambda[1], lambda[2]`都變得更加精確了，有了更小的標準差。這和我們的預期相同，因爲觀察數據增加自然會提高相對危險度估計的精確度。可是，我們發現在沒有信息的先驗概率分布條件下，相對危險度的事後估計幾乎沒有太大的變化(1.783 v.s. 1.770)。相反地，有信息的先驗概率分布條件下，相對危險度的事後估計比之前增加了不少(1.540 v.s. 1.238)。這主要是因爲，現在我們得到更多的觀察數據，這些數據得到的信息被給予了更多的權重，且觀察數據提示相對危險度應該要比較大(100/56 = 1.786)。
+
+盡管觀察數據確實給模型提供了較多的有價值的信息，你會發現，我們使用的第二個先驗概率分布（也就是有信息的先驗概率分布）仍然對相對危險度的事後估計起到了相當的影響(the prior variance is 0.03, giving prior sd of 0.17)。這也是因爲這個先驗概率分布給出的信息量，幾乎相當於觀察數據給出的信息量（二者的標準差很接近）。另外一種理解此現象的方法是看事後概率分布推導出的新的伽馬分布的計算式：
+
+$$
+\begin{aligned}
+p(\lambda | y, E) & \propto p(\lambda) p (y | \lambda, E) \\ 
+                  & \propto \frac{b^a}{\Gamma(a)}\lambda^{a-1}e^{-b\lambda} \frac{(\lambda E)^ye^{-\lambda E}}{y!} \\ 
+                  & \propto \lambda^{a + y -1}e^{-(b+E)\lambda} \\ 
+                  & = \text{Gamma}(a + y, b + E)
+\end{aligned}
+$$
+
+由於事後伽馬分布的方差（標準差）主要由第二個參數$(b + E)$決定，從上面的公式推導我們可以看見，事後伽馬分布的第二個參數$(b + E)$，分別是先驗概率分布的第二個參數$(b = 40)$，和觀察數據的期望值$(E = 56)$。由於這兩個數值大小接近，所以我們也可以理解此時先驗概率提供的信息和我們觀察數據提供的信息旗鼓相當。另外，在這個新的觀察數據條件下，我們無論使用哪個先驗概率分布做條件，都獲得了100%的結果也就是這個特定區域的白血病發病率大於期望值的概率是100%。也就是我們此時有100%的把握認爲這個特定區域的白血病發病率較高。
+
+
+```{r R-OpenBUGS17, cache=FALSE, fig.width=4, fig.height=4, fig.cap='Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2) with more observations.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+# chain <- data.frame(P.excess1 = samplesSample("P.excess[1]"), 
+#                     P.excess2 = samplesSample("P.excess[2]"), 
+#                     lambda1 = samplesSample("lambda[1]"), 
+#                     lambda2 = samplesSample("lambda[2]"))
+Simulated <- coda::as.mcmc(post.jags)
+#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:
+ggSample <- ggmcmc::ggs(Simulated)
+
+Lambda1 <- ggSample %>% 
+  filter(Parameter == "lambda[1]")
+Lambda2 <- ggSample %>% 
+  filter(Parameter == "lambda[2]")
+
+boxplot(Lambda1$value,Lambda2$value, col = "green", ylab = "lambda", 
+        outline=FALSE, main = "boxplot: lambda", ylim = c(0,4), 
+        names = c("1", "2")) 
+abline(h = 1.66)
+```
+
+D. James Bond Example.
+
+007邦德喝了16杯馬丁尼酒，每飲一杯，都被問道那杯馬丁尼酒是被調酒師用搖的(shaken)還是用攪拌的(stired)調制的。結果在這邦德喝過的16杯馬丁尼酒中，他居然答對了13杯。（007就是流弊）
+
+1. 嘗試修改新藥試驗的模型代碼，用均一分布作爲參數$\theta$的先驗概率分布，你是否能進行一個貝葉斯分析來回答這個問題：“邦德能夠正確區分一杯馬丁尼酒的調制方法的概率是多少？”
+
+2. 那如果把這個問題稍微改變一下，“邦德能夠區分馬丁尼酒的調制方法的概率是多少？(what is the probability that James Bond has at least some ability to tell the difference between shaken and stirred martinis?i.e. better than guessing)”你能回答嗎？
+
+3. 假定這樣一個場景，你和另外三個朋友在酒吧遇見了邦德，你們每個人都說要和邦德玩品酒的遊戲，如果邦德能準確分辨出馬丁尼酒的調制方法，你們就付那一杯酒錢，如果邦德答錯了，那他要把酒錢付給你們。在這樣的場景下，已知邦德能分辨16杯馬丁尼酒中的13杯，你們４人有多大的概率能把酒錢都賺回來？
+
+
+```
+# Bond example - model code
+
+model{
+   theta    ~ dunif(0, 1)               # prior distribution
+   y        ~ dbin(theta,16)            # sampling distribution
+   
+   P.ability <- step(theta - 0.5)       # = 1 if theta > 0.5 (i.e. if better than guessing)
+   
+   y.pred   ~ dbin(theta,4)             # predictive distribution for 4 new taste tests
+   
+   P.Moneyback   <- step(0.5 - y.pred)  # =1 if y.pred <= 0.5, 0 otherwise
+  #P.Moneyback   <- equals(y.pred, 0)   # alternative way of calculating predictive prob of 0 correct taste tests
+  
+# data 
+#  y <- 13                               # observed number of correct taste tests in original experiment
+  
+}
+```
+
+
+```{r R-OpenBUGS18, cache=FALSE, message=TRUE, warning=FALSE}
+
+# Codes for R2JAGS
+
+
+Dat <- list(
+y = c(13)                    # Bond had 13 correct taste tests
+)
+
+# fit use R2jags package
+
+post.jags <- jags(
+  data = Dat,
+  parameters.to.save = c("P.ability", "P.Moneyback", "theta", "y.pred"),
+  n.iter = 100100,
+  model.file = paste(bugpath, 
+                     "/backupfiles/bondmodel.txt", 
+                     sep = ""),
+  n.chains = 1,
+  n.thin = 1,
+  n.burnin = 100,
+  progress.bar = "none")
+
+print(post.jags)
+
+# # Step 1 check model
+# modelCheck(paste(bugpath, "/backupfiles/bondmodel.txt", sep = "")) 
+# 
+# # compile the model
+# modelCompile(numChains = 1) 
+# # There is no need to provide initial values as 
+# # they are aleady provided in the model specification
+# modelGenInits() #
+# # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:
+# parameters <- c("P.ability", "P.Moneyback", "theta", "y.pred")
+# samplesSet(parameters)
+# 
+# # Generate 100000 iterations
+# modelUpdate(100000)
+# #### SHOW POSTERIOR STATISTICS
+# sample.statistics <- samplesStats("*")
+# print(sample.statistics)
+```
+
+1. 第一個問題，可以用 `theta` 的事後概率分布來回答，十萬次MC計算的結果顯示，邦德能夠準確分辨馬丁尼酒的調制方法的概率是0.78，且這個事後概率分布的95%可信區間是(0.564, 0.933)。
+
+2. 第二個問題，邦德擁有能準確分辨馬丁尼酒調制方法的能力(不是猜的)的概率是 `P.ability = 0.993`。如果邦德只是瞎猜，那麼 `theta` 就只能等於或者十分接近0.5。所以我們相信邦德有這樣一種分辨能力的概率是99.3%。
+
+3. 你和４名好友在酒吧能從邦德身上把4被馬丁尼酒錢賺回來的概率，也就等價於邦德在這四次猜酒的結果上都給出了錯誤的答案，四次全錯的概率，就是 `P.Moneyback = 0.006`。模型代碼中 `y.pred` 用來預測邦德在接下來４次猜酒遊戲中給出的答案是 0還是 1(四次都對的話和爲4)。結果顯示 `y.pred` 的均值達到了3.105，４次全錯的概率是驚人的0.006。
