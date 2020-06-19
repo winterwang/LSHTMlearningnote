@@ -1,0 +1,77 @@
+
+
+## 生存分析策略
+
+## 針對臨床實驗
+
+## 針對觀察性研究
+
+## 模型檢查的要點
+
+1. 總體模型對數據的擬合情況是否合理？
+2. 是否有極端數據，影響了模型的擬合結果？
+3. 解釋變量，特別是連續型變量是否以正確的形式進入了模型？
+
+## 比例風險假設的檢查 check the proportional hazard assumtion
+
+
+主要有三板斧：
+
+1. 用非參數法繪製簡單的生存曲線圖；
+2. 用統計檢驗，判斷一個解釋變量對風險的影響是否和時間產生了交互作用；
+3. 殘差繪圖法。
+
+非參數法繪製生存曲線圖詳見第 \@ref(nonparametric) 章節部分。
+
+### 比例風險檢查的統計檢驗法
+
+在滿足比例風險前提下，某個解釋變量估計的風險比 (hazard ratio) 不會隨著時間變化而變化，根據這個特點，我們可以認為，如果某些解釋變量在追踪開始時對風險影響很強，在之後的追踪中，和風險之間的關係變弱的話，(或者反過來)，那麼風險比的這一變化就違背了比例風險這一前提。最簡單的，我們可以在模型中加入該變量和時間的相乘項 (交互作用項)：
+
+$$
+h(t|x) = h_0(t)\exp\{ \beta x + \gamma (x\times t)\}
+$$
+
+聰明的你一下子就明白了，接下來只要檢驗 $H_0: \gamma = 0$:
+
+$$
+\frac{\hat\gamma}{SE(\hat\gamma)} \sim N(0,1)
+$$
+
+
+### 用 Schoenfeld 殘差繪圖
+
+另外一種視覺化檢查比例風險假設的方法是使用 **Schoenfeld 殘差**：
+
+The residual compares the observed values of the explanatory variable for the case at a given envent time with the weighted average of the explanatory variable in the risk set. The residuals should not show any dependence on time -- this would indicate that the proportional hazards assumptions is not met.
+
+It is actually more convenient to use the "scaled Schoenfeld residuals". **The Scaled Schoenfeld residuals have a mean which is the true log hazard ratio** under the proportional hazards assumption, and the average values of the scaled Schoenfeld residuals over time can be interpreted as the time-varying log-hazard ratio. A plot of the scaled Schoenfeld residuals over time is therefore directly informative about how the log hazard ratio changes overtime. It is useful to show a smoothed average curve on these plots.
+
+## 評價模型擬合的其他有趣方法
+
+### Martingale 殘差-assessing the functional form of continuous variables
+
+Martingale (馬丁哥?) 殘差圖可以用來檢驗，比較連續型變量在模型中是否被正確擬合，因為有時候連續型變量需要增加該連續型變量的二次項或者多次項，也可能要用對數項之類的變形之後，才能完全把其與生存數據之間的關係完全解釋清楚。
+
+A Martingale is a residual for an event process -- it is the difference between what happened to a person (whether they had the event or not) and what is predicted to happen to a person under the model that has been fitted. The Martingale residual for individual i is:
+
+
+$$
+r_{M_i} = \delta_i - \hat H_0(t_i)\exp(\hat\beta x_i)
+$$
+
+Where, $\delta_i$ is the indicator of whether the individual $i$ had the event (1) or was censored (0), $t_i$ is the event or censoring time, $x_i$ denotes the explanatory variable (or more generally a vector of explanatory variables), and $\hat H_0(t_i)$ is the estimated baseline cumulative hazard at time $t_i$. If the model is correct then the Martingale residuals should sum to 0.
+
+
+### Deviance 偏差殘差 -- identifying individuals for whom the model does not provide a good fit
+
+偏差殘差是馬丁哥殘差的轉換值，它的定義是:
+
+$$
+r_{D_i} = \text{sign}(r_{M_i})[-2\{r_{M_i} + \delta_i\log(\delta_i - r_{M_i})\}]^{\frac{1}{2}}
+$$
+
+偏差殘差通過上面的公式，把模型給出的馬丁哥殘差轉換成為一組理論上應該是平均分佈在零兩側的數據。如果某個個體的偏差殘差過大，偏離0太遠的話，提示該模型對該個體數據擬合不佳。具體來說，如果偏差殘差遠大於零，提示的是該個體遠在模型預測他/她/它會發生事件的時間之前就已經發生了事件；相反如果偏差殘差遠小於零，則提示該個體在模型預測發生事件的時間點之後很晚才真的發生事件。
+
+把偏差殘差作 Y 軸，危險度評分 (risk score $=\beta^Tx$)，作 x 軸繪圖可以用於分析模型是否針對某些危險度高的人給出較高的偏差殘差，從而可以判斷模型是否合理。當判斷某些人可能偏差殘差過大，或者過小，之後要做的決定才是殘忍的，你要從數據中刪除這些個體？還是分析這些個體到底有哪些與眾不同的特質？或者是要重新對模型的各項解釋變量的形式進行修正？
+
+**在進行生存分析的時候，請一定要一邊構建模型，一邊用這些殘差來綜合分析模型的合理性。**

@@ -1,212 +1,114 @@
 
-```{r Surv-prac-03-01, cache=TRUE}
-whitehall <- read_dta("../backupfiles/whitehall.dta")
-whitehall <- whitehall %>%
-                mutate(timein = as.numeric(timein),
-                       timeout = as.numeric(timeout),
-                       timebth = as.numeric(timebth)) %>%
-                mutate(time = (timeout - timein)/365.25)
 
-with(whitehall, tabpct(grade, chd, graph = FALSE))
+```{r Surv-prac-02-01, cache=TRUE}
+# summarize and explore the data
+library(haven)
+pbcbase <- read_dta("../backupfiles/pbcbase.dta")
+with(pbcbase, tabpct(treat, d, graph = FALSE))
 
 #### median time
-Median_t <- ddply(whitehall,c("grade","chd"),summarise,Median=median(time))
+Median_t <- ddply(pbcbase,c("treat","d"),summarise,Median=median(time))
 Median_t
 ```
 
 
-```{r Surv-prac-03-02, cache=TRUE, fig.asp=.8, fig.width=6, fig.cap='Rplots of the Kaplan-Meier survivor functions', fig.align='center', out.width='70%'}
-whl.km <- survfit(Surv(time = time, event = chd) ~ as.factor(grade), data = whitehall)
-plot(whl.km, conf.int = T, col = c("blue", "red"), mark.time = F, xlab = "Time", ylab = "Survivor function", ylim = c(0.8, 1))
-legend(1, 0.85, c("Grade 1", "Grade 2"), col = c("blue", "red"), lty = 1)
 ```
+sts list if treat==2 & cir0==1
 
- "Grade 1" 患者的生存概率明顯好於 "Grade 2"。而且，95% 信賴區間沒有重疊，提示這兩組之間的生存概率曲線應該有統計學上的顯著不同。
+         failure _d:  d
+   analysis time _t:  (dateout-origin)/365.25
+             origin:  time datein
 
-```{r Surv-prac-03-03, cache=TRUE}
-# How many individuals survived 5, 10, 15 years of follow-up in each job grade?
-summary(whl.km, times = c(5, 10, 15))
-# Log rank test to compare the estimated survivor functions in the two job grades
-survdiff(Surv(time=time, event = chd) ~ as.factor(grade), data = whitehall)
-# Fit an exponential model
-whl.exp <- survreg(Surv(time, chd) ~ as.factor(grade), dist = "exponential", data = whitehall)
-summary(whl.exp)
-```
-
-這裏 R 的輸出結果和 STATA 的結果略有不同:
-
-```
-. streg i.grade, d(exp) nohr
-
-         failure _d:  chd
-   analysis time _t:  (timeout-origin)/365.25
-             origin:  time timein
-
-Iteration 0:   log likelihood = -627.95275
-Iteration 1:   log likelihood = -620.09818
-Iteration 2:   log likelihood = -619.57374
-Iteration 3:   log likelihood = -619.57209
-Iteration 4:   log likelihood = -619.57209
-
-Exponential PH regression
-
-No. of subjects =        1,677                  Number of obs    =       1,677
-No. of failures =          154
-Time at risk    =  27605.37066
-                                                LR chi2(1)       =       16.76
-Log likelihood  =   -619.57209                  Prob > chi2      =      0.0000
-
-------------------------------------------------------------------------------
-          _t |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     2.grade |   .6885037   .1635118     4.21   0.000     .3680264    1.008981
-       _cons |  -5.420525   .1054093   -51.42   0.000    -5.627123   -5.213926
-------------------------------------------------------------------------------
+           Beg.          Net            Survivor      Std.
+  Time    Total   Fail   Lost           Function     Error     [95% Conf. Int.]
+-------------------------------------------------------------------------------
+  .104       26      1      0             0.9615    0.0377     0.7569    0.9945
+ .2628       25      1      0             0.9231    0.0523     0.7260    0.9802
+ .4572       24      1      0             0.8846    0.0627     0.6836    0.9613
+ .4846       23      1      0             0.8462    0.0708     0.6404    0.9393
+ .9172       22      0      1             0.8462    0.0708     0.6404    0.9393
+ 1.164       21      1      0             0.8059    0.0780     0.5946    0.9143
+ 1.369       20      1      0             0.7656    0.0839     0.5505    0.8873
+ 1.572       19      0      1             0.7656    0.0839     0.5505    0.8873
+ 1.687       18      1      0             0.7230    0.0894     0.5044    0.8576
+ 1.725       17      1      0             0.6805    0.0937     0.4603    0.8262
+ 2.182       16      1      0             0.6380    0.0970     0.4180    0.7933
+ 2.201       15      1      0             0.5954    0.0994     0.3773    0.7590
+ 2.634       14      0      1             0.5954    0.0994     0.3773    0.7590
+ 2.667       13      1      0             0.5496    0.1018     0.3337    0.7215
+ 3.047       12      0      1             0.5496    0.1018     0.3337    0.7215
+  3.45       11      1      0             0.4997    0.1041     0.2866    0.6803
+ 3.472       10      1      0             0.4497    0.1050     0.2425    0.6371
+ 3.855        9      1      0             0.3997    0.1045     0.2012    0.5920
+ 4.249        8      1      0             0.3498    0.1027     0.1625    0.5448
+  5.47        7      0      1             0.3498    0.1027     0.1625    0.5448
+ 5.541        6      0      1             0.3498    0.1027     0.1625    0.5448
+ 6.762        5      1      0             0.2798    0.1033     0.1056    0.4859
+ 6.905        4      1      0             0.2099    0.0983     0.0601    0.4202
+ 8.019        3      1      0             0.1399    0.0869     0.0259    0.3469
+  8.89        2      0      1             0.1399    0.0869     0.0259    0.3469
+ 11.25        1      0      1             0.1399    0.0869     0.0259    0.3469
+-------------------------------------------------------------------------------
 ```
 
 
-在 R 裏面，指數分布模型的回歸系數中，常數項 `(Intercept)` 等同於 STATA 裏的 `_cons`，但是，它在 R 裏估計的是 $-\log \lambda$。`grade` 的回歸系數 $\beta$ 也一樣，在 R 裏它估計的是 $-\beta$。所以你會發現 R 的輸出結果和 STATA 的結果符號相反，但是殊途同歸。
-
-```{r Surv-prac-03-04, cache=TRUE}
-# Change the time scale to age time and fit the models again
-
-#The survreg function does not allow delayed entry times, so we can't use it with age as the time scale and entry at 'timein'
-#But we can fit the same model using an alternative function called 'weibreg' which is in the 'eha' package. You will need to install this package.
-# install.packages("eha") # install and loading this package by uncomment these two lines
-# library(eha)
-
-whl.exp2<-weibreg(Surv(timein/365.25, timeout/365.25,event=chd,origin=timebth/365.25)~as.factor(grade), data = whitehall,
-                  shape = 1)
-summary(whl.exp2)
-
-#Another alternative is the flexsurv package
-# install.packages("flexsurv") # install and loading this package by uncomment these two lines
-# library(flexsurv)
-whl.exp3<-flexsurvreg(Surv(timein/365.25, timeout/365.25,event=chd,origin=timebth/365.25)~as.factor(grade), data = whitehall,dist = "exponential",inits = rep(0.1,2))
-whl.exp3
-```
-
-在指數分布模型下，我們默認事件發生率不會隨着時間變化，所以，改變了時間尺度，對生存分析估計的參數結果沒有影響。
-
-```{r Surv-prac-03-05, cache=TRUE}
-whitehall <- whitehall %>%
-  mutate(agecat = cut(agein, breaks = c(40, 50, 55, 60, 65, 70),right = F, labels = F))
-whl.exp <- survreg(Surv(time, chd) ~ as.factor(grade) + as.factor(agecat), dist = "exponential", data = whitehall)
-summary(whl.exp)
-
-# Fit the Weibull model in R, keep job grade and age category
-
-whl.weibull <- survreg(Surv(time, chd) ~ as.factor(grade) + as.factor(agecat), dist = "weibull", data = whitehall)
-
-summary(whl.weibull)
-```
-
-這個結果和 STATA 的結果也有些許不同:
-
-```
-streg i.grade i.agecat, d(weib) nohr
-
-         failure _d:  chd
-   analysis time _t:  (timeout-origin)/365.25
-             origin:  time timein
-
-Fitting constant-only model:
-
-Iteration 0:   log likelihood = -627.95275
-Iteration 1:   log likelihood = -621.65709
-Iteration 2:   log likelihood = -621.54148
-Iteration 3:   log likelihood = -621.54144
-
-Fitting full model:
-
-Iteration 0:   log likelihood = -621.54144
-Iteration 1:   log likelihood = -591.43979
-Iteration 2:   log likelihood = -580.27283
-Iteration 3:   log likelihood =  -579.9356
-Iteration 4:   log likelihood = -579.93477
-Iteration 5:   log likelihood = -579.93477
-
-Weibull PH regression
-
-No. of subjects =        1,677                  Number of obs    =       1,677
-No. of failures =          154
-Time at risk    =  27605.37066
-                                                LR chi2(5)       =       83.21
-Log likelihood  =   -579.93477                  Prob > chi2      =      0.0000
-
-------------------------------------------------------------------------------
-          _t |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-     2.grade |    .285431   .1753856     1.63   0.104    -.0583184    .6291805
-             |
-      agecat |
-          2  |   .9690825   .2581668     3.75   0.000      .463085     1.47508
-          3  |    1.47402   .2416534     6.10   0.000     1.000388    1.947652
-          4  |   1.524436   .2707669     5.63   0.000     .9937422    2.055129
-          5  |   2.546185   .3759036     6.77   0.000     1.809428    3.282943
-             |
-       _cons |  -7.406372   .3705694   -19.99   0.000    -8.132675   -6.680069
--------------+----------------------------------------------------------------
-       /ln_p |   .3462011   .0767777     4.51   0.000     .1957195    .4966827
--------------+----------------------------------------------------------------
-           p |   1.413687   .1085397                      1.216186    1.643261
-         1/p |   .7073702   .0543103                      .6085461    .8222428
-------------------------------------------------------------------------------
-```
-
-- STATA裏的 `ln_p` (就是$\kappa$形狀參數 shape parameter)，在 R 裏的名字是 `-log(scale)`。
-- STATA報告對數風險度比 `2.grade |.285431` ，R 裏面的回歸系數 `as.factor(grade)2  -0.2019` 其實是對數風險度比除以形狀參數之後變更符號，所以 $-\frac{0.2854}{\exp(0.346)} = 0.202$
-- 所以在 R 中實際上輸出的結果是: $-\log\kappa, -\frac{\beta}{\kappa}$。
-
-
-```{r Surv-prac-03-06, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Non-paramatric plot to investigate whether the Weibull model fit the data appropriate', fig.align='center', out.width='70%'}
-whl.km.agecat1 <- survfit(Surv(time=time,event=chd)~grade,data=subset(whitehall,agecat==1))
-plot(whl.km.agecat1,conf.int=T,col=c("red","black"),mark.time=F,xlab="log time", ylab="log(-log S(t))",fun="cloglog")
+```{r Surv-prac-02-02, cache=TRUE}
+pbc.km <- survfit(Surv(time, d) ~ treat, data = pbcbase)
+summary(pbc.km)
 ```
 
 
-用 Weibull 分布模型的結果，繪制兩個 job grade 在 5 個不同年齡層次的估計生存概率曲線:
-
-```{r Surv-prac-03-07, cache=TRUE, fig.asp=.8, fig.width=6, fig.cap='The estimated survivor curves from the Weibull model in each job and age-at-entry category', fig.align='center', out.width='70%'}
-whl.weibull <- survreg(Surv(time, chd) ~ as.factor(grade) + as.factor(agecat), dist = "weibull", data = whitehall)
-plot(predict(whl.weibull, newdata = list(grade = 1, agecat = 1),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, col = "red",
-     xlab = "Time", ylab = "Survivor function: S(t)", xlim = c(0,20), ylim = c(0.5, 1))
-lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 1),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "red")
-
-lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 2),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "green")
-lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 2),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "green")
-
-lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 3),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "black")
-lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 3),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "black")
-
-lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 4),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "orange")
-lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 4),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "orange")
-
-lines(predict(whl.weibull, newdata = list(grade = 1, agecat = 5),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 1, col = "blue")
-lines(predict(whl.weibull, newdata = list(grade = 2, agecat = 5),  type = "quantile", p = seq(0.01, 0.99, by = 0.01)), seq(0.99, 0.01, by = -0.01), type = "l", lwd = 2, lty = 2, col = "blue")
-```
-
-下面把隨訪時間按照 5 到 20 年每間隔五年的方法把所有患者的追蹤時間截斷成4個部分。然後用指數分布回歸模型擬合數據，這也是一種放鬆**恆定事件發生率**這一前提條件的方法:
-
-```{r Surv-prac-03-08, cache=TRUE, warning=FALSE}
-whl.split <- survSplit(Surv(time, chd) ~ ., whitehall, cut = c(0, 5, 10, 15, 20), start = "time0", episode = "fuband")
-
-with(whitehall, whitehall[id == 5038,])
-
-with(whl.split, whl.split[id == 5038,])
-
-whl.split.exp <- flexsurvreg(Surv(time0, time, chd) ~ as.factor(grade) + as.factor(agecat) +
-                               as.factor(fuband), dist = "exponential", data = whl.split)
-
-whl.split.exp
+```{r Surv-prac-02-03, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier survivor functions', fig.align='center', out.width='70%'}
+plot(pbc.km, conf.int = F, col = c("red", "black"), mark.time = F, xlab = "Time", ylab = "Survivor function")
 ```
 
 
-我們用指數分布回歸擬合的生存時間模型，其實還可以用泊鬆回歸模型來做，結果也是一樣的:
-
-```{r Surv-prac-03-09, cache=TRUE, warning=FALSE}
-whl.poi <- glm(chd ~ as.factor(grade), family = poisson(link = log), offset = log(time), data = whitehall)
-summary(whl.poi)
+```{r Surv-prac-02-04, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier survivor functions with confidence intervals', fig.align='center', out.width='70%'}
+plot(pbc.km, conf.int = T, col = c("red", "black"), mark.time = T, xlab = "Time", ylab = "Survivor function")
 ```
 
-你可以回頭去和指數分布回歸的模型結果做個比較，他們的回歸系數估計和標準誤完全是一樣的。
+在追蹤前兩年，兩組患者的生存方程沒有太大區別，兩年之後，到大約第五年之間，藥物治療組的生存概率曲線似乎要低於對照組，暗示藥物治療在這段時間內可能導致患者較高的死亡率。患者隨訪達到第五年之後，可以看到藥物治療組患者的生存概率曲線一直都處在對照組的上方，提示我們患者被隨訪達到五年之後，藥物治療組的患者死亡率開始低於對照組死亡率。但是，這兩條生存概率曲線的 95% 信賴區間彼此重疊部分很大，且在臨近隨訪達到12年的時候，信賴區間太寬，因爲此時已經沒有多少死亡病例。這兩組患者都有大約 50% 左右的患者的生存率超過五年。
+
+```{r Surv-prac-02-05, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Nelson-Aalen estimates of the cumulative hazard', fig.align='center', out.width='70%'}
+pbc.km1 <- survfit(Surv(time, d) ~ 1, data=subset(pbcbase, pbcbase$treat == 1))
+pbc.km2 <- survfit(Surv(time, d) ~ 1, data=subset(pbcbase, pbcbase$treat == 2))
+cumhaz.1 <- cumsum(pbc.km1$n.event/pbc.km1$n.risk)
+cumhaz.2 <- cumsum(pbc.km2$n.event/pbc.km2$n.risk)
+plot(pbc.km1$time, cumhaz.1, type = "s", col = "red", xlab = "Time", ylab = "Cumulative hazard")
+lines(pbc.km2$time, cumhaz.2, type = "s", col = "black")
+```
+
+
+```{r Surv-prac-02-06, cache=TRUE, fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier estimates of the cumulative hazard', fig.align='center', out.width='70%'}
+
+plot(pbc.km, conf.int= F, col=c("red", "black"), mark.time =F,xlab = "Time", ylab = "Cumulative hazard", fun = "cumhaz")
+```
+
+
+從兩個生存累積概率曲線來看，治療組的生存累計概率似乎隨着時間更加呈線性變化。在對照組，風險在5年以後的累計速率陡然升高了。
+
+```{r Surv-prac-02-07, cache=TRUE}
+# the log rank test
+
+survdiff(Surv(time, d) ~ treat, data = pbcbase)
+```
+
+```{r Surv-prac-02-08, cache=TRUE,fig.asp=.8, fig.width=5, fig.cap='Rplots of the Kaplan-Meier estimates of the survivor curve', fig.align='center', out.width='70%'}
+whitehall <- read_dta("../backupfiles/whitehall.dta")
+whl.km <- survfit(Surv(time=(timeout - timein)/365.25, event = chd) ~ 1, data = whitehall)
+plot(whl.km, conf.int = T, mark.time = F, xlab = "Time", ylab = "Survivor function", ylim=c(0.8,1))
+```
+
+
+```{r Surv-prac-02-09, cache=TRUE,fig.asp=.8, fig.width=6, fig.cap='Rplots of the Kaplan-Meier estimates of the survivor curve', fig.align='center', out.width='70%'}
+whl.km <- survfit(Surv(time = (timeout - timein)/365.25, event = chd) ~ sbpgrp, data = whitehall)
+plot(whl.km, conf.int = F, mark.time = F, xlab = "Time", ylab = "Survivor function", ylim = c(0.75, 1), col = c("blue", "red", "green", "orange"))
+legend(1, 0.85, c("Group 1", "Group 2", "Group 3", "Group 4"), col = c("blue", "red", "green", "orange"), lty = c(1,1))
+```
+
+所以，第四組患者的生存率最差， 第一組，第二組患者幾乎沒有差別。
+
+```{r Surv-prac-02-10, cache=TRUE}
+survdiff(Surv(time = (timeout - timein)/365.25, event = chd) ~ sbpgrp, data = whitehall)
+```
+

@@ -1,0 +1,47 @@
+
+$$
+h(t|x) = h_0(t)e^{\beta^Tx}
+$$
+
+其中，$h_0(t)$ 是被比較的基線組成員(baseline individual)的風險度 (hazard)，在 Weibull 模型或者指數模型中，這個基線風險 (baseline hazard) 是需要被模型根據數據來進行參數估計的 (parameterized)。但是，1972年，神一樣的人物 Cox [@Cox1972b] 提出，其實我們不需要對這個基線風險進行"無謂"的估計，可以無視它在模型中的存在。正因為如此，這個模型被冠以發明者的名字 Cox proportional hazards model。因為此模型不對基線風險進行任何估計，但是對預測變量對於風險的效果 (effect of the explanatory variable) 用模型中的 $\beta$ 進行參數估計，所以，它又是一種典型的半參數化模型 (semi-parametric model)。
+
+Cox 比例風險模型下的似然：
+
+$$
+L= \prod_{i=1}^n\{ h_0(t)e^{\beta^Tx_i}\exp(-\int_0^{t_i} h_0(u)e^{\beta^Tx_i}du) \}^{\delta_i}\{ \exp(-\int_0^{t_i} h_0(u)e^{\beta^Tx_i}du) \}^{1-\delta_i}
+$$
+
+是無法估計的，此時要用到偏似然 (partial likelihood)，
+
+思考這樣一個問題，在一組用 $R_j$ 標記的患者集合中，當我們已知它們同時都存活到了時間點 $t_j$，且沒有發生刪失，那麼這組患者中的某個 $i_j$，他/她有一個解釋變量 $x_i$，他在這個時間點恰好發生事件的條件概率該怎麼計算：
+
+$$
+\frac{h_0(t_j)\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}h_0(t_j)\exp(\beta^Tx_k)} = \frac{\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}\exp(\beta^Tx_k)}
+$$
+
+是的，你沒有看錯，基線風險被完美的消除掉了，這就是它不需要被參數估計的原因。此時，我們用偏似然來計算這樣的模型似然：
+
+$$
+L_p = \prod_j \frac{\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}\exp(\beta^Tx_k)}
+$$
+
+
+
+模型的假設：
+
+$$
+h(t|x) = h_0(t)e^{\beta^Tx}
+$$
+
+1. Proportional hazards assumption - explanatory variables act **multiplicatively** on the hazard and their effect on the hazard does not change over time;
+2. We have correctly specified the form for how continuous explanatory variables act on the hazard;
+3. We have included all relevant explanatory variables including possbile interactions;
+4. Uninformative censoring;
+5. Individuals are independent.
+
+## 該用半參數模型還是用全參數模型
+
+- 如果說指數模型或者 Weibull 模型是合理的，通常此時用 Cox 半參數模型也是合理的；
+- 如果指數模型或者 Weibull 模型都是合理的，那麼 Cox 半參數模型給出的估計，其實不會和指數模型或者 Weibull 模型相差甚遠。指數模型或者 Weibull 模型可能給出的估計會相對更精確 (更小的標準誤)，但是實際應用中這種更加精確的程度其實十分有限；
+- 另外，使用指數模型或者 Weibull 模型，重要的基線風險是否被模型擬合正確將會是關鍵 (baseline hazard mis-specified?)，但是使用 Cox 模型，就可以避免這個假設，忽略掉基線風險；
+- 2002 年，[@Royston2002] 提出第三種生存數據模型，"flexible parametric survival models"，結合了參數和半參數模型的長處，正在變得流行起來。在這個新型靈活參數生存模型中，使用了三次方程平滑曲線 (cubic splines modelled smoothly) 擬合對數基線累積風險 (log cumulative baseline hazard)。
