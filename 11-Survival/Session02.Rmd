@@ -1,3 +1,15 @@
+## 本章概要
+
+本章內容包括
+
+1. 使用非參數方法（分別是Kaplan-Meier法，和生命表法）估計生存方程，累計風險度方程，同時考慮刪失值。
+2. 使用 Greenwood 表達式 (Greenwood's) 計算非參數法獲得的參數估計的不確定性（即信賴區間）。
+3. 製作生存分析非參數法的繪圖。
+4. 非參數法比較不同組間（治療組對照組）的生存時間。
+5. 學會並理解如何實施 log rank test 比較兩組之間生存時間模式的不同 (pattern of survival times)
+6. 在R中實際操作非參數法分析生存數據，並理解其輸出結果的含義。
+
+
 ## 生存分析中的非參數分析法
 
 非參數法分析生存數據其實是所有人在分析生存數據時應該着手做的第一件事。
@@ -5,7 +17,7 @@
 - 非參數法可以對生存時間不必進行任何參數分布 (parametric assumption) 的假設，初步地估計生存方程和累積風險度方程;
 - 使用非參數法可以用生存曲線圖的方式直觀地展示生存數據，包括刪失值在數據中的存在也可以通過圖表來表現出來;
 - 非參數法可以初步地對不同組/羣之間生存曲線的變化進行比較;
-- 通過非參數法對生存數據進行初步分析之後，可以對接下來的生存數據建模過程提供有參考價值的背景信息。
+- 通過非參數法對生存數據進行初步分析之後，可以對其後更加複雜的生存數據建模過程提供有參考價值的背景信息。
 
 ## Kaplan-Meier 法分析生存方程
 
@@ -17,7 +29,62 @@ $$
 \hat{S}(t) = \frac{\text{number of individuals with survival time} > t}{\text{total number of individuals}}
 $$
 
-在每個觀察到事件的時間點 $t_1 < t_2 < t_3 < \cdots < t_K$，我們可以計算該時間點的生存方程，然後假定兩個事件的時間點之間的生存概率保持不變，就可以繪制出一個階梯形狀的生存曲線。
+在每個觀察到事件的時間點 $t_1 < t_2 < t_3 < \cdots < t_K$，我們可以計算該時間點的生存方程，然後假定兩個事件的時間點之間的生存概率保持不變，就可以繪制出一個階梯形狀的生存曲線。也就是說，只有在觀察到事件的那些時間點上，生存方程得到定義。
+
+
+**例子** 白血病患者數據，估計對照組的生存方程。在這個白血病患者數據中，對照組中並沒有刪失值，正好可以用來展示沒有刪失值時，生存方程的計算過程。對照組中有21名白血病患者，我們感興趣的事件是癌症是否復發，此時的生存時間是，復發前的時間（單位週）他們的數據被總結在下面的表格中，其中治療組的時間後面某些患者的星號 (\*\) 表示這些患者無復發，是刪失值：
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-8hhd{border-color:inherit;font-size:18px;text-align:left;vertical-align:top}
+.tg .tg-fuxe{border-color:inherit;font-size:18px;text-align:left;vertical-align:top}
+</style>
+<table class="tg">
+<thead>
+  <tr>
+    <th class="tg-fuxe">Control group</th>
+    <th class="tg-fuxe">1,1,2,2,3,4,4,5,5,8,8,8,8,11,11,12,12,15,17,22,23</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-8hhd">Treatment group</td>
+    <td class="tg-8hhd">6\*\,6,6,6,7,9\*\,10\*\,10,11\*\,13,16,17\*\,19\*\,20\*\,22,23,25\*\,32\*\,32\*\,34\*\,35\*</td>
+  </tr>
+</tbody>
+</table>
+
+對照組中患者的實際觀測數據計算獲得的生存方程總結在下面的表格中：
+
+| $t_j$ | Number of events $d_j$ | $\hat{S}(t_j)$ |
+|:-----:|:----------------------:|:--------------:|
+|   1   |            2           |  19/21 = 0.90  |
+|   2   |            2           |  17/21 = 0.81  |
+|   3   |            1           |  16/21 = 0.76  |
+|   4   |            2           |  14/21 = 0.67  |
+|   5   |            2           |  12/21 = 0.57  |
+|   8   |            4           |   8/21 = 0.38  |
+|   11  |            2           |   6/21 = 0.29  |
+|   12  |            2           |   4/21 = 0.19  |
+|   15  |            1           |   3/21 = 0.14  |
+|   17  |            1           |   2/21 = 0.10  |
+|   22  |            1           |   1/21 = 0.05  |
+|   23  |            1           |        0       |
+
+
+上面表格中估計的生存方程可以用下圖 \@ref(fig:Survfig2-1) 來表示。可見這樣的生存方程繪製成的生存曲線其實是呈現階梯狀的。這也是爲什麼我們說在這樣的非參數過程中，生存方程在觀察到事件的兩個時間點之間默認生存方程是恆定不變的。
+
+```{r Survfig2-1, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Estimated survivor function corresponding to the leukaemia data in the control group.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/Leukemia-remission-control.png"))
+```
+
+
+
+
 
 ### 當數據中有刪失值
 
@@ -177,14 +244,14 @@ kable(dt, "html",  align = "l", caption = "表 72.1: Time to remission for leuka
    <td style="text-align:left;"> 2 </td>
    <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> 1 </td>
-   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> -- </td>
   </tr>
   <tr>
    <td style="text-align:left;"> 35 </td>
    <td style="text-align:left;"> 1 </td>
    <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> 1 </td>
-   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> -- </td>
   </tr>
 </tbody>
 </table>
