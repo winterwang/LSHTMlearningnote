@@ -160,10 +160,11 @@ $$
 白血病患者病情緩解數據：我們對該數據使用**指數模型**來分析，使用Stata 或者 R就可以獲取下面表格中的分析結果。
 ```
 
+
 | Parameter    | Estimate | Standard error | 95% confidence interval | p-value    |
-|--------------|----------|----------------|-------------------------|------------|
+|:------------:|:--------:|:--------------:|:-----------------------:|:----------:|
 | $\lambda$    | 0.12     | 0.03           | (0.08, 0.18)            |  $<$ 0.001 |
-| $\beta$      | -1.53    | 0.40           | (-2.31, -0.75)          | $<$0.001   |
+| $\beta$      | -1.53    | 0.40           | (-2.31, -0.75)          |  $<$ 0.001 |
 | $\exp \beta$ | 0.22     | 0.09           | (0.10, 0.48)            |  $<$ 0.001 |
 
 
@@ -183,7 +184,6 @@ names(gehan)[3] <- "remission"
 exp.model <- survreg(Surv(time = weeks, event = remission) ~ group, 
                      dist = "exponential", data = gehan)
 summary(exp.model)
-gtsummary::tbl_regression(exp.model, exponentiate = TRUE)
 ```
 
 - 風險度比的計算方法是: exp(-1.527) $\approx$ 0.22
@@ -261,7 +261,7 @@ $$
 ```
 
 | Parameter    | Estimate | Standard error | 95% confidence interval | p-value |
-|--------------|----------|----------------|-------------------------|---------|
+|:------------:|:--------:|:--------------:|:-----------------------:|:-------:|
 | $\lambda$    | 0.05     | 0.03           | (0.02, 0.14)            | <0.001  |
 | $\kappa$     | 1.37     | -              | (1.02, 1.82)            | 0.034   |
 | $\beta$      | -1.73    | 0.41           | (-2.54, -0.92)          | <0.001  |
@@ -281,14 +281,13 @@ knitr::include_graphics(paste0(bugpath, "/img/surv0302.png"))
 weibull.model <- survreg(Surv(time = weeks, event = remission) ~ group, 
                      dist = "weibull", data = gehan)
 summary(weibull.model)
-gtsummary::tbl_regression(weibull.model, exponentiate = FALSE)
 ```
 
 - 風險度比的計算方法是 exp(-1.267 * exp(0.312)) $\approx$ 0.18; 
 - 風險度比的95%信賴區間的計算方法是：
-    - exp((-1.267 - 1.96*0.311) * exp(0.312)) $\approx$ 0.08
-    - exp((-1.267 + 1.96*0.311) * exp(0.312)) $\approx$ 0.40
-- 基線風險度的計算方法是 exp(- 2.248 * exp(0.312)) $\approx$ 0.05
+    - exp((-1.267 - 1.96 $\times$ 0.311) $\times$ exp(0.312)) $\approx$ 0.08
+    - exp((-1.267 + 1.96 $\times$ 0.311) $\times$ exp(0.312)) $\approx$ 0.40
+- 基線風險度的計算方法是 exp(- 2.248 $\times$ exp(0.312)) $\approx$ 0.05
  
 
 實際在Stata的計算過程是：
@@ -303,16 +302,25 @@ streg group, distribution(weibull)
         group|         .1771299    .0731691   -4.19 0.000 .0788272  .3980227            
         _cons|         .0463885    .025888    -5.50 0.000 .0155375   .138497 
         /ln_p|         .3117092    .1472919    2.12 0.034 .0230224   .600396 
-           p |         1.365757    .201165                1.02329    1.82284 
-         1/p |         .7321944    .1078463                .5485944 .9772406 
+           p |         1.365757    .201165                 1.02329   1.82284 
+         1/p |         .7321944    .1078463               .5485944  .9772406 
 -------------+----------------------------------------------------------------
 ```
 
 ## Weibull 和 指數模型的比較
 
+至此，我們可以看出，同樣的生存數據我們可以選擇使用指數模型也可以使用 Weibull 模型。問題是，哪個模型會更優於另一個？簡單說有兩種方法可以幫助你作出選擇。
+
+1. 使用繪圖輔助
+2. 使用統計檢驗比較
+
+
 ### 繪圖法
 
-在指數分布模型中，累積風險度 cumulative hazard 是和時間呈正比的:
+使用非參數方法獲得的圖形，有時會有助於（視覺上的方法，非正式但有助於）判斷哪種參數模型更加合適你手頭的數據。這裏用一個二進制暴露變量來做解釋。
+
+在指數分布模型中，累積風險度 cumulative hazard 是和追蹤時間呈正比的:
+
 $$
 H(t;x) = -\log S(t;x) = \lambda t e^{\beta x}
 $$
@@ -323,7 +331,7 @@ $$
 \log H(t;x) = \log\{ -\log S(t;x) \} = \log \lambda + \kappa \log t + \beta x
 $$
 
-所以，累積風險度如果取了對數，那麼這個值和時間的對數 $\log t$ 是呈線性關系的，且當這個直線的坡度爲 1 的話 $\kappa = 1$，就說明數據符合指數模型。如果，$x$ 只是一個二分類解釋變量的話，你會看到對數累積風險度和對數時間呈現爲**兩條平行線**。
+所以，累積風險度如果取了對數，那麼這個值和時間的對數 $\log t$ 是呈線性關系的，且當這個直線的坡度爲 1 （和橫軸呈現45度角） 的話 $\kappa = 1$，就說明數據符合指數模型。如果，$x$ 只是一個二分類解釋變量的話，你會看到對數累積風險度和對數時間呈現爲**兩條平行線**。
 
 ### 統計檢驗法
 
@@ -340,12 +348,24 @@ $$
 -2(\ell_{\text{exponential}} - \ell_{\text{Weibull}}) \sim \chi_1^2
 $$
 
-服從的卡方分布的自由度是兩個模型的參數數量的差。
+服從的卡方分布的自由度是兩個模型的參數數量的差。似然比檢驗通常會比簡單比較 $\kappa = 1$ 更值得實施因爲它通常會相對 wald 檢驗提供更加值得信任的檢驗，所以多數人也比較傾向於使用似然比檢驗法比較符合嵌套結構的參數模型。
 
 
-## 多於 1 個解釋變量的參數模型
+```{r  Survfig3-3, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Leukaemia patient data: Kaplan-Meier plots of the cumulative hazard (left) and the log cumulative hazard (right) in treatment and controls groups.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/Logtcumhaz.png"))
+```
 
-當然可以在生存分析參數模型中加入多於一個變量，而且可以是分類型，連續型變量:
+
+```{r Surv03-03, cache=TRUE}
+summary(weibull.model)
+
+lrtest(weibull.model, exp.model)
+```
+
+
+## 拓展解釋變量（類型與個數）的參數模型
+
+當然可以在生存分析參數模型中加入多於一個變量，而且可以是分類型，連續型變量 $\mathbf{X} = (X_1, X_2, \dots, X_p)^T$ :
 
 $$
 h(t;x) = h_0 (t)e^{\beta^Tx}
@@ -356,3 +376,53 @@ $$
 - $\beta_k$ 是當保持所有其他變量不變時，解釋變量 $X_k$ 在增加/減少一個單位對應的對數風險度比 (log-hazard ratio)。
 
 
+### 當變量是連續型時
+
+對於一個連續型暴露變量 $X$ 來說，每增加1個單位，其效果其實就是風險度乘以 $\exp^\beta$。所以，比較一個 $X = 1$ 的實驗對象和一個 $X = 0$ 的實驗對象的風險度之比： 
+
+$$
+\frac{h(t : 1)}{h(t: 0)} = \frac{h_0(t) e^\beta}{h_0(t)} = e^\beta
+$$
+
+如果說舉例年齡作爲唯一的暴露變量的話，73歲的人和72歲的人相比，他們之間的風險度比是：
+
+$$
+\frac{h(t : 73)}{h(t: 72)} = \frac{h_0(t) e^{73\beta}}{h_0(t) e^{72\beta}} = e^\beta
+$$
+
+所以，對於一個連續型變量 $X$ 來說，$\beta$ 是 $X$ 每增加一個單位時的風險度比的對數 (the log hazard ratio associated with 1 unit increase in $X$)。
+
+### （多於兩種類型的）分類型變量
+
+如果是一個多餘兩種分類（$K + 1$）類型的變量，我們定義一系列的 $K$ 個啞變量 (dummy variable)，或者叫做指示型變量 (indicator variables)
+
+
+$$
+X_k = \left\{
+  \begin{array}{ll}
+  1 & \text{ if in category } k  \\
+  0 & \text{ otherwise }
+  \end{array}
+\right.
+$$
+
+那麼此時第 $k$ 個分組的風險度是 
+ 
+ 
+$$
+h_0(t)e^{\beta_k}, (k = 0, 1, \dots, K)
+$$
+
+
+其中基線風險度 $h_0(t)$ 其實是分類在第一個類別（基準組類別 $X_0 = 1, \beta_0 = 0$）中的實驗對象的風險度。所以，$e^{\beta_k}$ 就是比較第 $k$ 組分類和第一個類別的實驗對象的風險度比 (the hazard ratio which compares individuals in category $k$ with individuals in category 0)。這樣一個模型同時可以改寫成： 
+
+$$
+h(t; x) = h_0(t)\exp(\beta_1x_1 + \beta_2 x_2 + \cdots + \beta_K x_K)
+$$
+
+其中 $x_k$ 是實驗對象是否屬於第 $k$ 組分類的指示型變量。
+
+
+### 當你加入了多個解釋變量時
+
+一般來說我們會用 $X$ 表示一系列的暴露變量組成的向量。其中可能包括二進制型，多分類型，或者連續型變量。那如果說 $\mathbf{\beta}$ 表示這些暴露變量本身的對數風險度比(log hazard ratio)的估計值組成的向量。那解釋其中某一個 $\beta$ 的方法其實就是，該估計值對應的暴露變量的對數危險度比，當且僅當其他的變量保持不變。也就是調整了其他暴露變量之後該變量的對數風險度比。
