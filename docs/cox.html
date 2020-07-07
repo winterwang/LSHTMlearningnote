@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-07-07" />
+<meta name="date" content="2020-07-08" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1247,7 +1247,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="74.1" data-path="cox.html"><a href="cox.html#本章概要-3"><i class="fa fa-check"></i><b>74.1</b> 本章概要</a></li>
 <li class="chapter" data-level="74.2" data-path="cox.html"><a href="cox.html#初步介紹-cox-比例風險模型"><i class="fa fa-check"></i><b>74.2</b> 初步介紹 Cox 比例風險模型</a></li>
-<li class="chapter" data-level="74.3" data-path="cox.html"><a href="cox.html#偏似然法-partial-likelihood"><i class="fa fa-check"></i><b>74.3</b> 偏似然法 (partial likelihood)</a></li>
+<li class="chapter" data-level="74.3" data-path="cox.html"><a href="cox.html#偏似然法-partial-likelihood"><i class="fa fa-check"></i><b>74.3</b> 偏似然法 (partial likelihood)</a>
+<ul>
+<li class="chapter" data-level="74.3.1" data-path="cox.html"><a href="cox.html#爲什麼使用-cox-回歸模型"><i class="fa fa-check"></i><b>74.3.1</b> 爲什麼使用 Cox 回歸模型？</a></li>
+</ul></li>
 <li class="chapter" data-level="74.4" data-path="cox.html"><a href="cox.html#該用半參數模型還是用全參數模型"><i class="fa fa-check"></i><b>74.4</b> 該用半參數模型還是用全參數模型</a></li>
 <li class="chapter" data-level="74.5" data-path="cox.html"><a href="cox.html#practical-survival-04"><i class="fa fa-check"></i><b>74.5</b> Practical Survival 04</a></li>
 </ul></li>
@@ -1650,14 +1653,142 @@ L= \prod_{i=1}^n\{ h_0(t)e^{\beta^Tx_i}\exp(-\int_0^{t_i} h_0(u)e^{\beta^Tx_i}du
 </div>
 <div id="偏似然法-partial-likelihood" class="section level2" number="74.3">
 <h2><span class="header-section-number">74.3</span> 偏似然法 (partial likelihood)</h2>
-<p>思考這樣一個問題，在一組用 <span class="math inline">\(R_j\)</span> 標記的患者集合中，當我們已知它們同時都存活到了時間點 <span class="math inline">\(t_j\)</span>，且沒有發生刪失，那麼這組患者中的某個 <span class="math inline">\(i_j\)</span>，他/她有一個解釋變量 <span class="math inline">\(x_i\)</span>，他在這個時間點恰好發生事件的條件概率該怎麼計算：</p>
+<p>假定已知某一名實驗對象身上經過了生存時間 <span class="math inline">\(t_j\)</span> 之後發生了研究者追蹤的事件 (event of interest)。我們用 <span class="math inline">\(i_j\)</span> 標記該實驗對象，她/他/它身上具有的所有解釋變量則用 <span class="math inline">\(x_{i_j}\)</span> 來表達。在無限接近時間點 <span class="math inline">\(t_j\)</span> 之前的時刻，有一個包含了所有此時仍未發生事件的觀察對象的潛在對象集合 (risk set) <span class="math inline">\(R_j\)</span>。觀察對象 <span class="math inline">\(i_j\)</span> 也屬於這個潛在對象集合 <span class="math inline">\(R_j\)</span>。這裏我們假定該時間無限短，短到有且僅有一個對象可以發生事件，即沒有人同時發生事件。</p>
+<p>接下來我們思考這樣一個問題：在這組用 <span class="math inline">\(R_j\)</span> 標記的潛在對象集合中，我們已知它們同時都存活到了時間點 <span class="math inline">\(t_j\)</span>，且沒有發生刪失，那麼這組患者中的某個個體 <span class="math inline">\(i_j\)</span>，它/他/她有一個解釋變量 <span class="math inline">\(x_i\)</span>，它/他/她在這個時間點發生事件的條件概率 (conditional probability) 該怎麼計算？</p>
 <p><span class="math display">\[
 \frac{h_0(t_j)\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}h_0(t_j)\exp(\beta^Tx_k)} = \frac{\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}\exp(\beta^Tx_k)}
 \]</span></p>
-<p>是的，你沒有看錯，基線風險被完美的消除掉了，這就是它不需要被參數估計的原因。此時，我們用偏似然來計算這樣的模型似然：</p>
+<p>是的，你沒有看錯，基線風險度 <span class="math inline">\(h_0(t)\)</span> 被完美的從分子和分母中抵消掉了，這就是它不需要被參數估計的原因。那麼，在所有發生事件的時間點上，我們都可以類似的計算其對應的條件概率，然後把所有發生事件時的條件概率相乘，就獲得了我們所需要的偏似然 (partial likelihood)，用 <span class="math inline">\(L_p\)</span> 來表示：</p>
 <p><span class="math display">\[
 L_p = \prod_j \frac{\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}\exp(\beta^Tx_k)}
 \]</span></p>
+<p>這個似然之所以被命名爲偏似然 (partial)，就因爲它並不是一個完整的生存過程，我們只巧妙地取用了生存過程中的一部分。而且目前爲止的統計學已經證明了，它和完整的標準似然在生存數據中其實是漸進一致的 (asymptotically the same)。這也就意味着，我們可以利用這個性質，忽略掉 <span class="math inline">\(h_0(t)\)</span>，使用極大似然法來獲取全部的 <span class="math inline">\(\beta\)</span> 的估計值。且我們知道這些 MLE <span class="math inline">\(\hat\beta\)</span> 的方差 (variance) 可以通過計算 Fisher information matrix 的逆矩陣 (inverse of matrix) 來獲得。這樣我們就理解了 Cox 回歸的計算原理和過程。</p>
+<p>該偏似然的對數如果用 <span class="math inline">\(l_p\)</span> 表示：</p>
+<p><span class="math display">\[
+l_p = \sum_j \beta^T x_{i_j} - \sum_j \log(\sum_{k \in R_j} \exp \beta^T x_k)
+\]</span></p>
+<p>在最簡單的只有一個解釋變量 <span class="math inline">\(x\)</span> 的情況之下，<span class="math inline">\(\beta\)</span> 可以通過對該對數似然求導數之後解下列的方程獲得：</p>
+<p><span class="math display">\[
+\frac{dl_p}{d\beta} = \sum_j x_{i_j} - \sum_j \frac{\sum_{k \in R_j} x_k \exp \beta x_k}{\sum_{k \in R_j} \exp \beta x_k} = 0
+\]</span></p>
+<p>如果 <span class="math inline">\(\beta\)</span> 是多個需要被估計的 MLE 那麼就會同時獲得多個類似上述方程的聯立方程需要同時求解。在實際操作中，統計包會選擇使用迭代法 (iterative method) 去尋找符合這樣聯立方程的解作爲 MLE。</p>
+
+<div class="example">
+<p><span id="exm:Survival-analysis-0401" class="example"><strong>Example 74.1  </strong></span><strong>給白血病患者數據套用 Cox 比例風險回歸模型</strong> 在這個數據中，42名白血病患者中各有21人分別在治療和對照組。研究者關心的事件是病情的緩解 (remission)。追蹤時間是從白血病診斷時起，單位是週數。那麼暴露變量就是被分配到治療組與否，其中被分配到對照組的患者的風險度被認爲是基線風險度 (baseline hazard)。於是這個模型其實可以簡單描述成：</p>
+</div>
+<p><span class="math display">\[
+\begin{cases}
+     h_0(t)   &amp; 對照組 \text{ control group} \\
+     h_0(t) e^\beta &amp; 治療組 \text{ treatment group}
+\end{cases}
+\]</span></p>
+<p>使用偏似然法計算該模型的參數我們獲得對數風險度比 (log hazard ratio) 的估計值 <span class="math inline">\(\hat\beta = -1.51\)</span>，其對應的標準誤是 <span class="math inline">\(0.410\)</span>，95% 信賴區間是 (-2.31, -0.71)。於是相應的，風險度比 <span class="math inline">\(\exp \hat\beta = 0.22\)</span>，95% 信賴區間是 <span class="math inline">\((0.10, 0.49)\)</span>。</p>
+<p>該模型用 Stata 計算的過程如下</p>
+<pre><code>## 
+## . infile group weeks remission using https://data.princeton.edu/wws509/datas&gt; /gehan.raw
+## (42 observations read)
+## 
+## . label define group 1 &quot;control&quot; 2 &quot;treated&quot;
+## 
+## . label values group group
+## 
+## . stset weeks, failure(remission)
+## 
+##      failure event:  remission != 0 &amp; remission &lt; .
+## obs. time interval:  (0, weeks]
+##  exit on or before:  failure
+## 
+## ------------------------------------------------------------------------------
+##          42  total observations
+##           0  exclusions
+## ------------------------------------------------------------------------------
+##          42  observations remaining, representing
+##          30  failures in single-record/single-failure data
+##         541  total analysis time at risk and under observation
+##                                                 at risk from t =         0
+##                                      earliest observed entry t =         0
+##                                           last observed exit t =        35
+## 
+## . stcox group
+## 
+##          failure _d:  remission
+##    analysis time _t:  weeks
+## 
+## Iteration 0:   log likelihood =  -93.98505
+## Iteration 1:   log likelihood = -86.385606
+## Iteration 2:   log likelihood = -86.379623
+## Iteration 3:   log likelihood = -86.379622
+## Refining estimates:
+## Iteration 0:   log likelihood = -86.379622
+## 
+## Cox regression -- Breslow method for ties
+## 
+## No. of subjects =           42                  Number of obs    =          42
+## No. of failures =           30
+## Time at risk    =          541
+##                                                 LR chi2(1)       =       15.21
+## Log likelihood  =   -86.379622                  Prob &gt; chi2      =      0.0001
+## 
+## ------------------------------------------------------------------------------
+##           _t | Haz. Ratio   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##        group |   .2210887   .0905501    -3.68   0.000     .0990706    .4933877
+## ------------------------------------------------------------------------------
+## 
+## . stcox group, nohr
+## 
+##          failure _d:  remission
+##    analysis time _t:  weeks
+## 
+## Iteration 0:   log likelihood =  -93.98505
+## Iteration 1:   log likelihood = -86.385606
+## Iteration 2:   log likelihood = -86.379623
+## Iteration 3:   log likelihood = -86.379622
+## Refining estimates:
+## Iteration 0:   log likelihood = -86.379622
+## 
+## Cox regression -- Breslow method for ties
+## 
+## No. of subjects =           42                  Number of obs    =          42
+## No. of failures =           30
+## Time at risk    =          541
+##                                                 LR chi2(1)       =       15.21
+## Log likelihood  =   -86.379622                  Prob &gt; chi2      =      0.0001
+## 
+## ------------------------------------------------------------------------------
+##           _t |      Coef.   Std. Err.      z    P&gt;|z|     [95% Conf. Interval]
+## -------------+----------------------------------------------------------------
+##        group |  -1.509191   .4095644    -3.68   0.000    -2.311923   -.7064599
+## ------------------------------------------------------------------------------
+## 
+## .</code></pre>
+<p>該模型用 R 計算的過程如下</p>
+<div class="sourceCode" id="cb1310"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1310-1"><a href="cox.html#cb1310-1"></a>gehan &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;https://data.princeton.edu/wws509/datasets/gehan.raw&quot;</span>, <span class="dt">header =</span>  <span class="ot">FALSE</span>, <span class="dt">sep =</span><span class="st">&quot;&quot;</span>, <span class="dt">col.names =</span> <span class="kw">c</span>( <span class="st">&quot;group&quot;</span>, <span class="st">&quot;weeks&quot;</span>, <span class="st">&quot;remission&quot;</span>))</span>
+<span id="cb1310-2"><a href="cox.html#cb1310-2"></a></span>
+<span id="cb1310-3"><a href="cox.html#cb1310-3"></a>cox.model &lt;-<span class="st"> </span><span class="kw">coxph</span>(<span class="kw">Surv</span>(<span class="dt">time =</span> weeks, <span class="dt">event =</span> remission) <span class="op">~</span><span class="st"> </span><span class="kw">as.factor</span>(group), </span>
+<span id="cb1310-4"><a href="cox.html#cb1310-4"></a>                     <span class="dt">data =</span> gehan, <span class="dt">method =</span> <span class="st">&quot;breslow&quot;</span>)</span>
+<span id="cb1310-5"><a href="cox.html#cb1310-5"></a><span class="kw">summary</span>(cox.model)</span></code></pre></div>
+<pre><code>## Call:
+## coxph(formula = Surv(time = weeks, event = remission) ~ as.factor(group), 
+##     data = gehan, method = &quot;breslow&quot;)
+## 
+##   n= 42, number of events= 30 
+## 
+##                       coef exp(coef) se(coef)       z  Pr(&gt;|z|)    
+## as.factor(group)2 -1.50919   0.22109  0.40956 -3.6849 0.0002288 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##                   exp(coef) exp(-coef) lower .95 upper .95
+## as.factor(group)2   0.22109     4.5231  0.099071   0.49339
+## 
+## Concordance= 0.69  (se = 0.041 )
+## Likelihood ratio test= 15.21  on 1 df,   p=0.0001
+## Wald test            = 13.58  on 1 df,   p=0.0002
+## Score (logrank) test = 15.93  on 1 df,   p=7e-05</code></pre>
+<div id="爲什麼使用-cox-回歸模型" class="section level3" number="74.3.1">
+<h3><span class="header-section-number">74.3.1</span> 爲什麼使用 Cox 回歸模型？</h3>
+<p>理由很簡單，半參數回歸模型我們放棄了對基線風險度的估計，也就是放寬了對它的限制和假設，使模型估計的結果更高效可靠 (efficient and reliable)。Cox回歸模型現在已經廣爲人知且易於理解。</p>
 <p>模型的假設：</p>
 <p><span class="math display">\[
 h(t|x) = h_0(t)e^{\beta^Tx}
@@ -1669,6 +1800,7 @@ h(t|x) = h_0(t)e^{\beta^Tx}
 <li>Uninformative censoring;</li>
 <li>Individuals are independent.</li>
 </ol>
+</div>
 </div>
 <div id="該用半參數模型還是用全參數模型" class="section level2" number="74.4">
 <h2><span class="header-section-number">74.4</span> 該用半參數模型還是用全參數模型</h2>
