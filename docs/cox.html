@@ -1251,8 +1251,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="74.3.1" data-path="cox.html"><a href="cox.html#爲什麼使用-cox-回歸模型"><i class="fa fa-check"></i><b>74.3.1</b> 爲什麼使用 Cox 回歸模型？</a></li>
 </ul></li>
-<li class="chapter" data-level="74.4" data-path="cox.html"><a href="cox.html#該用半參數模型還是用全參數模型"><i class="fa fa-check"></i><b>74.4</b> 該用半參數模型還是用全參數模型</a></li>
-<li class="chapter" data-level="74.5" data-path="cox.html"><a href="cox.html#practical-survival-04"><i class="fa fa-check"></i><b>74.5</b> Practical Survival 04</a></li>
+<li class="chapter" data-level="74.4" data-path="cox.html"><a href="cox.html#處理相等的生存時間-handling-tied-survival-times"><i class="fa fa-check"></i><b>74.4</b> 處理相等的生存時間 handling tied survival times</a></li>
+<li class="chapter" data-level="74.5" data-path="cox.html"><a href="cox.html#估計生存曲線"><i class="fa fa-check"></i><b>74.5</b> 估計生存曲線</a></li>
+<li class="chapter" data-level="74.6" data-path="cox.html"><a href="cox.html#cox回歸模型中包涵的假設"><i class="fa fa-check"></i><b>74.6</b> Cox回歸模型中包涵的假設：</a></li>
+<li class="chapter" data-level="74.7" data-path="cox.html"><a href="cox.html#該用半參數模型還是用全參數模型"><i class="fa fa-check"></i><b>74.7</b> 該用半參數模型還是用全參數模型</a></li>
+<li class="chapter" data-level="74.8" data-path="cox.html"><a href="cox.html#practical-survival-04"><i class="fa fa-check"></i><b>74.8</b> Practical Survival 04</a></li>
 </ul></li>
 <li class="chapter" data-level="75" data-path="surv-check.html"><a href="surv-check.html"><i class="fa fa-check"></i><b>75</b> 分析策略和模型檢查 Model checking-survival analysis</a>
 <ul>
@@ -1624,7 +1627,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2><span class="header-section-number">74.1</span> 本章概要</h2>
 <ul>
 <li>學會寫下 Cox 比例風險方程的數學表達式</li>
-<li>能夠解釋 Cox 比例風險模型是怎樣通過半似然的方法獲取 MLE 的，他們又是怎樣獲得估計風險度比 (hazard ratio)，和它的標準誤，p 值，以及信賴區間的</li>
+<li>能夠解釋 Cox 比例風險模型是怎樣通過偏似然的方法獲取 MLE 的，他們又是怎樣獲得估計風險度比 (hazard ratio)，和它的標準誤，p 值，以及信賴區間的</li>
 <li>比較 Cox 比例風險模型和全參數模型 (fully parametric models)，及非參數方法 (non-parametric methods)</li>
 <li>能夠解釋各種不同類型的（連續型，二進制型，或者多變量型）解釋（暴露）變量在 Cox 比例風險模型中獲得的參數估計的涵義</li>
 <li>學會使用統計軟件繪製的圖形方法來分析並解釋比例風險度的假設條件是否得到滿足</li>
@@ -1640,7 +1643,7 @@ h(t|x) = h_0(t)e^{\beta^Tx}
 <p>其中，<span class="math inline">\(h_0(t)\)</span> 就是被比較的基線組成員(baseline individual)的風險度函數 (hazard function)，在 Weibull 模型或者指數模型中，這個基線風險 (baseline hazard) 是需要被模型根據數據來進行參數估計的 (parameterized)。但是，1972年，神一樣的人物 Cox <span class="citation">(Cox <a href="#ref-Cox1972b" role="doc-biblioref">1972</a>)</span> 提出，其實我們不需要對這個基線風險進行估計，可以忽略它在模型中的存在。正因為如此，這個模型被冠以發明者的名字 Cox proportional hazards model。因為此模型不對基線風險進行任何估計，但是對預測變量對於風險的效果 (effect of the explanatory variable) 用模型中的 <span class="math inline">\(\beta\)</span> 進行參數估計，所以，它又被稱爲是半參數化模型 (semi-parametric model)。</p>
 <p>下面的討論，我們保持和之前的章節使用相同的數學標記法。</p>
 <ul>
-<li><span class="math inline">\(i = 1, \dots, n\)</span> 標記實驗對象的個體編</li>
+<li><span class="math inline">\(i = 1, \dots, n\)</span> 標記實驗對象的個體編號</li>
 <li><span class="math inline">\(x_i\)</span> 表示她/他/它的解釋型變量（大多數情況下它是包含了多個變量的向量）</li>
 <li><span class="math inline">\(t_i\)</span> 表示生存時間（刪失時間）</li>
 <li><span class="math inline">\(\delta_i\)</span> 則是指示是使用生存時間，或者刪失時間的指示變量 (indicator)</li>
@@ -1653,7 +1656,13 @@ L= \prod_{i=1}^n\{ h_0(t)e^{\beta^Tx_i}\exp(-\int_0^{t_i} h_0(u)e^{\beta^Tx_i}du
 </div>
 <div id="偏似然法-partial-likelihood" class="section level2" number="74.3">
 <h2><span class="header-section-number">74.3</span> 偏似然法 (partial likelihood)</h2>
-<p>假定已知某一名實驗對象身上經過了生存時間 <span class="math inline">\(t_j\)</span> 之後發生了研究者追蹤的事件 (event of interest)。我們用 <span class="math inline">\(i_j\)</span> 標記該實驗對象，她/他/它身上具有的所有解釋變量則用 <span class="math inline">\(x_{i_j}\)</span> 來表達。在無限接近時間點 <span class="math inline">\(t_j\)</span> 之前的時刻，有一個包含了所有此時仍未發生事件的觀察對象的潛在對象集合 (risk set) <span class="math inline">\(R_j\)</span>。觀察對象 <span class="math inline">\(i_j\)</span> 也屬於這個潛在對象集合 <span class="math inline">\(R_j\)</span>。這裏我們假定該時間無限短，短到有且僅有一個對象可以發生事件，即沒有人同時發生事件。</p>
+<p>假定已知某一名實驗對象身上經過了生存時間 <span class="math inline">\(t_j\)</span> 之後發生了研究者追蹤的事件 (event of interest)。我們用 <span class="math inline">\(i_j\)</span> 標記該實驗對象，她/他/它身上具有的所有解釋變量則用 <span class="math inline">\(x_{i_j}\)</span> 來表達。在無限接近時間點 <span class="math inline">\(t_j\)</span> 之前的時刻，有一個包含了所有此時仍未發生事件的觀察對象的潛在對象集合 (risk set) <span class="math inline">\(R_j\)</span>。觀察對象 <span class="math inline">\(i_j\)</span> 也屬於這個潛在對象集合 <span class="math inline">\(R_j\)</span>。這裏我們假定該時間無限短，短到有且僅有一個對象可以發生事件，即沒有人同時發生事件。如圖 <a href="cox.html#fig:Survfig4-1">74.1</a></p>
+<div class="figure" style="text-align: center"><span id="fig:Survfig4-1"></span>
+<img src="img/risksets.png" alt="Definition of risk sets." width="90%" />
+<p class="caption">
+圖 74.1: Definition of risk sets.
+</p>
+</div>
 <p>接下來我們思考這樣一個問題：在這組用 <span class="math inline">\(R_j\)</span> 標記的潛在對象集合中，我們已知它們同時都存活到了時間點 <span class="math inline">\(t_j\)</span>，且沒有發生刪失，那麼這組患者中的某個個體 <span class="math inline">\(i_j\)</span>，它/他/她有一個解釋變量 <span class="math inline">\(x_i\)</span>，它/他/她在這個時間點發生事件的條件概率 (conditional probability) 該怎麼計算？</p>
 <p><span class="math display">\[
 \frac{h_0(t_j)\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}h_0(t_j)\exp(\beta^Tx_k)} = \frac{\exp(\beta^Tx_{i_j})}{\sum_{k\in R_j}\exp(\beta^Tx_k)}
@@ -1763,11 +1772,13 @@ l_p = \sum_j \beta^T x_{i_j} - \sum_j \log(\sum_{k \in R_j} \exp \beta^T x_k)
 ## 
 ## .</code></pre>
 <p>該模型用 R 計算的過程如下</p>
-<div class="sourceCode" id="cb1310"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1310-1"><a href="cox.html#cb1310-1"></a>gehan &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;https://data.princeton.edu/wws509/datasets/gehan.raw&quot;</span>, <span class="dt">header =</span>  <span class="ot">FALSE</span>, <span class="dt">sep =</span><span class="st">&quot;&quot;</span>, <span class="dt">col.names =</span> <span class="kw">c</span>( <span class="st">&quot;group&quot;</span>, <span class="st">&quot;weeks&quot;</span>, <span class="st">&quot;remission&quot;</span>))</span>
-<span id="cb1310-2"><a href="cox.html#cb1310-2"></a></span>
-<span id="cb1310-3"><a href="cox.html#cb1310-3"></a>cox.model &lt;-<span class="st"> </span><span class="kw">coxph</span>(<span class="kw">Surv</span>(<span class="dt">time =</span> weeks, <span class="dt">event =</span> remission) <span class="op">~</span><span class="st"> </span><span class="kw">as.factor</span>(group), </span>
-<span id="cb1310-4"><a href="cox.html#cb1310-4"></a>                     <span class="dt">data =</span> gehan, <span class="dt">method =</span> <span class="st">&quot;breslow&quot;</span>)</span>
-<span id="cb1310-5"><a href="cox.html#cb1310-5"></a><span class="kw">summary</span>(cox.model)</span></code></pre></div>
+<div class="sourceCode" id="cb1310"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1310-1"><a href="cox.html#cb1310-1"></a>gehan &lt;-<span class="st"> </span><span class="kw">read.table</span>(<span class="st">&quot;https://data.princeton.edu/wws509/datasets/gehan.raw&quot;</span>, </span>
+<span id="cb1310-2"><a href="cox.html#cb1310-2"></a>                    <span class="dt">header =</span>  <span class="ot">FALSE</span>, <span class="dt">sep =</span><span class="st">&quot;&quot;</span>, </span>
+<span id="cb1310-3"><a href="cox.html#cb1310-3"></a>                    <span class="dt">col.names =</span> <span class="kw">c</span>( <span class="st">&quot;group&quot;</span>, <span class="st">&quot;weeks&quot;</span>, <span class="st">&quot;remission&quot;</span>))</span>
+<span id="cb1310-4"><a href="cox.html#cb1310-4"></a></span>
+<span id="cb1310-5"><a href="cox.html#cb1310-5"></a>cox.model &lt;-<span class="st"> </span><span class="kw">coxph</span>(<span class="kw">Surv</span>(<span class="dt">time =</span> weeks, <span class="dt">event =</span> remission) <span class="op">~</span><span class="st"> </span><span class="kw">as.factor</span>(group), </span>
+<span id="cb1310-6"><a href="cox.html#cb1310-6"></a>                     <span class="dt">data =</span> gehan, <span class="dt">method =</span> <span class="st">&quot;breslow&quot;</span>)</span>
+<span id="cb1310-7"><a href="cox.html#cb1310-7"></a><span class="kw">summary</span>(cox.model)</span></code></pre></div>
 <pre><code>## Call:
 ## coxph(formula = Surv(time = weeks, event = remission) ~ as.factor(group), 
 ##     data = gehan, method = &quot;breslow&quot;)
@@ -1789,7 +1800,86 @@ l_p = \sum_j \beta^T x_{i_j} - \sum_j \log(\sum_{k \in R_j} \exp \beta^T x_k)
 <div id="爲什麼使用-cox-回歸模型" class="section level3" number="74.3.1">
 <h3><span class="header-section-number">74.3.1</span> 爲什麼使用 Cox 回歸模型？</h3>
 <p>理由很簡單，半參數回歸模型我們放棄了對基線風險度的估計，也就是放寬了對它的限制和假設，使模型估計的結果更高效可靠 (efficient and reliable)。Cox回歸模型現在已經廣爲人知且易於理解。</p>
-<p>模型的假設：</p>
+
+<div class="example">
+<span id="exm:Survival-analysis-0402" class="example"><strong>Example 74.2  </strong></span><strong>稍微複雜一些的例子：EPIC-Norfolk 隊列研究數據分析乳腺癌的危險因子</strong>
+EPIC-Norfolk 隊列研究是一個收集了25639名觀察對象的隊列。起點觀察時間是在1990年代，全部的觀察對象都在40歲以上。該隊列研究追蹤觀察對象的多種疾病診斷和死亡，同時收集了大量的觀察對象本身的生活習慣數據，其中有飲食習慣相關數據。這個例子中我們把事件定義爲被診斷爲乳腺癌，且乳腺癌的診斷不是其他部位轉移產生的癌症，即原發乳腺癌的診斷。那麼，男性觀察對象被排除，剩下12576名女性患者作爲潛在對象集合。另外再需要排除在隨訪開始時就已經患有任意一種癌症的女性，隨訪過程中如果在未觀察到乳腺癌時就發生了其他部位的癌症的話，在診斷爲其他癌症時就被定義爲是刪失值。其餘的刪失值還包括由於非乳腺癌原因的死亡事件，或者觀察對象離開研究而致隨訪中斷。我們使用年齡作爲分析的事件尺度，圖 <a href="cox.html#fig:Survfig4-2">74.2</a> 是該隊列的 Kaplan-Meier 生存函數曲線。
+</div>
+<div class="figure" style="text-align: center"><span id="fig:Survfig4-2"></span>
+<img src="img/epicnorfalk.png" alt="Kaplan-Meier estimate of the survival curve for women in the EPIC-Norfolk cohot (solid line), showing the 95% confidence limits (dotted lines)" width="90%" />
+<p class="caption">
+圖 74.2: Kaplan-Meier estimate of the survival curve for women in the EPIC-Norfolk cohot (solid line), showing the 95% confidence limits (dotted lines)
+</p>
+</div>
+<p>例如我們現在的分析目的是想用該隊列收集的生活習慣分析飲酒量和被診斷爲乳腺癌的風險之間的關係。同時模型中我們還希望能夠調整其他可能的混雜因子。這裏我們先考慮兩個簡單的混雜因子，一個是家族乳癌史，還有一個是吸菸習慣。現實情況中你可能需要考慮更多的潛在混雜因子。飲酒量通過問卷調查獲得，並被換算成爲單位是每10g/天的連續型變量。家族乳癌史是二進制變量 (是/否)。吸菸習慣是三個分類的多類別變量（從未(ref)/曾經/現在吸菸）。那麼我們可以寫下這個比例風險模型的數學表達式：</p>
+<p><span class="math display">\[
+h(t; \mathbf{X}) = h_0(t) \exp\{ \beta_1 X_{\text{alc}} + \beta_2 X_{\text{FH}} + \beta_3 X_{\text{former-smoker}} + \beta_4 X_{\text{current-smoker}} \}
+\]</span></p>
+<p>其中，</p>
+<ul>
+<li><span class="math inline">\(X_{\text{alc}}\)</span> 是表示飲酒量的連續型變量。</li>
+<li><span class="math inline">\(X_{\text{FH}}\)</span> 是表示是(=1)否(=0)有家族乳癌史的二進制變量。</li>
+<li><span class="math inline">\(X_{\text{former-smoker}}\)</span> 是表示是(=1)否(=0)是曾經吸菸者的二進制變量。</li>
+<li><span class="math inline">\(X_{\text{current-smoker}}\)</span> 是表示是(=1)否(=0)是現在吸菸者的二進制變量。</li>
+</ul>
+<p>該模型的 Cox 比例風險模型分析的結果如下表：</p>
+<table>
+<thead>
+<tr class="header">
+<th align="center">Variable</th>
+<th align="center">Hazard ratio</th>
+<th align="center">95% confidence interval</th>
+<th align="center">p-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center"><span class="math inline">\(X_{\text{alc}}\)</span></td>
+<td align="center">1.140</td>
+<td align="center">(1.041, 1.249)</td>
+<td align="center">0.005</td>
+</tr>
+<tr class="even">
+<td align="center"><span class="math inline">\(X_{\text{FH}}\)</span></td>
+<td align="center">1.766</td>
+<td align="center">(1.337, 2.334)</td>
+<td align="center">&lt;0.001</td>
+</tr>
+<tr class="odd">
+<td align="center"><span class="math inline">\(X_{\text{former-smoker}}\)</span></td>
+<td align="center">0.875</td>
+<td align="center">(0.714, 1.047)</td>
+<td align="center">0.197</td>
+</tr>
+<tr class="even">
+<td align="center"><span class="math inline">\(X_{\text{current-smoker}}\)</span></td>
+<td align="center">1.001</td>
+<td align="center">(0.749, 1.337)</td>
+<td align="center">0.995</td>
+</tr>
+</tbody>
+</table>
+<p>你會解釋上面列出的風險度比的結果嗎？</p>
+</div>
+</div>
+<div id="處理相等的生存時間-handling-tied-survival-times" class="section level2" number="74.4">
+<h2><span class="header-section-number">74.4</span> 處理相等的生存時間 handling tied survival times</h2>
+<p>在許多實驗和觀察研究中，生存時間會有相等的時候。也就是在某些時間點上，發生兩個及以上事件是可能的。這個可能是根據實驗對時間的定義精確度決定的。如果只是精確到週或者月，甚至是天，都有可能出現生存時間相同的情況。即使這樣，偏似然其實也是可以克服的。假如在時間點 <span class="math inline">\(t_j\)</span> 時發生了 <span class="math inline">\(m_j\)</span> 個事件。那麼此時，這些發生事件的對象組成的集合 <span class="math inline">\((i_{1_j}, i_{2_j}, \dots, i_{m_j})\)</span>，如果他們的解釋變量向量是 <span class="math inline">\((x_{i_1}, x_{i_2}, \dots, x_{i_m})\)</span> 的話，該時間點時刻發生時間的概率是</p>
+<p><span class="math display">\[
+\frac{h_0(t_j) \exp \beta^T x_{i_1} \times h_0(t_j) \exp \beta^T x_{i_2} \times \dots \times h_0(t_j) \exp \beta^T x_{i_m}}{\sum_{L \in R_{mj}} \prod _{l \in L} \exp \beta^T x_l} \\
+= \frac{\exp(\beta^T x_{i_1} + \beta^T x_{i_2} + \dots + \beta^Tx_{i_m})}{\sum_{L \in R_{mj}}\prod _{l \in L} \exp \beta^T x_l}
+\]</span></p>
+<p>如果數據中在相同時間點發生事件的件數較多，上面的方程變得繁瑣，因爲分母變得特別複雜。這時我們傾向於使用一個叫做 “Breslow” 估計法 (Breslow’s approximation) 來近似的計算上述方程以簡化計算：</p>
+<p><span class="math display">\[
+L_{p*} = \prod_j \frac{\exp(\beta^T x_{i_1} + \beta^T x_{i_2} + \dots + \beta^Tx_{i_m})}{\{ \sum_{k \in R_j} \exp \beta^T x_k \}^{m_j}}
+\]</span></p>
+<p>R 裏的程序中也已經加入了這個近似法。</p>
+</div>
+<div id="估計生存曲線" class="section level2" number="74.5">
+<h2><span class="header-section-number">74.5</span> 估計生存曲線</h2>
+</div>
+<div id="cox回歸模型中包涵的假設" class="section level2" number="74.6">
+<h2><span class="header-section-number">74.6</span> Cox回歸模型中包涵的假設：</h2>
 <p><span class="math display">\[
 h(t|x) = h_0(t)e^{\beta^Tx}
 \]</span></p>
@@ -1801,9 +1891,8 @@ h(t|x) = h_0(t)e^{\beta^Tx}
 <li>Individuals are independent.</li>
 </ol>
 </div>
-</div>
-<div id="該用半參數模型還是用全參數模型" class="section level2" number="74.4">
-<h2><span class="header-section-number">74.4</span> 該用半參數模型還是用全參數模型</h2>
+<div id="該用半參數模型還是用全參數模型" class="section level2" number="74.7">
+<h2><span class="header-section-number">74.7</span> 該用半參數模型還是用全參數模型</h2>
 <ul>
 <li>如果說指數模型或者 Weibull 模型是合理的，通常此時用 Cox 半參數模型也是合理的；</li>
 <li>如果指數模型或者 Weibull 模型都是合理的，那麼 Cox 半參數模型給出的估計，其實不會和指數模型或者 Weibull 模型相差甚遠。指數模型或者 Weibull 模型可能給出的估計會相對更精確 (更小的標準誤)，但是實際應用中這種更加精確的程度其實十分有限；</li>
@@ -1811,8 +1900,8 @@ h(t|x) = h_0(t)e^{\beta^Tx}
 <li>2002 年，<span class="citation">(Royston and Parmar <a href="#ref-Royston2002" role="doc-biblioref">2002</a>)</span> 提出第三種生存數據模型，“flexible parametric survival models”，結合了參數和半參數模型的長處，正在變得流行起來。在這個新型靈活參數生存模型中，使用了三次方程平滑曲線 (cubic splines modelled smoothly) 擬合對數基線累積風險 (log cumulative baseline hazard)。</li>
 </ul>
 </div>
-<div id="practical-survival-04" class="section level2" number="74.5">
-<h2><span class="header-section-number">74.5</span> Practical Survival 04</h2>
+<div id="practical-survival-04" class="section level2" number="74.8">
+<h2><span class="header-section-number">74.8</span> Practical Survival 04</h2>
 </div>
 </div>
 <h3>References</h3>

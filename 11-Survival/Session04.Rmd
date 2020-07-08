@@ -34,7 +34,11 @@ $$
 
 ## 偏似然法 (partial likelihood)
 
-假定已知某一名實驗對象身上經過了生存時間 $t_j$ 之後發生了研究者追蹤的事件 (event of interest)。我們用 $i_j$ 標記該實驗對象，她/他/它身上具有的所有解釋變量則用 $x_{i_j}$ 來表達。在無限接近時間點 $t_j$ 之前的時刻，有一個包含了所有此時仍未發生事件的觀察對象的潛在對象集合 (risk set) $R_j$。觀察對象 $i_j$ 也屬於這個潛在對象集合 $R_j$。這裏我們假定該時間無限短，短到有且僅有一個對象可以發生事件，即沒有人同時發生事件。
+假定已知某一名實驗對象身上經過了生存時間 $t_j$ 之後發生了研究者追蹤的事件 (event of interest)。我們用 $i_j$ 標記該實驗對象，她/他/它身上具有的所有解釋變量則用 $x_{i_j}$ 來表達。在無限接近時間點 $t_j$ 之前的時刻，有一個包含了所有此時仍未發生事件的觀察對象的潛在對象集合 (risk set) $R_j$。觀察對象 $i_j$ 也屬於這個潛在對象集合 $R_j$。這裏我們假定該時間無限短，短到有且僅有一個對象可以發生事件，即沒有人同時發生事件。如圖 \@ref(fig:Survfig4-1)
+
+```{r Survfig4-1, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Definition of risk sets.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/risksets.png"))
+```
 
 接下來我們思考這樣一個問題：在這組用 $R_j$ 標記的潛在對象集合中，我們已知它們同時都存活到了時間點 $t_j$，且沒有發生刪失，那麼這組患者中的某個個體 $i_j$，它/他/她有一個解釋變量 $x_i$，它/他/她在這個時間點發生事件的條件概率 (conditional probability) 該怎麼計算？
 
@@ -99,7 +103,9 @@ stcox group, nohr
 該模型用 R 計算的過程如下
 
 ```{r  Surv04-01, cache=TRUE}
-gehan <- read.table("https://data.princeton.edu/wws509/datasets/gehan.raw", header =  FALSE, sep ="", col.names = c( "group", "weeks", "remission"))
+gehan <- read.table("https://data.princeton.edu/wws509/datasets/gehan.raw", 
+                    header =  FALSE, sep ="", 
+                    col.names = c( "group", "weeks", "remission"))
 
 cox.model <- coxph(Surv(time = weeks, event = remission) ~ as.factor(group), 
                      data = gehan, method = "breslow")
@@ -111,9 +117,68 @@ summary(cox.model)
 理由很簡單，半參數回歸模型我們放棄了對基線風險度的估計，也就是放寬了對它的限制和假設，使模型估計的結果更高效可靠 (efficient and reliable)。Cox回歸模型現在已經廣爲人知且易於理解。
 
 
+```{example Survival-analysis-0402}
+**稍微複雜一些的例子：EPIC-Norfolk 隊列研究數據分析乳腺癌的危險因子**
+EPIC-Norfolk 隊列研究是一個收集了25639名觀察對象的隊列。起點觀察時間是在1990年代，全部的觀察對象都在40歲以上。該隊列研究追蹤觀察對象的多種疾病診斷和死亡，同時收集了大量的觀察對象本身的生活習慣數據，其中有飲食習慣相關數據。這個例子中我們把事件定義爲被診斷爲乳腺癌，且乳腺癌的診斷不是其他部位轉移產生的癌症，即原發乳腺癌的診斷。那麼，男性觀察對象被排除，剩下12576名女性患者作爲潛在對象集合。另外再需要排除在隨訪開始時就已經患有任意一種癌症的女性，隨訪過程中如果在未觀察到乳腺癌時就發生了其他部位的癌症的話，在診斷爲其他癌症時就被定義爲是刪失值。其餘的刪失值還包括由於非乳腺癌原因的死亡事件，或者觀察對象離開研究而致隨訪中斷。我們使用年齡作爲分析的事件尺度，圖 \@ref(fig:Survfig4-2) 是該隊列的 Kaplan-Meier 生存函數曲線。
+```
+
+```{r Survfig4-2, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Kaplan-Meier estimate of the survival curve for women in the EPIC-Norfolk cohot (solid line), showing the 95% confidence limits (dotted lines)', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/epicnorfalk.png"))
+```
+
+例如我們現在的分析目的是想用該隊列收集的生活習慣分析飲酒量和被診斷爲乳腺癌的風險之間的關係。同時模型中我們還希望能夠調整其他可能的混雜因子。這裏我們先考慮兩個簡單的混雜因子，一個是家族乳癌史，還有一個是吸菸習慣。現實情況中你可能需要考慮更多的潛在混雜因子。飲酒量通過問卷調查獲得，並被換算成爲單位是每10g/天的連續型變量。家族乳癌史是二進制變量 (是/否)。吸菸習慣是三個分類的多類別變量（從未(ref)/曾經/現在吸菸）。那麼我們可以寫下這個比例風險模型的數學表達式：
+
+$$
+h(t; \mathbf{X}) = h_0(t) \exp\{ \beta_1 X_{\text{alc}} + \beta_2 X_{\text{FH}} + \beta_3 X_{\text{former-smoker}} + \beta_4 X_{\text{current-smoker}} \}
+$$
+
+其中，
+
+- $X_{\text{alc}}$ 是表示飲酒量的連續型變量。
+- $X_{\text{FH}}$ 是表示是(=1)否(=0)有家族乳癌史的二進制變量。
+- $X_{\text{former-smoker}}$ 是表示是(=1)否(=0)是曾經吸菸者的二進制變量。
+- $X_{\text{current-smoker}}$ 是表示是(=1)否(=0)是現在吸菸者的二進制變量。
 
 
-模型的假設：
+該模型的 Cox 比例風險模型分析的結果如下表： 
+
+|          Variable           | Hazard ratio | 95% confidence interval | p-value |
+| :-------------------------: | :----------: | :---------------------: | :-----: |
+|      $X_{\text{alc}}$       |    1.140     |     (1.041, 1.249)      |  0.005  |
+|       $X_{\text{FH}}$       |    1.766     |     (1.337, 2.334)      | <0.001  |
+| $X_{\text{former-smoker}}$  |    0.875     |     (0.714, 1.047)      |  0.197  |
+| $X_{\text{current-smoker}}$ |    1.001     |     (0.749, 1.337)      |  0.995  |
+
+你會解釋上面列出的風險度比的結果嗎？
+
+
+## 處理相等的生存時間 handling tied survival times
+
+在許多實驗和觀察研究中，生存時間會有相等的時候。也就是在某些時間點上，發生兩個及以上事件是可能的。這個可能是根據實驗對時間的定義精確度決定的。如果只是精確到週或者月，甚至是天，都有可能出現生存時間相同的情況。即使這樣，偏似然其實也是可以克服的。假如在時間點 $t_j$ 時發生了 $m_j$ 個事件。那麼此時，這些發生事件的對象組成的集合 $(i_{1_j}, i_{2_j}, \dots, i_{m_j})$，如果他們的解釋變量向量是 $(x_{i_1}, x_{i_2}, \dots, x_{i_m})$ 的話，該時間點時刻發生時間的概率是 
+
+$$
+\frac{h_0(t_j) \exp \beta^T x_{i_1} \times h_0(t_j) \exp \beta^T x_{i_2} \times \dots \times h_0(t_j) \exp \beta^T x_{i_m}}{\sum_{L \in R_{mj}} \prod _{l \in L} \exp \beta^T x_l} \\
+= \frac{\exp(\beta^T x_{i_1} + \beta^T x_{i_2} + \dots + \beta^Tx_{i_m})}{\sum_{L \in R_{mj}}\prod _{l \in L} \exp \beta^T x_l}
+$$
+
+
+
+如果數據中在相同時間點發生事件的件數較多，上面的方程變得繁瑣，因爲分母變得特別複雜。這時我們傾向於使用一個叫做 "Breslow" 估計法 (Breslow's approximation) 來近似的計算上述方程以簡化計算：
+
+$$
+L_{p*} = \prod_j \frac{\exp(\beta^T x_{i_1} + \beta^T x_{i_2} + \dots + \beta^Tx_{i_m})}{\{ \sum_{k \in R_j} \exp \beta^T x_k \}^{m_j}}
+$$
+
+R 裏的程序中也已經加入了這個近似法。
+
+
+## 估計生存曲線
+
+
+
+
+
+## Cox回歸模型中包涵的假設：
 
 $$
 h(t|x) = h_0(t)e^{\beta^Tx}
