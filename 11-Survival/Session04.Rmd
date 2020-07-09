@@ -1,7 +1,7 @@
 ## 本章概要
 
-- 學會寫下 Cox 比例風險方程的數學表達式
-- 能夠解釋 Cox 比例風險模型是怎樣通過偏似然的方法獲取 MLE 的，他們又是怎樣獲得估計風險度比 (hazard ratio)，和它的標準誤，p 值，以及信賴區間的
+- 學會寫下 Cox 比例風險函數的數學表達式
+- 能夠解釋 Cox 比例風險模型是怎樣通過偏似然的方法獲取 MLE 的，這個過程又是怎樣獲得估計風險度比 (hazard ratio)，和它的標準誤，p 值，以及信賴區間的
 - 比較 Cox 比例風險模型和全參數模型 (fully parametric models)，及非參數方法 (non-parametric methods)
 - 能夠解釋各種不同類型的（連續型，二進制型，或者多變量型）解釋（暴露）變量在 Cox 比例風險模型中獲得的參數估計的涵義
 - 學會使用統計軟件繪製的圖形方法來分析並解釋比例風險度的假設條件是否得到滿足
@@ -174,21 +174,64 @@ R 裏的程序中也已經加入了這個近似法。
 
 ## 估計生存曲線
 
+通常情況下，我們分析生存數據時只是爲了分析暴露變量和生存概率之間的關。於是基本上你看到大多數生存分析的報告和論文只是報告這些暴露變量的風險度比，及其對應的標準誤及信賴區間。那麼從我們本章目前爲止的介紹可以看出，在不需要估計基線風險 (baseline hazard) 的情況下啊，我們也可以求得我們想要的風險度比。
 
+但是在另外一些時候，我們有期望能夠描述觀察對象中的模型估計生存概率（曲線）i.e. estimated survival curves。還有的時候，我們希望利用辛苦建立的模型來有效地預測擁有相應特徵的人羣的生存概率。例如我們在分析了白血病患者數據之後，可能希望用該數據獲得的模型來預測某些患者如果進入治療組或者放在對照組，20週以後的生存概率。這些情況下的估計和預測，就需要使用到被Cox回歸模型忽略掉的基線風險。
+
+在全參數型模型中，如之前我們着重討論過的指數模型和 Weibull 模型，這並不是太大的問題，因爲在這些全參數模型中，基線風險也是被估計的參數之一，我們會獲得相應的基線風險估計值。怎樣在使用 Cox 回歸模型之後也能做相似的後續分析呢？
+
+處理的思考方式是這樣的，假設某個研究對象是屬於“基線組 (baseline group)”的，那麼它/他/她身上具有的所有可能的解釋變量可以用 $\mathbf{x}^* = (x^*_1, x^*_2, \dots, x^*_p)^T$ 表示。事實上這些變量由於是基線組，大多數可能都恰好等於零。當然也有特例，例如身高可能我們會選用平均身高作爲基線值，因爲身高爲零並不具有可比性。那麼用下面的表達式可以估計在時間點 $t$ 時，時間段 $t_k \leqslant t < t_{k+1}$上的基線累積風險 (baseline cumulative hazard)： 
+
+$$
+\hat H_0(t) = \sum_{j=1}^k\frac{d_j}{\sum_{l \in R_j}\exp\{ \hat\beta^T(x_l - x^*) \}}
+$$
+
+其中 $d_j$ 是在時間 $t_j$ 時發生的事件的計數。這個方程被命名爲 "Nelson-Aalen" 估計法，或者叫 "Breslow" 估計法估計基線累積風險。從上述計算式我們可以進一步估計生存函數：
+
+$$
+\hat S(t;x) = \exp\{ - \hat H_0(t) \exp (\hat\beta^T x) \}
+$$
+
+這樣就可以繪製Cox回歸模型估計的生存曲線了。
+
+
+```{r Survfig4-3, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Leukaemia patients data: estimated survivor curves using the Cox proportional hazard model.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/stcurveLeu.png"))
+```
+
+
+```{example Survival-analysis-0403}
+**EPIC-Norfolk 隊列研究數據分析乳腺癌的危險因子：** 之前分析過的模型中，加入了三個解釋變量 - 飲酒量（連續型），家族乳癌史（二進制型），吸菸習慣（分類型）。當你的模型類似這樣有多個模型時，不妨嘗試使用這幾個解釋變量的一些有特徵的值來繪製對應的不同組別對象的生存曲線。下圖 \@ref(fig:Survfig4-4) 就是指定了四個特徵值的人的模型估計生存分析。
+```
+
+
+```{r Survfig4-4, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Breast cancer data: estimated survivor curves using the Cox proportional hazard model. [FH: family history]', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/fhstcurve.png"))
+```
 
 
 
 ## Cox回歸模型中包涵的假設：
 
+
+和諸多的統計模型一樣，Cox比例風險模型本身有它的前提條件。其中最顯而易見的有兩個：
+
 $$
 h(t|x) = h_0(t)e^{\beta^Tx}
 $$
 
-1. Proportional hazards assumption - explanatory variables act **multiplicatively** on the hazard and their effect on the hazard does not change over time;
-2. We have correctly specified the form for how continuous explanatory variables act on the hazard;
-3. We have included all relevant explanatory variables including possbile interactions;
-4. Uninformative censoring;
-5. Individuals are independent.
+1. 比例風險假設 (proportional hazard assumption) - 解釋變量對與風險的作用所帶來的風險度比 (hazard ratio) 是不隨時間改變的 (hazard ratio is constant over time)。
+
+2. 模型構建合理假設 - 變量本身在模型中的形式是準確無誤的，特別是連續型變量。(We have correctly specified the form for how continuous explanatory variables act on the hazard);
+
+這兩個假設本身可能互相影響，其中比例風險假設可能在連續型變量保持不變的時候不能得到滿足，也可能當你修改了連續型變量的形式的時候（例如改成二次方，或者三次方形式）得到滿足。
+
+3. 第三個不太明顯的假設是，刪失值是無有效生存信息的 (Uninformative censoring)。
+
+## 評估比例風險假設 assessing the proportional hazard assumption
+
+在一些簡單的情況下，如單一的二進制暴露變量。
+
 
 ## 該用半參數模型還是用全參數模型
 

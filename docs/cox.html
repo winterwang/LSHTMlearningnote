@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-07-08" />
+<meta name="date" content="2020-07-09" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1254,8 +1254,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="74.4" data-path="cox.html"><a href="cox.html#處理相等的生存時間-handling-tied-survival-times"><i class="fa fa-check"></i><b>74.4</b> 處理相等的生存時間 handling tied survival times</a></li>
 <li class="chapter" data-level="74.5" data-path="cox.html"><a href="cox.html#估計生存曲線"><i class="fa fa-check"></i><b>74.5</b> 估計生存曲線</a></li>
 <li class="chapter" data-level="74.6" data-path="cox.html"><a href="cox.html#cox回歸模型中包涵的假設"><i class="fa fa-check"></i><b>74.6</b> Cox回歸模型中包涵的假設：</a></li>
-<li class="chapter" data-level="74.7" data-path="cox.html"><a href="cox.html#該用半參數模型還是用全參數模型"><i class="fa fa-check"></i><b>74.7</b> 該用半參數模型還是用全參數模型</a></li>
-<li class="chapter" data-level="74.8" data-path="cox.html"><a href="cox.html#practical-survival-04"><i class="fa fa-check"></i><b>74.8</b> Practical Survival 04</a></li>
+<li class="chapter" data-level="74.7" data-path="cox.html"><a href="cox.html#評估比例風險假設-assessing-the-proportional-hazard-assumption"><i class="fa fa-check"></i><b>74.7</b> 評估比例風險假設 assessing the proportional hazard assumption</a></li>
+<li class="chapter" data-level="74.8" data-path="cox.html"><a href="cox.html#該用半參數模型還是用全參數模型"><i class="fa fa-check"></i><b>74.8</b> 該用半參數模型還是用全參數模型</a></li>
+<li class="chapter" data-level="74.9" data-path="cox.html"><a href="cox.html#practical-survival-04"><i class="fa fa-check"></i><b>74.9</b> Practical Survival 04</a></li>
 </ul></li>
 <li class="chapter" data-level="75" data-path="surv-check.html"><a href="surv-check.html"><i class="fa fa-check"></i><b>75</b> 分析策略和模型檢查 Model checking-survival analysis</a>
 <ul>
@@ -1626,8 +1627,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="本章概要-3" class="section level2" number="74.1">
 <h2><span class="header-section-number">74.1</span> 本章概要</h2>
 <ul>
-<li>學會寫下 Cox 比例風險方程的數學表達式</li>
-<li>能夠解釋 Cox 比例風險模型是怎樣通過偏似然的方法獲取 MLE 的，他們又是怎樣獲得估計風險度比 (hazard ratio)，和它的標準誤，p 值，以及信賴區間的</li>
+<li>學會寫下 Cox 比例風險函數的數學表達式</li>
+<li>能夠解釋 Cox 比例風險模型是怎樣通過偏似然的方法獲取 MLE 的，這個過程又是怎樣獲得估計風險度比 (hazard ratio)，和它的標準誤，p 值，以及信賴區間的</li>
 <li>比較 Cox 比例風險模型和全參數模型 (fully parametric models)，及非參數方法 (non-parametric methods)</li>
 <li>能夠解釋各種不同類型的（連續型，二進制型，或者多變量型）解釋（暴露）變量在 Cox 比例風險模型中獲得的參數估計的涵義</li>
 <li>學會使用統計軟件繪製的圖形方法來分析並解釋比例風險度的假設條件是否得到滿足</li>
@@ -1877,22 +1878,56 @@ L_{p*} = \prod_j \frac{\exp(\beta^T x_{i_1} + \beta^T x_{i_2} + \dots + \beta^Tx
 </div>
 <div id="估計生存曲線" class="section level2" number="74.5">
 <h2><span class="header-section-number">74.5</span> 估計生存曲線</h2>
+<p>通常情況下，我們分析生存數據時只是爲了分析暴露變量和生存概率之間的關。於是基本上你看到大多數生存分析的報告和論文只是報告這些暴露變量的風險度比，及其對應的標準誤及信賴區間。那麼從我們本章目前爲止的介紹可以看出，在不需要估計基線風險 (baseline hazard) 的情況下啊，我們也可以求得我們想要的風險度比。</p>
+<p>但是在另外一些時候，我們有期望能夠描述觀察對象中的模型估計生存概率（曲線）i.e. estimated survival curves。還有的時候，我們希望利用辛苦建立的模型來有效地預測擁有相應特徵的人羣的生存概率。例如我們在分析了白血病患者數據之後，可能希望用該數據獲得的模型來預測某些患者如果進入治療組或者放在對照組，20週以後的生存概率。這些情況下的估計和預測，就需要使用到被Cox回歸模型忽略掉的基線風險。</p>
+<p>在全參數型模型中，如之前我們着重討論過的指數模型和 Weibull 模型，這並不是太大的問題，因爲在這些全參數模型中，基線風險也是被估計的參數之一，我們會獲得相應的基線風險估計值。怎樣在使用 Cox 回歸模型之後也能做相似的後續分析呢？</p>
+<p>處理的思考方式是這樣的，假設某個研究對象是屬於“基線組 (baseline group)”的，那麼它/他/她身上具有的所有可能的解釋變量可以用 <span class="math inline">\(\mathbf{x}^* = (x^*_1, x^*_2, \dots, x^*_p)^T\)</span> 表示。事實上這些變量由於是基線組，大多數可能都恰好等於零。當然也有特例，例如身高可能我們會選用平均身高作爲基線值，因爲身高爲零並不具有可比性。那麼用下面的表達式可以估計在時間點 <span class="math inline">\(t\)</span> 時，時間段 <span class="math inline">\(t_k \leqslant t &lt; t_{k+1}\)</span>上的基線累積風險 (baseline cumulative hazard)：</p>
+<p><span class="math display">\[
+\hat H_0(t) = \sum_{j=1}^k\frac{d_j}{\sum_{l \in R_j}\exp\{ \hat\beta^T(x_l - x^*) \}}
+\]</span></p>
+<p>其中 <span class="math inline">\(d_j\)</span> 是在時間 <span class="math inline">\(t_j\)</span> 時發生的事件的計數。這個方程被命名爲 “Nelson-Aalen” 估計法，或者叫 “Breslow” 估計法估計基線累積風險。從上述計算式我們可以進一步估計生存函數：</p>
+<p><span class="math display">\[
+\hat S(t;x) = \exp\{ - \hat H_0(t) \exp (\hat\beta^T x) \}
+\]</span></p>
+<p>這樣就可以繪製Cox回歸模型估計的生存曲線了。</p>
+<div class="figure" style="text-align: center"><span id="fig:Survfig4-3"></span>
+<img src="img/stcurveLeu.png" alt="Leukaemia patients data: estimated survivor curves using the Cox proportional hazard model." width="90%" />
+<p class="caption">
+圖 74.3: Leukaemia patients data: estimated survivor curves using the Cox proportional hazard model.
+</p>
+</div>
+
+<div class="example">
+<span id="exm:Survival-analysis-0403" class="example"><strong>Example 74.3  </strong></span><strong>EPIC-Norfolk 隊列研究數據分析乳腺癌的危險因子：</strong> 之前分析過的模型中，加入了三個解釋變量 - 飲酒量（連續型），家族乳癌史（二進制型），吸菸習慣（分類型）。當你的模型類似這樣有多個模型時，不妨嘗試使用這幾個解釋變量的一些有特徵的值來繪製對應的不同組別對象的生存曲線。下圖 <a href="cox.html#fig:Survfig4-4">74.4</a> 就是指定了四個特徵值的人的模型估計生存分析。
+</div>
+<div class="figure" style="text-align: center"><span id="fig:Survfig4-4"></span>
+<img src="img/fhstcurve.png" alt="Breast cancer data: estimated survivor curves using the Cox proportional hazard model. [FH: family history]" width="90%" />
+<p class="caption">
+圖 74.4: Breast cancer data: estimated survivor curves using the Cox proportional hazard model. [FH: family history]
+</p>
+</div>
 </div>
 <div id="cox回歸模型中包涵的假設" class="section level2" number="74.6">
 <h2><span class="header-section-number">74.6</span> Cox回歸模型中包涵的假設：</h2>
+<p>和諸多的統計模型一樣，Cox比例風險模型本身有它的前提條件。其中最顯而易見的有兩個：</p>
 <p><span class="math display">\[
 h(t|x) = h_0(t)e^{\beta^Tx}
 \]</span></p>
 <ol style="list-style-type: decimal">
-<li>Proportional hazards assumption - explanatory variables act <strong>multiplicatively</strong> on the hazard and their effect on the hazard does not change over time;</li>
-<li>We have correctly specified the form for how continuous explanatory variables act on the hazard;</li>
-<li>We have included all relevant explanatory variables including possbile interactions;</li>
-<li>Uninformative censoring;</li>
-<li>Individuals are independent.</li>
+<li><p>比例風險假設 (proportional hazard assumption) - 解釋變量對與風險的作用所帶來的風險度比 (hazard ratio) 是不隨時間改變的 (hazard ratio is constant over time)。</p></li>
+<li><p>模型構建合理假設 - 變量本身在模型中的形式是準確無誤的，特別是連續型變量。(We have correctly specified the form for how continuous explanatory variables act on the hazard);</p></li>
+</ol>
+<p>這兩個假設本身可能互相影響，其中比例風險假設可能在連續型變量保持不變的時候不能得到滿足，也可能當你修改了連續型變量的形式的時候（例如改成二次方，或者三次方形式）得到滿足。</p>
+<ol start="3" style="list-style-type: decimal">
+<li>第三個不太明顯的假設是，刪失值是無有效生存信息的 (Uninformative censoring)。</li>
 </ol>
 </div>
-<div id="該用半參數模型還是用全參數模型" class="section level2" number="74.7">
-<h2><span class="header-section-number">74.7</span> 該用半參數模型還是用全參數模型</h2>
+<div id="評估比例風險假設-assessing-the-proportional-hazard-assumption" class="section level2" number="74.7">
+<h2><span class="header-section-number">74.7</span> 評估比例風險假設 assessing the proportional hazard assumption</h2>
+<p>在一些簡單的情況下，如單一的二進制暴露變量。</p>
+</div>
+<div id="該用半參數模型還是用全參數模型" class="section level2" number="74.8">
+<h2><span class="header-section-number">74.8</span> 該用半參數模型還是用全參數模型</h2>
 <ul>
 <li>如果說指數模型或者 Weibull 模型是合理的，通常此時用 Cox 半參數模型也是合理的；</li>
 <li>如果指數模型或者 Weibull 模型都是合理的，那麼 Cox 半參數模型給出的估計，其實不會和指數模型或者 Weibull 模型相差甚遠。指數模型或者 Weibull 模型可能給出的估計會相對更精確 (更小的標準誤)，但是實際應用中這種更加精確的程度其實十分有限；</li>
@@ -1900,8 +1935,8 @@ h(t|x) = h_0(t)e^{\beta^Tx}
 <li>2002 年，<span class="citation">(Royston and Parmar <a href="#ref-Royston2002" role="doc-biblioref">2002</a>)</span> 提出第三種生存數據模型，“flexible parametric survival models”，結合了參數和半參數模型的長處，正在變得流行起來。在這個新型靈活參數生存模型中，使用了三次方程平滑曲線 (cubic splines modelled smoothly) 擬合對數基線累積風險 (log cumulative baseline hazard)。</li>
 </ul>
 </div>
-<div id="practical-survival-04" class="section level2" number="74.8">
-<h2><span class="header-section-number">74.8</span> Practical Survival 04</h2>
+<div id="practical-survival-04" class="section level2" number="74.9">
+<h2><span class="header-section-number">74.9</span> Practical Survival 04</h2>
 </div>
 </div>
 <h3>References</h3>
