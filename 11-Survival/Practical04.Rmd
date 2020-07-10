@@ -1,0 +1,139 @@
+
+
+```{r cache=TRUE}
+##########################################################
+##########################pbc data########################
+##########################################################
+library(survival)
+library(haven)
+pbc <- read_dta("../backupfiles/pbcbase.dta")
+
+
+##question 1##
+
+pbc.cox1<-coxph(Surv(time,d) ~ as.factor(treat),data=pbc)
+summary(pbc.cox1)
+
+pbc.cox2<-coxph(Surv(time,d)~bil0,data=pbc)
+summary(pbc.cox2)
+```
+
+
+
+```{r}
+
+##question 2##
+
+pbc.1<-survfit(Surv(time,d)~as.factor(treat),data=pbc)
+
+plot(pbc.1,mark.time=F,
+col=c("blue","red"),fun="cloglog",xlab="time (log scale)",ylab="log(-log S(t))")
+legend(0.02,0,c("Treat=1","Treat=2"),col=c("blue","red"),lty=1)
+
+```
+
+```{r}
+
+pbc$bil_q<-cut(pbc$bil0,breaks=quantile(pbc$bil0,probs=seq(0,1,0.25)))
+
+pbc.2<-survfit(Surv(time,d)~as.factor(bil_q),data=pbc)
+
+plot(pbc.2,mark.time=F,
+col=c("blue","red","green","yellow"),fun="cloglog",xlab="time (log scale)",ylab="log(-log S(t))")
+legend(0.02,0,c("bil0: group 1","bil0: group 2","bil0: group 3","bil0: group 4"),col=c("blue","red","green","yellow"),lty=1)
+
+```
+
+```{r}
+
+pbc.cox<-coxph(Surv(time,d)~treat,data=pbc)
+
+plot(survfit(pbc.cox,newdata=data.frame(treat=c(0,1))),mark.time=F,col=c("grey","black"),xlab="Time",ylab="Estimated survivor function")
+
+pbc.km<-survfit(Surv(time,d)~as.factor(treat),data=pbc)
+
+lines(pbc.km,mark.time=F,col=c("grey","black"),lty=2,add=T)
+
+legend(8,1,c("Treat=1, Cox","Treat=2, Cox","Treat=1, Kaplan-Meier","Treat=2, Kaplan-Meier"),col=c("grey","black","grey","black"),lty=c(1,1,2,2))
+
+```
+
+```{r}
+
+#question 3
+
+pbc.cox<-coxph(Surv(time,d)~treat+bil0,data=pbc)
+summary(pbc.cox)
+
+pbc.km.bil0.1<-survfit(Surv(time,d)~as.factor(bil_q),data=subset(pbc,treat==1))
+pbc.km.bil0.2<-survfit(Surv(time,d)~as.factor(bil_q),data=subset(pbc,treat==2))
+
+par(mfrow=c(1,2))
+
+plot(pbc.km.bil0.1,mark.time=F,col=c("blue","red","green","yellow"),fun="cloglog",xlab="time (log scale)",ylab="log(-log S(t))",main="Treatment group 1")
+legend(0.02,1,c("bil0: group 1","bil0: group 2","bil0: group 3","bil0: group 4"),col=c("blue","red","green","yellow"),lty=1)
+
+plot(pbc.km.bil0.2,mark.time=F,col=c("blue","red","green","yellow"),fun="cloglog",xlab="time (log scale)",ylab="log(-log S(t))",main="Treatment group 2")
+legend(0.02,1,c("bil0: group 1","bil0: group 2","bil0: group 3","bil0: group 4"),col=c("blue","red","green","yellow"),lty=1)
+
+```
+
+```{r}
+
+#question 4
+
+pbc.cox.sq<-coxph(Surv(time,d)~treat+bil0+I(bil0^2),data=pbc)
+summary(pbc.cox.sq)
+
+exp(pbc.cox.sq$coef[1]+60*pbc.cox.sq$coef[2]+(60^2)*pbc.cox.sq$coef[3])/exp(50*pbc.cox.sq$coef[2]+(50^2)*pbc.cox.sq$coef[3])
+
+```
+
+```{r}
+
+#question 5
+pbc.cox.sq<-coxph(Surv(time,d)~treat+bil0+I(bil0^2),data=pbc)
+
+par(mfrow=c(1,1))
+
+plot(survfit(pbc.cox.sq,newdata=data.frame(treat=c(0,1),bil0=50)),mark.time=F,col=c("grey","black"),xlab="Time",ylab="Estimated survivor function")
+legend(7,1,c("Treatment group 1","Treatment group 2"),col=c("grey","black"),lty=1)
+
+```
+
+```{r}
+
+##########################################################
+##########################whitehall#######################
+##########################################################
+whl <- read.table("../backupfiles/whitehall.csv",sep=",",header=T)
+
+whl$agecat<-cut(whl$agein, breaks=c(40,50,55,60,65,70),right=F,labels=F)
+
+my.mod1<-coxph(Surv(time=timein,time2=timeout,event=chd,origin=timein)~grade,data=whl)
+summary(my.mod1)
+
+my.mod2<-coxph(Surv(time=timein,time2=timeout,event=chd,origin=timein)~grade+as.factor(agecat),data=whl)
+summary(my.mod2)
+
+
+#We can do the same thing as follows (note the change in the Surv function)
+
+my.mod1<-coxph(Surv(time=(timeout-timein),event=chd)~grade,data=whl)
+summary(my.mod1)
+
+my.mod2<-coxph(Surv(time=(timeout-timein),event=chd)~grade+as.factor(agecat),data=whl)
+summary(my.mod2)
+
+
+
+#using age as the time scale with delayed entry 
+
+my.mod3<-coxph(Surv(time=timein,time2=timeout,event=chd,origin=timebth)~grade,data=whl)
+summary(my.mod3)
+
+my.mod4<-coxph(Surv(time=timein,time2=timeout,event=chd,origin=timebth)~grade+as.factor(agecat),data=whl)
+summary(my.mod4)
+
+```
+
