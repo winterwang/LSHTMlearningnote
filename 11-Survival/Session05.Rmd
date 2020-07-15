@@ -235,7 +235,7 @@ knitr::include_graphics(paste0(bugpath, "/img/ScaledSchoenfeld.png"))
 
 
 ```{example Survival-analysis-0503}
-**AGVHD數據，評估風險比例假設**，在這個數據的例子中，我們給風險比例模型中加入了“治療組 $\times$ 時間”的交互作用項之後，發現它的參數估計是 $e^{\hat\gamma} = 0.854$，它的信賴區間估計是 $(0.726, 1.003)$，$p = 0.055$。似乎有跡象表明比例風險假設的前提沒有被滿足。這和我們繪製的生存曲線圖 \@ref(fig:Survfig5-2)，還有調整後 scaled Schoenfeld 殘差圖 \@ref(fig:Survfig5-3) 提示的一致。
+**AGVHD數據，評估風險比例假設**，在這個數據的例子中，我們給風險比例模型中加入了“治療組 $\times$ 時間”的交互作用項之後，發現它的參數估計是 $e^{\hat\gamma} = 0.854$，它的信賴區間估計是 $(0.726, 1.003)$，$p = 0.055$。似乎有跡象表明比例風險假設的前提沒有被滿足。這和我們繪製的生存曲線圖 \@ref(fig:Survfig5-2)，還有調整後 scaled Schoenfeld 殘差圖 \@ref(fig:Survfig5-3) 提示的一致。圖 \@ref(fig:Survfig5-3) 中顯示的平滑曲線遠遠不能認爲是和橫軸近似平行的曲線。隨着時間的推移，該變量的對數風險度比很明顯是越來越小的。
 ```
 
 
@@ -243,8 +243,35 @@ knitr::include_graphics(paste0(bugpath, "/img/ScaledSchoenfeld.png"))
 knitr::include_graphics(paste0(bugpath, "/img/AGVHD.png"))
 ```
 
-```{r Survfig5-3, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='AGVHD data: plots of the scaled Schoenfeld residuals。', fig.align='center', out.width='90%', cache=TRUE}
+```{r Survfig5-3, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='AGVHD data: plots of the scaled Schoenfeld residuals.', fig.align='center', out.width='90%', cache=TRUE}
 knitr::include_graphics(paste0(bugpath, "/img/AGVHDschoenfeld.png"))
+```
+
+
+
+```{example Survival-analysis-0504}
+**EPIC-Norfolk 隊列研究數據，評估乳癌發生的風險比例假設**，在這個例子中我們建立了有三個解釋變量的模型，其中吸菸習慣還是一個有三個類別的變量。我們進一步用下列模型來分析每一個解釋變量的風險度比是否會隨時間發生變化：
+
+$$
+h(t;X) = h_0(t) \exp\{ \beta_1 X_{\text{alc}} + \beta_2 X_{\text{FH}} + \beta_3 X_{\text{former-smoker}} + \beta_4 X_{\text{current-smoker}} + \gamma_1 X_{\text{alc}}t + \gamma_2 X_{\text{FH}}t + \gamma_3 X_{\text{former-smoker}}t + \gamma_4 X_{\text{current-smoker}}t \}
+$$
+
+上述模型估計的 $\gamma$ 總結在下列表格中：
+```
+
+|            Parameter             | Estimate |     95% CI     | p-value |
+| :------------------------------: | :------: | :------------: | :-----: |
+|    Alcohol ($\exp \gamma_1$)     |  0.995   | (0.995, 1.005) |  0.306  |
+| Family history ($\exp \gamma_2$) |  1.007   | (0.978, 1.036) |  0.656  |
+| Former smoker ($\exp \gamma_3$)  |  1.029   | (1.008, 1.051) |  0.008  |
+| Current smoker ($\exp \gamma_4$) |  1.038   | (1.005, 1.071) |  0.022  |
+
+
+對該模型的每一個解釋變量，都可以繪製相應的 scaled Schoenfeld 殘差圖。
+
+
+```{r Survfig5-4, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Plots of the scaled Schoenfeld residuals for the breast cancer data.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/EPICschoenfeld.png"))
 ```
 
 
@@ -253,16 +280,76 @@ knitr::include_graphics(paste0(bugpath, "/img/AGVHDschoenfeld.png"))
 ## 評價模型擬合的其他有趣方法
 
 ### Martingale 殘差-assessing the functional form of continuous variables
-Matingale (馬丁哥?) 殘差圖可以用來檢驗，比較連續型變量在模型中是否被正確擬合，因為有時候連續型變量需要增加該連續型變量的二次項或者多次項，也可能要用對數項之類的變形之後，才能完全把其與生存數據之間的關係完全解釋清楚。
 
-A Martingale is a residual for an event process -- it is the difference between what happened to a person (whether they had the event or not) and what is predicted to happen to a person under the model that has been fitted. The Martingale residual for individual i is:
+Matingale (馬丁哥?) 殘差圖可以用來輔助分析判斷生存回歸模型中連續型變量是否使用了合適的數學函數形式 (appropriate functional form)，因為有時候連續型變量需要增加該連續型變量的二次項或者多次項，也可能要用對數項之類的變形之後，才能完全把其與生存數據之間的關係完全解釋清楚。例如我們分析一個連續型變量 $X$，有許多時候可能需要把它進行數學轉換，那麼我們需要比較進行了數學轉換之前的模型和轉換之後的模型哪個更加合適：
+
+$$
+h(t; x) = h_0(t) \exp(\beta_1 \color{red}{x}) \text{ or } h(t; x) = h_0(t) \exp(\beta_1 \color{red}{\log x}) 
+$$
+
+
+一個 “Martingale” 殘差，其實是在描述實驗對象在所建立好的比例風險回歸模型估計的事件發生與否的殘差。它比較的是，該實驗對象在隨訪中是否真是觀察到事件發生，以及和模型中預測到該對象的最終事件發生與否之間的差值。A Martingale is a residual for an event process -- it is the difference between what happened to a person (whether they had the event or not) and what is predicted to happen to a person under the model that has been fitted. The Martingale residual for individual i is:
 
 
 $$
 r_{M_i} = \delta_i - \hat H_0(t_i)\exp(\hat\beta x_i)
 $$
 
-Where, $\delta_i$ is the indicator of whether the individual $i$ had the event (1) or was censored (0), $t_i$ is the event or censoring time, $x_i$ denotes the explanatory variable (or more generally a vector of explanatory variables), and $\hat H_0(t_i)$ is the estimated baseline cumulative hazard at time $t_i$. If the model is correct then the Martingale residuals should sum to 0.
+其中，
+
+- $\delta_i$ 是該實驗對象 $i$ 實際是 (=1) 否 (=0) 發生事件的指示變量 
+- $t_i$ 是生存時間，或者刪失事件
+- $x_i$ 是解釋變量的向量 
+- $\hat H_0(t_i)$ 則是在事件點 $t_i$ 時，該模型估計的累積基線風險 (estimated baseline cumulative hazard)
+- 如果模型正確，它就能接近100%準確地估計每一個實驗對象是否在對應的時間發生事件，且這個殘差之和應該等於零
+
+
+這樣一個有趣的殘差，它之所以能幫助我們判斷連續型變量應有的數學函數形式，其實是要通過我們計算零模型 (沒有解釋變量的模型) 的 Martingale 殘差之後，繪製該殘差和你將要加入的連續變量（或轉換之後的形式）之間的散點圖。如果說模型中已有其他的非連續型變量，那麼上述的零模型可以指代沒有該連續變量的模型。
+
+```{example Survival-analysis-0505}
+**白血病患者的觀察數據，分析患者的白細胞計數 (WBC)，白細胞的某種特性 AG (+/-)，以及死亡事件之間可能存在的關係**：我們該如何處理 WBC 這個連續型變量？
+
+首先，我們建立一個只有 AG 變量的 Cox 模型。此時獲得的 Martingale 殘差我們把它和連續型變量 WBC 做散點圖 \@ref(fig:Survfig5-5)
+```
+
+```{r Survfig5-5, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Plot of Martingale residuals (from a model with AG only) against WBC.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/WBC.png"))
+```
+
+假如該散點圖中的平滑曲線 (smoothed curve) 顯示爲接近一條直線，那麼我們可以認爲把 WBC 原封不動，連續型的單一變量放入模型中就可以，但是顯然圖中所示並非如此。那麼接下來該做的是，就是對 WBC 進行數學函數轉換 (transformation)。下圖 \@ref(fig:Survfig5-6) 展示的是相同模型獲得的 Martingale 殘差和對數轉換之後的 WBC 繪製的散點圖，看起來似乎比之前原始數據的形式給出的散點圖更接近直線：
+
+
+```{r Survfig5-6, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Plot of Martingale residuals (from a model with AG only) against log WBC.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/logWBC.png"))
+```
+
+那麼我們重新建立一個增加了 log WBC 而不是 WBC 本身的風險比例模型。
+
+$$
+h(t|AG,WBC) = h_0(t)e^(\beta_1 AG + \beta_2 \log(WBC))
+$$
+
+再計算獲取該模型的 Martingale 殘差，將之和 log WBC 繪製散點圖 \@ref(fig:Survfig5-7)。如果這個變量的形式選對了，那麼此時的平滑曲線應該是接近橫軸的平線 (flat line)，顯然，這條平滑曲線接近平線的程度並不十分令人滿意。
+
+
+```{r Survfig5-7, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Plot of Martingale residuals (from a model with AG and log(WBC)) against log WBC.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/logWBCMartingale.png"))
+```
+
+當然，有人此時可能開始考慮把 WBC 白細胞計數這個變量本身給轉換成分類型變量（例如分成五個等分）。
+
+$$
+h(t|AG,WBC) = h_0(t)e^(\beta_1 AG + \beta_2 WBC_2 + \beta_3 WBC_3 + \beta_4 WBC_4 + \beta_5 WBC_5)
+$$
+
+
+圖 \@ref(fig:Survfig5-8) 顯示的是上述模型獲得的 Martingale 殘差和WBC之間的散點圖，及其獲得的平滑曲線；
+
+```{r Survfig5-8, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Plot of Martingale residuals (from a model with AG and categorized WBC) against WBC.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/WBCcategorize.png"))
+```
+
+似乎此時我們看見了最接近平線 (flat line) 的平滑曲線。但是通常情況下，其實我們並不期望把連續型變量人爲地分割成多類別變量。
 
 
 ### Deviance 偏差殘差 -- identifying individuals for whom the model does not provide a good fit
