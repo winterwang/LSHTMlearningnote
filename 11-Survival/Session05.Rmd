@@ -66,17 +66,90 @@ $$
 
 先看第一種情況下的分析策略：
 
-#### 分析某個暴露變量對生存的影響 estimating an exposure effect
+#### Type 1: 分析某個暴露變量對生存的影響 estimating an exposure effect
+
+下列分析步驟僅僅只是一個大致的範圍和框架，供參考和討論：
+
+1. 第一步，先實施非參數法分析，對數據進行大致的瞭解：這不僅僅是生存分析過程中重要的開始步驟，也是所有生物統計分析開始的敲門磚和基石。
+    - 對於可操作的變量（二進制型，多類別型）逐一繪製 Kaplan-Meier 生存曲線圖，實施 log-rank 檢驗。
+    - 對每一個變量實施初步的比例風險前提的圖形觀察和評估。
+    - 使用表格歸納法，或者是廣義線性回歸模型分析暴露變量之間可能存在的關係。
+2. 第二步，主要的建模分析：如果確認比例風險前提可以得到滿足，則多數研究者會選用比例風險模型（Cox半參數或者全參數模型），有時候取決於個人偏好。
+    i. 建立最簡單的只有一個主要暴露變量的初步風險回歸模型 (Model 0)。
+    ii. 建立一系列的風險回歸模型，每個模型中的解釋變量除了前一步中的主要暴露變量意外，**只單獨增加數據集中的一個變量**。(fit further models including the main exposure and each potential confounder, **one at a time**)
+    iii. 觀察前一步中建立的系列風險回歸模型給出的主要暴露變量的風險度比估計（也就是主要暴露變量和生存概率之間的關係），主要留意哪些模型給出的估計和初步模型 Model 0 給出的風險度比估計相比變化顯著。(examine the impact of adjustment for each confounder on the estimated association between the main exposure and time-to-event, i.e. on the hazard ratio.)
+    iv. 使用交互作用項檢驗每一個變量和主要暴露變臉之間是否存在顯著的交互作用關係 (i.e. whether there are any interactions.)
+    v. 選 iii. 步中判定是混雜因子的變量，如果 iv. 中發現有意義的交互作用關係也在這裏保留，建立一個略複雜的風險比例回歸模型 (Model 1)
+    vi. 第 v. 步中未加入 Model 1 的變量此時再逐步加入模型中來，說不定他們會是你在 v. 中選入作爲混雜因子變量之後的混雜因子 (confounders in the presence of other variables)
+    vii. 建立最終模型 (Model 2)，把 v. 和 vi. 中認爲需要調整的變量及可能存在的交互作用都加入進來。
+3. 第三步，檢查比例風險模型在上述各模型中是否都得到滿足。
+
+#### Type 2: 分析某幾個特定的暴露變量和生存概率之間的關係 understand the associations between a set of several variables and the time-to-event
+
+這其實是相對偏探索型分析的情境。之所以是這樣的分析目的，很大可能是我們並不太瞭解，或者這些暴露變量對該生存事件本身的影響沒有太多的背景知識，或者研究對象本身是來自相對未知的人羣，我們他們身上發生的（生存/疾病/死亡）事件本身比較沒有概念。所以在這樣的情況下，我們並不確定，也沒有把握哪個或者哪些變量對我們關心的事件發生之間可能有怎樣的關係。此時，如果你的數據集中收集的變量個數不多，很多研究者可能選擇使用減法的方法來篩選變量，也就是一開始就把所有的變量都放入模型中去。如此可以一開始就看到多個變量同時互相調整時對事件發生，生存概率的影響。相反，你也可以考慮使用我們在第一種情境（Type 1）下的步驟的擴展版：
+
+1. 第一步，先實施非參數法分析：
+    - 對於可操作的變量（二進制型，多類別型）逐一繪製 Kaplan-Meier 生存曲線圖，實施 log-rank 檢驗。
+    - 對每一個變量實施初步的比例風險前提的圖形觀察和評估。
+    - 使用表格歸納法，或者是廣義線性回歸模型分析暴露變量之間可能存在的關係。
+2. 第二步，主要的建模分析：這一步其實有多種可能性，下面所寫的分析策略也只是多種可能的方案之一，僅作參考。
+    i. 把每一個可能的變量，我們都先把它當作潛在的最重要的主要暴露變量，逐一建立只有一個解釋變量的風險比例模型。用似然比檢驗法，確認哪些變量對事件發生，或者生存概率之間的有單獨的有意義的關係。(assess whether each is associated with survival by itself using a likelihood ratio test)
+    ii. 把第 i. 步中確認單獨和生存概率有關係的變量全部放入一個風險比例模型。此時再使用似然比檢驗法，逐一篩選此時模型中的變量，看是否對模型的對數似然 (log-likelihood) 有顯著的影響，無則棄，有則留，最終保留的模型爲 Model 1。
+    iii. 第 ii. 步中丟棄的那些變量，我們在這一步中，再逐一放入 Model 1，看哪一個，或者有哪些在此時可能對模型的對數似然有顯著貢獻（還是使用似然比檢驗法），如果有，再把它（們）加回模型中去 (Model 2)。
+    iv. 最終確認 Model 2 中的變量沒有任何一個是可以再被從模型中移出的，確保每一個保留下的變量都對事件的發生有影響形成模型 Model 3。
+3. 第三步，檢查比例風險模型在上述各模型中是否都得到滿足。
+
+#### Type 3: 建立預測模型
+
+如果研究的目的是建立一個可靠的預測模型，我們可以使用和 Type 2 情境下相似的策略。不過如果你的數據集測量的非常多的變量，那麼你可能需要考慮在建立生存模型之前，進行一些數據的降維過程，提煉一些數據中真正需要的變量。
+
+
+```{example Survival-analysis-0501}
+**另一個白血病患者的觀察數據，分析患者的白細胞計數，白細胞的某種特性 AG (+/-)，以及死亡事件之間可能存在的關係**，這個數據包含了 33 名白血病患者的血液數據。數據中有兩個變量：
+
+- AG: 爲 0/1 的二進制變量 (0 = -; 1 = +)，它表示白細胞的某種特性 (characteristic)；
+- 白細胞計數 (WBC)：是一個連續型變量表示患者採集血樣中的白細胞的個數。
+
+患者的生存時間的單位是“週”，範圍是 1 至 156 週，且該數據中 33 名患者最終都死亡了。（即，沒有刪失值）
+下面的表格總結了該數據擬合的三個 Cox 比例風險回歸模型估計的各變量的風險度比，95%信賴區間，和模型的對數似然：
+
+(1) 有且僅有 AG 一個解釋變量 
+(2) 有且僅有 WBC 一個解釋變量
+(3) 有 AG, WBC 兩個解釋變量
+```
+
+|            | AG                   | WBC                 | log-likelihood |
+|------------|----------------------|---------------------|----------------|
+| Model (1)  | 0.307 (0.136,0.696)  | -                   | -80.93         |
+|            | p = 0.005            |                     |                |
+| Model (2)  | -                    | 1.010 (1.001,1.020) | -83.16         |
+|            |                      | p = 0.038           |                |
+| Model (3)  | 0.336 (0.146,0.776)  | 1.008 (0.998,1.018) | -79.79         |
+|            | p = 0.011            | p = 0.117           |                |
+
+
+你會選擇哪個模型？
+
+```{r Surv5-1, cache=TRUE}
+# p value for likelihood ratio test comparing Model (3) with Model (1)
+pchisq(-2*(-80.93 - (-79.79)), df = 1, lower.tail = FALSE)
+
+# p value for likelihood ratio test comparing Model (3) with Model (2)
+pchisq(-2*(-83.16 - (-79.79)), df = 1, lower.tail = FALSE)
+```
 
 
 
 
+## 模型檢查的要點
 
-### 模型檢查的要點
+建立風險比例模型之後，報告你的分析結果之前，我們應該實施的重要步驟還有模型的檢查。這一步保證了我們報告的結果可靠，且不至於給出錯誤的結論。生存數據模型的檢查，比起線性回歸模型要複雜一些，但是離不開下面三個要點：
 
-1. 總體模型對數據的擬合情況是否合理？
-2. 是否有極端數據，影響了模型的擬合結果？
-3. 解釋變量，特別是連續型變量是否以正確的形式進入了模型？
+1. 總體模型對數據的擬合情況是否合理？(how good is the overall fit of the model?)
+2. 是否有極端數據，影響了模型的擬合結果？(Are there some individuals for whom the model does not provide a good fit?)
+3. 解釋變量，特別是連續型變量是否以正確的形式進入了模型？(Is the functional form for the explanatory variables correct?)
+
+
 
 ## 比例風險假設的檢查 check the proportional hazard assumtion
 
@@ -91,7 +164,7 @@ $$
 
 ### 比例風險檢查的統計檢驗法
 
-在滿足比例風險前提下，某個解釋變量估計的風險比 (hazard ratio) 不會隨著時間變化而變化，根據這個特點，我們可以認為，如果某些解釋變量在追踪開始時對風險影響很強，在之後的追踪中，和風險之間的關係變弱的話，(或者反過來)，那麼風險比的這一變化就違背了比例風險這一前提。最簡單的，我們可以在模型中加入該變量和時間的相乘項 (交互作用項)：
+在滿足比例風險前提下，某個解釋變量估計的風險度比 (hazard ratio) 不會隨著時間變化而變化，根據這個特點，我們可以認為，如果某些解釋變量在追踪開始時對風險影響很強，在之後的追踪中，和風險之間的關係變弱的話，(或者反過來)，那麼風險比的這一變化就違背了比例風險這一前提。最簡單的，我們可以在模型中加入該變量和時間的相乘項 (交互作用項)：
 
 $$
 h(t|x) = h_0(t)\exp\{ \beta x + \gamma (x\times t)\}
@@ -108,15 +181,68 @@ $$
 
 另外一種視覺化檢查比例風險假設的方法是使用 **Schoenfeld 殘差**：
 
-The residual compares the observed values of the explanatory variable for the case at a given envent time with the weighted average of the explanatory variable in the risk set. The residuals should not show any dependence on time -- this would indicate that the proportional hazards assumptions is not met.
+首先我們用下面的式子表示 Cox 風險比例模型的對數偏似然：
 
-It is actually more convenient to use the "scaled Schoenfeld residuals". **The Scaled Schoenfeld residuals have a mean which is the true log hazard ratio** under the proportional hazards assumption, and the average values of the scaled Schoenfeld residuals over time can be interpreted as the time-varying log-hazard ratio. A plot of the scaled Schoenfeld residuals over time is therefore directly informative about how the log hazard ratio changes overtime. It is useful to show a smoothed average curve on these plots.
+$$
+\ell_p = \sum_j \beta^T x_{i_j} - \sum_j \log (\sum_{k \in R_j }\exp(\beta^T) x_k)
+$$
+
+其中，
+
+- $x_k$ 表示第 $k$ 名對象的解釋變量組成的向量 $x_k = (x_{1k}, x_{2k}, \dots, x_{pk})^T$。
+- $\beta$ 是每個解釋變量對應的回歸係數，也就是對數似然比估計 log-hazard ratios $\beta = (\beta_1, \dots, \beta_p)^T$
+- 偏似然是把所有事件發生的時刻時的條件概率相加起來。
+
+該偏似然計算式取 $\beta_1$ 的一階導數 (first derivative of $\ell_p$ with respect to $\beta_1$) 是：
+
+
+$$
+\frac{d\ell_p}{d\beta_1} = \sum_j x_{1i_j} - \sum_j \frac{\sum_{k \in R_j} x_{1k} \exp\beta^T x_k}{\sum_{k \in R_j} \exp \beta^T x_k}
+$$
+
+那麼在事件事件 $t_j$ 時，我們定義 Schoenfeld 殘差 $r_{s_{1j}}$ 爲：
+
+$$
+r_{s_{1j}} = x_{1i_j} - \frac{\sum_{k \in R_j} x_{1k} \exp\hat\beta^T x_k}{\sum_{k \in R_j} \exp \hat\beta^T x_k}
+$$
+
+由於我們知道 $\hat\beta$ 是當且僅當偏似然的一階導數等於零的情況下的極大似然估計。所以這些 Schoenfeld 殘差之和必須也爲零。這個殘差的涵義其實質是在比較每個事件發生的事件點時，發生事件對象的解釋變量的觀察值和其餘的潛在對象集合 (the risk set) 乘以他們各自的權重均值之差。(The residual compares the observed values of the explanatory variable for the case at a given event time with the weighted average of the explanatory variable in the risk set.) 重點是，這些個計算獲得的 Schoenfeld 殘差不應該和事件有任何的關係，如果繪製這些殘差和事件時間的散點圖，他們應該是呈現一種無序的狀態，也就說明了比例風險假設是沒有被違反的。(The residuals should not show any dependence on time -- this would indicate that the proportional hazards assumptions is not met.)
+
+實際操作中，更常用的是把這些 Schoenfeld 殘差調整之後的 "scaled Schoenfeld residuals"。調整後的 scaled Schoenfeld residuals 的計算式是：
+
+$$
+r_{SS_{1j}} = d \times r_{S_{1j}} \text{var}(\hat\beta_1)
+$$
+
+其中，
+
+- $\text{var}(\hat\beta_1)$ 是該對數風險度比的方差。
+- $d$ 是在該時間點時同時發生的事件計數
+
+當比例風險前提得到滿足時，調整後的 scaled Schoenfeld residuals 的均值等於該變量的對數似然比。(**The Scaled Schoenfeld residuals have a mean which is the true log hazard ratio** under the proportional hazards assumption)。所以把調整後的 scaled Schoenfeld residuals 和時間做圖的話，繪製它隨着時間變化時的均值平滑曲線 (a smoothed average curve)，就能看出該變量的對數似然比，到底有沒有隨着時間的推進出現較大的波動。這樣的圖被叫做時間波動對數風險度比 (time-varying log-hazard ratio)。
+
+
+```{example Survival-analysis-0502}
+**白血病患者數據，評估風險比例假設**，當模型中增加了“治療組 $\times$ 時間”的交互作用項之後，它的參數估計是 $e^{\hat\gamma} = 1.008$，它的信賴區間估計是 $(0.894, 1.137)$，$p = 0.894$。似乎並沒有證據提示比例風險假設前提被違反。該數據的調整後 scaled Schoenfeld 殘差圖和事件之間關係的圖繪製在 \@ref(fig:Survfig5-1)
+```
+
+
+
+```{r Survfig5-1, echo=FALSE, fig.asp=.7, fig.width=7, fig.cap='Plot of the scaled Schoenfeld residuals for the leukaemia patient data.', fig.align='center', out.width='90%', cache=TRUE}
+knitr::include_graphics(paste0(bugpath, "/img/ScaledSchoenfeld.png"))
+```
+
+
+
+```{example Survival-analysis-0503}
+**AGVHD數據，評估風險比例假設**，在這個數據的例子中，我們給風險比例模型中加入了“治療組 $\times$ 時間”的交互作用項之後，發現它的參數估計是 $e^{\hat\gamma} = 0.854$，它的信賴區間估計是 $(0.726, 1.003)$，$p = 0.055$。似乎有跡象表明比例風險假設的前提沒有被滿足。
+```
+
 
 ## 評價模型擬合的其他有趣方法
 
 ### Martingale 殘差-assessing the functional form of continuous variables
-
-Martingale (馬丁哥?) 殘差圖可以用來檢驗，比較連續型變量在模型中是否被正確擬合，因為有時候連續型變量需要增加該連續型變量的二次項或者多次項，也可能要用對數項之類的變形之後，才能完全把其與生存數據之間的關係完全解釋清楚。
+Matingale (馬丁哥?) 殘差圖可以用來檢驗，比較連續型變量在模型中是否被正確擬合，因為有時候連續型變量需要增加該連續型變量的二次項或者多次項，也可能要用對數項之類的變形之後，才能完全把其與生存數據之間的關係完全解釋清楚。
 
 A Martingale is a residual for an event process -- it is the difference between what happened to a person (whether they had the event or not) and what is predicted to happen to a person under the model that has been fitted. The Martingale residual for individual i is:
 
