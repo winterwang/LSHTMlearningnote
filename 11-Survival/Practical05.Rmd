@@ -1,0 +1,208 @@
+
+在本次練習中，繼續使用 PBC 數據。
+
+### 把數據讀入你最喜歡的 R 的環境中，先考慮一個二進制變量 `cir0` 對生存的影響。在建立的模型中加入該 `cir0` 變量和時間的交互作用項。在 R 裏需要用到 `tt()` 命令。
+
+```{r Surv-prac-05-01, cache=TRUE}
+pbcbase <- read.table("../backupfiles/pbcbase.csv", 
+                      sep=",", header=T)
+head(pbcbase)
+with(pbcbase, tabpct(treat, d, graph = FALSE))
+
+##question 1##
+
+cir0.model<- coxph(Surv(time,d)~cir0+tt(cir0), data=pbcbase, tt=function(x,t,...) {x*t})
+summary(cir0.model)
+```
+
+可以看到，`cir0` 和時間交互作用項的風險度比估計值是 `0.849`， 意思其實是，log(0.849) = -0.164 是該變量每增加一年的隨訪時間對死亡風險度的額外影響 (is the additional effect on the hazard for cirrhosis for each additional year of follow-up time)。對該交互作用項的回歸係數是否等於零的 Wald 檢驗提示並沒有有意義的交互作用。也就是該變量對發生死亡風險度的影響並不會隨時間改變。所以，無證據提示比例風險假設被違背。該模型的數學表達式可以寫作：
+
+$$
+h(t;x) = h_0(t)\exp(\beta x + \gamma xt)
+$$
+
+### 繪製模型中只有 `cir0` 一個變量的情況下，調整後的 scaled Schoenfeld 殘差圖。
+
+
+
+```{r Surv-prac-05-02, cache=TRUE, fig.cap='Test of PH assumption.', fig.align='center', out.width='90%'}
+##question 2##
+
+cir0.cox<-coxph(Surv(time,d)~cir0,data=pbcbase)
+time.dep.zph <- cox.zph(cir0.cox, transform = 'identity')
+time.dep.zph
+
+plot(time.dep.zph)
+```
+
+
+儘管途中顯示似乎殘差和時間有那麼一點點關係，但是平滑曲線好像又有點接近平線 (flat line)。該卡方檢驗其實檢驗的是該圖中繪製的平滑曲線是否和平線相同。p = 0.11說明沒有證據提示該變量有違反風險比例假設。
+
+### 另外一種探索變量 `cir0` 的風險度比是否隨時間保持不變的方法是可以把生存數據分割成幾個時間段，分別估計每個時間段內該暴露變量的風險度比。
+
+1. 在隨訪時間的中位數 2.85 年時把數據分割成兩部分，使用 `survSplit` 命令
+2. 使用 `cir0` 和分割好的時間段之間的交互作用項建立模型，看該交互作用項的風險度比是否有意義。
+
+```{r Surv-prac-05-03, cache=TRUE}
+# Remove zero survival times
+pbc1<-pbcbase[!(pbcbase$time==0),]
+
+pbc.split<- survSplit(Surv(time,d)~., pbc1, cut=c(2.85,12), end="time", event="d", start="time0", episode="tiband")
+
+cir0.model.tiband1<- coxph(Surv(time,d)~cir0,data=pbc.split[pbc.split$tiband==1,])
+cir0.model.tiband2<- coxph(Surv(time,d)~cir0,data=pbc.split[pbc.split$tiband==2,])
+
+summary(cir0.model.tiband1)
+summary(cir0.model.tiband2)
+
+cir0.model.tiband<- coxph(Surv(time,d)~cir0*as.factor(tiband),data=pbc.split)
+summary(cir0.model.tiband)
+
+cir0.model.tt<- coxph(Surv(time,d)~cir0+tt(cir0),data=pbc, tt=function(x,t,...) {x*(t<2.85)})
+summary(cir0.model.tt)
+
+```
+
+我們發現在第一個時間段內， `cir0` 的風險度比是 3.70，第二個時間段內，相同的參數估計是 2.02。但是你看他們二者的信賴區間有相當的重疊部分，所以事實上還是沒有證據證明風險比例假設有被違反的痕跡。
+
+
+### 接下來我們來看該數據集中的一個連續型變量， `bil0` 。我們練習使用 Martingale 殘差輔助我們判斷該連續型變量應該放入模型中的數學函數形式。
+
+
+```{r Surv-prac-05-04, cache=TRUE, fig.cap='Martingale residuals from empty model and bi10 variable.', fig.align='center', out.width='90%'}
+
+##question 4##
+
+empty.cox<-coxph(Surv(time,d)~1,data=pbcbase)
+mgale_res<-resid(empty.cox,type="martingale")
+plot(pbc$bil0,mgale_res)
+lines(lowess(pbc$bil0,mgale_res))
+
+```
+
+```{r Surv-prac-05-040, cache=TRUE, fig.cap='Martingale residuals from empty model and log bil0 variable.', fig.align='center', out.width='90%'}
+
+pbcbase$log_bil0<-log(pbcbase$bil0)
+plot(pbcbase$log_bil0,mgale_res)
+lines(lowess(pbcbase$log_bil0,mgale_res))
+```
+
+圖 \@ref(fig:Surv-prac-05-04) 給出的平滑曲線顯然不能認爲是直線 (linear)。似乎提示應該把連續型變量做自然對數的轉換 (log transformation)。而進行了對數轉換之後的 Martingale 殘差和對數 `bil0` 之間呈現了較爲接近直線的關係。
+
+### 選擇你認爲應該對 `bil0` 進行的數學函數形式，使用 Scaled Schoenfeld 殘差檢查它是否違反比例風險假設。
+
+```{r Surv-prac-05-05, cache=TRUE, fig.cap='Scaled Schoenfeld residuals from Cox model with log bil0.', fig.align='center', out.width='90%'}
+
+##question 5##
+
+log_bil0.cox<-coxph(Surv(time,d)~log_bil0,data=pbcbase)
+time.dep.zph <- cox.zph(log_bil0.cox, transform = 'identity')
+time.dep.zph
+
+plot(time.dep.zph)
+
+log_bil0.cox.tt<-coxph(Surv(time,d)~log_bil0+tt(log_bil0),data=pbcbase, tt=function(x,t,...) {x*t})
+summary(log_bil0.cox.tt)
+```
+
+
+### 建立一個含有如下解釋變量的 Cox 比例風險回歸模型：轉換過後的`bil0`, `cir0`，`cenc0`, `Age`
+
+1. 寫下該模型的數學表達式
+
+$$
+h(t; x) = h_0(t)\exp (\beta_1 \text{treat} + \beta_2 \text{log_bil10} + \beta_3 \text{cir0} + \beta_4 \text{cenc0} + \beta_5 \text{age})
+$$
+
+2. 使用 R 建立該模型並作出估計。
+
+```{r Surv-prac-05-06, cache=TRUE}
+
+##question 6##
+
+big.model<-coxph(Surv(time,d)~as.factor(treat)+cir0+log_bil0+cenc0+age,data=pbcbase)
+summary(big.model)
+
+```
+
+在其他模型解釋變量保持不變的條件下，治療組相比對照組死亡的風險度下降了近 44%。如果在基線時患者本身已經有肝硬化 `cir0 = 1`，是沒有肝硬化的患者的死亡風險度的 2.75 倍。年齡每增加 1 歲，死亡風險增加 5% 左右。患者如果在基線時已經有膽汁淤滯 (`cenc0 = 1`)，該患者的死亡風險度是沒有膽汁淤滯患者的死亡風險度的2.45 倍。在對數尺度上，每增加一個單位的 `bil0`，死亡風險度增加接近3倍。
+
+我們可以使用下面的代碼和圖形來診斷年齡應該有的數學函數形式：
+
+```{r Surv-prac-05-060, cache=TRUE, fig.cap='Martingale residuals suggest that there may be a non-linear effect of age.', fig.align='center', out.width='90%'}
+
+big.model.notage<-coxph(Surv(time,d)~as.factor(treat)+cir0+log_bil0+cenc0,data=pbcbase)
+mgale_res<-resid(big.model.notage,type="martingale")
+plot(pbcbase$age,mgale_res)
+lines(lowess(pbcbase$age,mgale_res))
+```
+
+```{r Surv-prac-05-061, cache=TRUE, fig.cap='Martingale residuals adding a quadratic term of age.', fig.align='center', out.width='90%'}
+
+#adding in age^2
+
+big.model.agesq<-coxph(Surv(time,d)~as.factor(treat)+cir0+log_bil0+cenc0+age+I(age^2),data=pbcbase)
+summary(big.model.agesq)
+
+mgale_res<-resid(big.model.agesq,type="martingale")
+plot(pbcbase$age,mgale_res)
+lines(lowess(pbcbase$age,mgale_res))
+```
+
+重新評估對數轉換之後的 `bil0` 是否違反了比例風險假設
+
+```{r Surv-prac-05-062, cache=TRUE, fig.cap='Martingale residuals with log bil0.', fig.align='center', out.width='90%'}
+#re-assessing the form for log_bilirubin
+
+big.model<-coxph(Surv(time,d)~as.factor(treat)+cir0+log_bil0+cenc0+age,data=pbcbase)
+mgale_res<-resid(big.model,type="martingale")
+plot(pbcbase$log_bil0,mgale_res)
+lines(lowess(pbcbase$log_bil0,mgale_res))
+```
+令人滿意的圖。
+
+```{r Surv-prac-05-063, cache=TRUE, fig.height=8, fig.cap='Scaled Schoenfeld residuals plot from Cox model for each covariate.', fig.align='center', out.width='90%'}
+#Schoenfeld test
+
+big.model.zph <- cox.zph(big.model, transform = 'identity')
+big.model.zph
+par(mfrow=c(3,2))
+plot(big.model.zph)
+
+```
+
+Schoenfeld 殘差圖及其檢驗結果也提示無違反風險比例的跡象。
+
+#### 觀察該模型的偏差殘差圖
+
+```{r Surv-prac-05-07, cache=TRUE}
+##question 7##
+
+#deviance residuals##
+  
+devres<-resid(big.model,type="deviance")
+plot(devres,xlab="index", ylab="Deviance residuals",cex.lab=1.3)
+abline(h=0)
+
+```
+
+```{r Surv-prac-05-08, cache=TRUE}
+
+#delta betas
+  
+delta.betas<-resid(big.model,type="dfbeta")
+par(mfrow=c(2,3))
+
+plot(delta.betas[,1],xlab="index",ylab="Delta-betas",main="treat")
+abline(h=0)
+plot(delta.betas[,2],xlab="index",ylab="Delta-betas",main="log_bil0")
+abline(h=0)
+plot(delta.betas[,3],xlab="index",ylab="Delta-betas",main="cir0")
+abline(h=0)
+plot(delta.betas[,4],xlab="index",ylab="Delta-betas",main="cenc0")
+abline(h=0)
+plot(delta.betas[,5],xlab="index",ylab="Delta-betas",main="age")
+abline(h=0)
+
+```
+
