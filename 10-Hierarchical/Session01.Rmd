@@ -1,0 +1,565 @@
+## 相互依賴的數據
+
+線性回歸模型，廣義線性回歸模型，他們背後都有一個十分十分**十分重要的假設--數據的相互獨立性**。這個前提假設常常會在現實數據中得不到滿足，因爲數據與數據之間在背後很可能會有有所關聯，也許是已知的，也許是未知的因素讓某些數據顯得更加接近彼此。這個章節，主要的內容就是舉例說明分層數據在日常生活中的常見性，以及處理這個非獨立性質的必要性。
+
+- 圖 \@ref(fig:Hier01-1) 展示的箱式圖顯示的是六個不同醫院對各自 12 名患者收縮期血壓測量的結果。如果把醫院看做一個單位，取院內患者的平均值，那麼六所醫院的血壓均值最大爲 135.7 mmHg，最小是 117.7 mmHg，六所醫院測量的血壓總體均值爲 125.6 mmHg。
+
+```{r Hier01-1, echo=FALSE, fig.height=6, fig.width=7, fig.cap='Box and whiskers plot of measured SBP in patients from six hospitals', fig.align='center', out.width='90%', cache=TRUE}
+Bp <- read_dta("../backupfiles/bp.dta")
+
+Bp$hosp <- as.factor(Bp$hosp)
+with(Bp, boxplot(bp ~ hosp, xlab = "Hospital No.", ylab = "Systolic blood pressure (mmHg)"))
+```
+
+
+- 圖 \@ref(fig:Hier01-2) 展示的是對 17 名患者使用兩種不同的測量方法測量的最大呼吸速率 (peak-expiratory-flow rate, PEFR)。兩種方法又測量了兩次，途中展示的是其中一種測量方法前後兩次測量結果的散點圖。
+
+
+
+```{r Hier01-2, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='Two recordings of PEFR taken with the Mini Wright meter', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+pefr <- read_dta("../backupfiles/pefr.dta")
+# the data are in wide format
+
+
+# transform data into long format
+pefr_long <- pefr %>%
+  gather(key, value, -id) %>%
+  separate(key, into = c("measurement", "occasion"), sep = 2) %>%
+  arrange(id, occasion) %>%
+  spread(measurement, value)
+## figure shows slightly closer agreement between the repeated measures of standard Wright,
+## than between those of Mini Wright
+
+ggplot(pefr_long, aes(x = id, y = wm, fill = occasion)) +
+  geom_point(size = 4, shape = 21) +
+  geom_hline(yintercept = mean(pefr_long$wm), colour = "red") +
+  theme_bw() +
+  scale_x_continuous(breaks = 1:17)+
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Subject ID", y = "MW Measurements")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19), 
+  legend.title = element_text(size = 19))
+```
+
+- 圖 \@ref(fig:Hier01-3) 展示的來自全英 65 所學校的 4059 名學生入學前閱讀水平測試成績 (LRT) 和畢業時 GCSE 考試成績之間的散點圖關系。值得注意的是該圖其實無視了學校這個變量，把每個學生看成相互獨立的個體。但是當我們隨機選取四所學校，看它們各自的學生的成績表現 (圖 \@ref(fig:Hier01-4))。很顯然，之前忽視了學校這一層級的變量是不恰當的，因爲不同學校學生的入學前和畢業時成績之間的相關性很明顯存在不同的模式 (四所學校的回歸線各自的截距和斜率各不相同)。
+
+```{r Hier01-3, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='GCSE by LRT in all 65 schools', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+gcse_selected <- read_dta("../backupfiles/gcse_selected.dta")
+ggthemr::ggthemr('fresh')
+
+ggplot(gcse_selected, aes(x = lrt, y = gcse)) + geom_point(size = 2.5) + 
+  geom_smooth(method = "lm", se = FALSE) +
+  xlim(-40, 40) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "LRT", y = "GCSE score")
+```
+
+```{r Hier01-4, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='GCSE by LRT in four randomly selected schools', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
+
+p <- ggplot(gcse_selected[gcse_selected$school %in% c(2, 7, 40, 53), ], aes(x = lrt, gcse)) + 
+  geom_point(size = 2.5) +
+    geom_smooth(method = "lm", se = FALSE) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "LRT", y = "GCSE score")
+p + facet_wrap( ~ school, ncol=2)+ 
+  theme(strip.text = element_text(face = "bold", size = rel(1.5)))
+```
+
+
+- 另一個特別好的例子展示在圖 \@ref(fig:Hier01-5) 中，是關於同一個母親的不同孩子的出生體重的數據。一個母親可以有多個孩子，每個母親的孩子之間的出生體重很明顯無法看作相互獨立。圖中展示的是，3300 名生了兩個孩子的母親的孩子們出生體重的散點圖。同一個母親的小孩用線相連。顯然，同一個母親生的孩子，其出生體重比不同母親的孩子出生體重差距更小，更接近彼此，因爲他們來自同一個母親。可以想象，一個母親如果身材高大，那麼她的孩子們可能都傾向於有比較高的出生體重。所以同一個母親的孩子之間體重是有相關關系的 (within correlation)。
+
+
+```{r Hier01-5, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='Birthweight of siblings by maternal identifier', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+siblings <- read_dta("../backupfiles/siblings.dta")
+subSiblings <- siblings[(siblings$momid > 80000)&(siblings$momid < 95000)&(siblings$idx %in% c(1,2)), ]
+subSiblings$idx <- factor(subSiblings$idx)
+subSiblings_w <- subset(subSiblings, select = c("momid", "idx", "birwt"))
+
+subSiblings_w <- spread(subSiblings_w, key = idx, value = birwt)
+ggthemr('fresh')
+
+
+ggplot(subSiblings, aes(x = momid, y = birwt, fill = idx)) + 
+ geom_point(size = 4, shape = 21) + 
+#geom_segment(aes(x = momid, y = `1`, xend = momid, yend = `2`, colour = "segment"), data = subSiblings_w) + 
+ geom_line(aes(group = momid), lty = 1) + 
+   theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Mother ID", y = "Birthweight (g)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + 
+  theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19),   legend.title = element_text(size = 19)) + theme(plot.subtitle = element_text(vjust = 1), 
+  plot.caption = element_text(vjust = 1)) +labs(fill = "Child number") + 
+  scale_fill_discrete(labels = c("1st Child", "2nd Child"))
+```
+
+
+- 最後一個用於本章節的實例是，一項研究亞洲兒童生長狀況的調查分別記錄了 198 個數據點，68 個兒童在 0 到 3 歲之間的四個年齡點的體重數據。圖 \@ref(fig:Hier01-6) 展示的就是這個典型的隨訪數據的個人生長曲線。且圖中每個人的生長軌跡提示，男孩子的生長過程可能相互之間體重差異顯得較女孩子來得大。如果，我們用每個兒童自己的數據，給每個兒童擬合各自的回歸線，數據顯然不足，但是如果我們決定忽略個體的生長的隨機效應 (不均一性)，又顯得十分不妥當。
+
+```{r  Hier01-6, cache=TRUE, echo=FALSE, fig.height=6, fig.width=9, fig.cap='Growth profiles of boys and girls in the Asian growth data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+growth <- read_dta("../backupfiles/asian.dta")
+growth <- growth %>%
+  mutate(gender = factor(gender, labels= c("Boys", "Girls")))
+
+ggthemr('fresh')
+
+G <- ggplot(growth, aes(x = age, y = weight)) + 
+ geom_line(aes(group = id), lty = 1) + 
+   theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age (years)", y = "Weight (Kg)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) + 
+  theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19),   legend.title = element_text(size = 19)) + theme(plot.subtitle = element_text(vjust = 1), 
+  plot.caption = element_text(vjust = 1)) +labs(fill = "Child number") + 
+  scale_fill_discrete(labels = c("1st Child", "2nd Child"))
+G + facet_grid(. ~ gender) + 
+  theme(strip.text = element_text(face = "bold", size = rel(1.5)))
+```
+
+
+
+
+## 依賴性的來源在哪裏
+
+
+上述例子中的數據，均提示我們數據與數據之間獨立性的假設，常常會遇到尷尬的局面。因爲數據與數據之間本身就不可能完全獨立。
+
+1. 同一個診所或者醫院的患者，他們之間可能有着某些相似的因素從而導致他們的血壓相比其他醫院的人彼此更加接近。這個原因可能是有同一家醫院的患者可能有類似的疾病。
+2. 同一患者身上反復抽取樣本，也就是說一個對象貢獻了多個數據的時候，這些來自同一對象的數據當然具有相對不同對象數據更高的均質性。
+3. 同一所學校的學生的成績或內部的相關性，很可能大於不同學校兩個學生之間成績的相關性。因爲同一學校的孩子可能共享某些共同的特徵，比如說相似的家庭經濟背景，或者是同樣的教學內容教學老師等環境因素。這樣，來自同一所學校的孩子的成績很可能就會更加相似。
+4. 至於說家庭數據就更加典型了。來自同一家庭的兄弟姐妹，有着極強的相關性，因爲他們共享着遺傳因素，或者是相似的家庭教育/飲食/生活習慣等環境因素。
+5. 同一個體身上的縱向 (時間) 隨訪數據很顯然會比不同患者有更強的內部相關性。
+
+目前位置介紹的這些常見實例中，可以發現它們有一個共通點。就是這些數據其實內部是有分層結構的 (hierarchy)。這些數據中，都有一個最底層單元 (elementary units/level 1)，還有一個聚合單元 (aggregate units/level 2)，聚合單元常被命名爲層級 (cluster)。
+
+
+```{r Hier01tab00, echo=FALSE, cache=TRUE, eval=TRUE}
+dt <- read.csv("../backupfiles/Hier01tab00.csv", header = T)
+#names(dt) <- c("Model with", "sigma_u", "sigma_e", "sigma_u", "sigma_e")
+kable(dt, "html",  align = "l", caption = "Hierarchy in the data (5 examples in Chapter 1)") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") %>%
+  add_header_above(c("Level" = 2))
+```
+
+正如表格 \@ref(tab:Hier01tab00) 總結的那樣，這些數據中存在這層級結構，這種數據被稱爲分層數據 (hierarchical)，或者叫嵌套式數據 (nested data)。根據你所在的知識領域，它可能還被命名爲多層結構數據 (multilevel and clustered data)。在一些研究中，你可能會遇見從實驗設計階段就存在分層結構的數據，比如使用分層抽樣 (multistage sampling) 的設計的實驗等。這樣的實驗設計最常在人口學，社會學的研究中看到。在大多數醫學研究中，每個數據點 (observation point, level 1)，所屬的層 (cluster) 本身可能是我們感興趣的研究點 (例如同屬於一個家庭，相同母親的後代)，又或者是同一個人/患者的隨着時間推移的隨訪健康狀態 (如生長曲線，體重變化，疾病康復情況)。
+
+如果用前面用過的 圖 \@ref(fig:Hier01-6) 的生長曲線做例子，那麼每個被調查的兒童，就是該數據的第二級層，每個隨訪時刻測量的體重數據，則是觀察的數據點。這個數據還有一個特點是，觀察數據點是有前後的 (時間) 順序的，這是一個典型的**縱向研究數據 (longitudinal data)**。
+
+
+## 數據有依賴性導致的結果
+
+如果你手頭的數據，結構上是一種嵌套式結構數據，那麼任何無視了這一點作出的統計學推斷都是有瑕疵的。相互之間互不獨立這一特質，需要通過一種新的手段，把嵌套式的數據結構考慮進統計學模型裏來。
+
+在一些情況下，數據的嵌套式結構可能可以被忽略掉，但是其結果是導致統計學的估計變得十分低效 (inefficient procedure)。你可能會聽說過一般化估計公式 (generalized estimating equations)，是其中一種備擇手段，因爲在這一公式中，你需要人爲地指定數據與數據之間可能的依賴關系是怎樣的。
+
+其實，即使有人真的在分析過程中忽略了數據本身的嵌套式結構，他會發現最終在描述分析結果的時候，還是無法避免這一嚴重的問題。另外一些統計學家可能記得在穩健統計學法中，三明治標準誤估計法也是可以供選擇的一種處理相關數據的手段。
+
+## 邊際模型和條件模型 marginal and conditional models
+
+邊際模型和條件模型的概念其實不是分層模型特有的，卻在分析分層數據模型時十分有用。假如，對於某個結果變量 $Y$ 有它如下的回歸模型，其中我們把某個單一的共變量 $Z$ 從模型中分離出來，加以特別關注:
+
+$$
+g\{ \text{E}(Y|\textbf{X},Z) \} = \beta\textbf{X} +\gamma Z
+$$
+
+這是一個典型的條件模型，它描述了結果變量 $Y$ 的期望是以怎樣的**條件**和解釋變量 $\textbf{X},Z$ 之間建立關系的。每個解釋變量的回歸系數，其含義都是**以其他同一模型中的共變量不變的條件下**，和結果變量之間的關系。經過這樣的解讀，你會知道，其實本統計學教程目前爲止遇見過的所有的回歸模型都是條件模型。如果此時我們反過來思考，把上述模型中單獨分離出來的單一共變量 $Z$ 對於結果變量 $Y$ 均值的影響合並起來 (對共變量 $Z$ 積分即可)，此時我們得到的就是共變量 $\textbf{X}$ 和結果變量 $Y$ 之間，關於 $Z$ 的邊際模型 (Marginal model):
+
+$$
+\text{E}_Z\{ \text{E}(Y|\textbf{X}, Z) \} = \text{E}_Z\{ g^{-1}(\beta\textbf{X} + \gamma Z) \} \\
+\text{Where } \text{E}(Z) = 0
+$$
+
+
+用**線性回歸**來舉例:
+
+$$
+\text{E}(Y| \textbf{X}, Z) = \beta\textbf{X} + \gamma Z
+$$
+
+
+那麼此時共變量 $\textbf{X}$ 的邊際模型回歸系數 $\beta$ 的含義，和條件模型時的回歸系數其實是相同的含義:
+
+$$
+\text{E}_Z\{\text{E}(Y|\textbf{X},Z)\} = \text{E}_Z(\beta\textbf{X} + \gamma Z) = \beta\textbf{X} + \gamma\text{E}(Z) = \beta\textbf{X}
+$$
+
+
+爲什麼這裏的邊際模型對於分層數據來說很重要呢？答案在於，嵌套式數據中，我們常常關心那第二個階層 (重復測量某個指標的患者，學生成績數據中的學校層級，等) 在它所在的那個階層中和結果變量之間的平均關系。(In models for hierarchical data we often use level effects to represent what is common among observations from one "cluster" or "group". We may then want marginal conclusions: we need to average over these effects).
+
+
+```{r hier01tab01, echo=FALSE, cache=TRUE, eval=FALSE}
+dt <- read.csv("../backupfiles/hierexample.csv", header = T)
+names(dt) <- c("Cluster (j)", "id (i)", "X", "Y", "X", "Y")
+kable(dt, "html",  align = "c", caption = "Example data") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") #%>%
+  #add_header_above(c(" " = 1,"REML" = 2, "ML" = 2))
+```
+
+### 標記法 notation
+
+- $Y_{ij}$ 標記第 $j$ 層的第 $i$ 個個體;
+- $i = 1, \cdots, n_j$ 表示第 $j$ 層中共有 $n_j$ 個個體 (elements);
+- $j = 1, \cdots, J$ 表示數據共有 $J$ 個第二階層 (clusters);
+- $N = \sum_{j=1}^J n_j$ 表示總體樣本量等於各個階層樣本量之和;
+- 特殊情況: 如果每個階層的個體數相同 $n$，$N=nJ$，這樣的數據被叫做均衡數據 (balanced data)。
+
+### 合並每個階層 
+
+過去常見的總結嵌套式數據的手段只是把每層數據取平均值，這樣的方法簡單粗暴但是偶爾是可以接受的，只要你能夠接受如此處理數據可能帶來的如下後果:
+
+- 各層數據均值，其可靠程度 (方差) 隨着各層的樣本量不同而不同 (depends on the number of elementary units per cluster);
+- 變量的含義發生改變。如果是使用層水平 (cluster level) 的數據，本來測量給個體的那些變量，就變成了**層的變量**，從此作出的任何統計學推斷，只能限制在層水平 (ecological fallacy, as correlations at the macro level cannot be used to make assertions at the micro level);
+- 由於無視了層內個體數據，導致大量信息損失。
+
+此處我們借用 [@Snijders1999] 書中第 28 頁的人造數據，如下表
+
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>Artificial data</caption>
+ <thead>
+  <tr>
+   <th style="text-align:center;"> Cluster $(j)$ </th>
+   <th style="text-align:center;"> id $(i)$ </th>
+   <th style="text-align:center;"> $X$ </th>
+   <th style="text-align:center;"> $Y$ </th>
+   <th style="text-align:center;"> $\bar{X}$ </th>
+   <th style="text-align:center;"> $\bar{Y}$ </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 6 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 7 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 6 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 4 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 4 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 3 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 3 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 2 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 7 </td>
+   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 2 </td>
+  </tr>
+</tbody>
+</table>
+
+這個表中的人造數據，其結構是一目了然的，它的第二層級數量是 5，每層的個體數量是 2。這是一個平衡數據。由於這是個我們人爲模擬的數據，圖 \@ref(fig:artificialdata00) 也顯示它沒有隨機誤差，所有數據都在各自的直線上。
+
+
+```{r artificialdata00, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: scatter of clustered data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+dt <- read.csv("../backupfiles/hierexample.csv", header = T)
+names(dt) <- c("Cluster", "id", "X", "Y", "Xbar", "Ybar")
+dt$Cluster <- as.factor(dt$Cluster)
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y, shape = Cluster, colour = Cluster)) + geom_point(size =5) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + 
+theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19), legend.title = element_text(size = 19))
+```
+
+
+
+- 如果我們無視其分層數據的嵌套式結構，把每個數據都看作是獨立的樣本，擬合一個**整體回歸 (total regression) 圖 \@ref(fig:artificialdata01)**:
+
+$$
+\hat Y_{ij} = 5.33 - 0.33 X_{ij}
+$$
+
+
+```{r artificialdata01, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: Total regression', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y)) + geom_point(size = 5, shape = 23) + 
+  geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + 
+theme(legend.position = "bottom", legend.direction = "horizontal") + theme(legend.text = element_text(size = 19), legend.title = element_text(size = 19))
+```
+
+
+- 如果我們只保留層級數據本身，求了變量 $X,Y$ 在每層的均值的話，就得到了**層間回歸 (between regression) 圖 \@ref(fig:artificialdata02)** -- 變量 $X,Y$ 之間的回歸直線的斜率變得更大了:
+
+$$
+\hat{\bar{Y}}_j = 8.0 - 1.0 \bar{X}_j
+$$
+
+
+```{r artificialdata02, cache=TRUE, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: scatter of clustered data', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y)) + geom_point(size =5, shape=23) + 
+    geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+  geom_abline(intercept = 8, slope = -1) + 
+  geom_point(aes(x = Xbar, y=Ybar, size = 5)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + theme(legend.position="none")
+```
+
+
+### 生物學悖論 ecological fallacy
+
+生物學悖論常見於我們認爲某分層數據中層級變量之間的關系，同樣適用與層級中的個體之間: 例如比較 A 國 和 B 國之間心血管疾病的發病率，發現 A 國國民食鹽平均攝入量高於 B 國，很多人可能就會下結論說食鹽攝入量高的個體，心血管疾病發病的危險度較高。然而，這樣的推論很多時候是錯誤的。
+
+曾經在 [@Robinson1950] 論文中舉過的著名例子: 該研究調查美國每個州的移民比例，和該州相應的識字率之間的關系。研究者發現，移民比例較高的州，其識字率也較高 (相關系數 0.53)。由此就有人下結論說移民越多，那個州的教育水平會比較高。但是實際情況是，把每個個體的受教育水平和該個體本身是不是移民做了相關系數分析之後發現，這個關系其實是負相關 (-0.11)。所以說在州的水平作出的統計學推斷-移民多的州受教育水平高-是不正確的。之所以在州水平發現移民比例和受教育水平之間的正關系，是因爲移民傾向於居住在教育水平本來就比較高的本土出生美國人的州。
+
+### 分解層級數據
+
+如果是分析最初層級數據 (level 1) 的話，我們還需要考慮下列一些問題: 
+
+- 當心數據被多次利用 
+
+如果我們關心的變量其實是在第二層級的 (level 2/cluster level)，但是你卻把它當作是第一層級的數據，就會引起**數據很多**的錯覺，因爲同一層的個體他們的層屬變量都是一樣的，你擁有的數據其實並沒有你想的那麼多。
+
+前文中用過的 GCSE 數據其實是一個很好的例子，下表中歸納了調查的學校類型 (男校，女校或者混合校)，以及按照每個學生個人所屬學校類型的總結，可以看出，當你嘗試使用個人 (elementary level) 水平的數據分析實際上是第二層級數據的特性時，你會被誤導。因爲個人數據告訴你， 34% 的學生在女校學習，然而正確的分析法應該是，學校中有 31% 的學校是女校。
+
+
+```{r hier01tab02, echo=FALSE, cache=TRUE, eval=FALSE}
+dt <- read.csv("../backupfiles/hier01tab01.csv", header = T)
+#names(dt) <- c("Model with", "sigma_u", "sigma_e", "sigma_u", "sigma_e")
+kable(dt, "html",  align = "c", caption = "Aggregated and disaggregated") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") %>%
+  add_header_above(c("School type" = 1,"Cluster Level" = 2, "Elementary Level" = 2))
+```
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>Aggregated and disaggregated</caption>
+ <thead>
+<tr>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="1"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">School type</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Cluster Level</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Elementary Level</div></th>
+</tr>
+  <tr>
+   <th style="text-align:center;">  </th>
+   <th style="text-align:center;"> N </th>
+   <th style="text-align:center;"> % </th>
+   <th style="text-align:center;"> N </th>
+   <th style="text-align:center;"> % </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> mixed </td>
+   <td style="text-align:center;"> 35 </td>
+   <td style="text-align:center;"> 54 </td>
+   <td style="text-align:center;"> 2169 </td>
+   <td style="text-align:center;"> 53 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> boys only </td>
+   <td style="text-align:center;"> 10 </td>
+   <td style="text-align:center;"> 15 </td>
+   <td style="text-align:center;"> 513 </td>
+   <td style="text-align:center;"> 13 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> girls only </td>
+   <td style="text-align:center;"> 20 </td>
+   <td style="text-align:center;"> 31 </td>
+   <td style="text-align:center;"> 1377 </td>
+   <td style="text-align:center;"> 34 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> 65 </td>
+   <td style="text-align:center;"> 100 </td>
+   <td style="text-align:center;"> 4059 </td>
+   <td style="text-align:center;"> 100 </td>
+  </tr>
+</tbody>
+</table>
+
+
+
+- 分層數據分析法
+
+有人會說，既然如此，那麼我們就把數據放在每層當中分析就好了 (stratified analyses)。還是用前文中用過的人造 5 層數據來說明這樣做的弊端。前面用了兩種方法 (total regression, between regression) 來總結這個 5 層的人造數據 \@ref(fig:artificialdata02)。最後一種分析此數據的方法是，把 5 層數據分開分別做回歸線如圖 \@ref(fig:artificialdata03)。等同於我們的對數據擬合五次下面的回歸方程: 
+
+$$
+\hat Y_{ij} - \bar{Y}_j = \beta(X_{ij} - \bar{X}_j)
+$$
+
+這種模型被叫做**層內回歸 (within regression)**。這 5 個線性回歸的斜率都是 1，是五條不同截距的平行直線。因爲我們自己編造的數據的緣故，現實數據不太可能恰好所有層內回歸的斜率都是完全相同的。這其實也是曾內回歸法的一個默認前提 -- 每層數據中解釋變量和結果變量之間的關系是相同的。
+
+
+
+
+```{r artificialdata03, cache=TRUE, echo=FALSE, fig.asp=.7, fig.width=6, fig.cap='Artificial data: within cluster regressions', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr('fresh')
+
+ggplot(dt, aes(x = X, y = Y)) + geom_point(size =5, shape=20) +
+  geom_line(aes(group = Cluster), lty = 2) + 
+  #  geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+ #  geom_abline(intercept = 8, slope = -1) + 
+ # geom_point(aes(x = Xbar, y=Ybar, size = 5)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "X", y = "Y")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + theme(legend.position="none")
+```
+
+
+
+### 固定效應模型 fixed effect model
+
+無論數據中的分層結構是否有現實意義 (如果說是五種不同的民族，那就有顯著的現實意義)，在回歸模型中都**有必要考慮這個分層結構對數據的變異的貢獻** (the contribution of the clusters to the data variation)。
+
+線性回歸章節中我們使用的是五個啞變量來代表不同組別加以分析: 
+
+$$
+Y_{ij} = \alpha_1 I_{i, j = 1} + \alpha_2 I_{i, j=2} + \cdots + \alpha_5 I_{i, j=5} + \beta_1X_{ij} + \varepsilon_{ij}
+$$
+
+其中 $j$ 是所屬層級編號。該模型中的 $\varepsilon_{ij}$ 被認爲服從均值爲零，方差爲 $\sigma_{\varepsilon}^2$ 的正態分布。該模型也可以簡寫爲:
+
+$$
+Y_{ij} = \alpha_j + \beta_1X_{ij} + \epsilon_{ij}
+$$
+一樣一預案
+這樣的模型在等級線性回歸模型中被認爲是**固定效應模型 fixed effect model**。它其實是默認給五個層級五個不同的截距，每層內部 $X,Y$ 之間的關系 (斜率) 則被認爲是完全相同的 (namely the within cluster models are the same)。
+
+本課剛開始的例子中有個數據是來自 6 所不同醫院 72 名患者的收縮期血壓的數據。我們現在來分析這些人中血壓和年齡之間的關系。下面的散點圖重現了六所醫院的72名患者的血壓和年齡。
+
+
+
+```{r Hier01-7, echo=FALSE, fig.height=6, fig.width=7, fig.cap='SBP versus age: different symbols identify the six hospitals', fig.align='center', out.width='90%', cache=TRUE}
+Bp <- read_dta("../backupfiles/bp.dta")
+
+Bp$hosp <- as.factor(Bp$hosp)
+
+ggthemr('fresh')
+
+ggplot(Bp, aes(x = age, y = bp, shape = hosp)) + geom_point(size =5) + 
+    #geom_smooth(method = "lm", se = FALSE, linetype = 2) +
+  #geom_abline(intercept = 8, slope = -1) + 
+  #geom_point(aes(x = Xbar, y=Ybar, size = 5)) +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "Age", y = "Systolic blood pressure (mmHg)")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8)) + theme(legend.position="bottom")
+```
+
+下面在 R 裏擬合這個固定效應模型:
+
+```{r Hier01-8, echo=TRUE, cache=TRUE}
+Bp <- read_dta("../backupfiles/bp.dta")
+
+Bp$hosp <- as.factor(Bp$hosp)
+Bp <- Bp %>%
+  mutate(c_age = age - mean(age))
+# 通過指定截距爲零，獲取每個醫院的回歸線的截距
+Model0 <- lm(bp ~ 0 +  c_age + hosp, data = Bp) 
+
+summary(Model0)
+
+# 先生成一個新的醫院變量 hops1 = 1。然後使用偏 F 檢驗法
+# 檢驗控制了患者的年齡以後，這六所醫院的截距是否各自不相同。
+Bp$hosp1 <- Bp$hosp[1]
+mod2 <- lm(bp ~ 0 +  c_age + as.numeric(hosp1), data = Bp)
+anova(Model0, mod2)
+```
+
+偏 F 檢驗法給出的結果 $F(5, 65) = 2.16, P = 0.07$，所以說，數據其實告訴我們，調整了年齡之後，這六所醫院患者中年齡和血壓之間關系的回歸線有不同的截距。
+
+## 簡單線性迴歸複習
+
+滾回線性回歸章節 \@ref(lm)。
+
