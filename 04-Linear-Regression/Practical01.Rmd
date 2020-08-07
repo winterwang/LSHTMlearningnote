@@ -1,0 +1,96 @@
+
+
+使用的數據內容爲：兩次調查同一樣本，99 名健康男性的血清膽固醇水平，間隔一年。
+
+
+```{r LM04, cache=TRUE, message=FALSE, warning=FALSE, fig.align='center', out.width='80%'}
+# 數據讀入
+Chol <- read_dta("../backupfiles/chol.dta")
+summary(Chol)
+
+# Alternative Descriptive Statistics using psych package
+describe(Chol)
+
+# 兩次膽固醇水平的直方圖 Distribution of the two measures
+par(mfrow=c(1,2))
+hist(Chol$chol1)
+hist(Chol$chol2)
+
+# 對兩次膽固醇水平作散點圖
+ggplot(Chol, aes(x=chol1, y=chol2)) + geom_point(shape=20) +
+  scale_x_continuous(breaks=seq(150, 400, 50),limits = c(150, 355))+
+  scale_y_continuous(breaks=seq(150, 400, 50),limits = c(150, 355)) +
+   theme_stata() +labs(x = "Cholesterol at visit 1 (mg/100ml)", y = "Cholesterol at visit 2 (mg/100ml)")
+```
+
+### 兩次測量的膽固醇水平分別用 $C_1, C_2$ 來標記的話，考慮這樣的簡單線性迴歸模型：$C_2=\alpha+\beta C_2 + \varepsilon$。我們進行這樣迴歸的前提假設有哪些？
+
+- 每個觀察對象互相獨立。
+- 前後兩次測量的膽固醇水平呈線性相關。
+- 殘差值，在每一個給定的 $C_1$ 值處呈現正態分佈，且方差不變。
+
+從散點圖來看這些假設應該都能得到滿足。
+
+```{r LM05, cache=TRUE}
+# 計算兩次膽固醇水平的 均值，方差，以及二者的協方差
+mean(Chol$chol1); mean(Chol$chol2)
+var(Chol$chol1); var(Chol$chol2)
+cov(Chol$chol1, Chol$chol2)
+```
+
+### 計算普通最小二乘法 (OLS) 下，截距和斜率的估計值 $\hat\alpha, \hat\beta$
+
+$$
+\begin{aligned}
+\hat\beta &= \frac{\sum_{i=1}^n(x_i-\bar{x})(y_i-\bar{y})}{\sum_{i=1}^n(x_i-\bar{x})^2}\\
+&=\frac{\text{Cov}(C_1,C_2)}{\text{Var}(C_1)}\\
+&=\frac{1661.061}{961.224}=0.578
+\end{aligned}
+$$
+
+```{r LM06, cache=TRUE}
+cov(Chol$chol1, Chol$chol2)/var(Chol$chol1)
+```
+
+$$\hat\alpha=\bar{y}-\hat\beta\bar{x}=263.54-0.578\times264.59=110.425$$
+
+```{r LM07, cache=TRUE}
+mean(Chol$chol2)-mean(Chol$chol1)*cov(Chol$chol1, Chol$chol2)/var(Chol$chol1)
+```
+### 和迴歸模型計算的結果作比較，解釋這些估計值的含義
+
+```{r LM08, cache=TRUE}
+summary(lm(chol2~chol1, data=Chol))
+```
+
+- 截距的估計值是 110.4 mg/100ml: 意爲這組樣本，第一次採集數據時，膽固醇水平的平均值是 110.4。
+- 斜率的估計值是 0.58：意爲第一次採集的膽固醇水平每高 1 mg/100ml，那麼第二次採集的膽固醇相應提高的值的期待量爲 0.58.
+
+### 加上計算的估計值直線 (即迴歸直線)
+
+```{r LM09, cache=TRUE, warning=FALSE}
+ggplot(Chol, aes(x=chol1, y=chol2)) + geom_point(shape=20, colour="grey40") +
+  stat_smooth(method = lm, se=FALSE, size=0.5) +
+   scale_x_continuous(breaks=seq(150, 400, 50),limits = c(150, 355))+
+  scale_y_continuous(breaks=seq(150, 400, 50),limits = c(150, 355)) +
+   theme_stata() +labs(x = "Cholesterol at visit 1 (mg/100ml)", y = "Cholesterol at visit 2 (mg/100ml)")
+```
+
+可以注意到，第一次訪問時膽固醇水平高的人，第二次被測量時膽固醇值高於平均值，但是卻沒有第一次高出平均值的部分多。
+相似的，第一次膽固醇水平低的人，第二次膽固醇水平低於平均值，但是卻沒有第一次低於平均值的部分多。這一現象被叫做 “向均數迴歸-regression to the mean”
+
+
+### 下面的代碼用於模型的假設診斷 {#diagnosis}
+```{r LM10, cache=TRUE}
+M <- lm(chol2~chol1, data=Chol)
+par(mfrow = c(2, 2))  # Split the plotting panel into a 2 x 2 grid
+plot(M)
+```
+
+
+好心人在 [github](https://gist.github.com/atyre2/ff4e1ec24e42adda8dbd43cda99d6282) 上共享了 `Check_assumption.R` 的代碼，可以使用 ggplot2 來獲取高逼格的模型診斷圖：
+
+```{r LM11, cache=TRUE, message=FALSE}
+source("../checkassumptions.R")
+check_assumptions(M)
+```
