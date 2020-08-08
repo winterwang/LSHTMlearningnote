@@ -1,0 +1,241 @@
+## 背景
+
+計劃臨牀實驗的時候，爲了避免偏倚和帶有偏見的結論，應當將注意力放在
+
+1. 如何將實驗對象隨機分配 (randomisation)
+2. 設計對照組 (control group)
+3. 合適（且必須）的貫徹盲法 (blinding)
+
+另外一個同樣重要的問題是--**“我到底需要多少樣本?”**
+
+一項臨牀實驗，應該提供足夠的證據來證明新藥物（新治療方法）是否有效，是否安全。影響一個實驗設計的樣本量的因素可能有如下幾種：
+
+1. **統計學方案。**
+    <br> 從統計學上可以推算出，需要多少樣本來獲得一個堅實可信的證據來證明藥物的實際有效性。
+2. 經濟上的因素。
+    <br> 然而實際上可能還有經濟上，時間上，人力物力資源上的現實因素，會制約到底一個實驗能夠收集到多少樣本量。
+3. 倫理道德上的因素。
+    <br> 許多臨牀實驗還必須受制於醫學倫理因素。在倫理上一個實驗到底可以維持多久。或者說，要考慮當實驗中一些受試者的結果不理想，或者是有副作用的時候，我們何時該及時停止該實驗？
+4. 實驗本身的可信度。
+    <br> 如果一個臨牀實驗的規模在設計上就很小，可能它本身的可信度就很低。
+
+這裏我們只考慮沒有其他任何因素的影響下，**1. 統計學方案**上該如何計算準確的所需樣本量的大小。
+
+比較下列兩個同樣比較了溶栓酶和安慰劑在預防心肌梗塞患者死亡的臨牀實驗：
+```{r 05-clinical-trials-1, echo=FALSE}
+dt <- read.csv("../backupfiles/clinicaltrials001.csv", header = T) # in ubuntu
+# dt <- read.csv("backupfiles/clinicaltrials002.csv", header = T) # in win10s
+# names(dt) <- c(" ", "0.05", "0.1", "0.2", "0.5")
+# dt[,1] <- c(" ", 0.05, 0.01)
+kable(dt, "html",align = "l",caption = "Results from the 1st Australian and ISIS-2 trials for reducing mortality from post-MI") %>%
+#   column_spec(1:4, bold = T, border_right = T)  %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+
+這兩個臨牀實驗獲得的治療效果 (treatment effect)，在數字的百分比上幾乎十分接近。然而由於樣本量巨大的差距，可以看到第一個實驗的信賴區間十分的大，使得實驗結果是無意義的。而第二個大樣本的實驗結果就告訴我們，溶栓酶的治療效果是有效降低了心肌梗死患者死亡概率（降低了23%）。第一個實驗收集了近500個病例，卻仍然不能提供確實有效的證據證明溶栓酶的治療效果（提供了強的關聯結果，卻是極弱的證據。strong correlation, but weak evidence) 。
+
+
+## 決定所需樣本量大小的統計學因素
+
+(1) 實驗主要結果的測量/比較方法是什麼？ What is the principal outcome measure of the trial?
+<br> 一項臨牀實驗的主要結果，應該是切合該實驗的主要目的的。並且應當能夠客觀評價。(如死亡率的改善，治癒率的提高等等)
+
+(2) 實驗數據準備分析的方案是什麼？ How will the data be analysed to detect a treatment difference?
+<br> 實驗結果獲得的數據是連續型的 (血壓，血糖值，BMI)？還是分類的離散變量 (死亡的發生與否，疾病的治癒與否)？統計學上認爲的，治療結果提示有意義的差別時的概率。通常定爲 5%。(p < 0.05)
+
+(3) 對照組的試驗期望結果是怎樣的？ What results are expected in the control group?
+<br> 當然我們不可能事先預知實驗對照組可能出現的結果。此處只討論我們的預期結果。大多數情況下，我們可以從已經進行過的類似臨牀試驗報告中獲得，或者是從非臨牀干預型研究（觀察型研究）報告中獲得對照組的期望結果。
+
+(4) 如果實驗藥物在治療上確實有差異，當這個差異最小爲多少時希望能從設計的實驗中被檢測到？ How small a treatment difference, if it exists, is important to detect?
+<br> 這一條恐怕是每個臨牀實驗在設計階段最重要，最敏感也是最難做出決定的。如果我們已知這個藥物療效和對照相比差別很大，那麼樣本量不用很大，就足以提供值得信賴的證據。不過臨牀上常常會認爲療效差距不必**非常的**顯著，但是在臨牀意義上也是十分重要的。
+<br> 常常在這個問題上會引起衆多討論，因爲醫生和患者可能認爲任何一點差異都是有臨牀意義的。但是如果我們想檢測出較小的差距，會需要非常巨大的樣本量，這將會是十分不切合實際的。**What needs to be decided upon is the smallest clinically relevant difference that would be important to detect if it were true.**
+
+(5) 在上面第 4 條被決定了以後，還要確定的是我們需要多大的把握來相信這個被檢測出來的療效差別？ With what degree of certainty is needed to be able to detect the treatment difference in 4?
+<br> 在實際臨牀實驗中，結論是從觀察數據中得來的，而不是從我們預想的那個“未知的實驗效果”。觀察獲得的療效差別，可能比預想的大（有效），也很可能比預想的小（無效）。設計較好的臨牀實驗應該有足夠機率觀察到有意義的療效差別，即使觀察得到的結果不如預期的大。當然要增加我們觀察到有意義的療效差別，最簡單的辦法是增加樣本量。這個條件的含義是，當療效真差別真實存在，我們要有足夠大的把握把它通過實驗觀察到。
+
+## 第一類和第二類錯誤 Type I and type II errors
+
+下面羅列一下我們在進行實驗設計時要用到的概念和相應的標記，注意雖然我們無法知道真正的人羣裏真實參數 (parameter) 的大小，但是我們需要用一些估計 (estimator) 來代替：
+
+- $p_1=$ the **observed percentage** in those on standard treatment <br> 意爲施行標準治療法時觀察到的（治癒/有效）百分比
+- $p_2=$ the **observed percentage** in those on "new" treatment <br> 意爲施行“新療法”時觀察到的（治癒/有效）的百分比
+
+$\Rightarrow p_1-p_2=$ **observed treatment effect** <br> 意爲可以觀察到的治療效果。
+
+- $\pi_1=$ the **anticipated percentage** in those on standard treatment <br> 意爲施行標準治療法時，我們預期的（治癒/有效）百分比
+- $\pi_2=$ the **anticipated percentage** in those on "new" treatment <br> 意爲施行“新療法”時，我們預期的（治療/有效）百分比
+
+$\Rightarrow \pi_1-\pi_2=$ is the true difference which has been decided it is important to detect <br> 意爲上面第 4 條中我們設定好的希望通過實驗證實的真實的療效差別。
+
+其餘的數學標記包括：
+
+- $\alpha=$ 有意義的療效差異，在統計學上的水平 (概率水平，通常設定爲 0.05 or 5%)
+- $1-\beta=$ Degree of certainty that a true difference of $\pi_1 - \pi_2$ would be detected. <br> 效能, power。意爲有多大的把握能通過實驗檢測出療效差別。（通常將目標值設定爲 $1-\beta=90\%$）
+
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>Table 33.2: Observed trial results compared to the `truth` of 1) no difference; 2) a true $\pi_1-\pi_2$ diffrence</caption>
+ <thead>
+<tr>
+<th style="border-bottom:hidden"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">真實情況 <br> Truth</div></th>
+</tr>
+<tr>
+<th style="text-align:center;">   </th>
+   <th style="text-align:center;"> 無差別 </th>
+   <th style="text-align:center;"> 真實差別存在 $\pi_1-\pi_2$ </th>
+  </tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;"> 觀察到不存在有意義差別 </td>
+   <td style="text-align:center;"> $1−\alpha$</td>
+   <td style="text-align:center;"> $\beta$ <br> Type II error </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> 觀察到存在有意義差別 </td>
+   <td style="text-align:center;"> $\alpha$ <br> Type I error </td>
+   <td style="text-align:center;"> $1-\beta$ <br> Power </td>
+  </tr>
+</tbody>
+</table>
+
+
+考慮上面這個表格，可以很容易想到，一個理想的實驗設計，我們希望這個臨牀實驗獲得的結果儘可能地落在上表中的
+
+1. 左上角：即如果真實情況是無差別的，實驗結果也應該觀察到不存在有意義的差別。
+2. 右下角：即如果真實情況是是存在真實差別 $\pi_1-\pi_2$ 的，試驗結果也應該觀察到有意義的差別。
+
+然而，我們在獲得臨牀實驗結果之後常常犯的兩類錯誤，同樣在上面的表格中顯示：
+
+- **Type I error:** A type I error is when a treatment difference is claimed based on a statistically significant observed result when in truth no such difference exists, i.e. a false positive result. <br> 左下角爲**一類錯誤**，即實驗結果觀察到有顯著的療效差異，然而，真實情況是並沒有差異的話，被認爲是假陽性判斷。$\alpha$ 表示一類錯誤發生的概率。
+- **Type II error:** A type II error is when in truth there exists a difference of $\pi_1-\pi_2$ but the observed results fail to reach statistical significance, i.e. a false negative result. <br> 右上角爲**二類錯誤**，即實驗結果觀察到沒有顯著的療效差異，然而，真實情況是有差異的話，被認爲是假陰性判斷。$\beta$ 表示二類錯誤發生的概率。
+
+Alternative ways of describing $\alpha$ and $\beta$ are as follows:
+
+- $\alpha$ is the risk of a Type I error; $\alpha$ 也被叫做檢驗的顯著水平, significant level。
+- $\beta$ is the risk of a Type II error. $1-\beta$ is termed statistical power. 其中 $1-\beta$ 被叫做檢驗效能。
+
+$\alpha, 1-\beta$ 的水平需要事先被確定，否則無法進行進一步的樣本量的計算。
+
+
+## 比較兩組之間的百分比 (percentages or proportions)
+
+### 樣本量計算公式 (使用顯著水平 5%, 和檢驗效能 90%)
+
+$$n=10.5\times\frac{[\pi_1\times(100-\pi_1)+\pi_2\times(100-\pi_2)]}{(\pi_1-\pi_2)^2}\times2$$
+
+注意：
+
+- 上面的公式後面有 $\times2$ 是因爲前一半公式計算的只是一組（治療或對照組）所需的樣本量。
+- 這裏使用的是百分比。所以當使用比例的時候，要把 $100$ 改成 $1$。
+- 使用公式計算的所需樣本量，並不是說我們需要的病例數就是計算出來的結果。上面的公式獲得的結果只是對所需樣本量的估算。
+
+### 樣本量計算公式的一般化 (不同的顯著水平和檢驗效能條件下)
+
+$$n=f(\alpha, \beta)\times\frac{[\pi_1\times(100-\pi_1)+\pi_2\times(100-\pi_2)]}{(\pi_1-\pi_2)^2}\times2$$
+
+其中， $f(\alpha, \beta)$ 指的是關於檢驗顯著水平 $\alpha$ 和檢驗效能 $\beta$ 的函數。 可以參考下面的表格：
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>Table 33.2: Values of $f(\alpha, \beta)$ for different levels of $\alpha$ and $\beta$</caption>
+ <thead>
+<tr>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="1"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">$\alpha$</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="4"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">$\beta$</div></th>
+</tr>
+<tr>
+<th style="text-align:center;">   </th>
+   <th style="text-align:center;"> 0.05 </th>
+   <th style="text-align:center;"> 0.1 </th>
+   <th style="text-align:center;"> 0.2 </th>
+   <th style="text-align:center;"> 0.5 </th>
+  </tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">  </td>
+   <td style="text-align:center;"> ($95\%$ power) </td>
+   <td style="text-align:center;"> ($90\%$ power) </td>
+   <td style="text-align:center;"> ($80\%$ power) </td>
+   <td style="text-align:center;"> ($50\%$ power) </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> 0.05 </td>
+   <td style="text-align:center;"> 13.0 </td>
+   <td style="text-align:center;"> 10.5 </td>
+   <td style="text-align:center;"> 7.85 </td>
+   <td style="text-align:center;"> 3.84 </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> 0.01 </td>
+   <td style="text-align:center;"> 17.8 </td>
+   <td style="text-align:center;"> 14.9 </td>
+   <td style="text-align:center;"> 11.7 </td>
+   <td style="text-align:center;"> 6.63 </td>
+  </tr>
+</tbody>
+</table>
+
+
+```{r 05-clinical-trials-2, echo=FALSE, eval=FALSE}
+dt <- read.csv("../backupfiles/falphabeta.csv", header = T)
+names(dt) <- c(" ", "0.05", "0.1", "0.2", "0.5")
+dt[,1] <- c(" ", 0.05, 0.01)
+kable(dt, "html",align = "c",caption = "Values of f(\u03b1, \u03b2) for different levels of \u03b1 and \u03b2") %>%
+#   column_spec(1:5, bold = T, border_right = T)  %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+  add_header_above(c("\u03b1" = 1, "\u03b2" = 4))
+```
+
+要注意的是，除了上面表格中提供的 $f(\alpha, \beta)$ 數值，可以通過以下公式計算得出：
+
+$$f(\alpha, \beta)=(Z_{1-\frac{\alpha}{2}}+Z_{1-\beta})^2$$
+
+例如：
+
+- $\alpha=0.05, \beta=0.1$ 時：$f(\alpha, \beta)=(1.96+1.282)^2=10.5$;
+- $\alpha=0.05, \beta=0.2$ 時：$f(\alpha, \beta)=(1.96+0.84)^2=7.85$。
+
+
+## 比較兩組之間的均值
+
+許多臨牀實驗不光關心患者是否被治癒或者死亡，另外還有許多實驗的主要結果是連續變量：例如，腎功能（腎小球濾過率），或收縮期血壓。然而背後的原理其實還是一樣的。
+
+### 樣本量計算公式
+
+然而，另外一個必須考慮的因素：治療組對照組測量結果的標準差 (standard deviation, $sd, \sigma$)。這裏先考慮兩者標準差相同的情況。標準差的數據通常來自與先行研究的科學文獻，有些（土豪）實驗會先進行預實驗獲得想要的實驗數據--標準差。通常，建議像比較百分比那樣，調整改變一下不同的檢驗顯著水品和檢驗效能，計算多個所需樣本量來互相比較參考。
+
+
+比較兩組均值時需要用到的數學標記：
+
+1. $\mu_1=$ 標準治療法（對照組）的期待平均值；
+2. $\mu_2=$ 新治療法（治療組）的期待平均值；
+3. $\sigma=$ 兩組的標準差（假設兩組標準差相同）；
+4. $\alpha=$ 一類錯誤發生的概率，檢驗顯著水平；
+5. $\beta=$ 二類錯誤發生的概率，$1-\beta$ 是檢驗效能。
+
+用上面標記表示的公式如下：
+
+$$n=f(\alpha, \beta)\times\frac{2\sigma^2}{(\mu_1-\mu_2)^2}\times2$$
+
+可以認爲，上面的公式中 $\mu_1-\mu_2$ ，各組的平均值本身並不重要，兩組之間均值的差是我們關心的。如果用 $\delta$ 表示兩組之間均值差的期待值，那麼公式可以改寫爲：
+
+$$n=f(\alpha, \beta)\times\frac{2\sigma^2}{\delta^2}\times2$$
+
+
+## 樣本量計算的調整
+
+如果我們無法成功隨訪部分患者，那麼這部分人的數據就無法獲得，實驗數據的說服力就會下降。如果我們預估計有 $Q\%$ 的人會失去隨訪，那麼我們可以將之前步驟中計算獲得的數字乘以 $\frac{1}{1-Q\%}$。
+
+如果實驗設計是我們會在某個時間點允許治療組或對照組中的部分人變更自己的實驗方案（即治療組的參與者改進入對照組，反之亦然）。那麼所需樣本量的計算調整的方法爲：
+
+- 令 $Q_1=$ 第一組中改成第二組治療方案的人數比例；
+- 令 $Q_2=$ 第二組中改成第一組治療方案的人數比例；
+- 將之前步驟中計算獲得的樣本量數字乘以 $\frac{1}{(1-Q_1-Q_2)^2}$。
+
+如果預期參與實驗治療組（而不是對照組）的人中有部分人（比例爲 $Q$）會中斷實驗進程，那麼調整公式爲：$\frac{1}{(1-Q)^2}$。
+
+還有的實驗會使用大於 $1:1$ 的比例設計對照組和實驗組的人數。假設這一比例爲 $r:1$ 那麼調整的樣本量數字還要乘以：$\frac{(r+1)^2}{4r}$。
