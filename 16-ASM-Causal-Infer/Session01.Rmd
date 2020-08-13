@@ -1,0 +1,381 @@
+
+## 當我們在談論因果推斷的時候，我們在談論什麼？
+
+衆多的醫學研究，科研工作者們苦苦收集數據，都是爲了能夠給觀察到的現象作出**因果關系的結論**。研究者帶着的研究問題通常是: 
+
+- 這個治療方案有沒有效果？
+- 暴露在某種可能有害的因素中到底有沒有危險？
+- 提出的新的衛生政策到底能不能解決實際的醫療問題？
+
+這些都是內在爲因果關系的設問。隨機對照實驗，之所以要隨機設計，且對其**隨機性**要求精準且苛刻，就是爲了一個能夠清晰可靠地作出因果關系的結論。在很多流行病學研究中，隨機設計可能因爲倫理因素不能使用。但每一個精心設計的實驗或者觀察性研究，其終極目的都是爲了解答暴露和結果之間到底有沒有因果關系這一設問。
+
+這裏我們用 “因果推斷” 來命名一類 “專門以探尋因果關系爲目的的” 統計學方法。其與傳統的統計學方法最大的不同點在於因果推斷用一套**正式的科學語言**，來解釋現象中到底有沒有因果關系。
+
+之所以發明這一套因果推斷專用的科學語言，有這樣幾個目的: 
+
+1. 更清晰地描述，我們到底要估計的 (estimate) 是什麼。
+2. 更徹底地強調，因果推斷結論背後的統計學前提和假設。
+3. 建立在前兩條前提的基礎上，我們可以使用專門爲統計推斷設計的新的統計學技巧，達到爲因果推斷提供證據的目的。
+
+
+因果推斷包括三個部分: 
+
+1. 清晰描述因果關系概念的正式科學語言 (causal language)。
+2. 因果關系示意圖 (causal diagram) -- 清晰地展示研究者對變量之間存在的所有可能因果關系的假設，在實驗設計，和數據分析兩個階段都需要用到。
+3. 因果關系統計學方法 (causal inference methods) -- 從獲得的數據中，用和傳統方法不同的假設，作出因果關系的推斷。
+
+
+## 傳統的統計學方法
+
+用一個簡單實例來理解傳統統計學方法實際上做的是什麼: 
+
+
+```{example 16-ASM-Causal-infer-1}
+臨牀上認爲，給有貧血的患者靜脈內補充鐵劑是進行髖關節置換手術 (hip replacement operation) 之前建議的手段。研究者收集了某個醫院 2009 年至 2014 年間接受髖關節置換手術且有貧血的患者數據。在這個研究中，暴露變量 (exposure) 是患者是否在術前接受了靜脈內鐵劑補充，結果變量是髖關節置換手術之後，患者是否存活時間達到 90 天及以上。其他同時收集的數據有: 年齡，性別，伴隨疾病 (心血管疾病，糖尿病，腎病)，手術過程中是否接受了外來血源的輸血，以及住院時間。
+```
+
+
+
+### 初步分析 
+
+很多人第一步想到的，一定是先制作 2×2 的暴露 (FeIV) 和結果 (Death90) 的表格: 
+
+```{r CI-tab1-1, echo=FALSE, eval = TRUE, cache=TRUE}
+dt <- read.csv("../backupfiles/ci-tab1-1.csv", header = T)
+names(dt) <- c(" ", " ", "0", "1")
+kable(dt, digits = 3, row.names = FALSE, align = "c",
+              caption = NULL, format = "html") %>%
+kable_styling(bootstrap_options = c("striped", "condensed"),
+        position = "center", full_width = FALSE) %>%
+add_header_above(c(" " = 2, "Death90" = 2)) %>%
+  column_spec(c(1,2), bold = T) %>%
+  collapse_rows(columns = 1:2)
+```
+
+
+從這個四格表我們計算的初步對數比值比是: 0.04 (95% CI: -0.12, 0.19)。
+
+請問在這個對數比值比的計算過程中，我們估計的到底是什麼？ 這裏的被估計量 (estimand) 是: 
+
+$$
+\log \text{OR}_{Y|X} = \log\{\frac{\text{Pr}(Y=1 | X = 1)}{1- \text{Pr}(Y = 1|X = 1)}\} - \log\{\frac{\text{Pr}(Y=1 | X = 0)}{1- \text{Pr}(Y = 1|X = 0)}\}
+$$
+
+```{definition 16-ASM-Causal-infer-2, label="estimand"}
+<br>
+1. Estimand (被估計量): 我們想要知道的到底是什麼，例如，英國人口中收縮期血壓的平均值，這是一個無法知道，但是肯定存在確定量的量 (unknown fixed quantity)。<br>
+2. Estimator (估計量): 數據用來計算被估計量的某種**方程**，例如，隨機從街上找來100個人，測量他們的血壓，求出來的平均值，這是一個隨機變量 (random variable)，會隨着隨機挑選的樣本而變化。<br>
+3. Estimate (估計): 給定數據下，計算獲得的具體的量，例如，我做了隨機抽取100名英國人血壓測量的實驗，獲得 130.4 mmHg 這個平均收縮期血壓的測量值，這是一個可以計算成爲已知的確定量 (known fixed quantity)。
+```
+
+
+### 混雜
+
+我們知道，單純這樣簡單初步計算獲得的對數比值比，我們是無法對其作出因果關系的解釋的，因爲通常這樣的分析都忽略掉了潛在的混雜。在目前爲止我們學習過的傳統統計學方法中，混雜被我們粗略地定義成: "和暴露，結果兩個變量同時且獨立地相關，但是確定不存在在暴露和結果的因果通路上的變量 (associated with the exposure and independently associated with the outcome, without being on the causal pathway from exposure to outcome)"，下一章我們會看到，這其實是一個不能令人滿意的定義。
+
+例如，可能之所以有些病人在髖關節置換術之前會被提供靜脈鐵劑支持，其原因不僅是貧血，還可能他們本身體質虛弱，年紀較大，或者是貧血得太嚴重，或者還有許多其他的並發症，那麼表面看起來靜脈鐵劑支持，和術後90天生存率沒有關系的對數比值比就成了一個表面現象。這些因素會混淆，甚至是掩蓋靜脈鐵劑可能對貧血患者的潛在保護作用。此時我們說初步分析的對數比值比被混雜偏倚所影響 (suffer from confounding bias)。(關於偏倚在統計推斷中的概念，滾回章節 \@ref(bias)。)
+
+當我們說，初步分析的對數比值比被混雜偏倚影響，那麼其實是在說，我們心裏想要的那個被估計量 (estimand)，和實際計算中使用的被估計量是兩個不同的概念。我們心裏想要的那個--沒有被偏倚影響的--被估計量，是可以有因果關系的推論的。所以偏倚，就是一種漸進偏倚 (an asymptotic bias)，它是我們心裏想要的那個被估計量，和實際被用到的被估計量之間的差。
+
+### 以共變量爲條件 conditioning on covariates 
+
+對於混雜偏倚，常見的做法是要麼進行分層分析，或者直接丟到回歸模型中去做調整，這樣的做法，其實是把我們使用的被估計量從一個初步對數比值比，改成了一個條件對數比值比: 
+
+$$
+\log\text{OR}_{Y|X\cdot C} = \log\{\frac{\text{Pr}(Y=1 | X = 1, \mathbf{C})}{1- \text{Pr}(Y = 1|X = 1, \mathbf{C})}\} - \log\{\frac{\text{Pr}(Y=1 | X = 0, \mathbf{C})}{1- \text{Pr}(Y = 1|X = 0, \mathbf{C})}\}
+$$
+
+其中，$\mathbf{C}$ 就是被調整的變量組成的向量。
+
+**應該調整哪些變量？**
+
+從簡單的理解來看，輸血與否，和住院時間長短，應該是處在暴露和結果兩個變量的因果通路之上的，所以不應該調整這兩個變量。所以，隨着這個思路，我們雖然不能調整輸血與否，和住院時間長短兩個變量，但是可以調整諸如年齡，性別，心血管疾病，糖尿病，腎病，貧血嚴重程度，和手術的種類等。
+
+調整了上述變量之後，我們獲得的條件對數比值比 (conditional log-odds ratio) 是 -0.24 (95%CI -0.41, -0.07)。
+
+**可以給予這個條件對數比值比以因果關系的解釋嗎？**
+
+顯然，由於還有其他我們不知道的因素，可能混淆這裏的暴露和結果變量 (我們沒有收集)，所以此時漸進偏倚定義是上面的這個條件對數比值比和我們心裏那個真實想要測量的因果被估計量 (causal estimand) 之間的差: 
+
+$$
+\log\text{OR}_{Y|X\cdot C} - \{ \text{True value of some causally -interpretable estimand} \}
+$$
+
+在哪些前提條件下，這個漸進偏倚可以被認爲等於零？此時我們需要因果推斷的科學定義和語言來幫助我們理解。
+
+## 更加正規的方法
+### 因果推斷使用的語言
+
+**概率與統計學**
+
+概率論和統計學中使用的詞匯和語言，允許我們估計，描述很多觀察變量之間的聯合分布 (joint distribution)，例如均值，方差，協方差，四分位，回歸系數，相關系數等。
+
+但是這一標準的統計學語言，卻無法描述這些聯合分布在受到外在影響或者幹預 (external intervention) 之後，會發生怎樣的變化。用這裏使用的例子來說就是，當所有患者都被提供了靜脈內鐵劑支持，(注意到這是和現實情況不一樣的)
+ 患者的生存概率會是多少？
+ 
+
+因果關系的思考，其實是在追問這樣一個問題: 當暴露變量 $X$，可以改變，並且**以與我們觀察到的相反的形式出現**，那麼結果變量 $Y$ 會發生怎樣的變化？本書，我們使用 [@Neyman1923] 當年創立，後來被 [@Rubin1974] 發展的概念: 潛在結果框架 (potential outcome framework)。
+
+```{definition 16-ASM-Causal-infer-3}
+**潛在結果 Potential outcome**: 定義 $Y(x)$ 爲當暴露變量 $X$ 取假設的值 (x) 時，結果變量的取值。
+```
+
+對於一個而二分類暴露變量 $X$，每個個體/研究對象，我們賦予它一個潛在的可能取值結果的概念: $Y(0)$ 和 $Y(1)$。$Y(0)$ 的意思是當暴露變量是 $0$ 的時候該對象可能的取值，$Y(1)$ 的意思是當暴露變量是 $1$ 的時候，該對象可能的取值。但是，在現實情況下，我們只能觀察到二者中的一種結果。在我們的例題中，當一個患者真的接受了靜脈鐵劑補充，那麼他/她的觀察結果 $Y = Y(1)$，也就是此時觀察結果等於暴露爲 $(1)$ 時的潛在結果 $Y(1)$。對與這個患者來說，他/她在沒有接受經脈鐵劑補充的情況下的另一種潛在結果 $Y(0)$ 是沒有被觀測到的。但是，這個患者的潛在結果 $Y(0)$，表示的是他/她如果接受沒有接受靜脈鐵劑補充的話，他/她在90天時死亡/存活的**潛在結果**。
+
+```{definition 16-ASM-Causal-infer-4}
+**用潛在結果表示邊緣和條件因果對比 marginal and conditional causal contrast:** <br>
+邊緣對比: $$E\{Y(1)\} - E\{ Y(0) \}$$ 
+條件對比: $$E\{ Y(1) | \mathbf{V=v} \} - E\{ Y(0) | \mathbf{V=v} \}$$
+```
+
+這種潛在結果的統計框架，曾經被 [@Dawid2000] 批判爲一種不恰當的方法。以爲潛在結果框架建議說存在另一個完全不存在的平行宇宙，使得觀察對象在一個空間裏做一件事，在另一個空間裏做一件相反的事情，看會發生怎樣的結果，這實際是在說存在這種潛在的完美聯合分布。另外，我們會在第四章中看見的，在潛在結果的框架下，我們可能問的問題是，當所有人都接受了暴露變量時，暴露和結果之間的因果效應的平均值: 
+
+$$
+E\{ Y(1) - Y(0) | X = 1 \}
+$$
+
+
+潛在結果框架不是完美的。但是它非常實用: 
+
+1. 使不確定性變得明確而清晰;
+2. 把研究的問題變得更加容易理解; 
+3. 能夠保證研究者明確做因果推斷時的前提條件; 
+4. 改善實驗設計; 
+5. 有助於設計更能回答研究問題的統計分析方案;
+6. 可以給結果恰當的因果關系解釋。
+
+但是我們需要注意的是: 
+
+1. 不要過度相信你做的因果推斷的前提假設是正確的 (over confidence in assumptions); 
+2. 不要錯誤的解讀你的分析結果。
+
+### 因果推斷的被估計量 causal estimands
+
+於是，現在用這些重新定義過的名詞和語言，我們來描述 (二分類結果變量在) 因果推斷中的被估計量: 
+
+
+邊緣被估計量 (marginal estimands): 
+
+$$
+\begin{aligned}
+\text{Potential risk difference: } & \text{Pr}\{Y(1) = 1| \mathbf{V=v}\} - \text{Pr}\{Y(0) = 1| \mathbf{V=v}\} \\
+\text{Potential risk ratio: } & \frac{\text{Pr}\{ Y(1) = 1 | \mathbf{V=v}\}}{\text{Pr}\{Y(0) = 1 | \mathbf{V=v}\} } \\
+\text{Potential log odds ratio: } & \\
+                \log[\frac{ \text{Pr}\{Y(1) = 1| \mathbf{V=v}\}}{1- \text{Pr}\{Y(1) = 1| \mathbf{V=v}\}}] & - \log[\frac{\text{Pr}\{Y(0) = 1| \mathbf{V=v} \}}{1-\text{Pr}\{Y(0) = 1| \mathbf{V=v} \}}]
+\end{aligned}
+$$
+
+條件被估計量: 
+
+$$
+\begin{aligned}
+\text{Potential risk difference: } & \text{Pr}\{Y(1) = 1\} - \text{Pr}\{Y(0) = 1\} \\
+\text{Potential risk ratio: } & \frac{\text{Pr}\{ Y(1) = 1 \}}{\text{Pr\{Y(0) = 1 \}}} \\
+\text{Potential log odds ratio: } & \\
+                \log[\frac{ \text{Pr}\{Y(1) = 1\}}{1- \text{Pr}\{Y(1) = 1\}}] & - \log[\frac{\text{Pr\{Y(0) = 1 \}}}{1-\text{Pr\{Y(0) = 1 \}}}]
+\end{aligned}
+$$
+
+
+### 鑑定因果推斷時的前提假設 assumptions for identification
+
+- **無相互幹擾 no interference**
+
+$Y_i(x)$ 表示的是，如果第 $i$ 個個體的暴露變量被設定爲 $x$ 時，結果變量的值。所以是 $X_i$ 被設定成爲 $x (i = 1, \cdots, n)$ 時， $Y_i$ 的潛在結果。此時，我們已經有了一個前提假設，那就是，潛在結果 $Y_i$，和另一個個體的潛在暴露 $X_j (j\neq i)$ 是相互獨立的。這個前提被稱爲無相互幹擾前提。這個前提，在暴露變量是某些特殊情況 (如注射疫苗) 的情況下，是無法成立的。因爲人羣中如果有些人注射了疫苗，同樣也能保護那些沒有注射疫苗的人。
+
+- **一致性 consistency**
+
+$$
+X_i = x \Rightarrow Y_i = Y_i(x)
+$$
+
+一致性的含義是，對於某個觀察對象來說，他/她的暴露變量是 $x$ 時，觀測到的結果變量的觀測值 $Y_i$，和在**虛擬世界中**，該觀察對象接受潛在 $(x)$ 暴露變量時獲得的潛在結果 $Y_i(x)$，是一樣的。更具體地說: 
+
+1. 暴露變量的定義，要清晰明確。
+2. 爲了保持一致性，也就是在實際實驗中，如果暴露變量是 $x$，那麼你觀察到的結果 $Y$，必須和理論討論的虛擬世界中我們預想的那樣潛在變量 $(x)$ 導致的潛在結果 $Y(x)$ 是相同的。
+
+在臨牀試驗的設定下，用本文一開始的靜脈鐵劑補充例子來說明就是，我們構築的潛在世界框架下的幹預手段 (靜脈鐵劑補充)，對患者起到的不論是積極的還是負面的作用，它的理論效果，和我們在實際現實世界中觀察到的對患者進行靜脈鐵劑補充起到的效果，是相同的。
+
+在非臨牀試驗的設定下，一致性有許多值得探討的地方。假如，潛在暴露變量是體質指數 (BMI)，這時候的一致性前提就十分微妙。因爲能夠改變 BMI (運動，飲食，服藥，接受抽脂手術，吸煙，吸毒，甚至是截肢)，以及BMI變化導致的結果 (如心血管疾病) 途徑非常多。所以，當我們在這種觀察實驗的設定下，寫下某個潛在暴露量 X (BMI = 20) 時的潛在結果 Y 時，就必須把暴露變量達到 20 的特定條件指明才可以 (need to be clear under what sort of intervention we imagine that BMI is set to 20)。所以，在非臨牀試驗的觀察性研究中，如果探討的是類似 BMI 這樣的暴露變量，那麼在我們想象的平行世界中對BMI造成影響的因素將會和現實世界一樣是非常復雜的，單一的想象幹預，如抽脂手術，不可能滿足**一致性**的前提假設。所以，觀察對象的 BMI 達到 20 的條件，更加合理的是多種方法的組合 (it is more likely that the individuals in our observational study achieved their different BMI level through a combination of different ways.)，那麼在一致性的前提下，在那個我們想象出來的平行世界裏，潛在暴露 BMI 獲得的幹預，就是各種和 BMI 有關的所有變量。
+
+- **條件可置換性 conditional exchangeability**
+
+第三個前提假設是條件可置換性:
+
+$$
+Y(x) \perp\perp X |\mathbf{C}, \forall x
+$$
+
+
+$\perp\perp$ 表示條件獨立 (conditional independence)，所以 $A\perp\perp B|C$ 的正確讀法是: "在C的條件下，A條件獨立於B"。$A\perp\perp B$ 的意思就是， A 和 B 之間互爲 (邊際 marginally) 獨立。
+
+在條件向量 $\mathbf{C}$ 的條件下，觀測對象的實際暴露狀況 $X$ 和他/她/它的所有潛在結果之間相互獨立。
+
+
+我們可以把第三個前提條件設想爲: 潛在結果 $Y(x)$ 已經能夠把對象身上所有的和結果 $Y$ 相關的特點都包含進來，唯一不包含的是他/她/它在現實世界中的觀測暴露變量。也就是，如果我們知道潛在結果 $Y(0), Y(1)$，且我們知道 $X$，那麼我們就可以知道 Y，因爲 $Y = XY(1) + (1-X) Y(0)$。
+
+
+```{example 16-ASM-Causal-infer-5}
+還是靜脈鐵劑補充的例子，如果我們手裏拿到的數據如下表。一共只有24名患者，假定只有一個條件變量 C (貧血嚴重與否)，表格中羅列的是觀察變量 $X,Y,C$，同時還羅列了兩個平行世界的潛在結果變量 $Y(1), Y(0)$。這裏我們爲了解釋條件可置換性，我們先假裝真的可以獲得所有的潛在結果，實際情況下是不可能的。
+```
+
+
+```{r CI-tab1-2, echo=FALSE, eval = TRUE, cache=TRUE}
+dt <- read.csv("../backupfiles/ci-tab1-2.csv", header = T)
+names(dt) <- c("Patient ID", "X", "Y", "C", "Y(0)", "Y(1)")
+kable(dt, digits = 3, row.names = FALSE, align = "c",
+              caption = NULL, format = "html") %>%
+kable_styling(bootstrap_options = c("striped", "condensed"),
+        position = "center", full_width = FALSE)  %>%
+    scroll_box(width = "400px", height = "500px", extra_css="margin-left: auto; margin-right: auto;")
+```
+
+在這個表格的數據中，我們注意到一致性的前提得到滿足，因爲對於每個 $X=1$ 的研究對象 $Y = Y(1)$，對於每個 $X=0$ 的研究對象 $Y=Y(0)$。
+
+- 邊際概率 marginal probability: 
+
+接下來，第一步，假設我們的數據中沒有條件變量 C，我們來看看數據是否能滿足可置換性 ($Y(0), Y(1)$ 和 $X$ 互相獨立)。
+
+$$
+\begin{aligned}
+\text{Pr}\{ Y(0)=1|X=1 \} &= \frac{2}{3}, \;\; \text{Pr}\{ Y(0)=1|X=0 \} = \frac{7}{12} \\
+\text{Pr}\{ Y(1)=1|X=1 \} &= \frac{5}{12}, \;\; \text{Pr}\{ Y(1)=1|X=0 \} = \frac{1}{3}
+\end{aligned}
+$$
+
+這裏條件概率計算的結果告訴我們，邊際概率此時不具有可置換性，因爲潛在結果變量 $Y(0) = 1$ 的概率取決與 觀測暴露變量 $X$。
+
+- 條件概率 conditional probability: 
+
+$$
+\begin{aligned}
+\text{Pr}\{ Y(0) = 1 | X=1, C=0\} & = \frac{1}{2} \;\; \text{Pr}\{Y(0) = 1 | X=0, C=0 \} = \frac{1}{2}\\ 
+\text{Pr}\{ Y(1) = 1 | X=1, C=0\} & = \frac{1}{4} \;\; \text{Pr}\{ Y(1) = 1 | X=0, C=0\}  = \frac{1}{4} \\
+\text{Pr}\{ Y(0) = 1 | X=1, C=1\} & = \frac{3}{4} \;\; \text{Pr}\{ Y(0) = 1 | X=0, C=1\}  = \frac{3}{4} \\
+\text{Pr}\{ Y(1) = 1 | X=1, C=1\} & = \frac{1}{2} \;\; \text{Pr}\{ Y(1) = 1 | X=0, C=1\}  = \frac{1}{2} 
+\end{aligned}
+$$
+
+在 C 條件下，我們發現這個時候 $Y(0) = 1$ 和 $X$ 之間相互獨立，$Y(1) = 1$ 也和 $X$ 之間相互獨立了。這就是條件可置換性的最直觀展示。
+
+### 鑑定 identification
+
+假設 $X,Y$ 兩個變量都是二分類變量。我們關心他們二者之間的邊際因果危險度差: 
+
+$$
+\text{Pr}\{ Y(1) = 1 \} - \text{Pr}\{ Y(0) = 1 \}
+$$
+
+假定，**互相無幹擾前提成立**，用 $\mathbf{C}$ 標記要被控制的混雜變量向量。用概率論的全概率法則，
+
+$$
+\text{Pr}\{ Y(x) = 1 \} = \sum_c \text{Pr}\{ Y(x) = 1|C=c \} \text{Pr}(C=c)
+$$
+
+
+假定，**條件可置換的前提成立**，那麼上面的式子可以變成
+
+$$
+\sum_c\text{Pr}\{ Y(x) =1 | X=x, C=c \}\text{Pr}(C = c)
+$$
+
+這是因爲條件可置換性告訴我們，在 C 的條件下，潛在結果 $Y(x)$ 和實際觀測的暴露變量值之間相互獨立，所以可以在上面條件概率公式的右半邊可以加入 $X=x$。
+
+假定，**一致性的前提成立**，那麼上面的式子有可以繼續變成
+
+$$
+\sum_c \text{Pr}\{ Y = 1 | X = x, C=c \}\text{Pr}(C=c)
+$$
+
+這是因爲一致性告訴我們，現實條件下 $X=x$ 時導致的結果變量 $Y$， 和平行世界中的潛在暴露變量 $(x)$ 導致導致的潛在結果 $Y(x)$ 相同。那麼，接下來就可以把編輯因果危險度差的式子推導成爲: 
+
+$$
+\begin{aligned}
+\text{Pr}\{ & Y(1) = 1 \}  - \text{Pr}\{ Y(0) = 1 \} \\ 
+                         & = \sum_c\text{Pr}(Y=1 | X=1,C = c)\text{Pr}(C=c)  \\
+                         & \;\;\;\; -\sum_c\text{Pr}(Y=0 | X=1,C = c)\text{Pr}(C=c)
+\end{aligned}
+(\#eq:Causal-infe-1-1)
+$$
+
+```{definition 16-ASM-Causal-infer-6}
+**標準化和 g computation 公式**: 
+$$\text{Pr}\{ Y(x) = 1 \} = \sum_c\text{Pr}(Y=1|X=x,C=c)\text{Pr}(C=c)$$
+是我們在因果推斷中說的 g computation 公式的簡單例子。這個過程在流行病學中，被命名爲標準化 standardisation。所以，條件因果效應 (conditional causal effect): 
+  
+$$\text{Pr}(Y=1 | X=1, C=c) - \text{Pr}(Y=1 | X=1, C=c)$$ 
+  
+在這個 g computation 的過程中，被根據條件變量 C 在人羣衆的分布給標準化了。就是在這個根據條件變量的分布標準化 (或者叫邊際化 marginalisation) 的過程中，條件效應的含義華麗轉身變成了邊際因果效應 (marginal causal risk difference)。
+```
+
+```{definition 16-ASM-Causal-infer-7}
+**鑑定和估計 identification vs. estimation:** 在因果推斷的語境中，鑑定過程和估計過程被嚴格區分。
+
+鑑定 identification 指的是，因果被估計量利用因果推斷的假設把無法觀察的概率分布用可以觀察的數據的分布推導計算的過程。
+
+估計 estimation 指的是，當我們對因果關系鑑定完畢之後，接下來進行的用實際觀察數據來估計被估計量的過程。這個過程通常不需要再進行公式推導，會使用統計模型，這些統計模型自己又自帶另外的一些前提假設。
+
+所以，鑑定過程的前提假設是因果推斷的命根，最最底層的前提。接下來的數據計算或者模型擬合帶來的別的假設和鑑定過程的假設有本質的區別。區分這兩個過程的另一目的還包括鑑定過程的前提假設基本上是無法找到統計學方法進行檢驗的 (untestable structual assumptions) 結構性假設。
+
+**對機器學習的一點點暗示:**
+在因果推斷中新興的一個重要話題 -- 機器學習 (machine learning，或者叫做 data-adaptive estimation techniques 數據適應性估計技巧) 在當今大數據時代顯得特別突出。常有人認爲，數據適應性估計技巧可以用於預測，但是不能用於因果推斷。這其實只能是說對了一部分。機器學習本身，其實是在給定了 (一大堆) 變量之後，尋找某個變量的最佳預測量。但是從我們目前爲止在因果推斷中的推導來看，相信你也能看出來，因果推斷本身也包括了預測的過程。因果推斷的第一個部分 -- 鑑定過程是處理的是因果之間的前提假設，以及判斷因果推斷中用到的參數怎樣和已觀察到的數據在這裏因果條件下連接起來 -- 這個部分是不能放到機器中去的。但是因果推斷的第二部分 -- 估計 -- 就是純粹的預測過程啦。這裏想強調的是機器學習的方法，可以被用在因果推斷的第二部分，而不是第一部分。第一部分還是要由人來完成。[@Laan2017]
+```
+
+```{example 16-ASM-Causal-infer-8}
+用前面的靜脈內鐵劑補充的24名患者數據來看，由於我們不切實際地假定了我們可以知道每個對象的所有潛在結果。所以，我們可以直接先用這個結果計算因果危險度差 (causal risk difference): 
+  
+$$\text{Pr}\{Y(1) = 1\} - \text{Pr}\{ Y(0) =1 \} = \frac{9}{24} - \frac{15}{24} = -\frac{1}{4}$$  
+  
+如果我們忽略掉患者貧血嚴重程度 C 的混雜效果，從觀察數據 X, Y, 計算獲得的粗危險度差 (crude risk difference) 就是 
+
+$$\text{Pr}(Y=1 | X=1) - \text{Pr}(Y=1|X=0) = \frac{5}{12} - \frac{7}{12} = -\frac{1}{6}$$
+  
+可見在這個例子中，忽略了貧血嚴重程度時，粗危險度差是往無效的方向偏倚的。但是其實那些被給予了靜脈內鐵劑補充支持的患者本身體質就弱，貧血就嚴重，粗危險度差的結果掩蓋掉了補充鐵劑對患者實際存在的保護作用。
+
+當考慮了貧血嚴重程度時，我們知道，在前提條件條件可置換性和一致性成立時，我們可以用\@ref(eq:Causal-infe-1-1) 來進行因果危險度差的計算: 
+  
+$$
+\begin{aligned}
+\text{Pr}\{ Y(1) = 1 \} & - \text{Pr}\{ Y(0) = 1 \} \\
+& = \sum_{c=0}^1\text{Pr}(Y=1|X=1,C=c)\text{Pr}(C=c) \\ 
+& \;\;\; - \sum_{c=0}^1\text{Pr}(Y=1|X=0,C=c)\text{Pr}(C=c) \\
+& = \text{Pr}(Y=1|X=1,C=0)\text{Pr}(C=0) \\
+& \;\;\; + \text{Pr}(Y=1|X=1,C=1)\text{Pr}(C=1) \\ 
+& \;\;\; -  \text{Pr}(Y=1|X=0,C=0)\text{Pr}(C=0) \\
+& \;\;\; - \text{Pr}(Y=1|X=0,C=1)\text{Pr}(C=1) \\
+& = \frac{1}{4}\times\frac{1}{2} + \frac{1}{2}\times\frac{1}{2} - \frac{1}{2}\times\frac{1}{2} - \frac{3}{4}\times\frac{1}{2} \\
+& = -\frac{1}{4} \\
+\end{aligned}
+$$
+  
+和前面計算的相吻合。
+```
+
+當 C 是連續型變量時，$\text{Pr}(C=c)$ 變成關於 $c$ 的概率密度方程，加號就變成了積分符號:
+
+
+$$
+\text{Pr}\{ Y(x) = 1 \} = \int_c \text{Pr}\{ Y(x) = 1 | \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+$$
+
+Where $p_\mathbf{C}(\cdot)$ is the joint probability density/mass function for $\mathbf{C}$, $\mu_\mathbf{C}(\mathbf{c})$ is a dominating measure (Lebesque for continuous components of $\mathbf{C}$ and counting measure otherwise).
+
+By conditional exchangeability, this can be rewritten as:
+
+$$
+\int_c \text{Pr}\{ Y(x) = 1 | X=x, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+$$
+
+By consistency, this is 
+
+$$
+\int_c \text{Pr}\{ Y = 1 | X=x, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+$$
+
+Thus we have 
+
+$$
+\text{Pr}\{ Y(x) = 1 \} - \text{Pr}\{ Y(0) = 1 \} \\
+= \int_c \text{Pr}\{ Y = 1 | X=1, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) - \\
+ \int_c \text{Pr}\{ Y = 1 | X=0, \mathbf{C=c} \}p_\mathbf{C}(\mathbf{c})d\mu_\mathbf{C}(\mathbf{c}) 
+$$
