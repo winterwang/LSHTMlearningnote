@@ -1,0 +1,184 @@
+### 數據缺失產生的影響，缺失機制，和多重插補法
+
+目的：
+
+練習完成後你應該明白
+
+1. 數據缺失對結果估計可能造成的影響，包括可能帶來的偏倚 Bias，和對參數估計精確度的影響。
+2. 如何分析一個變量的缺失模式。
+3. 對單一不完整的觀察變量進行簡單的多重插補。
+
+### 二進制變量的缺失 "class size study"
+
+第一個練習，我們使用的是 "class size" 數據。
+
+```{r missing01-prac01, cache=TRUE}
+classp3dta <- read_dta("../backupfiles/classp3.dta")
+head(classp3dta)
+names(classp3dta)
+```
+
+每個變量的名字和含義羅列如下：
+
+| Name     | Details                                                    |
+|----------|------------------------------------------------------------|
+| `uniqueid` | Unique pupil id                                            |
+| `nmatpre`  | Pre-reception maths score                                  |
+| `nlitpost` | Post-reception literacy score                              |
+| `sen`      | Special educational needs (1 = yes, 0 = no)                |
+| `sen_m`    | Special educational needs, with a number of missing values |
+
+其中，分數的變量 `nmatpre`, 和 `nlitpost` 都被標準化了 (normalised)。因爲不少學生成績分數相同，所以會看到一些標準化分數完全相同的數值。先來觀察一下 `nmatpre`, 和 `nlitpost` 這兩個變量之間調整 `sen` 之後的關係。我們先使用 `sen` 作爲調整變量，再使用 `sen_m` 作爲調整變量。之後我們會對 `sen_m` 中的缺失值做標記，最後再用多重插補法分析這個模型。
+
+### 完整數據分析結果
+
+```{r missing01-prac02, cache=TRUE}
+classmissing <- lm(nlitpost ~ nmatpre + sen, data = classp3dta)
+summary(classmissing)
+
+jtools::summ(classmissing, digits = 6, confint = TRUE, exp = FALSE)
+```
+
+完整數據用 Stata 分析的結果
+
+```{r engine='stata', echo=FALSE}
+use "../backupfiles/classp3.dta", clear
+describe
+regress nlitpost nmatpre sen
+```
+
+此時的結果我們總結在下表中
+
+| Variable                  | Original Data analysis Coefficient. (SE) | Complete Case analysis Coefficient. (SE) | Multiple Imputation Coefficient. (SE) |
+|---------------------------|------------------------------------------|------------------------------------------|---------------------------------------|
+| Pre-reception numeracy    | 0.58 (0.012)                             |                                          |                                       |
+| Special educational needs | -0.432 (0.043)                           |                                          |                                       |
+
+
+### 去除了缺失值的分析結果 complete case analysis
+
+接下來使用 `sen_m` 作爲調整變量，它是有大約一半缺失值數據的 `sen`：
+
+```{r missing01-prac03, cache=TRUE}
+epiDisplay::tab1(classp3dta$sen, graph = FALSE)
+epiDisplay::tab1(classp3dta$sen_m, graph = FALSE)
+```
+
+
+```{r missing01-prac04, cache=TRUE}
+classcompelet <- lm(nlitpost ~ nmatpre + sen_m, data = classp3dta)
+summary(classcompelet)
+
+jtools::summ(classcompelet, digits = 6, confint = TRUE, exp = FALSE)
+```
+
+
+去除了缺失值的數據用 Stata 分析的結果
+
+```{r engine='stata', echo=FALSE}
+use "../backupfiles/classp3.dta", clear
+regress nlitpost nmatpre sen_m
+```
+
+
+我們發現此時分析僅基於擁有完整數據的 2405 名對象，另外2468名對象因爲 `sen_m` 缺失而無法進入模型。可以看到模型中的兩個預測變量的回歸係數本身和對應的標準誤差也都發生了較大的偏差，精確度明顯下降。像這樣使用去除掉缺失值的數據分析獲得的結果，如果說 `sen_m` 的缺失值機制是條件（conditional on `nmatpre` 和 `sen`）獨立於結果變量 `nlitpost` 的話，可以被認爲是無偏估計，但是現實情況下如果你的數據中出現這樣大量的缺失值的話，我們無法判斷它是否獨立於我們希望分析的結果變量和預測變量。
+
+此時的結果我們總結在下表中
+
+| Variable                  | Original Data analysis Coefficient. (SE) | Complete Case analysis Coefficient. (SE) | Multiple Imputation Coefficient. (SE) |
+|---------------------------|------------------------------------------|------------------------------------------|---------------------------------------|
+| Pre-reception numeracy    | 0.58 (0.012)                             |  0.43 (0.019)                            |                                       |
+| Special educational needs | -0.432 (0.043)                           |  -0.362 (0.047)                          |                                       |
+
+
+
+### 分析 `sen_m` 的缺失值機制
+
+先生成一個關於 `sen_m` 是否是缺失值的指示變量 (indicator variable) `r`：
+
+```{r missing01-prac05, cache=TRUE}
+classp3dta <- classp3dta %>% 
+  mutate(r = !is.na(sen_m))
+
+epiDisplay::tab1(classp3dta$sen_m, graph = FALSE)
+epiDisplay::tab1(classp3dta$r, graph = FALSE)
+```
+
+然後我們一個邏輯回歸模型，把 `r` 作爲該模型的結果變量，把 `nlitpost nmatpre` 作爲預測變量：
+
+```{r missing01-prac06, cache=TRUE}
+classglm <- glm(r ~ nlitpost + nmatpre, data = classp3dta, 
+                family = binomial(link = logit))
+summary(classglm)
+jtools::summ(classglm, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+
+同樣的過程在 Stata 可以這樣完成：
+
+```{r engine='stata', echo=FALSE}
+use "../backupfiles/classp3.dta", clear
+gen r=(sen_m!=.)
+logistic r nlitpost nmatpre
+```
+
+你能看出 `sen_m` 的缺失值機制大致是怎樣的嗎？
+
+
+從上面邏輯回歸模型的結果可以看出， `sen_m` 本身是否出現缺失值，和 `nlitpost nmatpre` 兩個變量之間有着很強的關係。從獲得的OR值來看，這兩個分數越高的人，觀測到它 `sen` 數值的可能性越低（即較高可能性出現缺失值），也就是說，我們可以認爲該變量出現缺失值的機制不屬於完全隨機 (missing completely at random, MCAR)。
+
+下面我們把該邏輯回歸模型中的預測變量增加一個 `sen_m`：
+
+```{r missing01-prac07, cache=TRUE}
+classglm2 <- glm(r ~ nlitpost + nmatpre + sen_m, data = classp3dta, 
+                family = binomial(link = logit))
+summary(classglm2)
+jtools::summ(classglm2, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+你知道爲什麼這裏的模型中的參數無法被估計嗎？
+
+我們把 `sen_m` 替換成 `sen`
+
+```{r missing01-prac08, cache=TRUE}
+classglm3 <- glm(r ~ nlitpost + nmatpre + sen, data = classp3dta, 
+                family = binomial(link = logit))
+summary(classglm3)
+jtools::summ(classglm3, digits = 6, confint = TRUE, exp = TRUE)
+```
+
+此時，我們看見 `sen` 和 `sen_m` 是否出現缺失值是無關的 (no evidence that missingness in `sen_m` is associated with `sen`)，即使調整了 `nlitpost nmatpre`。這滿足了我們對隨機缺失機制 (Missing at random, MAR) 的定義。所以我們可以認爲 `sen_m` 的缺失值機制在知道了 `nlitpost nmatpre` 的條件下是隨機缺失 (MAR)。但是值得注意的是，因爲這裏我們是故意把一個變量隨機刪除掉一半以後人爲地造成了一個不完整數據的變量，才能夠根據上述定義來證明這個變量發生缺失值的機制是 MAR，**現實情況下，這樣的證明是沒有人可以做到的**，因爲有缺失值的變量你是無法獲得它的完整數據的。而且我們也從上述分析中發現了使用去除缺失值之後的數據進行分析時模型中參數估計出現較大偏倚和標準誤差變大的原因 -- 因爲 `sen_m` 是否出現缺失值同時和我們關心的結果變量 `nlitpost`，和預測變量 `nmatpre` 有關。
+
+
+### 多重插補 multiple imputation
+
+#### 在 Stata 裏，重新讀入數據
+
+- 首先我們需要告訴 Stata 我們要開始存儲一些多重插補過後的數據 `mi set wide`。
+- 然後，再告訴 Stata，我們要對 `sen_m` 這個變量進行多重插補 `mi register imputed sen_m`
+- 產生我們需要的多重插補之後的數據，這個過程（雖然都被計算機一步完成）可以描述爲：
+    - 對於二進制變量，我們需要使用 `logit` 命令來進行多重插補。
+    - 先使用去除了缺失值的數據來跑我們需要的模型，然後獲取對應的回歸模型的回歸係數(i.e. log odds ratios)及其標準誤差。
+    - 假設要進行 $m = 1, \cdots, M$ 次多重插補過程，那麼根據回歸係數 (logOR) 本身服從常態分佈的假設，每次多重插補我們需要從回歸係數服從的分佈中採樣一組回歸係數。
+    - 獲取了 $m$ 組回歸係數之後，在每一個多重插補過程中，根據模型中的變量和採集的回歸係數，計算存在缺失值的 `sen_m` 取值是 1 的概率。
+    - 根據上步中計算獲得的每個有缺失值的 `sen_m` 取值可能是 1 的概率。這個概率被當作是一個 Bernoulli (binary) 分佈的概率參數，然後隨機採集 0/1 作爲該缺失值的插補值。
+- 另外，實施多重插補過程的命令中 `add(10)` 是在告訴 Stata 我要進行十次插補，採集十次樣本，即 $m = 10$
+- 最後一步是使用插補後的數據進行我們希望的回歸模型分析。它的過程簡單來說就是對插補後的十個樣本進行相同的模型估計，然後利用 "Rubin" 法則把十次結果總結成爲一個估計。它和之前的結果相比如何？
+ 
+
+```{r engine='stata', echo=FALSE}
+use "../backupfiles/classp3.dta", clear
+mi set wide
+mi register imputed sen_m
+mi impute logit sen_m nlitpost nmatpre, add(10) rseed(4921)
+mi estimate: regress nlitpost nmatpre sen_m
+```
+
+
+| Variable                  | Original Data analysis Coefficient. (SE) | Complete Case analysis Coefficient. (SE) | Multiple Imputation Coefficient. (SE) |
+|---------------------------|------------------------------------------|------------------------------------------|---------------------------------------|
+| Pre-reception numeracy    | 0.58 (0.012)                             |  0.43 (0.019)                            |  0.59 (0.012)                         |
+| Special educational needs | -0.432 (0.043)                           |  -0.362 (0.047)                          |  -0.404 (0.053)                        |
+
+
+可以看到，使用多重插補之後，獲得的回歸係數的參數估計及其標準誤差都和原始數據模型結果十分接近，令人滿意。值得注意的是，因爲這裏的數據缺失是我們認爲通過 MAR 機制產生的，所以我們會看到這樣幾乎無偏的估計。然而在現實中，我們其實無法對缺失值的機制是否是 MAR 進行驗證。
