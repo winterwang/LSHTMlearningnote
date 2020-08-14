@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 87 章 貝葉斯廣義線性回歸 | 醫學統計學</title>
-  <meta name="description" content="第 87 章 貝葉斯廣義線性回歸 | 醫學統計學" />
+  <title>第 98 章 粗率比和分層率比 Crude and stratified rate ratios | 醫學統計學</title>
+  <meta name="description" content="第 98 章 粗率比和分層率比 Crude and stratified rate ratios | 醫學統計學" />
   <meta name="generator" content="bookdown 0.20 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 87 章 貝葉斯廣義線性回歸 | 醫學統計學" />
+  <meta property="og:title" content="第 98 章 粗率比和分層率比 Crude and stratified rate ratios | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 87 章 貝葉斯廣義線性回歸 | 醫學統計學" />
+  <meta name="twitter:title" content="第 98 章 粗率比和分層率比 Crude and stratified rate ratios | 醫學統計學" />
   
   
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="Bayes-design.html"/>
-<link rel="next" href="Bayes-Hier.html"/>
+<link rel="prev" href="causal-mediation-analysis.html"/>
+<link rel="next" href="references.html"/>
 <script src="libs/header-attrs/header-attrs.js"></script>
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
@@ -1653,616 +1653,173 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="Bayes-GLM" class="section level1" number="87">
-<h1><span class="header-section-number">第 87 章</span> 貝葉斯廣義線性回歸</h1>
-<p>第五章(Chapter <a href="Bayes-check.html#BayesianLM">85.1</a>)中我們已經展示過如何在貝葉斯統計學語境下如何描述和運算簡單線性回歸模型的過程：</p>
-<ul>
-<li>描述預測變量和結果變量之間應有的關係；</li>
-<li>描述結果變量的概率分佈假設 (probability assumptions)：也就是在前一步指定的方程式描述的預測變量和相應的參數的條件下，結果變量的分佈。</li>
-<li>給每個回歸係數，以及其他未知的參數提供先驗概率分佈的信息。</li>
-</ul>
-<p>對於一個結果變量 <span class="math inline">\(y_i\)</span> 來說，如果有一個預測變量的向量 <span class="math inline">\(x_1, \dots, x_p\)</span>，來描述它 <span class="math inline">\(i = 1,\dots, n\)</span> 個個體的話，標準的貝葉斯版本的線性回歸模型要寫作：</p>
-<p><span class="math display" id="eq:Bayesianchapter7eq01">\[
-\begin{aligned}
-y_i &amp; \sim N(\mu_i, \sigma^2) \\ 
-\mu_i &amp; = \beta_0 +  \sum_{i = 1}^p\beta_jx_{ji} \\ 
-(\beta_0, \beta_1, \dots, \beta_p) &amp; \sim \text{ Prior distributions } \\
-\end{aligned}
-\tag{87.1}
-\]</span></p>
-<p>用貝葉斯方法建立回歸模型的優點有很多。首先，你可以方便地對未知的回歸係數等參數加入相關的先驗概率分佈用來表達已有的知識，或者對回歸係數加以合理的限制。其次，你可以從容地對回歸模型的擬合效果，預測能力做出統計學推斷。再加上，使用貝葉斯方法也很容易讓我們把模型擴展到非線性回歸模型，處理並分析缺失值，以及分析共變量的測量誤差等等。</p>
-<p>更重要的是，MCMC方法讓我們人類也可以很容易地進行穩健的統計推斷 (robust inference)。例如上面的線性回歸模型中，如果有理由認為誤差服從的是自由度為4的 t 分佈，那就可以把第一行模型似然改寫成為：</p>
-<p><span class="math display">\[
-y_i \sim t_4(\mu_i, \sigma^2)
-\]</span></p>
-<p>使用t分佈作為模型似然的話，相比高斯模型(正態分佈)可以調低(downweight)離群值(outliers)的權重。(詳見 Chapter <a href="Bayes-check.html#tdreplacegaussian">85.2.9</a>)</p>
-<p>實際上，貝葉斯廣義線性回歸模型(Bayesian GLM)直觀地可以被認為是貝葉斯線性回歸模型的擴展模型。記得在基礎的廣義線性回歸模型章節，我們學習過如何用一個<strong>鏈接方程(link function)</strong>把結果變量(outcome)，和解釋變量用數學表達式連接起來。廣義線性回歸模型中最常見的莫過於邏輯回歸模型，接下來我們就來看看如何在貝葉斯統計學框架下擬合我們想要的邏輯回歸模型。在這之前，我們先要學習如何在BUGS語言下描述一個分類型變量(categorical variable)。</p>
-<div id="如何在bugs語言中描述分類型變量" class="section level2" number="87.1">
-<h2><span class="header-section-number">87.1</span> 如何在BUGS語言中描述分類型變量</h2>
-<p>雖然 BUGS 語言風格和 R 語言十分接近，但是二者並不完全通用。BUGS並無像R語言一樣有Factor因子型變量的概念來表述分類型數據。相似的概念在BUGS語言中可以有兩種方法來表達：</p>
-<ul>
-<li>人工把分類型變量編輯成為啞變量的方式，然後把啞變量輸入數據框中；</li>
-<li>利用BUGS語言方便的索引功能 (indexing facilities)。</li>
-</ul>
-<p>下面我們用簡單線性回歸模型來解釋這兩種方法的異同，其中一個分類型解釋變量 <span class="math inline">\(x_i\)</span>，它有 <span class="math inline">\(A,B,C\)</span> 三種分型(例如ABO血型只有三種分類時的情況)，其中 A 是三個分類中的參照組(reference group)。</p>
-<div id="啞變量的數據矩陣" class="section level3" number="87.1.1">
-<h3><span class="header-section-number">87.1.1</span> 啞變量的數據矩陣</h3>
-<p>用啞變量矩陣的方式表達分類型變量是常用的手段，為一個有三個分類的變量生成啞變量我們需要給出兩個指示變量(indicator variable)，其中 <span class="math inline">\(x2=1\)</span> 時表示 <span class="math inline">\(x_i = B\)</span>，<span class="math inline">\(x2=0\)</span>時表示 <span class="math inline">\(x_i\neq B\)</span>，<span class="math inline">\(x3=1\)</span> 時表示<span class="math inline">\(x_i = C\)</span>，<span class="math inline">\(x3=0\)</span> 時表示 <span class="math inline">\(x_i\neq C\)</span>：</p>
-<pre><code>y[]    x2[]    x3[]
-32     0       0        # x_i=A
-21     0       0
-...
-6      0       0
-15     1       0        # x_i=B
-24     1       0     
-...
-12     1       0
-7      0       1        # x_i=C
-26     0       1
-...
-19     0       1
-END
-</code></pre>
-<p>此時，這個模型的BUGS表達式可以寫作：</p>
-<pre><code>for (i in 1:n) {
-      y[i]  ~ dnorm(mu[i], tau) 
-      mu[i] &lt;- alpha + beta2*x2[i] + beta3*x3[i]
-}
+<div id="粗率比和分層率比-crude-and-stratified-rate-ratios" class="section level1" number="98">
+<h1><span class="header-section-number">第 98 章</span> 粗率比和分層率比 Crude and stratified rate ratios</h1>
+<p>本章內容不討論任何理論的東西，着重強調用 R 進行實際數據的分析，並加強對輸出結果的理解。</p>
+<p>此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。</p>
+<div class="sourceCode" id="cb1848"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1848-1"><a href="-crude-and-stratified-rate-ratios.html#cb1848-1"></a>whitehal &lt;-<span class="st"> </span><span class="kw">read_dta</span>(<span class="st">&quot;../backupfiles/whitehal.dta&quot;</span>)</span>
+<span id="cb1848-2"><a href="-crude-and-stratified-rate-ratios.html#cb1848-2"></a>whitehal<span class="op">$</span>followupyrs &lt;-<span class="st"> </span>(whitehal<span class="op">$</span>timeout <span class="op">-</span><span class="st"> </span>whitehal<span class="op">$</span>timein)<span class="op">/</span><span class="fl">365.25</span></span>
+<span id="cb1848-3"><a href="-crude-and-stratified-rate-ratios.html#cb1848-3"></a><span class="kw">max</span>(whitehal<span class="op">$</span>followupyrs<span class="op">*</span><span class="fl">365.25</span>) <span class="co"># time difference in days</span></span></code></pre></div>
+<pre><code>## Time difference of 7078.9927 days</code></pre>
+<div class="sourceCode" id="cb1850"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1850-1"><a href="-crude-and-stratified-rate-ratios.html#cb1850-1"></a><span class="kw">summary</span>(whitehal<span class="op">$</span>followupyrs &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(whitehal<span class="op">$</span>followupyrs)) <span class="co"># time difference in years</span></span></code></pre></div>
+<pre><code>##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+##  0.15063 17.16357 17.96020 16.46116 18.56262 19.38123</code></pre>
+<div class="sourceCode" id="cb1852"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1852-1"><a href="-crude-and-stratified-rate-ratios.html#cb1852-1"></a><span class="co"># categorize agein into groups (40-44, 45-49, 50-54, ... , 65-69)</span></span>
+<span id="cb1852-2"><a href="-crude-and-stratified-rate-ratios.html#cb1852-2"></a>whitehal<span class="op">$</span>agecat &lt;-<span class="st"> </span><span class="kw">cut</span>(whitehal<span class="op">$</span>agein, <span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="dv">40</span>, <span class="dv">70</span>, <span class="dv">5</span>), <span class="dt">right =</span> <span class="ot">FALSE</span>)</span>
+<span id="cb1852-3"><a href="-crude-and-stratified-rate-ratios.html#cb1852-3"></a><span class="kw">with</span>(whitehal, <span class="kw">table</span>(agecat))</span></code></pre></div>
+<pre><code>## agecat
+## [40,45) [45,50) [50,55) [55,60) [60,65) [65,70) 
+##     277     445     362     340     215      38</code></pre>
+<div class="sourceCode" id="cb1854"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1854-1"><a href="-crude-and-stratified-rate-ratios.html#cb1854-1"></a><span class="co"># examine how mortality rates change with age at entry</span></span>
+<span id="cb1854-2"><a href="-crude-and-stratified-rate-ratios.html#cb1854-2"></a><span class="co"># </span></span>
+<span id="cb1854-3"><a href="-crude-and-stratified-rate-ratios.html#cb1854-3"></a><span class="co"># with(whitehal %&gt;% group_by(agecat) %&gt;%</span></span>
+<span id="cb1854-4"><a href="-crude-and-stratified-rate-ratios.html#cb1854-4"></a><span class="co">#   summarise(D = sum(all),</span></span>
+<span id="cb1854-5"><a href="-crude-and-stratified-rate-ratios.html#cb1854-5"></a><span class="co">#             Y = sum(followupyrs)),</span></span>
+<span id="cb1854-6"><a href="-crude-and-stratified-rate-ratios.html#cb1854-6"></a><span class="co">#   cbind(whitehal$agecat, pois.exact(x = D, pt = Y/1000)))</span></span>
+<span id="cb1854-7"><a href="-crude-and-stratified-rate-ratios.html#cb1854-7"></a></span>
+<span id="cb1854-8"><a href="-crude-and-stratified-rate-ratios.html#cb1854-8"></a></span>
+<span id="cb1854-9"><a href="-crude-and-stratified-rate-ratios.html#cb1854-9"></a><span class="co">## rate ratios and 95% CIs for each age category compare with [40,44) age group</span></span>
+<span id="cb1854-10"><a href="-crude-and-stratified-rate-ratios.html#cb1854-10"></a>Model0 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class="op">~</span><span class="st"> </span>agecat <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(followupyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> whitehal); <span class="kw">ci.exp</span>(Model0)</span></code></pre></div>
+<pre><code>##                   exp(Est.)          2.5%         97.5%
+## (Intercept)    0.0048794197  0.0032705278  0.0072797841
+## agecat[45,50)  1.1740971320  0.7154062934  1.9268827913
+## agecat[50,55)  2.7732622719  1.7597191900  4.3705743919
+## agecat[55,60)  4.5784055712  2.9519678778  7.1009572062
+## agecat[60,65)  6.6882727538  4.2856745766 10.4377949444
+## agecat[65,70) 17.1110624279 10.1140257533 28.9487553770</code></pre>
+<div class="sourceCode" id="cb1856"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1856-1"><a href="-crude-and-stratified-rate-ratios.html#cb1856-1"></a><span class="co">## The rate ratios are increasing with age although there is no statistical evidence</span></span>
+<span id="cb1856-2"><a href="-crude-and-stratified-rate-ratios.html#cb1856-2"></a><span class="co">## at 5% level that the rate among 45-49 year olds is different to the rate among men</span></span>
+<span id="cb1856-3"><a href="-crude-and-stratified-rate-ratios.html#cb1856-3"></a><span class="co">## who are &lt;40 years</span></span>
+<span id="cb1856-4"><a href="-crude-and-stratified-rate-ratios.html#cb1856-4"></a></span>
+<span id="cb1856-5"><a href="-crude-and-stratified-rate-ratios.html#cb1856-5"></a></span>
+<span id="cb1856-6"><a href="-crude-and-stratified-rate-ratios.html#cb1856-6"></a><span class="co"># with(whitehal %&gt;% group_by(grade) %&gt;%</span></span>
+<span id="cb1856-7"><a href="-crude-and-stratified-rate-ratios.html#cb1856-7"></a><span class="co">#   summarise(D = sum(all),</span></span>
+<span id="cb1856-8"><a href="-crude-and-stratified-rate-ratios.html#cb1856-8"></a><span class="co">#             Y = sum(followupyrs)),</span></span>
+<span id="cb1856-9"><a href="-crude-and-stratified-rate-ratios.html#cb1856-9"></a><span class="co">#   cbind(whitehal$grade, pois.exact(x = D, pt = Y/1000)))</span></span>
+<span id="cb1856-10"><a href="-crude-and-stratified-rate-ratios.html#cb1856-10"></a></span>
+<span id="cb1856-11"><a href="-crude-and-stratified-rate-ratios.html#cb1856-11"></a>Model1 &lt;-<span class="st"> </span><span class="kw">glm</span>(all <span class="op">~</span><span class="st"> </span><span class="kw">factor</span>(grade) <span class="op">+</span><span class="st"> </span><span class="kw">offset</span>(<span class="kw">log</span>(followupyrs)), <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> whitehal); <span class="kw">ci.exp</span>(Model1)</span></code></pre></div>
+<pre><code>##                  exp(Est.)         2.5%       97.5%
+## (Intercept)    0.010865404 0.0095233128 0.012396632
+## factor(grade)2 2.305446287 1.8947528380 2.805158793</code></pre>
+<div class="sourceCode" id="cb1858"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1858-1"><a href="-crude-and-stratified-rate-ratios.html#cb1858-1"></a><span class="co">## There is strong evidence that the all cause mortality rate differs between high</span></span>
+<span id="cb1858-2"><a href="-crude-and-stratified-rate-ratios.html#cb1858-2"></a><span class="co">## and low grade workers.</span></span>
+<span id="cb1858-3"><a href="-crude-and-stratified-rate-ratios.html#cb1858-3"></a></span>
+<span id="cb1858-4"><a href="-crude-and-stratified-rate-ratios.html#cb1858-4"></a><span class="co">## To examine whether the estimated RR for grade is confounded by age at entry</span></span>
+<span id="cb1858-5"><a href="-crude-and-stratified-rate-ratios.html#cb1858-5"></a><span class="co">## we compare the crude RR =2.31 (1.90, 2.81) with the Mantel-Haenszel summary</span></span>
+<span id="cb1858-6"><a href="-crude-and-stratified-rate-ratios.html#cb1858-6"></a><span class="co">## estimate.</span></span>
+<span id="cb1858-7"><a href="-crude-and-stratified-rate-ratios.html#cb1858-7"></a></span>
+<span id="cb1858-8"><a href="-crude-and-stratified-rate-ratios.html#cb1858-8"></a>whitehal_table &lt;-<span class="st"> </span><span class="kw">aggregate</span>(<span class="kw">cbind</span>(all, followupyrs) <span class="op">~</span><span class="st"> </span>grade <span class="op">+</span><span class="st"> </span>agecat, <span class="dt">data=</span>whitehal, sum)</span>
+<span id="cb1858-9"><a href="-crude-and-stratified-rate-ratios.html#cb1858-9"></a>stmh_array &lt;-<span class="st"> </span><span class="kw">array</span>(<span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">20</span>,   <span class="fl">693.1284</span>,<span class="fl">4225.4893</span>,</span>
+<span id="cb1858-10"><a href="-crude-and-stratified-rate-ratios.html#cb1858-10"></a>                      <span class="dv">10</span>,<span class="dv">35</span>,   <span class="fl">1363.821</span>,<span class="fl">6491.072</span>,</span>
+<span id="cb1858-11"><a href="-crude-and-stratified-rate-ratios.html#cb1858-11"></a>                      <span class="dv">30</span>,<span class="dv">52</span>,  <span class="fl">1399.63</span>, <span class="fl">4660.12</span>,                                                        <span class="dv">51</span>,<span class="dv">67</span>,   <span class="fl">1832.169</span>,<span class="fl">3449.846</span>,</span>
+<span id="cb1858-12"><a href="-crude-and-stratified-rate-ratios.html#cb1858-12"></a>                      <span class="dv">59</span>,<span class="dv">42</span>,   <span class="fl">1660.597</span>,<span class="fl">1434.251</span>,</span>
+<span id="cb1858-13"><a href="-crude-and-stratified-rate-ratios.html#cb1858-13"></a>                      <span class="dv">28</span>,<span class="dv">5</span>,  <span class="fl">316.23840</span>, <span class="fl">79.00879</span>),</span>
+<span id="cb1858-14"><a href="-crude-and-stratified-rate-ratios.html#cb1858-14"></a>                      <span class="dt">dim=</span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">6</span>),</span>
+<span id="cb1858-15"><a href="-crude-and-stratified-rate-ratios.html#cb1858-15"></a>                      <span class="dt">dimnames =</span> <span class="kw">list</span>(</span>
+<span id="cb1858-16"><a href="-crude-and-stratified-rate-ratios.html#cb1858-16"></a>                      <span class="dt">Grade=</span><span class="kw">c</span>(<span class="st">&quot;2&quot;</span>,<span class="st">&quot;1&quot;</span>),</span>
+<span id="cb1858-17"><a href="-crude-and-stratified-rate-ratios.html#cb1858-17"></a>                      <span class="kw">c</span>(<span class="st">&quot;death&quot;</span>, <span class="st">&quot;Person_years&quot;</span>),</span>
+<span id="cb1858-18"><a href="-crude-and-stratified-rate-ratios.html#cb1858-18"></a>                      <span class="dt">Agecat=</span><span class="kw">names</span>(<span class="kw">table</span>(whitehal<span class="op">$</span>agecat))</span>
+<span id="cb1858-19"><a href="-crude-and-stratified-rate-ratios.html#cb1858-19"></a>                    ))</span>
+<span id="cb1858-20"><a href="-crude-and-stratified-rate-ratios.html#cb1858-20"></a>stmh_array</span></code></pre></div>
+<pre><code>## , , Agecat = [40,45)
+## 
+##      
+## Grade death Person_years
+##     2     4     693.1284
+##     1    20    4225.4893
+## 
+## , , Agecat = [45,50)
+## 
+##      
+## Grade death Person_years
+##     2    10     1363.821
+##     1    35     6491.072
+## 
+## , , Agecat = [50,55)
+## 
+##      
+## Grade death Person_years
+##     2    30      1399.63
+##     1    52      4660.12
+## 
+## , , Agecat = [55,60)
+## 
+##      
+## Grade death Person_years
+##     2    51     1832.169
+##     1    67     3449.846
+## 
+## , , Agecat = [60,65)
+## 
+##      
+## Grade death Person_years
+##     2    59     1660.597
+##     1    42     1434.251
+## 
+## , , Agecat = [65,70)
+## 
+##      
+## Grade death Person_years
+##     2    28    316.23840
+##     1     5     79.00879</code></pre>
+<div class="sourceCode" id="cb1860"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1860-1"><a href="-crude-and-stratified-rate-ratios.html#cb1860-1"></a>mhgrade_age &lt;-<span class="st"> </span><span class="kw">epi.2by2</span>(stmh_array, <span class="dt">method =</span> <span class="st">&quot;cohort.time&quot;</span>, <span class="dt">units =</span> <span class="dv">1000</span>)</span>
+<span id="cb1860-2"><a href="-crude-and-stratified-rate-ratios.html#cb1860-2"></a>mhgrade_age</span></code></pre></div>
+<pre><code>##              Outcome +    Time at risk        Inc rate *
+## Exposed +          182            7266              25.0
+## Exposed -          221           20340              10.9
+## Total              403           27605              14.6
+## 
+## Point estimates and 95% CIs:
+## -------------------------------------------------------------------
+## Inc rate ratio (crude)                       2.31 (1.88, 2.82)
+## Inc rate ratio (M-H)                         1.43 (1.16, 1.76)
+## Inc rate ratio (crude:M-H)                   1.61
+## Attrib rate (crude) *                        14.18 (10.27, 18.10)
+## Attrib rate (M-H) *                          6.28 (2.42, 10.15)
+## Attrib rate (crude:M-H)                      2.26
+## -------------------------------------------------------------------
+##  Wald confidence limits
+##  M-H: Mantel-Haenszel; CI: confidence interval
+##  * Outcomes per 1000 units of population time at risk</code></pre>
+<div class="sourceCode" id="cb1862"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1862-1"><a href="-crude-and-stratified-rate-ratios.html#cb1862-1"></a><span class="co">## Overall estimate and Wald 95% confidence intervals,</span></span>
+<span id="cb1862-2"><a href="-crude-and-stratified-rate-ratios.html#cb1862-2"></a><span class="co">## controlling for agecate</span></span>
+<span id="cb1862-3"><a href="-crude-and-stratified-rate-ratios.html#cb1862-3"></a>mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.mh.wald</span></code></pre></div>
+<pre><code>##        est     lower     upper
+## 1 1.429211 1.1598631 1.7611078</code></pre>
+<div class="sourceCode" id="cb1864"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1864-1"><a href="-crude-and-stratified-rate-ratios.html#cb1864-1"></a>mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>chisq.mh <span class="co">## p-value for age-adjusted MH rate ratio</span></span></code></pre></div>
+<pre><code>##   test.statistic df       p.value
+## 1      11.132745  5 0.00084816981</code></pre>
+<div class="sourceCode" id="cb1866"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1866-1"><a href="-crude-and-stratified-rate-ratios.html#cb1866-1"></a><span class="co">## The Mantel-Haenszel summary estimate RR = 1.43 (1.16, 1.76).</span></span>
+<span id="cb1866-2"><a href="-crude-and-stratified-rate-ratios.html#cb1866-2"></a><span class="co">## The result shows that the crude estimate of the effect of grade was</span></span>
+<span id="cb1866-3"><a href="-crude-and-stratified-rate-ratios.html#cb1866-3"></a><span class="co">## partly confounded by age at entry.</span></span>
+<span id="cb1866-4"><a href="-crude-and-stratified-rate-ratios.html#cb1866-4"></a></span>
+<span id="cb1866-5"><a href="-crude-and-stratified-rate-ratios.html#cb1866-5"></a><span class="co">## To assess whether there is effect modification betwee grade and</span></span>
+<span id="cb1866-6"><a href="-crude-and-stratified-rate-ratios.html#cb1866-6"></a><span class="co">## agecat we examine the stratum specific estimates and assess</span></span>
+<span id="cb1866-7"><a href="-crude-and-stratified-rate-ratios.html#cb1866-7"></a><span class="co">## whether there is evidence of important variation between them.</span></span>
+<span id="cb1866-8"><a href="-crude-and-stratified-rate-ratios.html#cb1866-8"></a>mhgrade_age<span class="op">$</span>massoc<span class="op">$</span>IRR.strata.wald</span></code></pre></div>
+<pre><code>##         est      lower     upper
+## 1 1.2192515 0.30302945 3.6397113
+## 2 1.3598500 0.60057144 2.8059055
+## 3 1.9208868 1.18309546 3.0676307
+## 4 1.4332751 0.97576189 2.0941999
+## 5 1.2132872 0.80308583 1.8474726
+## 6 1.3991002 0.53338106 4.6404658</code></pre>
+<div class="sourceCode" id="cb1868"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1868-1"><a href="-crude-and-stratified-rate-ratios.html#cb1868-1"></a><span class="co">## The result indicates that the data are compatible with the assumption</span></span>
+<span id="cb1868-2"><a href="-crude-and-stratified-rate-ratios.html#cb1868-2"></a><span class="co">## of no interaction/effect modification (p=0.79)</span></span>
+<span id="cb1868-3"><a href="-crude-and-stratified-rate-ratios.html#cb1868-3"></a></span>
+<span id="cb1868-4"><a href="-crude-and-stratified-rate-ratios.html#cb1868-4"></a><span class="co">## test for unequal RRs (effect modification):</span></span>
+<span id="cb1868-5"><a href="-crude-and-stratified-rate-ratios.html#cb1868-5"></a>mhgrade_age<span class="op">$</span>res<span class="op">$</span>RR.homog</span></code></pre></div>
+<pre><code>## NULL</code></pre>
+<div class="sourceCode" id="cb1870"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1870-1"><a href="-crude-and-stratified-rate-ratios.html#cb1870-1"></a><span class="co">## Hence, we do not need to present the stratum-specific estimates.</span></span></code></pre></div>
 
-alpha ~ dunif(-1000, 1000)
-beta2 ~ dunif(-1000, 1000)
-beta3 ~ dunif(-1000, 1000)
-tau   ~ dgamma(0.001, 0.001)</code></pre>
-<p>其中，</p>
-<ul>
-<li><code>alpha</code> 是參照組 <span class="math inline">\(x_i = A\)</span> 的結果變量的均值；</li>
-<li><code>beta2</code> 是和參照組相比，<span class="math inline">\(x_i = B\)</span> 的結果變量的均值和參照組之間結果變量均值的差；</li>
-<li><code>beta3</code> 是和參照組相比，<span class="math inline">\(x_i = C\)</span> 的結果變量的均值和參照組之間結果變量均值的差。</li>
-</ul>
-</div>
-<div id="雙重索引bugs語言標記法" class="section level3" number="87.1.2">
-<h3><span class="header-section-number">87.1.2</span> 雙重索引BUGS語言標記法</h3>
-<p>與前面的啞變量矩陣描述相異的，我們可以利用BUGS語言中便捷的索引方法來描述一個分類型變量，例如用 <span class="math inline">\(x = 1\)</span> 表示 <span class="math inline">\(x_i = A\)</span>，用 <span class="math inline">\(x = 2\)</span> 表示 <span class="math inline">\(x_i = B\)</span>，用 <span class="math inline">\(x = 3\)</span> 表示 <span class="math inline">\(x_i = C\)</span>：</p>
-<pre><code>y[]      x[]
-32       1               # x = A
-21       1 
-... 
-6        1
-15       2               # x = B
-24       2 
-...
-12       2
-7        3               # x = C
-26       3
-...
-19       3
-END
-</code></pre>
-<p>此時，相同的模型則需要被表達成爲：</p>
-<pre><code>for(i in 1:n) {
-    y[i] ~ dnorm(m[i], tau)
-    mu[i] &lt;- alpha + beta[x[i]]
-}
-alpha ~ dunif(-1000, 1000)
-beta[1] &lt;- 0   # fixed as baseline class
-beta[2] ~ dunif(-1000, 1000)
-beta[3] ~ dunif(-1000, 1000)
-tau ~ dgamma(0.001, 0.001)</code></pre>
-<p>可以注意到我們在這個模型中把參考組的回歸系數篤定在了 0。這時候，我們給起始值數據時，就不需要給 <code>beta[1]</code> 指定起始值了：</p>
-<pre><code>list(alpha = 10, beta = c(NA, -2, 4), tau = 1)</code></pre>
-</div>
-</div>
-<div id="邏輯回歸-bayesian-logistic-regression" class="section level2" number="87.2">
-<h2><span class="header-section-number">87.2</span> 邏輯回歸 Bayesian Logistic Regression</h2>
-<p>對於一個二分類的結果變量 (binary outcome variable) 來說，最自然的模型是使用邏輯回歸模型。</p>
-<p>假如每個個體都有一個二分類結果變量 <span class="math inline">\(y_i = 0 \text{ or } 1\)</span>。那麼每個個體 <span class="math inline">\(i\)</span> 的結果 <span class="math inline">\(y_i\)</span> 可以用伯努利分布 (Chapter <a href="bernoulli.html#bernoulli">4</a>) 來描述它：</p>
-<p><span class="math display">\[
-y_i \sim Bern(p_i)
-\]</span></p>
-<p>其中，<span class="math inline">\(p_i\)</span>是第<span class="math inline">\(i\)</span>個個體的結果變量取1時<span class="math inline">\((y_i = 1)\)</span>的概率。此時 <span class="math inline">\(P(p_i = 1)\)</span> 是我們想要知道的需要用貝葉斯模型來擬合的未知參數。邏輯回歸模型中我們使用的鏈接方程是 <span class="math inline">\(\mathbf{logit}\)</span>：</p>
-<p><span class="math display">\[
-\theta_i = \text{logit}(p_i) = \log(\frac{p_i}{1-p_i})
-\]</span></p>
-<p><span class="math inline">\(\mathbf{logit}\)</span>鏈接方程允許我們把一個只能在 <span class="math inline">\((0,1)\)</span> 之間取值的概率數據，映射到可以在 <span class="math inline">\((-\infty, +\infty)\)</span> 之間取值的變量，之後我們再把這個變量和預測變量使用線性方程連接起來：</p>
-<p><span class="math display" id="eq:GLMbayesian01">\[
-\text{logit}(p_i)  = \alpha + \sum_k\beta_kx_{ki}
-\tag{87.2}
-\]</span></p>
-<p>這個模型的似然方程，它的事後概率分布是無法獲得閉合解的 (closed form)，但是但是，MCMC強大的計算機模擬過程幫我們解決了這個棘手的問題。</p>
-<p>###　邏輯回歸模型中回歸系數的含義</p>
-<p>在表達式 <a href="Bayes-GLM.html#eq:GLMbayesian01">(87.2)</a> 中我們可以對每個回歸系數做出如下的定義：</p>
-<ul>
-<li><span class="math inline">\(\alpha\)</span> 是當所有的預測變量取值同時爲零時的結果變量的對數比值 (log odds)：</li>
-</ul>
-<p><span class="math display">\[
-\Rightarrow \text{logit}^{-1}(\alpha) = \frac{e^\alpha}{(1+e^\alpha)} = \text{ probability of the outcome when all covariates are set to zero}
-\]</span></p>
-<ul>
-<li><span class="math inline">\(\beta_k\)</span> 則是預測變量 <span class="math inline">\(x_k\)</span> 發生一個單位變化時，引起的結果變量的變化的對數比值比 (log odds ratio)：</li>
-</ul>
-<p><span class="math display">\[
-\Rightarrow e^{\beta_k} = \text{ odds ratio of outcome per unit change in } x_k
-\]</span></p>
-<div id="低出生體重數據" class="section level3" number="87.2.1">
-<h3><span class="header-section-number">87.2.1</span> 低出生體重數據</h3>
-<p>本例子中，我們關心的研究問題是，三氯甲烷 (trihalomethane, THM)濃度和生下的新生兒爲低出生體重之間是否相關。THM已知是使用氟化氫(chlorine)對飲用水消毒時可能產生副產品，被認爲可能對人類生殖系統造成一定的傷害。數據收集到931名新生兒體重數據，該數據包含的變量有：</p>
-<ul>
-<li><code>lbw</code> 是該新生兒出生時體重是否爲低體重的二分類變量。</li>
-<li><code>thm</code> 是一個指示變量，當它爲0時表示暴露的THM爲低水平，當它爲1時表示暴露的THM爲高水平。</li>
-<li><code>age</code> 是一個關於母親們年齡的分類型變量 (1 = $$25歲，2 = 25-29歲，3 = 30-34 歲，4 = <span class="math inline">\(\geqslant\)</span> 35歲)。</li>
-<li><code>male</code> 表示新生兒的性別 (0 是女孩，1 是男孩)。</li>
-<li><code>car</code> 是一個表示貧困程度的指數。</li>
-<li><code>smoke</code> 是表示母親在懷孕期間是否有吸煙習慣的變量 (0 = 無吸煙習慣，1 = 有吸煙習慣)。</li>
-</ul>
-<p>要回答我們關心的研究問題，那麼這個數據中，</p>
-<ul>
-<li><code>lbw</code> 是結果變量；</li>
-<li><code>thm</code> 是暴露變量；</li>
-<li><code>age, male, car, smoke</code> 是可能影響暴露變量和結果之間關係的混雜因子 (confounders)。</li>
-</ul>
-<p>這時候，本例中的貝葉斯模型的數學表達式可以寫作：</p>
-<p><span class="math display">\[
-\begin{aligned}
-lbw_i &amp; \sim Bernoulli(p_i) \;\; [\text{equivalent to } Binomial(p_i, 1)] \\ 
-\text{logit}(p_i) &amp;  = \alpha + \beta_{thm}thm_i + \beta^T_C\mathbf{C}_i \\
-\alpha, \beta_{thm}, \dots &amp; \sim \text{Normal}(0, 10000^2) \\
-e^{\beta_{thm}}&amp; = \text{odds ratio of low birth weight for high v low thm exposure}
-\end{aligned}
-\]</span></p>
-<p>其中 <span class="math inline">\(\mathbf{C}\)</span> 是混雜因子組成的向量。也就是母親的年齡，新生兒的性別，貧困指數，以及母親孕期吸煙史。</p>
-<p>利用OpenBUGS的雙重索引功能來標記分類型變量的話，這個低體重數據可以被整理為：</p>
-<pre><code>lbw[] thm[] age[] male[] car[] smoke[]
-0     0     1     1      0.156   1
-0     0     3     0     -2.165   1
-0     1     1     0     -1.391   1
-1     1     4     0      0.156   1
-......
-0     1     3     1      0.930   0
-END
-</code></pre>
-<p>其對應的BUGS模型代碼為：</p>
-<pre><code>model{
-    ### MODEL ###
-    for (i in 1:931) { # loop through 931 individuals
-       y[i] ~ dbern(p[i])
-       logit(p[i]) &lt;-  alpha+beta.thm*thm[i]+beta.age[age[i]]+beta.male*male[i]+
-       beta.car*car[i]+beta.smoke*smoke[i]
-    }
-    ### PRIORS ###
-    alpha ~ dnorm(0,0.00000001)
-    beta.thm ~ dnorm(0,0.00000001)
-    beta.age[1] ~ dnorm(0,0.00000001)
-    beta.age[2] &lt;- 0 # alias second level of maternal age beta
-    beta.age[3] ~ dnorm(0,0.00000001)
-    beta.age[4] ~ dnorm(0,0.00000001)
-    beta.male ~ dnorm(0,0.00000001)
-    beta.car ~ dnorm(0,0.00000001)
-    beta.smoke ~ dnorm(0,0.00000001)
-    ### CALCULATE THE ODDS RATIOS ###
-    OR.thm &lt;- exp(beta.thm)
-    OR.age1 &lt;- exp(beta.age[1])
-}</code></pre>
-<p>OpenBUGS中刨除前5000次樣本採集之後，獲取30000個位置參數的事後樣本，我們獲得了如下的結果：</p>
-<pre><code>         mean   sd     MC_error val2.5pc median val97.5pc
-beta.thm 0.7587 0.4181 0.008799 -0.02731 0.7453 1.631
-OR.thm   2.337  1.074  0.02403  0.9731   2.107  5.107</code></pre>
-<p>所以，我們獲得事後比值比2.337的含義就是，孕期暴露高劑量THM和低劑量的THM相比，新生兒出生體重為低出生體重的比值是2.3 (95% 可信區間 credible intervals: 0.97, 5.11)。</p>
-<p>值得注意的是，我們上面獲得的事後<code>beta.thm</code>均值，並不等於<code>OR.thm</code>均值取對數：<span class="math inline">\(0.7587 \neq log(2.337)\)</span>。</p>
-</div>
-</div>
-<div id="貝葉斯泊鬆回歸-bayesian-poisson-regression" class="section level2" number="87.3">
-<h2><span class="header-section-number">87.3</span> 貝葉斯泊鬆回歸 Bayesian Poisson Regression</h2>
-<p>泊鬆回歸用於對計數型數據做回歸模型，例如死亡人數，住院人數，發病人數等。對計數型結果變量使用泊鬆模型時，我們對發生事件的次數的均值的對數加以數學模型：<span class="math inline">\(\mu_i = E(y_i)\)</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-y_i &amp; \sim Poi(\mu_i) \\
-\log (\mu_i) &amp; = \alpha + \sum_k\beta_kx_{ki}
-\end{aligned}
-\]</span></p>
-<p>泊鬆模型的數學公式同時也暗示我們默認結果事件發生次數的均值，取對數以後和解釋變量之間呈線性關系。同樣地，高斯先驗概率分布(正態分布)長用於這樣廣義線性回歸模型中的未知參數。</p>
-</div>
-<div id="glm-in-a-bayesian-way" class="section level2" number="87.4">
-<h2><span class="header-section-number">87.4</span> GLM in a Bayesian way</h2>
-<ul>
-<li>各種你學過的廣義線性回歸模型均可以使用貝葉斯統計學的方法來描述並分析，通過MCMC獲得模型中每個未知參數的事後概率分布描述。</li>
-<li>各種你學過的廣義線性回歸模型使用的標準鏈接方程，都可以照搬過來用在貝葉斯廣義線性會回歸模型中。</li>
-<li>因爲我們用 MCMC 方法對各個未知參數的事後概率分布進行樣本採集，我們有極其靈活的先驗概率分布描述手段。回歸系數的先驗概率分布通常可以使用高斯分布(正態分布)，一般來說會設定均值爲0，方差合適的正態分布作爲先驗概率分布。</li>
-<li>使用貝葉斯統計學框架，廣義線性回歸模型的右邊，可以被擴展至任何非線性回歸模型。強大的計算機模擬過程幫我們解決了無法獲得閉合解這一大難題。</li>
-</ul>
-</div>
-<div id="Bayesian-practical07" class="section level2" number="87.5">
-<h2><span class="header-section-number">87.5</span> Practical Bayesian Statistics 07</h2>
-<p>要點：</p>
-<ul>
-<li>學會用OpenBUGS跑貝葉斯邏輯回歸模型；</li>
-<li>懂得如何解讀，解釋貝葉斯廣義線性回歸模型結果中的參數估計；</li>
-<li>使用DIC比較不同的貝葉斯模型。</li>
-</ul>
-<p>數據來自研究 <span class="citation">(Diggle et al. <a href="#ref-diggle2002childhood" role="doc-biblioref">2002</a>)</span>，該研究設計是爲了評價 National Impregnated Bednet Programme 是否能減少岡比亞兒童瘧疾發病率，及由於瘧疾導致的死亡。當時研究者從2035名岡比亞兒童身上採集了血樣，用於化驗是否有瘧原蟲感染。同時收集的變量包括，兒童的年齡，兒童是否有規律地使用蚊帳，以及使用的蚊帳是否是經過 (permethrin insecticide) 殺蟲。另外還收集的兩個村莊水平 (village level) 的變量分別是，兒童生活的村莊是否受 Primary Health Care System 管轄，以及村莊環境中的植被情況 (greenness of the village environment)。</p>
-<p>該試驗數據除了對使用蚊帳和罹患瘧疾之間的關係進行評估之外，還希望能通過收集到的數據分析是否存在超二項變異 (extra-binomial variation)的證據。這裏，超二項變異的含義是，在調整了已測量的全部觀察變量以後，仍然存在其他未知或者是未測量的潛在因子，導致殘留的差異(residual differences)無法被解釋。</p>
-<p>原始數據是個人級別的 (1 record per child)。這裏爲了練習的需要，我們對數據進行了整理彙總，這樣的數據其實使用 MCMC 採集事後樣本效率也比較高。且我們的練習題用的數據只是研究地區西部25個村莊構成的局部數據。這樣，經過處理後的數據庫保存有805名兒童的數據，他們的彙總後的數據有149個二項變量 (binomial categories)。</p>
-<p>數據保存在 <code>malaria-data.txt</code> 文件中，使用的是方形格式 (rectangular format)，它有如下的幾個變量:</p>
-<pre><code>POP[] MALARIA[] AGE[] BEDNET[] GREEN[] PHC[] VILLAGE[] 
-3     2         2     1        40.85   1      1
-1     1         3     1        40.85   1      1
-2     2         4     1        40.85   1      1
-7     3         1     2        40.85   1      1
-5     1         2     2        40.85   1      1
-6     3         3     2        40.85   1      1
-... 
-END
-</code></pre>
-<ul>
-<li><code>POP</code> 是所有變量組合下兒童的人數；</li>
-<li><code>MALARIA</code> 是所有變量組合下兒童感染虐原蟲兒童的人數；</li>
-<li><code>AGE</code> 表示年齡分組 (1 = 0-2 歲，2 = 2-3 歲，3 = 3-4 歲，4 = 4-5 歲)；</li>
-<li><code>BEDNET</code> 表示使用蚊帳的情況分類 (1 = 不使用蚊帳，2 = 使用未經殺蟲劑處理過的蚊帳，3 = 使用經過殺蟲劑處理過的蚊帳)；</li>
-<li><code>GREEN</code> 是表示村莊植被環境的一個連續型指標；</li>
-<li><code>PHC</code> 是一個二分類數據，1/0 = 該村莊是/不是受到 Primary Health Care System 管轄。</li>
-<li><code>VILLAGE</code> 是村莊的代碼。</li>
-</ul>
-<ol style="list-style-type: decimal">
-<li>使用貝葉斯邏輯迴歸模型估計使用蚊帳與否和虐原蟲感染之間的關係。嘗試寫下這個貝葉斯模型的BUGS表達文件，並且注意計算:</li>
-</ol>
-<ul>
-<li>參照組(也就是未使用蚊帳組)兒童的瘧疾感染率 (百分比)</li>
-<li>每一個可能的共變量的比值比</li>
-<li>使用蚊帳和不使用蚊帳相比，能夠降低兒童患瘧疾的比值(odds)的概率；<br> 使用殺蟲劑處理過的蚊帳和使用未處理過的蚊帳相比，能夠降低兒童患瘧疾的比值的概率； <br></li>
-</ul>
-<p>模型可以寫作:</p>
-<pre><code># Logistic regression model for malaria data
-	
-model {
-   for(i in 1:149) {
-      MALARIA[i] ~ dbin(p[i], POP[i])
-      logit(p[i]) &lt;- alpha + beta.age[AGE[i]] + beta.bednet[BEDNET[i]] +
-                                   beta.green*(GREEN[i] - mean(GREEN[])) + beta.phc*PHC[i]  
-   }
-  
-   # vague priors on regression coefficients
-   alpha ~ dnorm(0, 0.00001)
-   beta.age[1] &lt;- 0          # set coefficient for baseline age group to zero (corner point constraint)
-   beta.age[2] ~ dnorm(0, 0.00001)     
-   beta.age[3] ~ dnorm(0, 0.00001)     
-   beta.age[4] ~ dnorm(0, 0.00001)     
-   beta.bednet[1] &lt;- 0     # set coefficient for baseline bednet group to zero (corner point constraint)
-   beta.bednet[2] ~ dnorm(0, 0.00001)     
-   beta.bednet[3] ~ dnorm(0, 0.00001)     
-   beta.green ~ dnorm(0, 0.00001)     
-   beta.phc ~ dnorm(0, 0.00001)     
- 
-   # calculate odds ratios of interest
-   OR.age[2] &lt;- exp(beta.age[2]) # OR of malaria for age group 2 vs. age group 1
-   OR.age[3] &lt;- exp(beta.age[3]) # OR of malaria for age group 3 vs. age group 1
-   OR.age[4] &lt;- exp(beta.age[4]) # OR of malaria for age group 4 vs. age group 1
-   
-   OR.bednet[2] &lt;- exp(beta.bednet[2]) # OR of malaria for children using untreated bednets vs. not using bednets
-   OR.bednet[3] &lt;- exp(beta.bednet[3]) # OR of malaria for children using treated bednets vs. not using bednets
-   OR.bednet[4] &lt;- exp(beta.bednet[3] - beta.bednet[2]) # OR of malaria for children using treated bednets vs. using untreated bednets 
-   OR.green &lt;- exp(beta.green)  # OR of malaria per unit increase in greenness index of village
-   OR.phc &lt;- exp(beta.phc)      # OR of malaria sfor children living in villages belonging to the primary health care system versus children living in villages not in the health care system 
-   logit(baseline.prev) &lt;- alpha # baseline prevalence of malaria in baseline group (i.e. child in age group 1, sleeps without bednet, and lives in a village with average greenness index and not in the health care system) 
-   
-   PP.untreated &lt;- step(1 - OR.bednet[2]) # probability that using untreated bed net vs. no bed net reduces odds of malaria
-   PP.treated &lt;- step(1- OR.bednet[4]) # probability that using treated vs. untreated bednet reduces odds of malaria
-}</code></pre>
-<div class="sourceCode" id="cb1721"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1721-1"><a href="Bayes-GLM.html#cb1721-1"></a><span class="co"># Read in the data: </span></span>
-<span id="cb1721-2"><a href="Bayes-GLM.html#cb1721-2"></a></span>
-<span id="cb1721-3"><a href="Bayes-GLM.html#cb1721-3"></a>Data &lt;-<span class="st"> </span><span class="kw">read_delim</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/malaria-data.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>), <span class="dt">delim =</span> <span class="st">&quot; &quot;</span>)</span></code></pre></div>
-<pre><code>## Parsed with column specification:
-## cols(
-##   POP = col_double(),
-##   MALARIA = col_character(),
-##   AGE = col_character(),
-##   BEDNET = col_character(),
-##   GREEN = col_character(),
-##   PHC = col_character(),
-##   VILLAGE = col_character()
-## )</code></pre>
-<div class="sourceCode" id="cb1723"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1723-1"><a href="Bayes-GLM.html#cb1723-1"></a><span class="co"># Data file for the model</span></span>
-<span id="cb1723-2"><a href="Bayes-GLM.html#cb1723-2"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb1723-3"><a href="Bayes-GLM.html#cb1723-3"></a>  <span class="dt">POP =</span> Data<span class="op">$</span>POP, </span>
-<span id="cb1723-4"><a href="Bayes-GLM.html#cb1723-4"></a>  <span class="dt">MALARIA =</span> Data<span class="op">$</span>MALARIA, </span>
-<span id="cb1723-5"><a href="Bayes-GLM.html#cb1723-5"></a>  <span class="dt">AGE =</span> Data<span class="op">$</span>AGE, </span>
-<span id="cb1723-6"><a href="Bayes-GLM.html#cb1723-6"></a>  <span class="dt">BEDNET =</span> Data<span class="op">$</span>BEDNET,</span>
-<span id="cb1723-7"><a href="Bayes-GLM.html#cb1723-7"></a>  <span class="dt">GREEN =</span> Data<span class="op">$</span>GREEN,</span>
-<span id="cb1723-8"><a href="Bayes-GLM.html#cb1723-8"></a>  <span class="dt">PHC =</span> Data<span class="op">$</span>PHC</span>
-<span id="cb1723-9"><a href="Bayes-GLM.html#cb1723-9"></a>)</span>
-<span id="cb1723-10"><a href="Bayes-GLM.html#cb1723-10"></a></span>
-<span id="cb1723-11"><a href="Bayes-GLM.html#cb1723-11"></a></span>
-<span id="cb1723-12"><a href="Bayes-GLM.html#cb1723-12"></a><span class="co"># initial values for the model</span></span>
-<span id="cb1723-13"><a href="Bayes-GLM.html#cb1723-13"></a><span class="co"># the choice is arbitrary</span></span>
-<span id="cb1723-14"><a href="Bayes-GLM.html#cb1723-14"></a></span>
-<span id="cb1723-15"><a href="Bayes-GLM.html#cb1723-15"></a>inits &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb1723-16"><a href="Bayes-GLM.html#cb1723-16"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="fl">-0.51</span>, </span>
-<span id="cb1723-17"><a href="Bayes-GLM.html#cb1723-17"></a>     <span class="dt">beta.age =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="fl">-1.68</span>), </span>
-<span id="cb1723-18"><a href="Bayes-GLM.html#cb1723-18"></a>     <span class="dt">beta.bednet =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="fl">-2.41</span>,  <span class="fl">0.68</span>), </span>
-<span id="cb1723-19"><a href="Bayes-GLM.html#cb1723-19"></a>     <span class="dt">beta.green =</span> <span class="fl">-0.23</span>, </span>
-<span id="cb1723-20"><a href="Bayes-GLM.html#cb1723-20"></a>     <span class="dt">beta.phc =</span> <span class="fl">1.82</span>),</span>
-<span id="cb1723-21"><a href="Bayes-GLM.html#cb1723-21"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="fl">1.29</span>, </span>
-<span id="cb1723-22"><a href="Bayes-GLM.html#cb1723-22"></a>      <span class="dt">beta.age =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="fl">0.49</span>, <span class="fl">-0.38</span>, <span class="fl">-0.04</span>),  </span>
-<span id="cb1723-23"><a href="Bayes-GLM.html#cb1723-23"></a>      <span class="dt">beta.bednet =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="fl">6.85</span>,  <span class="fl">0.09</span>), </span>
-<span id="cb1723-24"><a href="Bayes-GLM.html#cb1723-24"></a>      <span class="dt">beta.green =</span> <span class="fl">2.66</span>, </span>
-<span id="cb1723-25"><a href="Bayes-GLM.html#cb1723-25"></a>      <span class="dt">beta.phc =</span> <span class="fl">-0.31</span>)</span>
-<span id="cb1723-26"><a href="Bayes-GLM.html#cb1723-26"></a>)</span>
-<span id="cb1723-27"><a href="Bayes-GLM.html#cb1723-27"></a></span>
-<span id="cb1723-28"><a href="Bayes-GLM.html#cb1723-28"></a></span>
-<span id="cb1723-29"><a href="Bayes-GLM.html#cb1723-29"></a></span>
-<span id="cb1723-30"><a href="Bayes-GLM.html#cb1723-30"></a><span class="co"># Set monitors on nodes of interest</span></span>
-<span id="cb1723-31"><a href="Bayes-GLM.html#cb1723-31"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.bednet&quot;</span>, <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;PP.treated&quot;</span>, <span class="st">&quot;PP.untreated&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)</span>
-<span id="cb1723-32"><a href="Bayes-GLM.html#cb1723-32"></a></span>
-<span id="cb1723-33"><a href="Bayes-GLM.html#cb1723-33"></a></span>
-<span id="cb1723-34"><a href="Bayes-GLM.html#cb1723-34"></a><span class="co"># fit the model in jags</span></span>
-<span id="cb1723-35"><a href="Bayes-GLM.html#cb1723-35"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
-<span id="cb1723-36"><a href="Bayes-GLM.html#cb1723-36"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1723-37"><a href="Bayes-GLM.html#cb1723-37"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-editted.txt&quot;</span>,</span>
-<span id="cb1723-38"><a href="Bayes-GLM.html#cb1723-38"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1723-39"><a href="Bayes-GLM.html#cb1723-39"></a>                    <span class="dt">parameters.to.save =</span> parameters,</span>
-<span id="cb1723-40"><a href="Bayes-GLM.html#cb1723-40"></a>                     <span class="dt">n.iter =</span> <span class="dv">1000</span>,</span>
-<span id="cb1723-41"><a href="Bayes-GLM.html#cb1723-41"></a>                     <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb1723-42"><a href="Bayes-GLM.html#cb1723-42"></a>                     <span class="dt">inits =</span> inits,</span>
-<span id="cb1723-43"><a href="Bayes-GLM.html#cb1723-43"></a>                     <span class="dt">n.burnin =</span> <span class="dv">0</span>,</span>
-<span id="cb1723-44"><a href="Bayes-GLM.html#cb1723-44"></a>                     <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb1723-45"><a href="Bayes-GLM.html#cb1723-45"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
-<pre><code>## Compiling model graph
-##    Resolving undeclared variables
-##    Allocating nodes
-## Graph information:
-##    Observed stochastic nodes: 149
-##    Unobserved stochastic nodes: 8
-##    Total graph size: 1037
-## 
-## Initializing model</code></pre>
-<div class="sourceCode" id="cb1725"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1725-1"><a href="Bayes-GLM.html#cb1725-1"></a><span class="co"># Show the trace plot</span></span>
-<span id="cb1725-2"><a href="Bayes-GLM.html#cb1725-2"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(jagsModel)</span>
-<span id="cb1725-3"><a href="Bayes-GLM.html#cb1725-3"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(Simulated)</span>
-<span id="cb1725-4"><a href="Bayes-GLM.html#cb1725-4"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1725-5"><a href="Bayes-GLM.html#cb1725-5"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
-<span id="cb1725-6"><a href="Bayes-GLM.html#cb1725-6"></a>                          <span class="st">&quot;OR.bednet[2]&quot;</span>, <span class="st">&quot;OR.bednet[3]&quot;</span>, <span class="st">&quot;OR.bednet[4]&quot;</span>,</span>
-<span id="cb1725-7"><a href="Bayes-GLM.html#cb1725-7"></a>                          <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1725-8"><a href="Bayes-GLM.html#cb1725-8"></a><span class="st">  </span><span class="kw">ggs_traceplot</span>()</span></code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0701"></span>
-<img src="bookdown_files/figure-html/BayesianPractical0701-1.png" alt="Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
-<p class="caption">
-圖 87.1: Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.
-</p>
-</div>
-<pre><code>## Potential scale reduction factors:
-## 
-##               Point est. Upper C.I.
-## OR.age[2]          1.000       1.00
-## OR.age[3]          1.006       1.01
-## OR.age[4]          0.999       1.00
-## OR.bednet[2]       1.001       1.01
-## OR.bednet[3]       1.010       1.04
-## OR.bednet[4]       1.003       1.02
-## OR.green           1.006       1.03
-## OR.phc             1.001       1.00
-## PP.treated         1.000       1.00
-## PP.untreated       1.008       1.03
-## baseline.prev      1.003       1.01
-## deviance           1.009       1.03
-## 
-## Multivariate psrf
-## 
-## 1.03</code></pre>
-<div class="figure" style="text-align: center"><span id="fig:BayesianPractical07021"></span>
-<img src="bookdown_files/figure-html/BayesianPractical0702-1.png" alt="Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
-<p class="caption">
-圖 87.2: Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.
-</p>
-</div>
-<div class="figure" style="text-align: center"><span id="fig:BayesianPractical07022"></span>
-<img src="bookdown_files/figure-html/BayesianPractical0702-2.png" alt="Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
-<p class="caption">
-圖 87.3: Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.
-</p>
-</div>
-<p>基本可以認爲刨除前1000次取樣 (burn-in) 可以達到收斂。</p>
-<div class="sourceCode" id="cb1727"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1727-1"><a href="Bayes-GLM.html#cb1727-1"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
-<span id="cb1727-2"><a href="Bayes-GLM.html#cb1727-2"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1727-3"><a href="Bayes-GLM.html#cb1727-3"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-editted.txt&quot;</span>,</span>
-<span id="cb1727-4"><a href="Bayes-GLM.html#cb1727-4"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1727-5"><a href="Bayes-GLM.html#cb1727-5"></a>                    <span class="dt">parameters.to.save =</span> parameters,</span>
-<span id="cb1727-6"><a href="Bayes-GLM.html#cb1727-6"></a>                     <span class="dt">n.iter =</span> <span class="dv">26000</span>,</span>
-<span id="cb1727-7"><a href="Bayes-GLM.html#cb1727-7"></a>                     <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb1727-8"><a href="Bayes-GLM.html#cb1727-8"></a>                     <span class="dt">inits =</span> inits,</span>
-<span id="cb1727-9"><a href="Bayes-GLM.html#cb1727-9"></a>                     <span class="dt">n.burnin =</span> <span class="dv">1000</span>,</span>
-<span id="cb1727-10"><a href="Bayes-GLM.html#cb1727-10"></a>                     <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb1727-11"><a href="Bayes-GLM.html#cb1727-11"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
-<pre><code>## Compiling model graph
-##    Resolving undeclared variables
-##    Allocating nodes
-## Graph information:
-##    Observed stochastic nodes: 149
-##    Unobserved stochastic nodes: 8
-##    Total graph size: 1037
-## 
-## Initializing model</code></pre>
-<div class="sourceCode" id="cb1729"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1729-1"><a href="Bayes-GLM.html#cb1729-1"></a><span class="kw">print</span>(jagsModel)</span></code></pre></div>
-<pre><code>## Inference for Bugs model at &quot;/Users/wangcc.me/Downloads/LSHTMlearningnote/backupfiles/malaria-model-editted.txt&quot;, fit using jags,
-##  2 chains, each with 26000 iterations (first 1000 discarded)
-##  n.sims = 50000 iterations saved
-##               mu.vect sd.vect    2.5%     25%     50%     75%   97.5%  Rhat n.eff
-## OR.age[2]       1.735   0.415   1.086   1.449   1.688   1.968   2.639 1.001 11000
-## OR.age[3]       2.004   0.461   1.278   1.687   1.953   2.265   3.016 1.001  7900
-## OR.age[4]       2.321   0.593   1.467   1.944   2.260   2.632   3.511 1.001 11000
-## OR.bednet[2]    0.880   0.162   0.606   0.765   0.866   0.978   1.240 1.001  9200
-## OR.bednet[3]    0.695   0.168   0.421   0.576   0.677   0.794   1.076 1.001 50000
-## OR.bednet[4]    0.799   0.176   0.508   0.675   0.782   0.904   1.186 1.001 12000
-## OR.green        0.975   0.024   0.930   0.959   0.975   0.991   1.022 1.001 16000
-## OR.phc          0.712   0.130   0.491   0.620   0.700   0.792   0.998 1.001 11000
-## PP.treated      0.877   0.329   0.000   1.000   1.000   1.000   1.000 1.001  6400
-## PP.untreated    0.786   0.410   0.000   1.000   1.000   1.000   1.000 1.001 26000
-## baseline.prev   0.288   0.043   0.208   0.258   0.286   0.316   0.377 1.001 42000
-## deviance      461.079   5.654 455.197 458.098 460.383 463.284 470.646 1.045  6700
-## 
-## For each parameter, n.eff is a crude measure of effective sample size,
-## and Rhat is the potential scale reduction factor (at convergence, Rhat=1).
-## 
-## DIC info (using the rule, pD = var(deviance)/2)
-## pD = 16.0 and DIC = 477.1
-## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<p>參照組 (年齡小於2歲，不使用蚊帳，生活的村莊植被水平爲全部的平均值，且不在 PHC 管轄範圍內) 患瘧疾的百分比估計在 28.8% 左右 (<code>baseline.prev</code>)。極強的證據表明隨着年齡的增加，患瘧疾的危險度（比值）也升高。使用蚊帳可能可以降低一些些換瘧疾的危險度（比值），(<code>OR.bednet[2] = 0.88</code>) 但是其95%可信區間範圍是包括了1的 (0.605, 1.237)。使用未經殺蟲劑處理的蚊帳，也有79%的概率能夠降低兒童患瘧疾。和使用未經殺蟲劑處理的蚊帳相比，經過殺蟲劑處理的蚊帳也可能(有87.6%的概率)可以進一步降低兒童患瘧疾的危險 (<code>OR.bednet[4]</code> = 0.799, 95% 可信區間 0.51, 1.19)。和不在PHC管轄內的村莊相比，在PHC管轄的村莊可能可以降低兒童患瘧疾的危險 (<code>OR.phc</code> = 0.711，95% 可信區間 0.49, 0.99)。</p>
-<p>把模型中發現和兒童發生瘧疾無太大關係的變量從貝葉斯邏輯迴歸模型中拿掉以後重新跑新的模型，和之前包含了全部變量的而模型相比較，你覺得哪個模型更合適？</p>
-<p>由於植被指標變量和是否使用蚊帳的變量和是否發生瘧疾似乎關係不太大，我們把這兩個變量從模型中拿掉，再跑這個貝葉斯模型:</p>
-<pre><code># Logistic regression model for malaria data
-	
-model {
-   for(i in 1:149) {
-      MALARIA[i] ~ dbin(p[i], POP[i])
-      logit(p[i]) &lt;- alpha + beta.age[AGE[i]] + beta.phc*PHC[i]  
-   }
-  
-   # vague priors on regression coefficients
-   alpha ~ dnorm(0, 0.00001)
-   beta.age[1] &lt;- 0          # set coefficient for baseline age group to zero (corner point constraint)
-   beta.age[2] ~ dnorm(0, 0.00001)     
-   beta.age[3] ~ dnorm(0, 0.00001)     
-   beta.age[4] ~ dnorm(0, 0.00001)     
-   beta.phc ~ dnorm(0, 0.00001)     
- 
-   # calculate odds ratios of interest
-   OR.age[2] &lt;- exp(beta.age[2]) # OR of malaria for age group 2 vs. age group 1
-   OR.age[3] &lt;- exp(beta.age[3]) # OR of malaria for age group 3 vs. age group 1
-   OR.age[4] &lt;- exp(beta.age[4]) # OR of malaria for age group 4 vs. age group 1
-   
-   OR.phc &lt;- exp(beta.phc)      # OR of malaria sfor children living in villages belonging to the primary health care system versus children living in villages not in the health care system 
-   logit(baseline.prev) &lt;- alpha # baseline prevalence of malaria in baseline group (i.e. child in age group 1, sleeps without bednet, and lives in a village with average greenness index and not in the health care system) 
-}</code></pre>
-<div class="sourceCode" id="cb1732"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1732-1"><a href="Bayes-GLM.html#cb1732-1"></a><span class="co"># Data file for the model</span></span>
-<span id="cb1732-2"><a href="Bayes-GLM.html#cb1732-2"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb1732-3"><a href="Bayes-GLM.html#cb1732-3"></a>  <span class="dt">POP =</span> Data<span class="op">$</span>POP, </span>
-<span id="cb1732-4"><a href="Bayes-GLM.html#cb1732-4"></a>  <span class="dt">MALARIA =</span> Data<span class="op">$</span>MALARIA, </span>
-<span id="cb1732-5"><a href="Bayes-GLM.html#cb1732-5"></a>  <span class="dt">AGE =</span> Data<span class="op">$</span>AGE, </span>
-<span id="cb1732-6"><a href="Bayes-GLM.html#cb1732-6"></a>  <span class="dt">PHC =</span> Data<span class="op">$</span>PHC</span>
-<span id="cb1732-7"><a href="Bayes-GLM.html#cb1732-7"></a>)</span>
-<span id="cb1732-8"><a href="Bayes-GLM.html#cb1732-8"></a></span>
-<span id="cb1732-9"><a href="Bayes-GLM.html#cb1732-9"></a></span>
-<span id="cb1732-10"><a href="Bayes-GLM.html#cb1732-10"></a><span class="co"># initial values for the model</span></span>
-<span id="cb1732-11"><a href="Bayes-GLM.html#cb1732-11"></a><span class="co"># the choice is arbitrary</span></span>
-<span id="cb1732-12"><a href="Bayes-GLM.html#cb1732-12"></a></span>
-<span id="cb1732-13"><a href="Bayes-GLM.html#cb1732-13"></a>inits &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb1732-14"><a href="Bayes-GLM.html#cb1732-14"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="fl">-0.51</span>, </span>
-<span id="cb1732-15"><a href="Bayes-GLM.html#cb1732-15"></a>     <span class="dt">beta.age =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="fl">-1.68</span>), </span>
-<span id="cb1732-16"><a href="Bayes-GLM.html#cb1732-16"></a>     <span class="dt">beta.phc =</span> <span class="fl">1.82</span>),</span>
-<span id="cb1732-17"><a href="Bayes-GLM.html#cb1732-17"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="fl">1.29</span>, </span>
-<span id="cb1732-18"><a href="Bayes-GLM.html#cb1732-18"></a>      <span class="dt">beta.age =</span> <span class="kw">c</span>(<span class="ot">NA</span>, <span class="fl">0.49</span>, <span class="fl">-0.38</span>, <span class="fl">-0.04</span>),  </span>
-<span id="cb1732-19"><a href="Bayes-GLM.html#cb1732-19"></a>      <span class="dt">beta.phc =</span> <span class="fl">-0.31</span>)</span>
-<span id="cb1732-20"><a href="Bayes-GLM.html#cb1732-20"></a>)</span>
-<span id="cb1732-21"><a href="Bayes-GLM.html#cb1732-21"></a></span>
-<span id="cb1732-22"><a href="Bayes-GLM.html#cb1732-22"></a></span>
-<span id="cb1732-23"><a href="Bayes-GLM.html#cb1732-23"></a></span>
-<span id="cb1732-24"><a href="Bayes-GLM.html#cb1732-24"></a><span class="co"># Set monitors on nodes of interest</span></span>
-<span id="cb1732-25"><a href="Bayes-GLM.html#cb1732-25"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)</span>
-<span id="cb1732-26"><a href="Bayes-GLM.html#cb1732-26"></a></span>
-<span id="cb1732-27"><a href="Bayes-GLM.html#cb1732-27"></a><span class="co"># fit the model in jags</span></span>
-<span id="cb1732-28"><a href="Bayes-GLM.html#cb1732-28"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
-<span id="cb1732-29"><a href="Bayes-GLM.html#cb1732-29"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1732-30"><a href="Bayes-GLM.html#cb1732-30"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-dropped.txt&quot;</span>,</span>
-<span id="cb1732-31"><a href="Bayes-GLM.html#cb1732-31"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1732-32"><a href="Bayes-GLM.html#cb1732-32"></a>                    <span class="dt">parameters.to.save =</span> parameters,</span>
-<span id="cb1732-33"><a href="Bayes-GLM.html#cb1732-33"></a>                     <span class="dt">n.iter =</span> <span class="dv">1000</span>,</span>
-<span id="cb1732-34"><a href="Bayes-GLM.html#cb1732-34"></a>                     <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb1732-35"><a href="Bayes-GLM.html#cb1732-35"></a>                     <span class="dt">inits =</span> inits,</span>
-<span id="cb1732-36"><a href="Bayes-GLM.html#cb1732-36"></a>                     <span class="dt">n.burnin =</span> <span class="dv">0</span>,</span>
-<span id="cb1732-37"><a href="Bayes-GLM.html#cb1732-37"></a>                     <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb1732-38"><a href="Bayes-GLM.html#cb1732-38"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
-<pre><code>## Compiling model graph
-##    Resolving undeclared variables
-##    Allocating nodes
-## Graph information:
-##    Observed stochastic nodes: 149
-##    Unobserved stochastic nodes: 5
-##    Total graph size: 626
-## 
-## Initializing model</code></pre>
-<div class="sourceCode" id="cb1734"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1734-1"><a href="Bayes-GLM.html#cb1734-1"></a><span class="co"># Show the trace plot</span></span>
-<span id="cb1734-2"><a href="Bayes-GLM.html#cb1734-2"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(jagsModel)</span>
-<span id="cb1734-3"><a href="Bayes-GLM.html#cb1734-3"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(Simulated)</span>
-<span id="cb1734-4"><a href="Bayes-GLM.html#cb1734-4"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1734-5"><a href="Bayes-GLM.html#cb1734-5"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
-<span id="cb1734-6"><a href="Bayes-GLM.html#cb1734-6"></a>                          <span class="st">&quot;baseline.prev&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1734-7"><a href="Bayes-GLM.html#cb1734-7"></a><span class="st">  </span><span class="kw">ggs_traceplot</span>()</span></code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0704"></span>
-<img src="bookdown_files/figure-html/BayesianPractical0704-1.png" alt="Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
-<p class="caption">
-圖 87.4: Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.
-</p>
-</div>
-<pre><code>## Potential scale reduction factors:
-## 
-##               Point est. Upper C.I.
-## OR.age[2]           1.00       1.00
-## OR.age[3]           1.00       1.00
-## OR.age[4]           1.00       1.01
-## OR.phc              1.01       1.01
-## baseline.prev       1.00       1.00
-## deviance            1.01       1.01
-## 
-## Multivariate psrf
-## 
-## 1</code></pre>
-<div class="figure" style="text-align: center"><span id="fig:BayesianPractical0705"></span>
-<img src="bookdown_files/figure-html/BayesianPractical0705-1.png" alt="Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
-<p class="caption">
-圖 87.5: Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.
-</p>
-</div>
-<div class="sourceCode" id="cb1736"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1736-1"><a href="Bayes-GLM.html#cb1736-1"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
-<span id="cb1736-2"><a href="Bayes-GLM.html#cb1736-2"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1736-3"><a href="Bayes-GLM.html#cb1736-3"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-dropped.txt&quot;</span>,</span>
-<span id="cb1736-4"><a href="Bayes-GLM.html#cb1736-4"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1736-5"><a href="Bayes-GLM.html#cb1736-5"></a>                    <span class="dt">parameters.to.save =</span> parameters,</span>
-<span id="cb1736-6"><a href="Bayes-GLM.html#cb1736-6"></a>                     <span class="dt">n.iter =</span> <span class="dv">26000</span>,</span>
-<span id="cb1736-7"><a href="Bayes-GLM.html#cb1736-7"></a>                     <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb1736-8"><a href="Bayes-GLM.html#cb1736-8"></a>                     <span class="dt">inits =</span> inits,</span>
-<span id="cb1736-9"><a href="Bayes-GLM.html#cb1736-9"></a>                     <span class="dt">n.burnin =</span> <span class="dv">1000</span>,</span>
-<span id="cb1736-10"><a href="Bayes-GLM.html#cb1736-10"></a>                     <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb1736-11"><a href="Bayes-GLM.html#cb1736-11"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
-<pre><code>## Compiling model graph
-##    Resolving undeclared variables
-##    Allocating nodes
-## Graph information:
-##    Observed stochastic nodes: 149
-##    Unobserved stochastic nodes: 5
-##    Total graph size: 626
-## 
-## Initializing model</code></pre>
-<div class="sourceCode" id="cb1738"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1738-1"><a href="Bayes-GLM.html#cb1738-1"></a><span class="kw">print</span>(jagsModel)</span></code></pre></div>
-<pre><code>## Inference for Bugs model at &quot;/Users/wangcc.me/Downloads/LSHTMlearningnote/backupfiles/malaria-model-dropped.txt&quot;, fit using jags,
-##  2 chains, each with 26000 iterations (first 1000 discarded)
-##  n.sims = 50000 iterations saved
-##               mu.vect sd.vect    2.5%     25%     50%     75%   97.5%  Rhat n.eff
-## OR.age[2]       1.678   0.382   1.055   1.407   1.636   1.902   2.542 1.001 50000
-## OR.age[3]       1.964   0.437   1.252   1.653   1.917   2.218   2.955 1.001 40000
-## OR.age[4]       2.313   0.524   1.463   1.939   2.255   2.624   3.491 1.001 50000
-## OR.phc          0.651   0.106   0.468   0.576   0.642   0.717   0.885 1.001 43000
-## baseline.prev   0.270   0.036   0.202   0.244   0.268   0.293   0.344 1.001 50000
-## deviance      461.528   3.232 457.291 459.160 460.882 463.181 469.544 1.001 28000
-## 
-## For each parameter, n.eff is a crude measure of effective sample size,
-## and Rhat is the potential scale reduction factor (at convergence, Rhat=1).
-## 
-## DIC info (using the rule, pD = var(deviance)/2)
-## pD = 5.2 and DIC = 466.8
-## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<p>這個新模型的DIC和之間包含全部變量的模型相比降低了大概3左右，也就是去掉三個共變量對模型的影響。DIC的變化爲3時可認爲幾乎模型的擬合效果沒有太大的變化。出於簡約化模型的考慮，我們選擇這個新的變量較少的模型。</p>
-</div>
-</div>
-<h3>References</h3>
-<div id="refs" class="references">
-<div id="ref-diggle2002childhood">
-<p>Diggle, Peter, Rana Moyeed, Barry Rowlingson, and Madeleine Thomson. 2002. “Childhood Malaria in the Gambia: A Case-Study in Model-Based Geostatistics.” <em>Journal of the Royal Statistical Society: Series C (Applied Statistics)</em> 51 (4): 493–506.</p>
-</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="Bayes-design.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="Bayes-Hier.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="causal-mediation-analysis.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="references.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -2293,7 +1850,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/12-Bayesian-stats.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/29SME.Rmd",
 "text": "編輯"
 },
 "history": {
