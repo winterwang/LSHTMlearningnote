@@ -1,0 +1,119 @@
+
+
+### Q1
+
+a) 假設十個對象中有三人死亡，用二項分佈模型來模擬這個例子，求這個例子中參數 $\pi$ 的似然方程和圖形 (likelihood) ?
+
+**解**
+
+$$\begin{aligned}
+ L(\pi|3) &= \binom{10}{3}\pi^3(1-\pi)^{10-3} \\
+ \text{omitting } & \text{terms not in } \pi\\
+ \Rightarrow \ell(\pi|3) &= \log[\pi^3(1-\pi)^7] \\
+ &= 3\log\pi+7\log(1-\pi)\\
+ \Rightarrow \ell^\prime(\pi|3)&= \frac{3}{\pi}-\frac{7}{1-\pi} \\
+\text{let} \; \ell^\prime& =0\\
+ &\frac{3}{\pi}-\frac{7}{1-\pi} = 0 \\
+ &\frac{3-10\pi}{\pi(1-\pi)} = 0 \\
+ \Rightarrow \text{MLE} &= \hat\pi = 0.3
+\end{aligned}$$
+
+
+```{r bin3-10,fig.width=6, echo=FALSE, message=FALSE, fig.cap='Binomial likelihood function 3 out of 10 subjects', fig.align='center', out.width='90%', cache=TRUE}
+pi <- seq(0, 1, by=0.01)
+
+L <- (pi^3)*((1-pi)^7)
+plot(pi, L, type = "l", ylim = c(0, 0.0025),yaxt="n", col="darkblue",
+     frame.plot = FALSE, ylab = "", xlab = "\U03C0")
+grid(NA, 5, lwd = 1)
+abline(v=0.3, lty=2)
+axis(1, at=0.3, las=0)
+axis(2, at=seq(0,0.0025,0.0005), las=2)
+#title(main = "Binomial likelihood function\n 3 out of 10 subjects")
+```
+
+
+b) 計算似然比，並作圖，注意方程圖形未變，$y$ 軸的變化；取對數似然比，並作圖
+
+```{r bin3-10-ratio,fig.width=6,  message=FALSE, warning=FALSE, message=FALSE, fig.cap='Binomial likelihood ratio function 3 out of 10 subjects', fig.align='center', out.width='90%', cache=TRUE}
+LR <- L/max(L) ; head(LR)
+plot(pi, LR, type = "l", ylim = c(0, 1),yaxt="n", col="darkblue",
+     frame.plot = FALSE, ylab = "", xlab = "\U03C0")
+grid(NA, 5, lwd = 1)
+axis(2, at=seq(0,1,0.2), las=2)
+title(main = "Binomial likelihood ratio function\n 3 out of 10 subjects")
+```
+
+
+```{r bin3-10-logratio,fig.width=6,  message=FALSE, warning=FALSE, message=FALSE, fig.cap='Binomial log-likelihood ratio function 3 out of 10 subjects', fig.align='center', out.width='90%', cache=TRUE}
+logLR <- log(L/max(L))
+plot(pi, logLR, type = "l", ylim = c(-4, 0),yaxt="n", col="darkblue",
+     frame.plot = FALSE, ylab = "", xlab = "\U03C0")
+grid(NA, 5, lwd = 1)
+axis(2, at=seq(-4,0,1), las=2)
+#title(main = "Binomial log-likelihood ratio function\n 3 out of 10 subjects")
+abline(h=-1.92, lty=1, col="red")
+axis(4, at=-1.92, las=0)
+```
+
+### Q2
+
+a) 與上面用同樣的模型，但是觀察人數變爲 $100$ 人 患病人數爲 $30$ 人，試作對數似然比方程之圖形，與上圖對比：
+
+```{r bin3-10-30-100-logllr,fig.asp=.7, fig.width=6,  echo=FALSE, warning=FALSE, message=FALSE, fig.cap='Binomial log-likelihood ratio function 3 out of 10 and 30 out of 100 subjects', fig.align='center', out.width='90%', cache=TRUE}
+par(mai = c(1.2, 0.5, 1, 0.7))
+logLR_30 <- log((pi^30)*((1-pi)^70)/max((pi^30)*((1-pi)^70)))
+plot(pi, logLR, type = "l", ylim = c(-4, 0),yaxt="n", col="darkblue",
+     frame.plot = FALSE, ylab = "", xlab = "\U03C0")
+lines(pi, logLR_30, col="darkred")
+grid(NA, 5, lwd = 1)
+axis(2, at=seq(-4,0,1), las=2)
+#title(main = "Binomial log-likelihood ratio function\n 3 out of 10 and 30 out of 100 subjects")
+abline(h=-1.92, lty=1, col="darkred")
+axis(4, at=-1.92, las=0)
+legend(x=0.1, y= -5.8 ,xpd = TRUE,  legend=c("logLR","LogLR_30"), bty = "n",
+       col=c("black","darkred"), lty=c(1,1), horiz = TRUE) #the legend is below the graph
+```
+
+可以看出，兩組數據的 MLE 都是一致的， $\hat\pi=0.3$，但是對數似然比方程圖形在 樣本量爲 $n=100$ 時比 $n=10$ 時窄很多，由此產生的似然比信賴區間也就窄很多(精確很多) 。所以對數似然比方程的曲率(二階導數) ，反映了觀察獲得數據提供的對總體參數 $\pi$ 推斷過程中的信息量。而且當樣本量較大時，對數似然比方程也更加接近左右對稱的二次方程曲線。
+
+
+### Q3
+
+在一個實施了160人年的追蹤調查中，觀察到8個死亡案例。使用泊松分佈模型，繪製對數似然比方程圖形，從圖形上目視推測極大似然比的 $95\%$ 信賴區間。
+
+**解**
+
+$$\begin{aligned}
+ d = 8, \;p &= 160\; \text{person}\cdot \text{year} \\
+  \Rightarrow \text{D}\sim \text{Poi}(\mu &=\lambda p) \\
+ L(\lambda|\text{data}) &= \text{Prob}(D=d=8) \\
+   &=  e^{-\mu}\frac{\mu^d}{d!} \\
+   &=   e^{-\lambda p}\frac{\lambda^d p^d}{d!} \\
+  \text{omitting}&\; \text{terms not in }\lambda \\
+   &= e^{-\lambda p}\lambda^d \\
+\Rightarrow \ell(\lambda|\text{data})&= \log(e^{-\lambda p}\lambda^d) \\
+     &= d\cdot \log(\lambda)-\lambda p \\
+     & = 8\times \log(\lambda) - 160\times\lambda
+\end{aligned}$$
+
+
+```{r Poi-llr-8-160,fig.width=6,  echo=FALSE, warning=FALSE, message=FALSE, fig.cap='Poisson log-likelihood ratio function\n 8 events in 160 person-years', fig.align='center', out.width='90%', cache=TRUE}
+lambda <- seq(0.01, 0.10, by=0.001)
+LogLR <- 8*log(lambda)-lambda*160-max(8*log(lambda)-lambda*160)
+plot(lambda, LogLR, type = "l", ylim = c(-4, 0),yaxt="n", col="darkblue",
+     frame.plot = FALSE, ylab = "", xlab = "\U03C0")
+grid(NA, 5, lwd = 1)
+axis(2, at=seq(-4,0,1), las=2)
+#title(main = "Poisson log-likelihood ratio function\n 8 events in 160 person-years")
+abline(h=-1.92, lty=1, col="darkred")
+axis(4, at=-1.92, las=0)
+```
+
+```{r infertable, echo=FALSE, cache=TRUE}
+kable(data.frame(lambda, LogLR), "html") %>%
+  kable_styling("striped", full_width = F, position = "center") %>%
+  row_spec(c(13,14,84,85), bold = T, color = "white", background = "#D7261E")
+```
+
+所以從列表數據結合圖形， 可以找到信賴區間的下限在 0.022~0.023 之間， 上限在 0.093～0.094 之間。
