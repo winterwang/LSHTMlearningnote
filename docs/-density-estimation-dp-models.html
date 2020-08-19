@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 5 章 二項分佈的概念 Binomial distribution | 醫學統計學</title>
-  <meta name="description" content="第 5 章 二項分佈的概念 Binomial distribution | 醫學統計學" />
+  <title>第 92 章 密度估計 Density estimation - 狄雷克雷過程模型 DP models | 醫學統計學</title>
+  <meta name="description" content="第 92 章 密度估計 Density estimation - 狄雷克雷過程模型 DP models | 醫學統計學" />
   <meta name="generator" content="bookdown 0.20 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 5 章 二項分佈的概念 Binomial distribution | 醫學統計學" />
+  <meta property="og:title" content="第 92 章 密度估計 Density estimation - 狄雷克雷過程模型 DP models | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 5 章 二項分佈的概念 Binomial distribution | 醫學統計學" />
+  <meta name="twitter:title" content="第 92 章 密度估計 Density estimation - 狄雷克雷過程模型 DP models | 醫學統計學" />
   
   
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="bernoulli.html"/>
-<link rel="next" href="poisson.html"/>
+<link rel="prev" href="nonparaBayes-intro.html"/>
+<link rel="next" href="grama-causal-infer.html"/>
 <script src="libs/header-attrs/header-attrs.js"></script>
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
@@ -1662,81 +1662,37 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="binomial" class="section level1" number="5">
-<h1><span class="header-section-number">第 5 章</span> 二項分佈的概念 Binomial distribution</h1>
-<p>二項分佈在醫學研究中至關重要，一組二項分佈的數據，指的通常是 <span class="math inline">\(n\)</span> 次相互獨立的<a href="https://winterwang.github.io/post/probability2-4/">成功率爲 <span class="math inline">\(\pi\)</span> 的伯努利實驗</a> (<span class="math inline">\(n\)</span> independent Bernoulli trials) 中成功的次數。</p>
-<p>當 <span class="math inline">\(X\)</span> 服從二項分佈，記爲 <span class="math inline">\(X \sim binomial(n, \pi)\)</span> 或<span class="math inline">\(X \sim bin(n, \pi)\)</span>。它的(第 <span class="math inline">\(x\)</span> 次實驗的)概率被定義爲：</p>
+<div id="密度估計-density-estimation---狄雷克雷過程模型-dp-models" class="section level1" number="92">
+<h1><span class="header-section-number">第 92 章</span> 密度估計 Density estimation - 狄雷克雷過程模型 DP models</h1>
+<p>這裏我們來探討如何在密度估計 (density estimation) 中使用非參貝葉斯 (BNP) 模型。主要介紹狄雷克雷過程的先驗概率在 BNP 模型中的應用。狄雷克雷過程是目前最常見的BNP。它主要有兩種類型：狄雷克雷過程混合模型 Dirichlet process mixture modeling，和有限狄雷克雷過程 finite Dirichlet process。</p>
+<p>密度估計是常見的需要對來自陌生分佈 <span class="math inline">\(G\)</span> 的獨立同分佈 (i.i.d) 樣本進行推斷時的過程：</p>
 <p><span class="math display">\[
-\begin{align}
-P(X=x) &amp;= ^nC_x\pi^x(1-\pi)^{n-x} \\
-       &amp;= \binom{n}{x}\pi^x(1-\pi)^{n-x} \\
-       &amp; for\;\; x = 0,1,2,\dots,n
-\end{align}
+y_i | G \stackrel{i.i.d}{\sim} G, i = 1, \dots,n
 \]</span></p>
-<div id="二項分佈的期望和方差" class="section level2" number="5.1">
-<h2><span class="header-section-number">5.1</span> 二項分佈的期望和方差</h2>
-<ul>
-<li>期望 <span class="math inline">\(E(X)\)</span>
-<ul>
-<li>若 <span class="math inline">\(X \sim bin(n,\pi)\)</span>，那麼 <span class="math inline">\(X\)</span> 就是這一系列獨立伯努利實驗中成功的次數。</li>
-<li>用 <span class="math inline">\(X_i, i =1,\dots, n\)</span> 標記每個相互獨立的伯努利實驗。</li>
-<li>那麼我們可以知道 <span class="math inline">\(X=\sum_{i=1}^nX_i\)</span>。</li>
-</ul></li>
-</ul>
-<p><span class="math display">\[
-      \begin{align} E(X) &amp;= E(\sum_{i=1}^nX_i)\\
-                         &amp;= E(X_1+X_2+\cdots+X_n) \\
-                         &amp;= E(X_1)+E(X_2)+\cdots+E(X_n)\\
-                         &amp;= \sum_{i=1}^nE(X_i)\\
-                         &amp;= \sum_{i=1}^n\pi \\
-                         &amp;= n\pi
-      \end{align}
-\]</span></p>
-<ul>
-<li>方差 <span class="math inline">\(Var(X)\)</span></li>
-</ul>
-<p><span class="math display">\[
-\begin{align}
-Var(X) &amp;= Var(\sum_{i=1}^nX_i) \\
-        &amp;= Var(X_i+X_2+\cdots+X_n) \\
-        &amp;= Var(X_i)+Var(X_2)+\cdots+Var(X_n) \\
-        &amp;= \sum_{i=1}^nVar(X_i) \\
-        &amp;= n\pi(1-\pi) \\
-\end{align}
-\]</span></p>
+<p>當我們需要對該過程使用貝葉斯理論推斷時，我們需要給 <span class="math inline">\(G\)</span> 補充一個先驗概率分佈 <span class="math inline">\(\pi\)</span>。假設這個 <span class="math inline">\(G\)</span> 的先驗概率分佈需要無限維度參數，也就是需要一個 BNP 先驗概率。</p>
+<div id="狄雷克雷過程-dirichlet-process" class="section level2" number="92.1">
+<h2><span class="header-section-number">92.1</span> 狄雷克雷過程 Dirichlet process</h2>
+<div id="定義-definition" class="section level3" number="92.1.1">
+<h3><span class="header-section-number">92.1.1</span> 定義 definition</h3>
+<p>狄雷克雷過程先驗概率 (DP prior) 是最常見的 BNP 模型。它最早由 <span class="citation">(Ferguson <a href="#ref-ferguson1973bayesian" role="doc-biblioref">1973</a>)</span> 作爲測量概率空間的先驗概率分佈提出 (as a prior on the space of probability measures)。</p>
+
+<div class="definition">
+<span id="def:DP" class="definition"><strong>Definition 92.1  (Dirichlet process-DP)  </strong></span>令 <span class="math inline">\(M &gt; 0\)</span> 且 <span class="math inline">\(G_0\)</span> 是定義在空間 <span class="math inline">\(S\)</span> 上的概率測量 (probability measure)。一個 DP 過程的參數由 <span class="math inline">\((M, G_0)\)</span> 構成。該過程是定義在空間 <span class="math inline">\(S\)</span> 上的一個隨機概率測量，對於任意一個可以測量的子集 <span class="math inline">\(B\)</span> 賦予對應的概率 <span class="math inline">\(G(B)\)</span>。<span class="math inline">\(\{ B_1, \dots, B_k \}\)</span> 構成了整個空間 <span class="math inline">\(S\)</span>。那麼這些子集的聯合概率分佈 joint distribution <span class="math inline">\((G(B_1), \dots, G(B_k))\)</span> 是一個狄雷克雷分佈，它的參數表達如下：
+<span class="math display">\[
+(MG_0(B_1), MG_0(B_2), \dots, MG_0(B_k))
+\]</span>
 </div>
-<div id="hyperdist" class="section level2" number="5.2">
-<h2><span class="header-section-number">5.2</span> 超幾何分佈 hypergeometric distribution</h2>
-<p>假設我們從總人數爲 <span class="math inline">\(N\)</span> 的人羣中，採集一個樣本 <span class="math inline">\(n\)</span>。假如已知在總體人羣中(<span class="math inline">\(N\)</span>)有 <span class="math inline">\(M\)</span> 人患有某種疾病。請問採集的樣本 <span class="math inline">\(X=n\)</span> 中患有這種疾病的人，服從怎樣的分佈？</p>
-<ul>
-<li>從人羣(<span class="math inline">\(N\)</span>)中取出樣本(<span class="math inline">\(n\)</span>)，有 <span class="math inline">\(^NC_n\)</span> 種方法。</li>
-<li>從患病人羣(<span class="math inline">\(M\)</span>)中取出患有該病的人(<span class="math inline">\(x\)</span>)有 <span class="math inline">\(^MC_x\)</span> 種方法。</li>
-<li>樣本中不患病的人(<span class="math inline">\(n-x\)</span>)被採樣的方法有 <span class="math inline">\(^{N-M}C_{n-x}\)</span> 種。</li>
-<li>採集一次 <span class="math inline">\(n\)</span> 人作爲樣本的概率都一樣。因此：</li>
-</ul>
-<p><span class="math display">\[P(X=x)=\frac{\binom{M}{x}\binom{N-M}{n-x}}{\binom{N}{n}}\]</span></p>
+
 </div>
-<div id="樂透中獎概率問題" class="section level2" number="5.3">
-<h2><span class="header-section-number">5.3</span> 樂透中獎概率問題：</h2>
-<ul>
-<li>從數字 <span class="math inline">\(1\sim59\)</span> 中選取 <span class="math inline">\(6\)</span> 個任意號碼</li>
-<li>開獎時從 <span class="math inline">\(59\)</span> 個號碼球中隨機抽取 <span class="math inline">\(6\)</span> 個</li>
-<li>如果六個號碼全部猜中(不分順序)，你可以成爲百萬富翁。請問一次猜中全部 <span class="math inline">\(6\)</span> 個號碼的概率是多少？</li>
-</ul>
-<p>從 <span class="math inline">\(59\)</span> 個號碼中隨機取出任意 <span class="math inline">\(6\)</span> 個號碼的方法有 <span class="math inline">\(^{59}C_6\)</span> 種。
-<span class="math display">\[^{59}C_6=\frac{59!}{6!(59-6)!}=45,057,474\]</span></p>
-<p>每次選取六個號碼做爲一組的可能性相同，所以，你買了一組樂透號碼，能中獎的概率就是 <span class="math inline">\(1/45,057,474 = 0.00000002219\)</span>。你還會再去買彩票麼？</p>
-<div id="如果我只想中其中的-3-個號碼概率有多大" class="section level3" number="5.3.1">
-<h3><span class="header-section-number">5.3.1</span> 如果我只想中其中的 <span class="math inline">\(3\)</span> 個號碼，概率有多大？</h3>
-<p>用超幾何分佈的概率公式：</p>
-<p><span class="math display">\[
-\begin{align}
-P(X=3) &amp;= \frac{^6C_3\times ^{53}C_3}{^{59}C_6} \\
-       &amp;= 0.010
-\end{align}
-\]</span></p>
-<p>你有 <span class="math inline">\(1\%\)</span> 的可能中獎。換句話說，如果中三個以上的數字算中獎的話，你買的彩票中獎的概率低於 <span class="math inline">\(1\%\)</span>。是不是覺得下次送錢給博彩公司的時候還不如跟我一起喝一杯咖啡划算？</p>
 </div>
+</div>
+
+
+
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-ferguson1973bayesian">
+<p>Ferguson, Thomas S. 1973. “A Bayesian Analysis of Some Nonparametric Problems.” <em>The Annals of Statistics</em>, 209–30.</p>
 </div>
 </div>
             </section>
@@ -1744,8 +1700,8 @@ P(X=3) &amp;= \frac{^6C_3\times ^{53}C_3}{^{59}C_6} \\
           </div>
         </div>
       </div>
-<a href="bernoulli.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="poisson.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="nonparaBayes-intro.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="grama-causal-infer.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1776,7 +1732,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/01-Probability.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/13-Bayesian-Nonparametric.Rmd",
 "text": "編輯"
 },
 "history": {
