@@ -5,7 +5,10 @@
 密度估計是常見的需要對來自陌生分佈 $G$ 的獨立同分佈 (i.i.d) 樣本進行推斷時的過程：
 
 $$
+\begin{equation}
 y_i | G \stackrel{i.i.d}{\sim} G, i = 1, \dots,n
+(\#eq:DPsampling)
+\end{equation}
 $$
 
 當我們需要對該過程使用貝葉斯理論推斷時，我們需要給 $G$ 補充一個先驗概率分佈 $\pi$。假設這個 $G$ 的先驗概率分佈需要無限維度參數，也就是需要一個 BNP 先驗概率。
@@ -14,7 +17,7 @@ $$
 
 ### 定義 definition
 
-狄雷克雷過程先驗概率 (DP prior) 是最常見的 BNP 模型。它最早由 [@ferguson1973bayesian] 作爲測量概率空間的先驗概率分佈提出 (as a prior on the space of probability measures)。
+狄雷克雷過程先驗概率 (DP prior) 是最常見的 BNP 模型。它最早由 @ferguson1973bayesian 作爲測量概率空間的先驗概率分佈提出 (as a prior on the space of probability measures)。
 
 ```{definition, label="DP", name = "Dirichlet process-DP"}
 令 $M > 0$ 且 $G_0$ 是定義在空間 $S$ 上的概率測量 (probability measure)。一個 DP 過程的參數由 $(M, G_0)$ 構成。該過程是定義在空間 $S$ 上的一個隨機概率測量，對於任意一個可以測量的子集 $B$ 賦予對應的概率 $G(B)$。$\{ B_1, \dots, B_k \}$ 構成了整個空間 $S$。那麼這些子集的聯合概率分佈 joint distribution $(G(B_1), \dots, G(B_k))$ 是一個狄雷克雷分佈，它的參數表達如下：
@@ -25,8 +28,33 @@ $$
 
 
 
+這個 DP 過程又可簡寫爲 **DP**$(MG_0)$，或者 **DP**$(M,G_0)$。其中參數 $M$ 叫做精確度 (precision) 或者總量參數 (total mass parameter)。參數 $G_0$ 則又叫做中心測量 (centering measure)，他們的乘積 $\alpha \equiv MG_0$ 被叫做狄雷克雷過程的基礎測量 (base measure)。
+
+狄雷克雷過程一個重要性質是 $G$ 的離散特性 (discrete nature)。由於是一個離散型隨機概率測量，我們總是可以把 $G$ 改寫成是每個測量位點的權重之和 (sum of point masses)：$G(\cdot) = \sum_{h = 1}^\infty w_h \delta_{m_h}(\cdot)$。這個權重之和中，$w_1, w_2, \dots$ 就是概率權重，$\delta_x(\cdot)$ 標記的是 $x$ 的狄拉克位置測量 (Dirac measure at $x$)。狄雷克雷另一個重要性質是它強大的極微小支持 (largely weak support)。這意味着，在較爲溫和的條件下，任意的分佈都可以通過中心測量 $G_0$，和隨機概率測量模擬和近似 (well approximated)。
+
+**掰棍子過程 (stick-breaking process)** 是利用狄雷克雷過程中 $G(\cdot)$ 的離散性質，即 $G(\cdot) = \sum_{h = 1}^\infty w_h \delta_{m_h} (\cdot)$。在掰棍子過程中，位置函數 $m_h$ 是從中心測量 $G_0$ 中隨機採集的 i.i.d 樣本。每一個權重 $w_h$ 是被定義爲剩餘長度棍子中的一部分 (a fraction of what is left after the proceeding point mass)：$\{ 1- \sum_{\ell < h} W_\ell \}$。令 $w_h = v_h \prod_{\ell < h}(1 - v_\ell)$，且 $v_h \stackrel{i.i.d}{\sim} \text{Beta}(1, M)$，$m_h \stackrel{i.i.d}{\sim} G_0$，$\{ v_h \}, \{ m_h \}$ 之間相互獨立。那麼就定義隨機概率測量 **DP**$(MG_0)$ 爲：
+
+$$
+\begin{equation}
+G(\cdot) = \sum_{h = 1}^\infty w_h \delta_{m_h} (\cdot)
+(\#eq:DPMG0)
+\end{equation}
+$$
+ 
+這樣表達的話， $G \sim \mathbf{DP}(MG_0), m \sim G_0, W \sim \text{Beta}(1, M)$ 會使 $W\delta_m(\cdot) + (1 - W) G(\cdot)$ 本身仍然是一個 **DP**$(MG_0)$ 的分佈。
 
 
+### 事後概率分佈和邊際分佈
 
+**事後更新 posterior updating**：狄雷克雷過程本身是共軛的 (conjugate)。也就是說，只要是按照獨立同分佈原則從模型 (\@ref(eq:DPsampling)) 中進行 DP 採樣，獲得的事後概率分佈還是一個狄雷克雷 DP。
+
+
+也就是說，如果令 $y_1, \dots, y_n | G \stackrel{i.i.d}{\sim} G$ 且 $G \sim \mathbf{DP}(M, G_0)$，那麼，事後概率分佈爲：
+
+$$
+\begin{equation}
+G | y_1,\dots, y_n \sim \mathbf{DP}(M + n, \frac{MG_0 + \sum_{i = 1}^n \delta_{y_i}}{M + n})
+\end{equation}
+$$
 
 
