@@ -58,3 +58,59 @@ G | y_1,\dots, y_n \sim \mathbf{DP}(M + n, \frac{MG_0 + \sum_{i = 1}^n \delta_{y
 $$
 
 
+
+```{example label="BNP-0201"}
+**T細胞受體個數問題** @guindani2014bayesian 探討了計算T細胞受體個數和對應種類的問題。已知T細胞受體的種類和個數是免疫系統重要的指標之一。常見的分析該指標的方法是對受體集羣(clonal-size)計數，來評價其複雜程度 (diversity)。集羣分佈可以用統計表格計算集羣的頻率 $\hat{G}_y, y = 1, 2, \dots, n$。例如，$\hat{G}_2 = 11$，就表示有11個不同的T細胞受體集羣，每個集羣出現了2次。
+```
+
+下表展示了 $\hat{G}_y$ 的觀察頻率，及其對應的計數 counts $y_i = 1, 2, \dots$。
+
+| Counts $y_i$ | 1   | 2   | 3   | 4   | $\geq$ 5 |
+| :----------- | :-- | :-- | :-- | :-- | :------- |
+| Frequencies  | 37  | 11  | 5   | 2   | 0        |
+
+
+假如我們思考這樣一個模型 $y_i \sim G$，其中給集羣分佈(clonal size distribution)的先驗概率分佈是一個狄雷克雷過程分佈 $G\sim$**DP**$(MG_0)$。由於計數型數據必須爲正(positive counts)，我們使用均值等於 2 的泊松分佈作爲中心測量 centering measure $G_0 = \mathbf{Poi}(2)$。總量參數 (total mass parameter) 使用 $M =1$。
+
+
+下列採樣過程的代碼來自 [https://rpubs.com/kaz_yos/dp1](https://rpubs.com/kaz_yos/dp1)，你也可以參考原作者的[網站](https://web.ma.utexas.edu/users/pmueller/bnp/R/DP/tcr/Tcell-ex3-DP.R) 
+
+```{r BNP-02exp3, cache=TRUE}
+library(MCMCpack)
+library(tidyverse)
+tcell <- tribble(
+    ~count, ~frequency,
+    1, 37,
+    2, 11,
+    3, 5,
+    4, 2,
+    ## >= 5, 0,
+    )
+tcell
+
+# Prior
+
+G0_vector <- function(lambda, min, max) {
+    ## values below min are truncated
+    ## values above max are collapsed
+
+    ## Probabilities from Poisson(lambda) for min:max
+    p_vec <- dpois(x = min:max, lambda = lambda)
+    ## Probability for max+1 ...
+    p_upper_tail <- 1 - ppois(q = max, lambda = lambda)
+    ## Collapse to max
+    p_vec[length(p_vec)] <- p_vec[length(p_vec)] + p_upper_tail
+    ## Renormalize
+    p_vec <- p_vec / sum(p_vec)
+    ## Name
+    names(p_vec) <- min:max
+    ##
+    return(p_vec)
+}
+
+## Collapse all values beyond 8 to 8+ bin
+G0_vector(lambda = 2, min = 1, max = 8)
+```
+
+
+
