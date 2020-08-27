@@ -1,0 +1,203 @@
+### 數據
+
+1. GHQ 數據 <br> 該數據包含 12 名學生前後兩次回答 General Health Questionnaire (GHQ) 問卷獲得的數據。該問卷用於測量學生的心理壓力，其變量名和含義如下：
+
+
+```
+id        Student identifier
+GHQ1      General Health Questionnaire score- 1st occasion
+GHQ2      General Health Questionnaire score- 2nd occasion
+```
+
+2. Siblings 數據 <br> 該數據是來自一項對 3978 名媽媽關於她們 8604 名孩子的出生體重及健康狀況的問卷調查。該數據的變量名和含義如下：
+
+
+```
+momid     Mother identifier
+idx       Baby identifier
+mage      Maternal age (years)
+meduc     Maternal education
+gestat    gestational age (weeks)
+birwt     Birth weight (g)
+smoke     Maternal smoking (0 = no, 1 = yes)
+male      Baby boy (0 = no, 1 = yes)
+year      Year of birth
+married   Maternal marital status (0 = no, 1 = yes)
+hsgrad    Maternal high school education (0 = no, 1 = yes)
+black     Maternal race (1 = black, 0 = other)
+```
+
+
+### 讀入 GHQ 數據，探索其內容，該數據是否是平衡數據 (balanced)？計算每名學生的兩次問卷成績平均分。
+
+```{r hierex2-1, cache=TRUE, message=FALSE}
+ghq <- read_dta("../backupfiles/ghq.dta")
+ghq
+
+ghq <- ghq %>%
+  mutate(mean = (GHQ1 + GHQ2)/2)
+
+# each student has 2 observations (i.e. n_j = n = 2)
+# and therefore the data are balanced.
+# the overall mean is 10.167 and its SD is 6.073
+ghq %>% 
+  summarise(OverallMean = mean(mean), SD = sd(mean))
+```
+
+### 把數據從寬 (wide) 改變成長 (long) 的形式
+
+
+```{r hierex2-2, cache=TRUE, message=FALSE}
+
+# transform data into long format
+ghq_long <- ghq %>%
+  gather(key, value, -id, -mean) %>%
+  separate(key, into = c("measurement", "occasion"), sep = 3) %>%
+  arrange(id, occasion) %>%
+  spread(measurement, value)
+ghq_long
+
+# after reshaping there are 24 records. the summary statistics are
+# overall mean sd and min max
+
+ghq_long %>% 
+  summarise(OverallMean = mean(GHQ), SD = sd(GHQ), Min = min(GHQ), Max = max(GHQ))
+
+# between groups mean sd and min
+
+ghq_long %>% 
+  distinct(id, .keep_all= TRUE) %>% 
+  summarise(Bet_mean = mean(mean), Bet_sd = sd(mean), Bet_min = min(mean), Bet_max = max(mean))
+
+# within groups mean sd and min (came from the difference between
+# the overall mean and the within difference) observations for
+# each group = 2
+ghq_long <- ghq_long %>%
+  mutate(dif_GHQ = mean(GHQ) - (GHQ - mean))
+
+ghq_long %>% 
+  summarise(N = n(),
+            Wit_mean = mean(dif_GHQ), Wit_sd = sd(dif_GHQ), 
+            Wit_min = min(dif_GHQ), Wit_max = max(dif_GHQ))
+```
+
+GHQ 的分佈並不左右對稱。
+
+```{r  histGHQ, cache=TRUE, echo=FALSE, fig.height=5.5, fig.width=7.5, fig.cap='Histogram of GHQ by occasion', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+ggplot(ghq_long, aes(x = GHQ, ..density.. , fill = occasion)) +
+geom_histogram(position = "identity",binwidth= 5.5) + facet_wrap(~occasion) +
+theme_bw() +
+#  scale_x_continuous(breaks = 1:17)+
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(x = "GHQ", y = "Density")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+
+### 對數據按照 `id` 分層進行 ANOVA
+
+```{r hierex2-3, cache=TRUE, message=FALSE}
+with(ghq_long, anova(lm(GHQ~factor(id))))
+
+#library(lme4)
+( fit <- lmer(GHQ ~ (1|id), data=ghq_long) )
+```
+
+$\sigma_u, \sigma_e$ 的估計值分別是 5.92 (between)， 1.91 (within)。可以計算層間相關係數 (intra-class correlation) $\hat\lambda = \frac{\sigma^2_u}{\sigma^2_u + \sigma^2_e} = 0.905$。且 $\hat\sigma_u = \sqrt{\frac{73.8 - 3.7}{2}} = 5.92$，和前一次練習一樣地，這個隨機效應的方差，可以通過方差分析表格來直接手動計算 (當且僅當分層數據是**平衡狀態**的)。和前面計算的樣本數據比較，樣本層間標準差是高估了的 (sample between variance = 6.073 > 5.92)，相反樣本層內標準差 (within sd) 則是低估了的 (sample within sd = 1.383 < 1.91)。兩個層內標準差的關係是：
+
+$$
+\sqrt{1.383^2\times\frac{23}{12}} = 1.91
+$$
+
+
+### 用 R 裏的 `nlme` 包，使用限制性極大似然法 (restricted maximum likelihood, REML) 擬合截距混合效應模型，比較其結果和前文中隨機效應 ANOVA 的結果
+
+```{r hierex2-4, cache=TRUE, message=FALSE}
+summary(nlme::lme(fixed = GHQ ~ 1, random = ~ 1 | id, data = ghq_long, method = "REML"))
+```
+
+截距混合效應模型的參數估計和隨機效應 ANOVA 的參數估計是一樣的。
+
+### 用極大似然法 (maximum likelihood, ML) `method = "ML"` 重新擬合前面的混合效應模型，比較結果有什麼不同。
+
+
+```{r hierex2-5, cache=TRUE, message=FALSE}
+#( fit <- lmer(GHQ ~ (1|id), data=ghq_long, REML = FALSE) ) # same but from `lme4` package
+
+summary(lme(fixed = GHQ ~ 1, random = ~ 1 | id, data = ghq_long, method = "ML"))
+```
+
+用極大似然法估計的隨機殘差標準差 $\sigma_e$ 和 REML/ANOVA 法估計的相同，但是隨機效應標準差 $\sigma_u$ 略小 5.65 < 5.92。
+
+
+### 用簡單線性迴歸擬合一個固定效應模型
+
+```{r hierex2-6, cache=TRUE, message=FALSE}
+Fixed_reg <- lm(GHQ-mean(GHQ) ~ 0 + factor(id), data = ghq_long)
+summary(Fixed_reg)
+```
+
+可以看到輸出報告最底段部分 `Residual standard error: 1.91 on 12 degrees of freedom` 就是前文三種不同模型擬合的隨機殘差效應的標準差。在 STATA 裏被叫做 `Root MSE`。
+
+### 計算這些隨機截距的均值和標準差
+
+```{r hierex2-7, cache=TRUE, message=FALSE}
+mean(Fixed_reg$coefficients)
+sd(Fixed_reg$coefficients)
+```
+
+這裏僅僅用固定效應模型時，不同羣截距的均值雖然和用混合效應模型估計的一樣爲零，但是其估計的標準差要大於無論是 REML (5.92) 或者是 ML (5.65) 估計值的大小，其實這裏簡單線性迴歸給出的截距均值，就是本練習一開始讓你計算的樣本均值的標準差 (between group sd)。這是因爲**簡單線性迴歸 (固定效應模型) 忽視了這些不同組的均值的不確定性**。
+
+### 忽略掉所有的分層和解釋變量擬合 `GHQ` 的簡單線性迴歸
+
+```{r hierex2-8, cache=TRUE, message=FALSE}
+Fixed_simple <- lm(GHQ ~ 1, data = ghq_long)
+summary(Fixed_simple)
+```
+
+此時的模型估計的 `Residual standard error: 6.09 on 23 degrees of freedom` 其實就是一開始讓你計算的樣本整體的標準差 (overall sd)
+
+
+### 用分層的穩健法 (三明治標準誤法) 計算簡單線性迴歸時，截距的標準誤差，和簡單線性迴歸時的結果作比較
+
+
+```{r hierex2-9, cache=TRUE, message=FALSE}
+# sandwich robust method with cluster id
+
+robustReg <- clubSandwich::coef_test(Fixed_simple, vcov = "CR1", cluster = ghq_long$id)
+
+rob.std.err <- robustReg$SE
+naive.std.err<-summary(Fixed_simple)$coefficients[,2]
+better.table <- cbind("Estimate" = coef(Fixed_simple),
+                      "Naive SE" = naive.std.err,
+                      "Pr(>|z|)" = 2 * pt(abs(coef(Fixed_simple)/naive.std.err), df=nrow(ghq_long)-2, lower.tail = FALSE),
+                      "LL" = coef(Fixed_simple) - 1.96 * naive.std.err,
+                      "UL" = coef(Fixed_simple) + 1.96 * naive.std.err,
+                      "Robust SE" = rob.std.err,
+                      "Pr(>|z|)" = 2 * pt(abs(coef(Fixed_simple)/rob.std.err), df=nrow(ghq_long)-2,
+lower.tail = FALSE),
+                      "LL" = coef(Fixed_simple) - qt(df=robustReg$df, 0.975) * rob.std.err,
+                      "UL" = coef(Fixed_simple) + qt(df=robustReg$df, 0.975) * rob.std.err)
+rownames(better.table)<-c("Constant")
+better.table
+```
+
+### 讀入 `siblings` 數據。先總結嬰兒的出生體重，思考這個數據中嬰兒出生體重之間是否可能存在關聯性？它的來源是哪裏。用這個數據擬合兩個混合效應模型 (ML, REML)，不加入任何解釋變量。
+
+
+```{r hierex2-10, cache=TRUE, message=FALSE}
+siblings <- read_dta("../backupfiles/siblings.dta")
+Fixed_ml <- lme(fixed = birwt ~ 1, random = ~ 1 | momid, data = siblings, method = "ML")
+summary(Fixed_ml)
+
+Fixed_reml <- lme(fixed = birwt ~ 1, random = ~ 1 | momid, data = siblings, method = "REML")
+summary(Fixed_reml)
+```
+
+由於該數據樣本量足夠大 (混合效應模型中等同於說數據的層數足夠多)，你可以看到其實 ML 法和 REML 法估計的參數結果十分地接近。
