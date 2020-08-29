@@ -1,0 +1,266 @@
+1. GCSE data: 數據來自65所中學的學生畢業成績 "the Graduate Certificate of Secondary Education (GCSE) score"，和這些學生在剛剛入學時接受閱讀能力水平測試 (LRT score) 的成績。其變量和各自含義爲：
+
+```
+school          school identifier
+student         student identifier
+gcse            GCSE score (multiplied by 10)
+lrt             LRT score (multiplied by 10)
+girl            Student female gender (1 = yes, 0 = no)
+schgend         type of school (1: mixed gender; 2: boys only; 3: girls only)
+```
+
+###　將數據導入軟件裏，
+
+
+
+```{r hierex4-02, echo=TRUE, cache=TRUE}
+gcse_selected <- read_dta("../backupfiles/gcse_selected.dta")
+
+length(unique(gcse_selected$school)) ## number of school = 65
+
+gcse_selected <- gcse_selected %>%
+  mutate(schgend = factor(schgend, labels  = c("mixed geder", "boys only", "girls only")))
+
+
+## create a subset data with only the first observation of each school
+gcse <- gcse_selected[!duplicated(gcse_selected$school), ]
+
+# 一共有 65 所學校，54% 是混合校，15% 是男校，31% 是女校
+with(gcse, tab1(schgend, graph = FALSE))
+  
+
+# 計算每所學校兩種成績的平均分，計算一個包含每所學校的平均女生人數的變量
+Mean_gcse_lrt <- ddply(gcse_selected,~school,summarise,mean_gcse=mean(gcse),mean_lrt=mean(lrt), mean_girl=mean(girl)) 
+
+# 整體來說，GCSE 分數的分布比起入學前 LRT 分數的分布更加寬泛，標準差更大。
+# 意味着入學時學生閱讀成績的差異，比起畢業時成績的差異要小。
+# 或者反過來說，畢業時成績差異，比起入學時閱讀成績的差異要大。
+epiDisplay::summ(Mean_gcse_lrt[,2:4])
+```
+
+
+### 先忽略學校編號爲 48 的學校，擬合一個只有固定效應 (簡單線性回歸模型)，結果變量是 GCSE，解釋變量是 LRT 和學校。
+
+```{r hierex4-01, echo=TRUE, cache=TRUE}
+Fix <- lm(gcse ~ lrt + factor(school), data = gcse_selected[gcse_selected$school !=48, ])
+anova(Fix)
+```
+```{r 10-Hierarchical-models-1, eval=FALSE}
+summary(Fix) # 輸出結果太長，中間被省略掉
+```
+
+LRT 的回歸系數 (直線斜率 = 0.56, se = 0.01)，殘差的標準差 $\hat\sigma_e =$ 7.52。
+
+```
+Call:
+lm(formula = gcse ~ lrt + factor(school), data = gcse_selected[gcse_selected$school != 
+    48, ])
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-28.32  -4.77   0.22   5.08  24.41 
+
+Coefficients:
+                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        4.08232    0.88060    4.64  3.7e-06 ***
+lrt                0.55948    0.01253   44.63  < 2e-16 ***
+factor(school)2    1.53785    1.34332    1.14  0.25235    
+                         ...
+                         ...<OMITTED OUTPUT>
+                         ...
+                         ...
+factor(school)65  -5.85245    1.21850   -4.80  1.6e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 7.52 on 3992 degrees of freedom
+Multiple R-squared:  0.442,	Adjusted R-squared:  0.433 
+F-statistic: 49.4 on 64 and 3992 DF,  p-value: <2e-16
+```
+
+
+### 僅有固定效應模型的學校變量變更爲學校類型 (男校女校或混合校)，從這個新模型的結果來看，你是否認爲學校類型，和學校編號本身相比能夠解釋相同的學校層面的方差？ `lrt` 的估計回歸參數發生了怎樣的變化？
+
+```{r  hierex4-03, echo=TRUE, cache=TRUE}
+Fix1 <- lm(gcse ~ lrt + schgend, data = gcse_selected[gcse_selected$school !=48, ])
+anova(Fix1)
+summary(Fix1)
+```
+
+
+新的模型 `Fix1` 參數明顯減少很多，殘差標準差估計 $\hat\sigma_u =$ 7.99。LRT 的回歸系數估計僅發生了不太明顯的變化 0.59 (0.01)
+
+
+### 使用限制性極大似然法擬合一個隨機截距模型。記錄此時的限制性對數似然的大小 (log-likelihood)。用 `lmerTest::rand` 命令對隨機效應部分的方差是否爲零做檢驗，指明該檢驗的零假設是什麼，並解釋其結果的含義。
+
+
+```{r hierex4-04, echo=TRUE, cache=TRUE, message=FALSE}
+library(lmerTest)
+Fixed_reml <- lmer(gcse ~ lrt +  (1 | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE)
+summary(Fixed_reml)
+ranova(Fixed_reml) ## random effect test
+```
+
+隨機截距模型的輸出結果可以看出，這裏的混合模型估計的 LRT 的回歸系數跟僅有固定效應的簡單線性回歸模型估計的值完全一樣 (0.56, se=0.01)。隨機效應部分 $\hat\sigma_e = 7.524, \hat\sigma_u = 3.07$，此時的限制性似然 (restricted log-likelihood) 是 -14022。最晚部分的隨機效應檢驗的零假設是 $\sigma_u = 0$，且值得注意的是，由於方差本身不可能小於零，故本次檢驗只用到自由度爲 1 的卡方分布的右半側(單側)。也就是說，其替代假設有且只有 $\sigma_u > 0$ 的單側假設。這裏的檢驗結果提示高度有意義 (highly significant)。
+
+
+### 在前一題的隨機截距模型中加入 `schgend` 變量，作爲解釋隨機截距的一個自變量，觀察輸出結果，解釋其是否有意義。記錄這個模型的限制性似然。
+
+```{r hierex4-05, echo=TRUE, cache=TRUE, message=FALSE}
+Fixed_reml1 <- lmer(gcse ~ lrt + schgend +  (1 | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE) 
+#Fixed_reml1 <- lme(fixed = gcse ~ lrt + schgend , random =  ~ 1 | school, data = gcse_selected[gcse_selected$school !=48, ], method = "REML") 
+
+summary(Fixed_reml1)
+
+## 檢驗新增的學校種類 schgend 是否對應該加入模型。
+
+mod2<- update(Fixed_reml1, . ~ . - schgend)
+anova(Fixed_reml1, mod2)
+
+## 求 Fixed_reml1 的似然
+
+logLik(Fixed_reml1)
+```
+
+增加了學校類型在固定效應部分時，隨機效應的標準差從錢一個模型的 3.07 降低到這裏的 2.92。這個變量本身，從最後的模型比較也能看出，對模型的貢獻是有意義的 (p=0.018)。當然從隨機截距模型的輸出結果可以看出，學校類型的這一變量中，可能只有"女校"這一細分部分提供了足夠的效應。這裏的隨機截距模型的REML似然是 (restricted log-likelihood = -14016)
+
+### 擬合隨機截距隨機斜率模型，固定效應部分的 `lrt` 也加入進隨機效應部分。
+
+```{r hierex4-06, echo=TRUE, cache=TRUE}
+Fixed_reml2 <- lmer(gcse ~ lrt + schgend +  (lrt | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE)
+summary(Fixed_reml2)
+logLik(Fixed_reml2)
+```
+
+當截距 (不同學校之間， gcse 的起點)，斜率 (不同學校之間 lrt 和 gcse 之間的關系的斜率) 均可以有隨機性以後，`lrt` 的斜率雖然仍然保持不變 $=0.56$，但是它的隨機效應標準差變成了 $=0.12$，隨機截距的標準差也保持不變 $=2.88$，這二者之間的相關系數是 $=0.58$。第一階層隨機殘差標準也有了微妙的變化 $7.52 \rightarrow 7.44$，此模型的限制性對數似然 (restricted log-likelihood) 是 `-13994.393 (df=8)`。
+
+### 通過上面幾個模型計算獲得的似然，嘗試檢驗隨機斜率標準差，以及該標準差和隨機截距標準差的協相關是否有意義。
+
+```{r hierex4-07, echo=TRUE, cache=TRUE}
+ranova(Fixed_reml2)
+
+# 手算的方法是這樣的
+likelihood <- as.numeric(-2*(logLik(Fixed_reml1) - logLik(Fixed_reml2)))
+0.5*(1-pchisq(as.numeric(likelihood), df = 1)) + 0.5*(1-pchisq(as.numeric(likelihood), df = 2))
+```
+
+似然比檢驗的統計量是 43.8，不用檢驗也知道肯定是有意義的。手算也是可以達到相同的效果。值得注意的是，R計算給出的基於自由度爲 2 的卡方分布，其實是偏保守的。注意看手算部分，其實用到了自由度爲 1 自由度爲 2 兩個卡方分布換算獲得的 p 值。
+
+### 模型中的 `schgend` 改成 `mean_girl` 會給出怎樣的結果呢？
+
+
+```{r hierex4-08, echo=TRUE, cache=TRUE}
+## 把女生平均值放回整體數據中去
+Mean_girl <- NULL
+for (i in 1:65) {
+  Mean_girl <- c(Mean_girl, rep(Mean_gcse_lrt$mean_girl[i], with(gcse_selected, table(school))[i]))
+  }
+gcse_selected$mean_girl <- Mean_girl
+  rm(Mean_girl)
+
+
+Fixed_reml3 <- lmer(gcse ~ lrt + mean_girl +  (lrt | school), data = gcse_selected[gcse_selected$school !=48, ], REML = TRUE)
+summary(Fixed_reml3)
+```
+
+由於 `mean_girl` 其實是和 `schgend` 非常相似的表示學校層面的男女生性別比例的變量，所以這個模型的結果其實和前一個給出的隨機效應標準差的估計都很接近。
+
+### 現在我們把注意力改爲關心學校編號爲 48 的學校的情況。用且禁用它一所學校的數據，擬合一個簡單線性回歸，結果變量是 `gcse`，解釋變量是 `lrt`。
+
+```{r hierex4-09, echo=TRUE, cache=TRUE}
+gcse_selected[gcse_selected$school ==48, ]
+school48lm <- lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school ==48, ])
+summary(school48lm)
+```
+
+由於 48 號學校只有兩個數據點，所以強行進行簡單線性回歸的結果，就是擬合了一條通過這兩個點的直線，截距是-32.7，斜率是 -6.9，且沒有任何估計的誤差。
+
+### 這次不排除 48 號學校，擬合所有學校的數據進入 `Fixed_reml2` 模型中去，結果有發生顯著的變化嗎？
+
+```{r hierex4-10, echo=TRUE, cache=TRUE}
+Fixed_reml2 <- lmer(gcse ~ lrt + schgend +  (lrt | school), data = gcse_selected, REML = TRUE)
+summary(Fixed_reml2)
+```
+
+可以看到，即使我們加入這個數據量極少的一個學校的數據，對結果也沒有太大的影響。
+
+### 計算這個模型的第二階級(level 2, `school` level)的殘差。
+
+
+```{r hierex4-11, echo=TRUE, cache=TRUE}
+School_res <- HLMdiag::HLMresid(Fixed_reml2, level = "school")
+epiDisplay::summ(School_res)
+School_res[48, ] 
+```
+
+隨機截距的殘差估計範圍在 -6.25 和 5.83 之間，隨機斜率殘差估計範圍在 -0.19 和 0.33 之間。其中 48 號學校的擬合後截距和斜率分別是 -0.74 和 -0.02。48 號學校在這個模型中估計的截距和斜率，與我們單獨對它一所學校擬合模型時的結果大相徑庭。這是因爲在總體的混合效應模型中，該學校的數據被拉近與總體的平均水平。
+
+
+```{r 4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope (unstandardized) residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+plot1 <- HLMdiag::ggplot_qqnorm(School_res[,1], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) intercept residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(School_res[,2], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) slope residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(plot1, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+圖 \@ref(fig:4-level2-residuals) 顯示標準化前的隨機效應部分的殘差表現尚可接受。
+
+
+### 計算這個模型的第一階級(level 1, student)殘差，分析其分布，查看第48所學校的殘差表現如何。
+
+```{r hierex4-12, echo=TRUE, cache=TRUE, warning=FALSE}
+Fixed_reml2 <- lme(fixed = gcse ~ lrt + schgend, random = ~  lrt | school, data = gcse_selected, method="REML") # for extracting standardized level 2 error
+
+gcse_selected$ehat <- residuals(Fixed_reml2, level = 1, type = "normalized")
+with(gcse_selected, epiDisplay::summ(ehat, graph = FALSE))
+#  48 號學校的標準化殘差並不顯得異常
+gcse_selected$ehat[gcse_selected$school == 48]
+```
+
+```{r 4-level1-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Histogram and Q-Q plots of elementary level (pupil) standardized residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+
+hist <- ggplot(gcse_selected, aes(x = ehat)) +
+    geom_histogram(colour = "black", aes(y = ..density..), 
+                   fill = "lightblue", size = 0.1, binwidth= 0.3)  + 
+  theme_bw() + stat_function(fun=dnorm,
+                         color="darkgreen", size = 1,
+                         args=list(mean=mean(gcse_selected$ehat), 
+                                  sd=sd(gcse_selected$ehat)))
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(gcse_selected$ehat, line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "EB level 1 (pupil) standardized residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```

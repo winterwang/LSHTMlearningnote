@@ -1,0 +1,478 @@
+
+這一章節我們把隨機截距模型進一步擴展，在隨機效應部分增加隨機斜率成分 (random slope)。這樣的模型又稱隨機系數模型 (random coefficient model) 或 隨機斜率模型 (random slope model)。
+
+## GCSE scores 實例
+
+第一章介紹過的 65 所中學學生在入學前的閱讀水平成績和畢業時的考試成績的 GCSE 數據，用來作爲本章介紹概念的實例。我們先對其中學校編號爲 1 的學生做兩個成績的線性回歸: 
+
+```{r hie04-1, cache=TRUE, warning=FALSE, message=FALSE}
+gcse_selected <- read_dta("../backupfiles/gcse_selected.dta")
+M_sch1 <- lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school == 1, ])
+
+summary(M_sch1)
+```
+
+```{r hier04-fig1, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='GCSE versus LRT in school 1', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+ggplot(gcse_selected[gcse_selected$school == 1, ], aes(x = lrt, y = gcse)) + geom_point() + 
+  geom_abline(intercept = M_sch1$coefficients[1], slope = M_sch1$coefficients[2]) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "GCSE score",x = "London Reading Test")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+當我們重復同樣的實驗，給 65 所學校 (48號學校除外，它只有兩個學生) 一一繪制回歸直線的時候，你得到的一簇直線是這樣紙的: 
+
+```{r hier04-fig2, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='Predicted regression lines of GCSE versus LRT scores: separate estimates from each school', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+# extract the school numbers as a numeric vector
+School_n <- as.numeric(with(gcse_selected, table(school)))
+# fit 65 linear regressions save them into a list
+my_lms <- lapply(1:65, function(School_n) lm(gcse ~ lrt, data = gcse_selected[gcse_selected$school == School_n, ]))
+
+# extract just coefficients
+Coefs <- sapply(my_lms, coef) # this is a matrix
+Coefs <- as.data.frame(t(Coefs)) # convert it into a dataframe vertically 
+
+ggplot( gcse_selected[gcse_selected$school != 48, ], aes(x = lrt, y = gcse, group = factor(school))) + geom_blank() + 
+  geom_smooth(se = FALSE, method = "lm") + 
+  #geom_abline(data = Coefs[-48,],   aes(intercept = `(Intercept)`, slope = lrt))  +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  xlim(-40, 40) + 
+  ylim(-20, 30) +
+  #scale_x_continuous(breaks = seq(-45, 45, by = 10))+
+ # scale_y_continuous(breaks = -20:20) +
+  labs(y = "Fitted regression lines",x = "London Reading Test")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+```
+
+
+實際上這麼多學校學生的成績前後回歸線，其截距和斜率各不相同 (圖\@ref(fig:hier04-fig2))。這些斜率和截距的總結歸納如下: 
+
+```{r hie04-2, cache=TRUE, warning=FALSE, message=FALSE}
+summ.data.frame(Coefs[-48,])
+```
+
+```{r hier04-fig3, cache=TRUE, echo=FALSE, fig.height=5, fig.width=7, fig.cap='School specific slopes and intercepts', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+ggplot(Coefs[-48, ], aes(x = `(Intercept)`, y = lrt)) + geom_point() + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  geom_vline(xintercept = -0.33) + 
+  geom_hline(yintercept = 0.54) + 
+  xlim(-10, 10) + 
+  ylim(0, 1) +
+  #scale_x_continuous(breaks = seq(-45, 45, by = 10))+
+ # scale_y_continuous(breaks = -20:20) +
+  labs(y = "Slopes",x = "Intercept")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+```
+
+
+圖 \@ref(fig:hier04-fig3) 展示的是這些回歸直線各自的截距 (x 軸) 和斜率 (y 軸) 的散點圖。縱橫添加的兩條直線分別是截距和斜率的均值的位置。很明顯，截距和斜率之間本身是呈現正相關的 (相關系數 0.36): **如果一個學校學生入學時成績一般，但是畢業時 GCSE 成績較高，說明那所學校本身對學生成績的提升作用明顯**。
+
+經過擬合64個線性回歸模型，獲得 $64\times3$ 個不同的回歸線的參數 (截距，斜率，和殘差方差)。所以我們可以提出的關於 "學校" 這個個體，它們各自的入學前後成績作出的回歸線獲得的三個參數，在它的 **"人羣 (可以是英國國內的中學，全歐洲的中學，或者是全世界的中學)"** 中是隨機分布在一些 "均值" 附近的。
+
+## 隨機回歸系數的實質
+
+在隨機截距模型中，截距可以隨機分布在某個均值周圍，但是每條回歸直線我們默認其解釋變量和結果變量之間的關系是一樣的 (相同斜率的一簇直線)。現在，我們來把這個模型擴展，放寬它對斜率的限制，允許不同的層與層之間不僅僅可以有不同的截距，還可以有不同的斜率: 
+
+$$
+\begin{equation}
+Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})X_{1ij} + e_{ij}
+\end{equation}
+(\#eq:hier04-1)
+$$
+
+其中: 
+
+- $u_{0j}:$ 是隨機截距成分 (第 $j$ 層數據和總體均值 $\beta_0$ 之間的差異)
+- $u_{1j}:$ 是隨機斜率成分 (第 $j$ 層數據和總體寫率 $\beta_1$ 之間的差異)
+- $\text{E}(u_{0j}|X_{1ij}) = 0$
+- $\text{E}(u_{1j}|X_{1ij}) = 0$
+- $\text{E}(e_{ij}|X_{1ij},u_{0j}, u_{1j}) = 0$
+- $u_0, u_1 \perp X_{1ij}$ (兩個隨機部分和解釋變量之間獨立不相關)
+- $u_0, u_1 \perp e_{ij}$ (兩個隨機部分和總體的隨機誤差獨立不相關)
+
+另外，$\mathbf{u}_j = \{u_0, u_1\}$ 服從分布: 
+
+$$
+\mathbf{u}_j | X_{1ij} \sim N(\mathbf{0}, \mathbf{\sum}_{\mathbf{u}})
+$$
+
+其中的 $\mathbf{\sum}_{\mathbf{u}}$ 是一個 $2\times2$ 的方差協方差矩陣: 
+
+$$
+\begin{aligned}
+\text{Where } \mathbf{u}_j & = (u_{0j}, u_{1j})^T \\ 
+              \mathbf{0}   & = (0, 0)^T \\ 
+              \mathbf{\sum}_{\mathbf{u}} & =\left( \begin{array}{cc}
+              \sigma^2_{u_{00}} & \sigma_{u_{01}} \\
+              \sigma_{u_{01}}   & \sigma^2_{u_{11}} \\
+              \end{array} \right)
+\end{aligned}
+$$
+
+$e_{ij}$ 則服從下列分布: 
+
+$$
+e_{ij} | X_{1ij}, u_{0j}, u_{1j} \sim N(0, \sigma^2_e)
+$$
+
+## 繼續 GCSE scores 實例
+
+繼續用 GCSE 數據，去除掉 48 號學校以後，擬合一個固定效應模型 (相同斜率，但是不同的固定截距): 
+
+```{r hie04-3, cache=TRUE, warning=FALSE, message=FALSE}
+FIX_inter <- lm(gcse ~ 0 + lrt + factor(school), data = gcse_selected[gcse_selected$school != 48, ])
+```
+
+```{r hier04-silence, cache=TRUE, eval=FALSE}
+summary(FIX_inter)
+```
+
+```
+Call:
+lm(formula = gcse ~ 0 + lrt + factor(school), data = gcse_selected[gcse_selected$school != 
+    48, ])
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-28.32  -4.77   0.22   5.08  24.41 
+
+Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)    
+lrt                0.5595     0.0125   44.63  < 2e-16 ***
+factor(school)1    4.0823     0.8806    4.64  3.7e-06 ***
+factor(school)2    5.6202     1.0154    5.53  3.3e-08 ***
+   ...................                  ............
+   ................... <Output ommited> ............
+   ...................                  ............
+factor(school)62  -0.5566     0.8929   -0.62  0.53306    
+factor(school)63   6.4827     1.3734    4.72  2.4e-06 ***
+factor(school)64   1.0089     0.9808    1.03  0.30368    
+factor(school)65  -1.7701     0.8415   -2.10  0.03547 *  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 7.52 on 3992 degrees of freedom
+Multiple R-squared:  0.442,	Adjusted R-squared:  0.433 
+F-statistic: 48.7 on 65 and 3992 DF,  p-value: <2e-16
+```
+
+該固定效應模型 (簡單線性回歸模型) 估計的共同斜率是 0.56 (se = 0.01)，和 64 個不同的固定斜率。這些固定斜率的範圍是 -9,63 到 7.91，均值是 0.03，標準差是 3.38。估計的殘差標準差是 `Residual standard error: 7.52`。
+
+如果用相同的數據，我們允許截距發生隨機變動的話 (隨機截距模型): 
+
+```{r hie04-4, cache=TRUE, warning=FALSE, message=FALSE}
+MIX_inter <- lmer(gcse ~ lrt + (1 | school), data = gcse_selected[gcse_selected$school != 48, ], REML = TRUE)
+summary(MIX_inter)
+```
+
+ 
+隨機截距模型估計的共同斜率還是不變 (0.56, se = 0.01)，總體平均截距是 0.03 (無統計學意義)。截距的 (正態) 分布的標準差是 3.07。殘差標準差，和剛才簡單現行回歸計算的殘差標準差是一樣的 (=7.52)。幾乎所有我們關心的參數估計，都接近簡單線性回歸的結果，但是隨機截距模型使用的參數個數只有 4 個，固定效應模型則用到了 66 個 (很顯然隨機截距模型更加高效)。
+
+接下來，我們進一步擬合本章的重點模型 -- 隨機參數模型:
+
+```{r hie04-5, cache=TRUE, warning=FALSE, message=FALSE}
+MIX_coef <- lmer(gcse ~ lrt + (lrt | school), data = gcse_selected[gcse_selected$school != 48, ], REML = TRUE)
+summary(MIX_coef)
+```
+
+這個模型，不僅允許了隨機的截距，還允許每個直線的斜率成爲隨機的斜率。此時的總體平均截距被估計爲 -0.11 (依然沒有統計學意義)，標準差略微變小 (3.07 變成了 3.04)。總體平均斜率是 0.56，現在也被允許有變動，其標準差是 0.12。此時這些許許多多的估計回歸方程中，斜率和截距的相關系數是 0.49，這十分接近我們在一開始的簡單回歸64次計算獲得的斜率和截距的相關系數 (0.36)。此隨機系數模型的殘差標準差變成了 7.44，略微小於之前的 7.52。這三個模型的結果總結如下表: 
+
+
+
+```{r Hier04tab01, echo=FALSE, cache=TRUE, eval=FALSE}
+dt <- read.csv("../backupfiles/hier04tab1.csv", header = T)
+#names(dt) <- c("Model with", "sigma_u", "sigma_e", "sigma_u", "sigma_e")
+kable(dt, "html",  align = "l", caption = "表 61.1: Comparison of fixed, random intercept, and random coefficient models: school data") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"),full_width = F, position = "center") %>%
+  add_header_above(c(" " = 1, "Fixed effect" = 2, "Random intercept" = 2, "Random coeff."  =2)) %>%
+    add_header_above(c(" " = 1, "Model" = 6))
+```
+
+
+
+<table class="table table-striped table-bordered" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>表 61.1: Comparison of fixed, random intercept, and random coefficient models: school data</caption>
+ <thead>
+<tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="6"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Model</div></th>
+</tr>
+<tr>
+<th style="border-bottom:hidden" colspan="1"></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Fixed effect</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Random intercept</div></th>
+<th style="text-align:center; border-bottom:hidden; padding-bottom:0; padding-left:3px;padding-right:3px;" colspan="2"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px;">Random coeff.</div></th>
+</tr>
+  <tr>
+   <th style="text-align:left;"> Parameter </th>
+   <th style="text-align:left;"> est </th>
+   <th style="text-align:left;"> se </th>
+   <th style="text-align:left;"> est </th>
+   <th style="text-align:left;"> se </th>
+   <th style="text-align:left;"> est </th>
+   <th style="text-align:left;"> se </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> $Fixed\; part$ </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $\beta_0$ </td>
+   <td style="text-align:left;"> -0.03 </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> 0.031 </td>
+   <td style="text-align:left;"> 0.405 </td>
+   <td style="text-align:left;"> -0.109 </td>
+   <td style="text-align:left;"> 0.403 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $\beta_1$ </td>
+   <td style="text-align:left;"> 0.56 </td>
+   <td style="text-align:left;"> 0.013 </td>
+   <td style="text-align:left;"> 0.563 </td>
+   <td style="text-align:left;"> 0.013 </td>
+   <td style="text-align:left;"> 0.557 </td>
+   <td style="text-align:left;"> 0.020 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $Random\; part$ </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;">  </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $\sigma_{u_{00}}$ </td>
+   <td style="text-align:left;"> 3.38 </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> 3.07 </td>
+   <td style="text-align:left;"> 0.312 </td>
+   <td style="text-align:left;"> 3.041 </td>
+   <td style="text-align:left;"> 0.311 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $\sigma_{u_{11}}$ </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> 0.122 </td>
+   <td style="text-align:left;"> 0.019 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $\text{Corr}(0,1)$ </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> 0.494 </td>
+   <td style="text-align:left;"> 0.149 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> $\sigma_e$ </td>
+   <td style="text-align:left;"> 7.522 </td>
+   <td style="text-align:left;"> - </td>
+   <td style="text-align:left;"> 7.524 </td>
+   <td style="text-align:left;"> 0.084 </td>
+   <td style="text-align:left;"> 7.442 </td>
+   <td style="text-align:left;"> 0.084 </td>
+  </tr>
+</tbody>
+</table>
+
+
+## 使用模型結果推斷
+
+接下來，我們討論如何比較隨機系數模型，隨機截距模型，也就是如何選擇一個更優的模型。如果只是比較相同數據下，隨機系數模型和隨機截距模型的優劣，那麼只需要同時檢驗 $u_{1j} = 0; \text{Cov}(u_{0j}, u_{1j}) = 0$。
+
+就用剛剛擬合好的 `MIX_inter` 和 `MIX_coef` 來比較: 
+
+```{r hie04-6, cache=TRUE, message=FALSE}
+MIX_coef <- lme(fixed = gcse ~ lrt, random =  ~ lrt | school, data = gcse_selected[gcse_selected$school != 48, ], method = "REML")
+MIX_inter <- lme(fixed = gcse ~ lrt, random = ~ 1 | school, data = gcse_selected[gcse_selected$school != 48, ], method = "REML")
+
+anova(MIX_inter, MIX_coef)
+```
+
+值得注意的是，這裏計算的 似然比的檢驗統計量服從的是一個 自由度爲 2 的卡方分布和一個 自由度爲 1 的卡方分布的混合分布。所以報告中給出的 p 值是一個保守估計，正確的 p 值可以這樣計算: 
+
+```{r hie04-7, cache=TRUE}
+likelihood <- as.numeric(-2*(logLik(MIX_inter) - logLik(MIX_coef)))
+0.5*(1-pchisq(as.numeric(likelihood), df = 1)) + 0.5*(1-pchisq(as.numeric(likelihood), df = 2))
+```
+
+另一個重要的問題是該如何去真正理解這裏隨機系數模型給出的結果呢？
+
+該模型的結果說，"人羣"中的總體均值是 -0.11，總體斜率是 0.56 (se = 0.02, 95%CI: 0.52, 0.60)。這裏的"人羣"指的是全英國/或者全世界這樣的學校。學校水平的截距和斜率服從以這兩個數字爲均值，標準差分別是 3.04 和 0.12 的正態分布。且截距和斜率之間的相關系數接近 0.50。第一層級 (學生的) 個體隨機誤差的標準差爲 7.44。這些結果可以拿來估計"學校人羣"的 95% 截距/斜率: $-0.11 \pm 1.96 \times3.04$ 和 $0.56 \pm 1.96\times0.12$，所以人羣的截距的 95% 信賴區間是: $-6.07, 5.85$，斜率的 95% 信賴區間是: $0.33, 0.80$。與此形成對比的是，我們開頭給 64 所學校建立的 64 個模型的 截距和斜率拿來估計的 95% 截距信賴區間是 $-0.18 \pm 1.96\times3.29: -6.63, 6.27$，95% 斜率信賴區間是 $0.54 \pm 1.96 \times 0.18: 0.19, 0.89$。所以，隨機系數模型對截距和斜率的人羣估計及推斷更加精準。
+
+
+
+## 隨機效應的方差 {#random-var}
+
+
+在解釋混合效應模型的隨機效應部分的時候，有幾點需要注意。首先，隨機截距的方差，和隨機斜率的方差，是具有不同單位的。**隨機截距的方差的單位是結果變量 $Y$ 的單位的平方**。**隨機斜率的方差，是結果變量和解釋變量的單位的商的平方**。
+
+另一個要注意的點是，$Y_{ij}$ 在 $X_{1ij}$ 的條件下的殘差的標準差，不是恆定不變的 (隨着 $X_1$ 的變化而變化): 
+
+$$
+\begin{aligned}
+Y_{ij} & = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j}) X_{1ij} + e_{ij}  \\ 
+       & = (\beta_0 + \beta_1X_{1ij}) + (u_{0j} + u_{1j}X_{1ij} + e_{ij}) \\ 
+       & = (\beta_0 + \beta_1X_{1ij}) + \epsilon_{ij}
+\end{aligned}
+$$
+
+所以從上面的式子可看出，隨機參數模型的**總體殘差 (total residuals)**，$\epsilon_{ij} = u_{0j} + u_{1j}X_{1ij} + e_{ij}$，是隨着你想給斜率隨機性的那個解釋變量的變化而變化的。也正因爲如此，總體殘差的方差，也是隨着解釋變量變化而變化的 (和解釋變量成二次方程關系，如果繪制總體慘差的方差和解釋變量之間的關系會是一個拋物線): 
+
+$$
+\begin{aligned}
+\text{Var}(Y_{ij} | X_{1ij}) & = \text{Var}( u_{0j} + u_{1j}X_{1ij} + e_{ij}) \\ 
+                             & = \sigma^2_{u_{00}} + X_{1ij}^2\sigma^2_{u_{11}} + 2X_{1ij}\sigma_{u_{01}} + \sigma^2_e
+\end{aligned}
+(\#eq:hier04-3)
+$$
+
+
+## 模型效果評估 
+
+擬合模型的評估中，另一個重要的事是分析第一階層殘差和第二階層殘差是不是符合其前提條件 (正態分布)。記得第二階層殘差獲取之後需要被標準化。
+
+```{r hie04-8, cache=TRUE} 
+MIX_coef <- lmer(gcse ~ lrt + (lrt | school), data = gcse_selected[gcse_selected$school != 48, ], REML = TRUE)
+School_res0 <- HLMdiag::HLMresid(MIX_coef, level = "school", type = "EB", standardize = FALSE)
+summ.data.frame(School_res0)
+
+School_res1 <- HLMdiag::HLMresid(MIX_coef, level = "school", type = "EB", standardize = TRUE)
+
+summ.data.frame(School_res1)
+```
+
+
+```{r hier4-level2-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope residuals (unstandardized)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+plot1 <- HLMdiag::ggplot_qqnorm(School_res0[,1], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) intercept residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(School_res0[,2], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) slope residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(plot1, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+
+```{r 4-level2sta-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Q-Q plots of school level intercept and slope residuals (standardized)', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+
+plot1 <- HLMdiag::ggplot_qqnorm(School_res1[,1], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) intercept residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(School_res1[,2], line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "BLUP r.e level 2 (school) slope residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(plot1, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
+
+```{r 4-level1sta-residuals, cache=TRUE, echo=FALSE, fig.height=5, fig.width=11, fig.cap='Histogram and Q-Qf plots of elementary level (pupil) standardized residuals', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+ggthemr("fresh")
+gcse <- gcse_selected[gcse_selected$school != 48, ]
+MIX_coef <- lme(fixed = gcse ~ lrt, random = ~ lrt | school, data = gcse, method = "REML")
+
+gcse$ehat <-  residuals(MIX_coef, level = 1, type = "normalized")
+epiDisplay::summ(gcse$ehat, graph = FALSE)
+
+hist <- ggplot(gcse, aes(x = ehat)) +
+    geom_histogram(colour = "black", 
+                   fill = "lightblue", size = 0.1, binwidth= 0.3)  + 
+  theme_bw() + stat_function(fun = function(x) dnorm(x, mean = mean(gcse$ehat), sd = sd(gcse$ehat)) * 4057 * 0.3, color="darkgreen", size = 1) + 
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) 
+
+
+plot2 <- HLMdiag::ggplot_qqnorm(gcse$ehat, line = "quantile") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 15),
+  axis.text.x = element_text(size = 15),
+  axis.text.y = element_text(size = 15)) +
+  labs(y = "EB level 1 (pupil) standardized residuals")  +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 8),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank())
+
+ggarrange(hist, plot2,  
+          ncol = 2, nrow = 1)
+```
+
+
