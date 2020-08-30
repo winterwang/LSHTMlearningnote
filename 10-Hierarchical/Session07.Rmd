@@ -1,0 +1,83 @@
+## 第一層級的異質性 level 1 heterogeneity
+
+目前爲止，我們使用討論過的模型，其實還默認另一個前提條件: 第一層級和第二層級的隨機誤差的方差是固定不變的 (level 1 and level 2 error variance are constant)。但是實際上我們可以把這個條件放寬，讓模型允許第一層級隨機誤差的方差根據某個解釋變量而不同，使得模型更加接近數據，這種模型被命名爲 **復雜第一層級方差模型 (complex level 1 variation)**。下面繼續使用 Asian growth data 來做說明。該數據測量了幾百名亞洲兒童在0-3歲之間幾個時間點的體重。現在我們來允許其第一層級 (每一個兒童在不同時間點測量的體重) 誤差方差隨着性別的不同而變化: $\sigma_e = f(\text{gender})$。這裏的方程爲了防止標準差變成負的而使用對數函數: 
+
+$$
+\text{log} (\sigma_e) = \delta_1I_{\text{gender = boy}} + \delta_2I_{\text{gender=girl}}
+$$
+
+這個加入了第一層級方差隨機性的模型在 R 裏可以這樣擬合: 
+
+```{r Hier07-01, cache=TRUE}
+M_growth_l1 <- lme(fixed = weight ~ age + age2 + gender, random = ~ age | id, weights = varIdent(form=~1|gender), data = growth, method = "REML", na.action = na.omit)
+summary(M_growth_l1)
+
+# 和之間默認男女兒童的誤差方差相等時的模型做比較
+# 沒有顯著差異 (p = 0.09)
+anova(M_growth_l1, M_growth_mix)
+```
+
+## 第二層級異質性 level 2 heterogeneity
+
+我們還可以在模型中允許第二層級的結構不一樣，這等同於認爲這是一個三個層級的模型，其中第二層級分裂成男孩和女孩。
+
+```{r Hier07-02, cache=TRUE}
+M_growth_l2 <- lme(fixed = weight ~ age + age2 + gender, 
+                   random = ~ age*gender | id,
+                   data = growth, method = "REML", na.action = na.omit)
+summary(M_growth_l2)
+
+growth <- growth %>%
+  mutate(boy = as.numeric(gender == "Boys"), 
+         girl = as.numeric(gender == "Girls")) %>%
+  mutate(age_boy = age*boy, 
+         age_girl = age*girl)         
+
+#M <- lmer(weight ~ age + age2 + girl + (age_boy |id) + (age_girl| id), data = growth, REML = TRUE)
+
+#growth <- growth %>%
+#  mutate(boy = ifelse(gender == "Boys", 1, 0), 
+#         girl = ifelse(gender == "Girls", 1, 0), 
+#         age_boy = age*boy, 
+#         age_girl = age*girl)
+#M_growth_l22 <- lme(fixed = weight ~ age + age2 + girl, 
+#                    random = list( ~ girl + age_girl | id, 
+#                                   ~ boy + age_boy | id),
+#                   data = growth, method = "REML", na.action = na.omit)
+#summary(M_growth_l22)
+M_growth <- lme(fixed = weight ~ age + age2 + gender, random = ~ age|id, data = growth, method = "REML",na.action = na.omit) 
+anova(M_growth_l2, M_growth)
+```
+
+
+## 分析策略
+
+進行統計建模之前，請思考你想從數據中探尋什麼問題的答案? 
+
+1. 是想了解某一個共變量在層內 (同一個體不同時間，或者統一學校不同學生之間) 的條件效應 (conditional effect)?
+2. 是想探索層內和層間數據的變化程度?
+3. 是想了解一個共變量的邊際效應 (marginal effect) 嗎?
+
+如果是 1 或 2 兩個問題的話，請使用混合效應模型。如果是 1，但是那個共變量卻不是定義於層水平的，那就只好放棄回到簡單的固定效應模型。如果是 3，需要考慮使用 GEE。
+
+### 模型選擇和建模步驟
+
+詳細請參考 [@Verbeke1997]。
+
+當擬合一個混合效應模型時，意味着均值的結構和協方差的結構可以被確定 (an appropriate mean structure as well as covariance structure is specified)。協方差結構，解釋了均值結構無法解釋的數據隨機變化，所以二者之間彼此高度互相依賴。另外，適當的協方差模型對於用數據進行人羣參數的有效統計推斷過程是必不可少的。
+
+- 第一步: 
+
+由於固定效應部分不能完美解釋數據的變異，所以協方差結構就是用來輔助解釋這部分數據變異的輔助工具。建模的起點就應該是，先建立一個飽和 (甚至是過飽和 overelaborated) 的模型給均值結構 (固定效應部分)，從而確保之後要增加的隨機效應部分不受固定效應部分的擬合錯誤影響。所以，開始建模時，要先把所有可能考慮到的固定效應全部加入模型中去 (包括連續變量的二次方形式/或其他非線性關系，包括所有變量之間的交互作用)。這樣做其實是使用過度飽和的參數使得均值結構在模型中盡量在後面加入隨機效應之前保持不變。在可選的那些數據結構中，我們也應當考慮到數據中不同層級結構可能存在的異質性。要注意的是，隨機效應部分，不能也不應該在沒有把所有可能的一次方程結構都考慮進去之後 (a random effect for the linear effect of time)，就上馬二次方程/或更高次方程的隨機效應(a random effect for the quadratic effect of time)。
+然後我們把飽和模型的殘差 (residuals)，異常值 (outliers)，擬合值 (fitted values)，和可能的 (potential) 隨機效應模型作出的這些殘差，異常值，擬合值之間進行比較。
+
+- 第二步:
+
+一旦你在飽和模型的條件下，確認好了隨機效應應該有的形式，接下來就是逐步精簡模型固定效應部分的過程: 
+
+1. 用 Wald 檢驗 (當使用 REML 時)，或者 LRT (使用 ML 時) 來精簡化固定效應部分。
+2. 反復檢查殘差，異常值，以及擬合值跟觀測值
+3. 使用模型的預測軌跡和觀測值的點做視覺比較
+4. 用人話把你的模型解釋給老奶奶聽懂
+
+
