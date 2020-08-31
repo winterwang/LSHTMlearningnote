@@ -1,0 +1,82 @@
+
+
+本次練習完成時，你將學會：
+
+1. 如何使用聚類分析，和主成分分析法來探索一組多變量數據之間的關係；
+2. 理解並懂得如何選取合適的距離測量尺度，和聚類分析方法；
+3. 繪製並能夠解釋由多層聚類分析算法 (hierarchical clustering algorithm) 獲得的樹狀圖；
+4. 使用主成分分析法對數據進行座標轉換，計算多個變量之間的方差，協方差矩陣，懂得如何判斷保留主成分的個數；
+5. 通過把數據繪製在較低維度的主成分座標軸上來判斷數據中可能存在的潛在分層/分組。
+
+
+### 使用的數據和簡單背景知識
+
+假設你是一名生物測量技術公司的統計師，現在有這樣一組數據，包含了對某植物測量的4種生物標幟物(biomarkers)。據報道，這四種成分或許能減少你公司生產的某藥物引起的副作用。爲了嘗試分析該植物的生物特性，從該植物的50個不同樣本中，測量了這4種生物標幟物的濃度。你的任務之一是對數據進行初步分析，彙報任何你找到的可能存在的顯著特徵差異。
+
+1. 在R裏讀入你的數據，看看這4種生物標幟物的簡單統計量和分佈，它們用的是相同的測量單位嗎？
+
+
+```{r pca-1, cache=TRUE}
+plant <- read_dta("../backupfiles/plant.dta")
+plant <- plant[, 1:4]
+head(plant)
+epiDisplay::summ(plant)
+psych::describe(plant)
+```
+
+觀察這四個生物標幟物的簡單統計量，似乎可以認爲它們使用的應該是相似或者相同的測量單位。它們的均值在53至61之間，標準差分佈在45-51之間，而且最大值最小值之間的範圍也十分接近。
+
+2. 這些生物標幟物能否單獨提供關於該植物的某部分特徵信息呢？思考我們該如何回答這個問題（提示：計算這些指標直接的相關係數）
+
+我們可以通過計算這四個生物標幟物濃度測量值之間的相關係數，來觀察它們之間是否具有相似性或者是否提供了部分相似的信息。
+
+```{r pca-2, cache=TRUE}
+cor(plant)
+```
+
+從相關係數矩陣的計算結果來看，平均地，這四個生物標幟物濃度之間具有一定程度的相關性。其中，生物標幟物1和3之間呈現了四者之間最高的樣本相關係數 $(r_{13} = 0.5941)$，生物標幟物1和4之間的相關係數則最小 $(r_{14} = 0.2677)$。
+
+3. 請描述前一步中我們計算的相關係數矩陣的維度(dimension)。
+
+該相關係數矩陣的維度是 $4\times4$，事實上，這個矩陣的維度是由我們想要觀察分析的樣本中測量變量的個數決定的（在這裏就是四個生物標幟物）。但是這個相關係數的矩陣並不適合用於做聚類分析 (cluster analysis)，因爲相關係數本身反映的是變量之間的關係 (between variables)，並非觀察對象 (between subjects) 之間的距離(即，不是我們關心的用來把50個樣本進行分組歸類的距離變量)。
+
+4. 再次思考問題1.的答案，思考並選擇合適的測量不同樣本個體之間距離 (distance) 的度量衡。嘗試使用簡單的聚類分析命令對樣本進行分類。
+
+由於每個生物標記物在所有樣本中的數值基本在相似的比例或者刻度，每個標幟物在這個樣本中的標準差/方差數值也較爲相近。我們嘗試用連續變量最常見的均值測量距離指標:
+
+```{r pca-3, cache=TRUE, fig.asp=.7, fig.width=7, fig.cap='Dendrogram for L2_avlink cluster analysis', fig.align='center', out.width='80%'}
+# prepare hierarchical cluster
+hc <-  hclust(dist(plant), "ave")
+
+
+plot(hc, cex = 0.8, hang = -1, 
+     main = "", ylab = "L2 dissimilarity measure", 
+     xlab = "No. of specimen")
+```
+
+可以觀察到，樣本編號 31, 27, 17, 48, 8, 30, 3, 14, 6, 42 很快就聚合成爲一組。且這些樣本和其他樣本被聚類在不同組的過程一直維持到差異性達到100以上。我們還可以注意到，聚類過程中其他的分支呈現相對對稱的形狀。
+
+
+5. 從簡單的歐幾里得距離改成歐幾里得距離平方來測量樣本之間的距離的話，圖形會變成什麼樣？
+
+```{r pca-4, cache=TRUE, fig.asp=.7, fig.width=7, fig.cap='Dendrogram for L2sq_avlink cluster analysis', fig.align='center', out.width='80%'}
+hc <- hclust(dist(plant)^2)
+
+plot(hc, cex = 0.8, hang = -1, 
+     main = "", ylab = "L2squared dissimilarity measure", 
+     xlab = "No. of specimen", sub = "")
+```
+
+當使用歐幾里得距離的平方作爲樣本間隔的度量衡時，我們發現聚類的過程其實總體來說和使用歐幾里得距離本身並無本質上的區別。只是在差異性較低的地方聚類加速 (squeeze the dissimilarities at the lower end)，並且在較大的聚類區分之間變得更加明顯，視覺效果上更容易區分。
+
+如果說，不用歐幾里得平方，而是使用簡單的曼哈頓距離 (L1 度量衡)，那麼圖形則又會呈現爲:
+
+```{r pca-5, cache=TRUE, fig.asp=.7, fig.width=7, fig.cap='Dendrogram for L1_avlink cluster analysis', fig.align='center', out.width='80%'}
+
+plot(cluster::agnes(plant, metric = "manhattan", stand = F), which.plots = 2, hang = -1, 
+     xlab = "No. of specimen", main = "", ylab = "L1 dissimilarity measure", sub = "", cex = 0.8)
+```
+
+可以看出，當使用曼哈頓距離做度量衡時，聚類的過程和之前的沒有本質上的區別，但是圖形的樹狀分支上似乎不再左右對稱。
+
+6. 接下來使用歐幾里得距離做度量衡，與上面的嘗試不同，這裏我們嘗試用完全連接，和單連接
