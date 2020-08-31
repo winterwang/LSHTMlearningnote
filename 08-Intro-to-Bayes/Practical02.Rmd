@@ -1,0 +1,440 @@
+
+
+
+### Q1
+當先驗概率分佈服從 $\text{Beta}(0.5,0.5)$，觀察數據記錄到 $5$ 個患者中 $3$ 人死亡的事件。
+試求：
+死亡發生概率 $\theta$ 的 95% 可信區間 (credible intervals)。
+
+**解**
+
+根據 Section \@ref(conjugate) 的公式，當先驗概率爲 $\pi_{\Theta|r}(\theta|r)=\text{Beta}(a=0.5,b=0.5)$ ，數據 $n=5, r=3$。參數 $\theta$ 的事後概率分佈 $\pi_{\Theta|r}(\theta|r)=\text{Beta}(a+r,b+n-r)=\text{Beta}(3.5,2.5)$。
+
+在 [R](https://www.r-project.org/) 裏進行貝葉斯計算十分簡便：
+
+```{r Bayes02, cache=TRUE}
+# 95% Credible Intervals
+L <- qbeta(0.025, 3.5, 2.5)
+U <- qbeta(0.975, 3.5, 2.5)
+
+print(c(L,U))
+```
+
+事後分佈 $\pi_{\Theta|r}(\theta|r)=\text{Beta}(3.5,2.5)$ 的分佈圖形如下：
+
+```{r Bayes03, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Posterior distribution of Beta(3.5,2.5)', out.width='80%', cache=TRUE}
+post <- Vectorize(function(theta) dbeta(theta, 3.5, 2.5))
+
+# Illustration
+x <- seq(0,1,length=10000)
+y <- post(x)
+plot(x,y, type = "l", xlab=~theta, ylab="Density", lwd=2, frame.plot = FALSE)
+
+polygon(c(L, x[x>=L & x<= U], U), c(0, y[x>=L & x<=U], 0), col="grey")
+```
+
+我們可以自己寫一個求可信區間的公式來計算：
+
+```{r Bayes04, cache=TRUE} 
+# Credible Interval function:
+# a, b : shape / super parameters
+# level: probability level (0,1)
+
+cred.int <- function(a,b,level){
+  L <- qbeta((1-level)/2, a, b) # Lower limit
+  U <- qbeta((1+level)/2, a, b) # Upper limit
+  return(c(L,U))
+}
+
+cred.int(3.5,2.5,0.95)
+```
+95%可信區間 $(0.2094, 0.9056)$ 告訴我們，參數 $\theta\in(0.2094, 0.9056)$ 的概率是 $0.95$。
+
+下面我們嘗試寫 Beta 分佈的其他統計量：均值，衆數，方差等。
+
+```{r Bayes05, cache=TRUE}
+# a, b: shape / super parameters
+MeanBeta <- function(a,b) a/(a+b)
+ModeBeta <- function(a,b) {
+  m <- ifelse(a>1 & b>1, (a-1)/(a+b-2), NA)
+  return(m)
+}
+VarianceBeta <- function(a,b) (a*b)/((a+b)^2*(a+b+1))
+
+# mean
+MeanBeta(3.5,2.5)
+
+# mode
+ModeBeta(3.5,2.5)
+
+# Variance
+VarianceBeta(3.5, 2.5)
+
+# SD
+sqrt(VarianceBeta(3.5, 2.5))
+```
+
+### Q2
+假如數據還是 Q1 的數據，然而先驗概率讓我們認爲可能在 5 名受試對象中觀察到 1 次事件。
+
+1. 試求超參數 $(a,b)$ 滿足先驗概率的 Beta 分佈。(不止一組)
+
+**解**
+
+我們認爲最有可能發生 “5 名受試對象中觀察到 1 次事件” 的情況，那麼先驗概率的均值爲 $\frac{a}{a+b}=0.2$。所以，在實數中有無數組超參數都可以用來模擬先驗概率分佈。例如 $a=1, b=4; a=10, b=40; a=100, b=400; a=0.317, b=1.268, \cdots$。
+
+
+2. 假如觀察數據是 $n=5, r=1$，計算事後概率分佈及其均值，標準差。
+
+**解**
+
+先來嘗試寫一個計算貝葉斯二項分佈的方程：
+
+```{r 08-Intro-to-Bayes-1}
+# binbayes function in R
+#------------------------------
+# a, b: shape / super parameters
+# r   : number of successes
+# n   : number of trials
+
+binbayes <- function(a, b, r, n) {
+  prior <- c(a, b, NA, MeanBeta(a,b), sqrt(VarianceBeta(a, b)), qbeta(0.025, a, b), qbeta(0.5, a, b), qbeta(0.975, a, b))
+  posterior <- c(a+r, b+n-r, r/n, MeanBeta(a+r, b+n-r), sqrt(VarianceBeta(a+r, b+n-r)), qbeta(0.025, a+r, b+n-r), qbeta(0.5, a+r, b+n-r), qbeta(0.975, a+r, b+n-r))
+  out <- rbind(prior, posterior)
+  out <- round(out, 4)
+  colnames(out) <- c("a","b","r/n","Mean", "SD", "2.5%", "50%", "97.5%")
+  return(out)
+}
+
+# a=1, b=4, r=1, n=5
+binbayes(1,4,1,5)
+
+# a=10, b=40, r=1, n=5
+binbayes(10,40,1,5)
+```
+
+通過繪製先驗概率分佈圖和事後概率分佈圖來比較二者的變化：
+
+```{r 08-Intro-to-Bayes-2, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,4) vs. Posterior (cont.) Beta(2,8)', out.width='80%', cache=TRUE}
+# Prior vs posterior graphs
+# a,b : shape / super parameters
+# r   : number of successes
+# n   : number of trials
+graph.binbayes <- function(a,b,r,n) {
+  prior <- Vectorize(function(theta) dbeta(theta, a,b))
+  posterior <- Vectorize(function(theta) dbeta(theta, a+r, b+n-r))
+  YL <- max(prior(seq(0.001,0.999,by=0.001)),posterior(seq(0.001,0.999,by=0.001)))
+  curve(prior, xlab=~theta, ylab="Density", lwd=1, lty=2,n=10000,ylim=c(0,YL), frame.plot = FALSE)
+  curve(posterior, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+}
+
+graph.binbayes(1,4,1,5)
+```
+
+
+```{r 08-Intro-to-Bayes-3, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(10,40) vs. Posterior (cont.) Beta(11, 44)', out.width='80%'}
+graph.binbayes(10,40,1,5)
+```
+
+我們可以很清楚的看見，先驗概率相同時，$\text{Beta} (a,b)$ 的超參數如果越大，先驗概率的分佈就越趨近與對稱圖形，且極大值也就越出現在均值的地方 (本例中是 $0.2$)。而且也會使事後概率的 HPD (highest posterior density) 的區間更狹窄 (意爲對事後概率的預測越準確)，同時事後概率分佈也更加接近左右對稱。
+
+### Q3
+我們事先估計某個事件在 $n=20$ 名患者中發生的概率爲 $15\%$。當實際觀察數據爲 $n=15,r=3$ 時，計算相應的事後概率。
+
+**解**
+
+```{r 08-Intro-to-Bayes-4}
+# because 15% events happened in 20 subjects, assuming prior Beta(a=3, b=17)
+# observed n=15, r=3
+binbayes(3,17,3,15)
+```
+
+```{r 08-Intro-to-Bayes-5, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(3,17) vs. Posterior (cont.) Beta(6,29)', out.width='80%'}
+graph.binbayes(3,17,3,15)
+```
+
+試着繪製先驗概率服從 $\text{Beta} (1,1)$，回憶之前本章開頭的圖 \@ref(fig:beta-distr)，這個先驗概率的含義就是我們沒有任何背景知識，對數據完全陌生的情況：
+
+```{r 08-Intro-to-Bayes-6, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4,13)', out.width='80%'}
+graph.binbayes(1,1,3,15)
+```
+
+### Q4
+試給出上面各題中參數 $\theta$ 落在 $(0.1,0.25)$ 之間的概率。
+
+
+```{r 08-Intro-to-Bayes-7}
+# function to calculate probabilities in a interval
+# a, b: super parameters
+# r   : number of successes
+# n   : number of trials
+# L   : Lower limit of the probability interval
+# U   : Upper limit of the probability interval
+
+prob.int <- function(a,b,r,n,L,U){
+prior0 <- pbeta(U,a,b) - pbeta(L,a,b)
+posterior0 <- pbeta(U,a+r,n-r+b) - pbeta(L,a+r,n-r+b)
+prob <- as.matrix(c(prior0, posterior0))
+prob <- round(prob,4)
+colnames(prob) <- paste("Probability of theta lies between the Interval", L, U)
+rownames(prob) <- c("Prior","Posterior")
+  return(prob)
+}
+
+# Prior Beta(0.317,1.286) n = 5, r=1
+binbayes(0.317, 1.286, 1, 5)
+prob.int(0.317, 1.286, 1, 5,0.1,0.25)
+```
+
+```{r 08-Intro-to-Bayes-8, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(0.317,1.286) vs. Posterior (cont.) Beta(1.317, 5.286)', out.width='80%'}
+graph.binbayes(0.317, 1.286, 1, 5)
+```
+
+```{r 08-Intro-to-Bayes-9}
+# Prior Beta(10,40) n = 5, r=1
+binbayes(10, 40, 1, 5)
+prob.int(10, 40, 1, 5,0.1,0.25)
+```
+
+所以在範圍固定的時候，事後概率分佈總是能夠比先驗概率分佈給出更高的累計概率。
+
+### Q5
+一個臨牀試驗要進行兩個階段 (two phases)，第一階段我們觀察到 $10$ 個患者中 $1$ 個事件。第二階段，觀察到 $n=50, r=5$。
+
+1. 兩個階段都使用 $\text{Beta}(1,1)$ 作先驗概率。求兩個實驗階段參數 $\theta<0.1$ 的概率。
+
+```{r 08-Intro-to-Bayes-10}
+# Phase I
+binbayes(1, 1, 1, 10)
+prob.int(1,1,1,10,0,0.1)
+```
+
+```{r 08-Intro-to-Bayes-11, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 10)', out.width='80%'}
+graph.binbayes(1, 1, 1, 10)
+```
+
+
+
+```{r 08-Intro-to-Bayes-12}
+# Phase II
+binbayes(1, 1, 5, 50)
+prob.int(1,1,5,50,0,0.1)
+```
+
+```{r 08-Intro-to-Bayes-13, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(6, 46)', out.width='80%'}
+graph.binbayes(1, 1, 5, 50)
+```
+
+2. 繼續使用先驗概率分佈 $\text{Beta}(1,1)$，合併兩個實驗階段，求此時的事後概率分佈，以及參數 $\theta<0.1$ 的概率。
+
+
+```{r 08-Intro-to-Bayes-14}
+# Combining both phases
+binbayes(1, 1, 6, 60)
+prob.int(1,1,6,60,0,0.1)
+```
+
+```{r 08-Intro-to-Bayes-15, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(7, 55)', out.width='80%'}
+graph.binbayes(1, 1, 6, 60)
+```
+
+3. 用第一階段的實驗結果做第二階段實驗的先驗概率分佈，再計算事後概率分佈，以及 $\theta<0.1$ 的概率。
+
+```{r 08-Intro-to-Bayes-16}
+# Using Phase I results as a prior for Phase II
+binbayes(2, 10, 5, 50)
+prob.int(2,10,5,50,0,0.1)
+```
+
+```{r 08-Intro-to-Bayes-17, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(2,10) vs. Posterior (cont.) Beta(7, 55)', out.width='80%'}
+graph.binbayes(2, 10, 5, 50)
+```
+
+第2，3兩個小問題提示我們，無論是將第一階段實驗結果作爲第二階段實驗的先驗假設還是將兩次實驗合併，最終的結果是不會改變的。Both approaches are equivalent.
+
+### Q6
+藥物 A 和藥物 B 都被批准用於治療某種疾病。在 5000 例病例中使用藥物 A，發現有 3 人發生了不良副作用。在另外 7000 例病例中使用藥物 B，發現只有 1 例發生了副作用。
+
+1. 先使用單一分佈作爲先驗概率 (uniform prior: $\text{Beta}(1,1)$)。求藥物 A 和藥物 B 各自發生不良反應的事後概率。
+
+**藥物 A**
+```{r 08-Intro-to-Bayes-18, cache=TRUE}
+# Drug A
+binbayes(1,1, 3, 5000)
+```
+```{r 08-Intro-to-Bayes-19, echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4, 4998)', out.width='80%', cache=TRUE}
+priorA     <- Vectorize(function(theta) dbeta(theta,1,1))
+posteriorA <- Vectorize(function(theta) dbeta(theta,1+3,5000-3+1))
+curve(priorA,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,1200),frame=FALSE)
+curve(posteriorA, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+**藥物 B**
+```{r 08-Intro-to-Bayes-20}
+# Drug B
+binbayes(1,1, 1, 7000)
+```
+```{r 08-Intro-to-Bayes-21, echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 7000)', out.width='80%', cache=TRUE}
+priorB     <- Vectorize(function(theta) dbeta(theta,1,1))
+posteriorB <- Vectorize(function(theta) dbeta(theta,1+1,7000-1+1))
+curve(priorB,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,2700),frame=FALSE)
+curve(posteriorB, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+2. 使用 $\text{Beta}(0.00001,0.00001)$ 作爲先驗概率，重複上面的計算
+
+
+**藥物 A**
+```{r 08-Intro-to-Bayes-22}
+# Drug A
+binbayes(0.00001, 0.00001, 3, 5000)
+```
+```{r 08-Intro-to-Bayes-23, echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(3, 4997)', out.width='80%', cache=TRUE}
+priorA     <- Vectorize(function(theta) dbeta(theta,0.00001,0.00001))
+posteriorA <- Vectorize(function(theta) dbeta(theta,0.00001+3,5000-3+0.00001))
+curve(priorA,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,1500),frame=FALSE)
+curve(posteriorA, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+**藥物 B**
+```{r 08-Intro-to-Bayes-24}
+# Drug B
+binbayes(0.00001, 0.00001, 1, 7000)
+```
+```{r 08-Intro-to-Bayes-25, echo=FALSE, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(1, 6999)', out.width='80%', cache=TRUE}
+priorB     <- Vectorize(function(theta) dbeta(theta,0.00001,0.00001))
+posteriorB <- Vectorize(function(theta) dbeta(theta,1+0.00001,7000-1+0.00001))
+curve(priorB,0,0.0025, xlab=~theta, ylab="Density",
+      lwd=1, lty=2,n=10000,ylim=c(0,7000),frame=FALSE)
+curve(posteriorB, xlab=~theta,lwd=2,lty = 1, add=T,n=10000)
+```
+
+3. 現在使用概率論的計算信賴區間 (confidence intervals) 的方法，求上面數據的精確二項分佈 95% 信賴區間。之前兩問中使用的哪個先驗概率更加接近概率論算法？
+
+```{r 08-Intro-to-Bayes-26}
+#------------------------------------------------
+# Binomial confidence intervals
+#------------------------------------------------
+# r    : number of successes
+# n    : number of trials
+# level: confidence level
+binom.confint <- function(r,n,level){
+ p <- r/n
+conf <-  as.vector(binom.test(r,n,conf.level = 0.95)$conf.int)
+out <- c(p,conf)
+out <- as.matrix(t(round(out,8)))
+colnames(out) <- c("MLE", "L", "U")
+return(out)
+}
+
+# Drug A
+binom.confint(3,5000,0.95)
+# Drug B
+binom.confint(1,7000,0.95)
+```
+
+明顯可以看到，先驗概率使用 $\text{Beta}(0.00001,0.00001)$ 時，事後概率的均值和可信區間的下限值更接近概率論算法。使用先驗概率 $\text{Beta}(1,1)$ 時，事後概率的可信區間的上限值更接近概率論算法。
+
+4. 如果需要你來下結論說，藥物 B 和藥物 A 哪個更加安全？ 求 $\text{Pr}(\theta_B < \theta_A|data)$。
+
+**解**
+
+**貝葉斯**
+
+在計算機的輔助下，這是一個十分簡單的計算。我們從各自的事後分佈中採集大量隨機樣本，然後求 $\theta_B-\theta_A$ 然後看有多少比例這個數值是小於零的就可以得出結論：
+
+```{r 08-Intro-to-Bayes-27, cache=TRUE}
+# Simulating from each posterior
+set.seed(1001)
+post.thetaA <- rbeta(1000000, 3, 4997)
+post.thetaB <- rbeta(1000000, 1, 6999)
+
+# Taking the differences
+theta.diff0 <- post.thetaB - post.thetaA
+```
+
+```{r 08-Intro-to-Bayes-28, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Histogram of  Drug B - Drug A', out.width='80%'}
+# Histogram of the differences
+hist(theta.diff0,probability = TRUE, breaks = 50, xlab=expression(theta[B] - theta[A]),main = "")
+abline(v=0, col="red", lwd=2)
+box()
+```
+
+也可以不採用直方圖而是使用連續曲線：
+```{r 08-Intro-to-Bayes-29, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Density of Drug B - Drug A', out.width='80%'}
+# Continuous version
+plot(density(theta.diff0), xlab=expression(theta[B] - theta[A]), lwd=2, main = "", frame=FALSE)
+abline(v=0, col="red", lwd=2)
+box()
+```
+
+計算 $\text{Pr}(\theta_B < \theta_A|data)$ 和可信區間：
+
+```{r 08-Intro-to-Bayes-30}
+# P(theta[B] < theta[A] | Data)
+mean(theta.diff0 <0)
+# Credible interval for theta[B] - theta[A]
+quantile(theta.diff0, c(0.05,0.95))
+quantile(theta.diff0, c(0.10,0.90))
+```
+```{r 08-Intro-to-Bayes-31, cache=TRUE}
+
+# Simulating from each posterior
+set.seed(1001)
+post.thetaA <- rbeta(1000000, 4, 4998)
+post.thetaB <- rbeta(1000000, 2, 7000)
+
+# Taking the differences
+theta.diff1 <- post.thetaB - post.thetaA
+
+```
+
+```{r 08-Intro-to-Bayes-32, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Histogram of  Drug B - Drug A', out.width='80%'}
+hist(theta.diff1,probability = TRUE, breaks = 50, xlab=expression(theta[B] - theta[A]),main = "")
+abline(v=0, col="red", lwd=2)
+box()
+```
+
+```{r 08-Intro-to-Bayes-33, fig.asp=.7, fig.width=5, fig.align='center',fig.cap='Density of  Drug B - Drug A', out.width='80%'}
+# Continuous version
+plot(density(theta.diff1), xlab=expression(theta[B] - theta[A]), lwd=2,main = "")
+abline(v=0, col="red", lwd=2)
+box()
+```
+計算 $\text{Pr}(\theta_B < \theta_A|data)$ 和可信區間：
+
+```{r 08-Intro-to-Bayes-34}
+# P(theta[B] < theta[A] | Data)
+
+mean(theta.diff1 <0)
+# Credible interval for theta[B] - theta[A]
+quantile(theta.diff1, c(0.05,0.95))
+quantile(theta.diff1, c(0.10,0.90))
+```
+
+**概率論算法**
+
+```{r 08-Intro-to-Bayes-35}
+# Normal Approximation
+diff_mle <- (1/7000)-(3/5000)
+diff_se <- sqrt( 1*6999/7000^3 + 3*4997/5000^3 )
+U <- diff_mle + 1.28*diff_se
+L <- diff_mle - 1.28*diff_se
+print(c(U,L))
+norm.app <- Vectorize(function(x) dnorm(x,diff_mle,diff_se))
+
+```
+
+```{r 08-Intro-to-Bayes-36, fig.asp=.7, fig.width=6, fig.align='center',fig.cap='Comparison of different prior distribution and frequentist approximation', out.width='80%'}
+# Comparison
+plot(density(theta.diff0), xlab=expression(theta[B] - theta[A]), xlim= c(-0.002,0.001), lwd=2, col="red",main = "")
+points(density(theta.diff1), xlab=expression(theta[B] - theta[A]), type = "l", col = "blue", lwd=2)
+curve(norm.app,-0.0045,0.002,add=T,lwd=2,n=10000)
+legend(-0.0021, 1300, c("Posterior with B(0,0)","Posterior with B(1,1)","Frequentist Normal App"), col=c("red","blue","black"),
+       text.col = "black", lty = c(1, 1, 1), lwd = c(2,2,2),
+       merge = TRUE, bg = "gray90",cex=0.8)
+box()
+```
