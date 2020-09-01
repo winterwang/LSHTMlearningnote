@@ -41,10 +41,77 @@ $$
 \begin{equation}
 \theta | y \sim \text{Beta}(y + 1, n - y + 1)
 \end{equation}
+(\#eq:betaposteriornew)
 $$
 
 
+### 事後概率分佈是數據和先驗概率分佈之間的妥協
 
+貝葉斯推斷的過程是從先驗概率分佈 $p(\theta)$ 過渡到事後概率分佈 $p(\theta | y)$ 的過程。我們應該會很自然地認為，這先驗和事後之間的概率分佈必然存在這某種聯繫。例如，我們可能會很純粹的認為，因為事後概率分佈增加了手上數據的信息，那麼它相應地應該比先驗概率分佈不那麼分散（less variable than the prior）。這個思考過程可以通過下面的數學關係來呈現：
+
+- $\theta$ 的事後概率分佈的期望 $E(\theta | y)$ 和它的先驗概率分佈的期望 $E(\theta)$ 之間的關係：
+
+$$
+\begin{equation}
+E(\theta) = E(E(\theta | y))
+\end{equation}
+(\#eq:posteriorE)
+$$
+事後概率分佈的期望 公式\@ref(eq:posteriorE) 很好理解。先驗概率分佈的 $\theta$ 均值 $E(\theta)$，等於事後概率分佈的 $\theta$，在所有觀察點 $y$ 時的值的平均值。
+
+- $\theta$ 的事後概率分佈的方差 $\text{var}(\theta | y)$ 和先驗概率分佈方差之間的關係
+
+$$
+\begin{equation}
+\text{var}(\theta)  = E(\text{var}(\theta | y)) + \text{var}(E(\theta | y))
+\end{equation}
+(\#eq:posterorvar)
+$$
+
+方差關係的方程式 \@ref(eq:posterorvar) 其實說的是先驗概率分佈的方差，在獲取了新的數據 $y$ 之後被分成了兩部分。一個是事後概率分佈本身的方差的均值 $E(\text{var}(\theta | y))$，還有一部分是事後概率分佈均值的方差 $\text{var}(E(\theta | y))$。
+
+**證明方差關係的公式 \@ref(eq:posterorvar)** 參考概率論部分期望與方差的關係 (Chapter \@ref(expectation))
+
+$$
+\begin{aligned}
+E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) & = E(E(\theta^2 | y) - (E(\theta | y))^2) + E([E(\theta | y)]^2) - [E(E(\theta | y))]^2 \\ 
+& = E(\theta^2) - E([E(\theta | y)]^2) +  E([E(\theta | y)]^2) - [E(\theta)]^2 \\
+& = E(\theta^2) - [E(\theta)]^2 \\ 
+& = \text{var}(\theta)
+\end{aligned}
+$$
+
+理解了上述關係之後，可以說，事後概率分佈的方差總是比先驗概率分佈的方差要小一些。如果能想方設法使事後概率分佈均值的方差 $\text{var}(E(\theta | y))$ 這部分佔據更大部分，我們就能提高對 $\theta$ 的事後估計精確度。(the greater the latter variation, the more the potential for reducing our uncertainty with regard to $\theta$).
+
+這也是貝葉斯統計推斷的基本特徵之一，事後概率分佈的中心，一般是位於先驗概率分佈的中心，和觀察數據的中心之間的某個地方，它是先驗概率分佈和數據之間相互妥協的結果。
+
+
+
+```{example 08-intro-to-Bayes-2}
+**估計有前置胎盤的母親生下的新生兒中女嬰的比例。**
+```
+
+一個早期來自德國的研究觀察到，980 名孕期有前置胎盤的母親生下的新生兒中，有 437 名是女嬰。那麼，如何來比較這個觀察數據和已知的，在總體人群 (general population) 中的女嬰出生比例 0.485之間的差異？
+
+當先驗概率分佈使用均一分佈 (uniform distribution: $\theta \sim \text{Beta}(a = 1, b = 1)$) 時，我們獲得的數據是 $n = 980, y = 437$。那麼根據共軛的性質可以計算出事後概率分佈是服從另一個 Beta 分佈: $p(\theta | y,n) = \text{Beta}(a + y, b + n - y) = \text{Beta}(438, 544)$
+
+```{r 08-intro-to-Bayesfig1, fig.height=4, fig.width=5, fig.cap='Probability of a girl given placenta previa (BDA3, p.37).', fig.align='center', out.width='90%', cache=TRUE}
+# 95% Credible Intervals
+L <- qbeta(0.025, 438, 544)
+U <- qbeta(0.975, 438, 544)
+
+post <- Vectorize(function(theta) dbeta(theta, 438, 544))
+
+# Illustration
+x1 <- seq(0.375, 0.525,length=10000)
+y1 <- post(x1)
+plot(x1, y1, type = "l", xlab=~theta, ylab="Density", 
+     main = "Uniform prior -> Posterior is Beta(438, 544)",
+     lwd = 2, frame.plot = FALSE)
+abline(v = 0.488, col = "blue", lty = 3, lwd = 2)
+
+polygon(c(L, x1[x1>=L & x1<= U], U), c(0, y1[x1>=L & x1<=U], 0), col="lightblue")
+```
 
 
 
