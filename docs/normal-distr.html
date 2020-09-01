@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-09-01" />
+<meta name="date" content="2020-09-02" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -749,7 +749,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="43.2.1" data-path="normal-distr.html"><a href="normal-distr.html#n-independent-identically-distributed-observations"><i class="fa fa-check"></i><b>43.2.1</b> <span class="math inline">\(n\)</span> independent identically distributed observations</a></li>
 </ul></li>
-<li class="chapter" data-level="43.3" data-path="normal-distr.html"><a href="normal-distr.html#貝葉斯預測分布"><i class="fa fa-check"></i><b>43.3</b> 貝葉斯預測分布</a></li>
+<li class="chapter" data-level="43.3" data-path="normal-distr.html"><a href="normal-distr.html#事後預測分佈-posterior-predictive-distribution"><i class="fa fa-check"></i><b>43.3</b> 事後預測分佈 Posterior predictive distribution</a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="44" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>44</b> 重要概念複習</a>
@@ -1758,11 +1758,60 @@ y_i, \cdots, y_n &amp; \stackrel{i.i.d}{\sim} N(\mu, \sigma^2=\frac{1}{\tau}) \\
 &amp; N\{ \frac{n\tau\bar{y} + \gamma\nu}{n\tau + \gamma}, \text{precision} = (n\tau + \gamma) \}
 \end{aligned}
 \]</span></p>
+<!-- ## 貝葉斯預測分布 -->
+<!-- 貝葉斯預測分布，是一種在用收集到的數據作爲條件，對未來的觀測作出的條件分布。這其實是在回答一個特別關鍵的問題: "目前爲止我們知道的信息，加上這一次實驗的結果，我們能對未來作什麼樣的預判？" -->
 </div>
 </div>
-<div id="貝葉斯預測分布" class="section level2" number="43.3">
-<h2><span class="header-section-number">43.3</span> 貝葉斯預測分布</h2>
-<p>貝葉斯預測分布，是一種在用收集到的數據作爲條件，對未來的觀測作出的條件分布。這其實是在回答一個特別關鍵的問題: “目前爲止我們知道的信息，加上這一次實驗的結果，我們能對未來作什麼樣的預判？”</p>
+<div id="事後預測分佈-posterior-predictive-distribution" class="section level2" number="43.3">
+<h2><span class="header-section-number">43.3</span> 事後預測分佈 Posterior predictive distribution</h2>
+<p>對於一個接下來將要被收集數據的預測，<span class="math inline">\(\tilde{y}\)</span>。在已經有的數據的條件下，它的條件分佈是 <span class="math inline">\(p(\tilde{y} | y)\)</span>。可以通過積分來運算：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(\tilde{y} | y)  &amp; = \int p(\tilde{y|\theta}) p(\theta | y) d\theta \\ 
+                  &amp; = \int \exp(-\frac{1}{2\sigma^2} (\tilde{y} - \theta)^2) \exp(-\frac{1}{2\tau_1^2}(\theta - \mu_1^2))d\theta
+\end{aligned}                 
+\]</span></p>
+<p>其中，</p>
+<ul>
+<li><span class="math inline">\(\mu_1 = \frac{\frac{1}{\tau_0^2}\mu_0 + \frac{1}{\sigma^2}y}{\frac{1}{\tau_0^2} + \frac{1}{\sigma^2}}\)</span></li>
+<li><span class="math inline">\(\frac{1}{\tau_1^2} = \frac{1}{\tau_0^2} + \frac{1}{\sigma^2}\)</span></li>
+</ul>
+<p>我們又可以根據公式 <a href="single-para-model.html#eq:posteriorE">(42.3)</a> 和 <a href="single-para-model.html#eq:posterorvar">(42.4)</a> 來進一步推導預測變量在已有的觀察數據的基礎上的均值和方差：</p>
+<p><span class="math display">\[
+\begin{aligned}
+E(\tilde{y}|y) &amp; = E(E(\tilde{y}|\theta, y) | y) \\ 
+               \because &amp; \tilde{y}\perp y \text{ new data is independent from the data collected} \\
+               &amp; = E(E(\tilde{y}|\theta) | y) \\ 
+               \because &amp; E(\tilde{y} | \theta) = \theta \\ 
+               &amp; = E(\theta |y)  = \mu_1
+\end{aligned}
+\]</span></p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{var}(\tilde{y} | y) &amp; = E(\text{var}(\tilde{y}|\theta , y) | y) + \text{var}(E(\tilde{y | \theta, y}) | y) \\  
+                          &amp; = E(\sigma^2 | y) + \text{var}(\theta | y) \\
+                          &amp; = \sigma^2 + \tau_1^2
+\end{aligned}
+\]</span></p>
+<p>也就是說我們希望預測的新數據的 <span class="math inline">\(\tilde{y}\)</span> 的均值等於 <span class="math inline">\(\theta\)</span> 的事後概率分佈的均值 <span class="math inline">\(\mu_1\)</span>，方差則由兩部分構成，一是模型方差 <span class="math inline">\(\sigma^2\)</span>，一是事後概率分佈的方差 <span class="math inline">\(\tau_1^2\)</span>。</p>
+<p>上述過程很容易被擴展到有多個獨立同分佈 (independent and identically distributed) 觀察變量 <span class="math inline">\(y = (y_1, \dots, y_n)\)</span> 時的情況：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(\theta | y) &amp; \propto p(\theta)p(y | \theta) \\ 
+              &amp; = p(\theta) \prod_{i = 1}^n p(y_i | \theta)  \\
+              &amp; = \exp(-\frac{1}{2\tau_0^2} (\theta - \mu_0)^2)\prod_{i = 1}^n \exp(-\frac{1}{2\sigma^2}(y_i - \theta)^2) \\
+              &amp; = \exp(-\frac{1}{2}(\frac{1}{\tau_0^2}(\theta  - \mu_0)^2 + \frac{1}{\sigma^2}\prod_{i =1}^n(y_i - \theta)^2))
+\end{aligned}
+\]</span></p>
+<p>事實上根據獨立同分佈正（常）態分佈數據的特徵可知，事後概率分佈此時取決於這 <span class="math inline">\(n\)</span> 個獨立同分佈樣本的均值 <span class="math inline">\(\bar{y} = \frac{1}{n}\sum y_i\)</span> 本身。於是有 <span class="math inline">\(\bar{y} | \theta, \sigma^2 \sim N(\theta, \sigma^2/n)\)</span>，此時把 <span class="math inline">\(\bar{y}\)</span> 本身作為一個單一觀察變量的模型即可獲得：</p>
+<p><span class="math display">\[
+p(\theta | y_1, \dots, y_n) = p(\theta | \bar{y}) = N(\theta | \mu_n, \tau^2_n)
+\]</span></p>
+<p>其中，</p>
+<p>$$
+_n = </p>
+<p> =  + 
+$$</p>
 
 </div>
 </div>

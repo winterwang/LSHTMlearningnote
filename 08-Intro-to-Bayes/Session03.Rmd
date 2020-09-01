@@ -178,6 +178,80 @@ y_i, \cdots, y_n & \stackrel{i.i.d}{\sim} N(\mu, \sigma^2=\frac{1}{\tau}) \\
 $$
 
 
-## 貝葉斯預測分布
+<!-- ## 貝葉斯預測分布 -->
 
-貝葉斯預測分布，是一種在用收集到的數據作爲條件，對未來的觀測作出的條件分布。這其實是在回答一個特別關鍵的問題: "目前爲止我們知道的信息，加上這一次實驗的結果，我們能對未來作什麼樣的預判？"
+<!-- 貝葉斯預測分布，是一種在用收集到的數據作爲條件，對未來的觀測作出的條件分布。這其實是在回答一個特別關鍵的問題: "目前爲止我們知道的信息，加上這一次實驗的結果，我們能對未來作什麼樣的預判？" -->
+
+
+## 事後預測分佈 Posterior predictive distribution 
+
+對於一個接下來將要被收集數據的預測，$\tilde{y}$。在已經有的數據的條件下，它的條件分佈是 $p(\tilde{y} | y)$。可以通過積分來運算：
+
+
+$$
+\begin{aligned}
+p(\tilde{y} | y)  & = \int p(\tilde{y|\theta}) p(\theta | y) d\theta \\ 
+                  & = \int \exp(-\frac{1}{2\sigma^2} (\tilde{y} - \theta)^2) \exp(-\frac{1}{2\tau_1^2}(\theta - \mu_1^2))d\theta
+\end{aligned}                 
+$$
+
+其中，
+
+- $\mu_1 = \frac{\frac{1}{\tau_0^2}\mu_0 + \frac{1}{\sigma^2}y}{\frac{1}{\tau_0^2} + \frac{1}{\sigma^2}}$
+- $\frac{1}{\tau_1^2} = \frac{1}{\tau_0^2} + \frac{1}{\sigma^2}$
+
+
+我們又可以根據公式 \@ref(eq:posteriorE) 和 \@ref(eq:posterorvar) 來進一步推導預測變量在已有的觀察數據的基礎上的均值和方差：
+
+$$
+\begin{aligned}
+E(\tilde{y}|y) & = E(E(\tilde{y}|\theta, y) | y) \\ 
+               \because & \tilde{y}\perp y \text{ new data is independent from the data collected} \\
+               & = E(E(\tilde{y}|\theta) | y) \\ 
+               \because & E(\tilde{y} | \theta) = \theta \\ 
+               & = E(\theta |y)  = \mu_1
+\end{aligned}
+$$
+
+
+$$
+\begin{aligned}
+\text{var}(\tilde{y} | y) & = E(\text{var}(\tilde{y}|\theta , y) | y) + \text{var}(E(\tilde{y | \theta, y}) | y) \\  
+                          & = E(\sigma^2 | y) + \text{var}(\theta | y) \\
+                          & = \sigma^2 + \tau_1^2
+\end{aligned}
+$$ 
+
+也就是說我們希望預測的新數據的 $\tilde{y}$ 的均值等於 $\theta$ 的事後概率分佈的均值 $\mu_1$，方差則由兩部分構成，一是模型方差 $\sigma^2$，一是事後概率分佈的方差 $\tau_1^2$。
+
+
+上述過程很容易被擴展到有多個獨立同分佈 (independent and identically distributed) 觀察變量 $y = (y_1, \dots, y_n)$ 時的情況：
+
+$$
+\begin{aligned}
+p(\theta | y) & \propto p(\theta)p(y | \theta) \\ 
+              & = p(\theta) \prod_{i = 1}^n p(y_i | \theta)  \\
+              & = \exp(-\frac{1}{2\tau_0^2} (\theta - \mu_0)^2)\prod_{i = 1}^n \exp(-\frac{1}{2\sigma^2}(y_i - \theta)^2) \\
+              & = \exp(-\frac{1}{2}(\frac{1}{\tau_0^2}(\theta  - \mu_0)^2 + \frac{1}{\sigma^2}\prod_{i =1}^n(y_i - \theta)^2))
+\end{aligned}
+$$
+
+事實上根據獨立同分佈正（常）態分佈數據的特徵可知，事後概率分佈此時取決於這 $n$ 個獨立同分佈樣本的均值 $\bar{y} = \frac{1}{n}\sum y_i$ 本身。於是有 $\bar{y} | \theta, \sigma^2 \sim N(\theta, \sigma^2/n)$，此時把 $\bar{y}$ 本身作為一個單一觀察變量的模型即可獲得：
+
+$$
+p(\theta | y_1, \dots, y_n) = p(\theta | \bar{y}) = N(\theta | \mu_n, \tau^2_n)
+$$
+
+
+其中， 
+
+$$
+\mu_n = \frac{\frac{1}{\tau_0^2}\mu_0 + \frac{n}{\sigma^2}\bar{y}}{\frac{1}{\tau_0^2} + \frac{n}{\sigma^2}}
+
+\text{ and } 
+
+\frac{1}{\tau_n^2} = \frac{1}{\tau_0^2} + \frac{n}{\sigma^2}
+$$
+
+
+
