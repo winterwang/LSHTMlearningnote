@@ -1734,7 +1734,7 @@ E(\theta) = E(E(\theta | y))
 \tag{42.4}
 \]</span></p>
 <p>方差關係的方程式 <a href="single-para-model.html#eq:posterorvar">(42.4)</a> 其實說的是先驗概率分佈的方差，在獲取了新的數據 <span class="math inline">\(y\)</span> 之後被分成了兩部分。一個是事後概率分佈本身的方差的均值 <span class="math inline">\(E(\text{var}(\theta | y))\)</span>，還有一部分是事後概率分佈均值的方差 <span class="math inline">\(\text{var}(E(\theta | y))\)</span>。</p>
-<p><strong>證明方差關係的公式 <a href="single-para-model.html#eq:posterorvar">(42.4)</a></strong> 參考第一章節概率論部分期望與方差的關係 <a href="expectation.html#expectation">3</a></p>
+<p><strong>證明方差關係的公式 <a href="single-para-model.html#eq:posterorvar">(42.4)</a></strong> 參考概率論部分期望與方差的關係 (Chapter <a href="expectation.html#expectation">3</a>)</p>
 <p><span class="math display">\[
 \begin{aligned}
 E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) - (E(\theta | y))^2) + E([E(\theta | y)]^2) - [E(E(\theta | y))]^2 \\ 
@@ -1751,7 +1751,7 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 </div>
 <p>一個早期來自德國的研究觀察到，980 名孕期有前置胎盤的母親生下的新生兒中，有 437 名是女嬰。那麼，如何來比較這個觀察數據和已知的，在總體人群 (general population) 中的女嬰出生比例 0.485之間的差異？</p>
 <p>當先驗概率分佈使用均一分佈 (uniform distribution: <span class="math inline">\(\theta \sim \text{Beta}(a = 1, b = 1)\)</span>) 時，我們獲得的數據是 <span class="math inline">\(n = 980, y = 437\)</span>。那麼根據共軛的性質可以計算出事後概率分佈是服從另一個 Beta 分佈: <span class="math inline">\(p(\theta | y,n) = \text{Beta}(a + y, b + n - y) = \text{Beta}(438, 544)\)</span></p>
-<div class="sourceCode" id="cb340"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb340-1"><a href="single-para-model.html#cb340-1"></a><span class="co"># 95% Credible Intervals</span></span>
+<div class="sourceCode" id="cb340"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb340-1"><a href="single-para-model.html#cb340-1"></a><span class="co"># 95% Credible Intervals  </span></span>
 <span id="cb340-2"><a href="single-para-model.html#cb340-2"></a>L &lt;-<span class="st"> </span><span class="kw">qbeta</span>(<span class="fl">0.025</span>, <span class="dv">438</span>, <span class="dv">544</span>)</span>
 <span id="cb340-3"><a href="single-para-model.html#cb340-3"></a>U &lt;-<span class="st"> </span><span class="kw">qbeta</span>(<span class="fl">0.975</span>, <span class="dv">438</span>, <span class="dv">544</span>)</span>
 <span id="cb340-4"><a href="single-para-model.html#cb340-4"></a></span>
@@ -1772,6 +1772,44 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 圖 42.1: Probability of a girl given placenta previa (BDA3, p.37).
 </p>
 </div>
+<p>使用 <code>ggplot2</code> 繪圖的方法如下，參考原作者的<a href="https://avehtari.github.io/BDA_R_demos/demos_ch2/demo2_1.html">代碼</a></p>
+<div class="sourceCode" id="cb341"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb341-1"><a href="single-para-model.html#cb341-1"></a><span class="co"># seq creates evenly spaced values</span></span>
+<span id="cb341-2"><a href="single-para-model.html#cb341-2"></a>df1 &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">seq</span>(<span class="fl">0.375</span>, <span class="fl">0.525</span>, <span class="fl">0.001</span>)) </span>
+<span id="cb341-3"><a href="single-para-model.html#cb341-3"></a>a &lt;-<span class="st"> </span><span class="dv">438</span></span>
+<span id="cb341-4"><a href="single-para-model.html#cb341-4"></a>b &lt;-<span class="st"> </span><span class="dv">544</span></span>
+<span id="cb341-5"><a href="single-para-model.html#cb341-5"></a><span class="co"># dbeta computes the posterior density</span></span>
+<span id="cb341-6"><a href="single-para-model.html#cb341-6"></a>df1<span class="op">$</span>p &lt;-<span class="st"> </span><span class="kw">dbeta</span>(df1<span class="op">$</span>theta, a, b)</span>
+<span id="cb341-7"><a href="single-para-model.html#cb341-7"></a></span>
+<span id="cb341-8"><a href="single-para-model.html#cb341-8"></a><span class="co">## 計算95%可信區間</span></span>
+<span id="cb341-9"><a href="single-para-model.html#cb341-9"></a><span class="co"># seq creates evenly spaced values from 2.5% quantile</span></span>
+<span id="cb341-10"><a href="single-para-model.html#cb341-10"></a><span class="co"># to 97.5% quantile (i.e., 95% central interval)</span></span>
+<span id="cb341-11"><a href="single-para-model.html#cb341-11"></a><span class="co"># qbeta computes the value for a given quantile given parameters a and b</span></span>
+<span id="cb341-12"><a href="single-para-model.html#cb341-12"></a>df2 &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">seq</span>(<span class="kw">qbeta</span>(<span class="fl">0.025</span>, a, b), <span class="kw">qbeta</span>(<span class="fl">0.975</span>, a, b), <span class="dt">length.out =</span> <span class="dv">100</span>))</span>
+<span id="cb341-13"><a href="single-para-model.html#cb341-13"></a><span class="co"># compute the posterior density</span></span>
+<span id="cb341-14"><a href="single-para-model.html#cb341-14"></a>df2<span class="op">$</span>p &lt;-<span class="st"> </span><span class="kw">dbeta</span>(df2<span class="op">$</span>theta, a, b)</span>
+<span id="cb341-15"><a href="single-para-model.html#cb341-15"></a></span>
+<span id="cb341-16"><a href="single-para-model.html#cb341-16"></a></span>
+<span id="cb341-17"><a href="single-para-model.html#cb341-17"></a><span class="kw">ggplot</span>(<span class="dt">mapping =</span> <span class="kw">aes</span>(theta, p)) <span class="op">+</span></span>
+<span id="cb341-18"><a href="single-para-model.html#cb341-18"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="dt">data =</span> df1) <span class="op">+</span></span>
+<span id="cb341-19"><a href="single-para-model.html#cb341-19"></a><span class="st">  </span><span class="co"># Add a layer of colorized 95% posterior interval</span></span>
+<span id="cb341-20"><a href="single-para-model.html#cb341-20"></a><span class="st">  </span><span class="kw">geom_area</span>(<span class="dt">data =</span> df2, <span class="kw">aes</span>(<span class="dt">fill=</span><span class="st">&#39;1&#39;</span>)) <span class="op">+</span></span>
+<span id="cb341-21"><a href="single-para-model.html#cb341-21"></a><span class="st">  </span><span class="co"># Add the proportion of girl babies in general population</span></span>
+<span id="cb341-22"><a href="single-para-model.html#cb341-22"></a><span class="st">  </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="fl">0.488</span>, <span class="dt">linetype=</span><span class="st">&#39;dotted&#39;</span>) <span class="op">+</span></span>
+<span id="cb341-23"><a href="single-para-model.html#cb341-23"></a><span class="st">  </span><span class="co"># Decorate the plot a little</span></span>
+<span id="cb341-24"><a href="single-para-model.html#cb341-24"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title=</span><span class="st">&#39;Uniform prior -&gt; Posterior is Beta(438,544)&#39;</span>, <span class="dt">y =</span> <span class="st">&#39;&#39;</span>) <span class="op">+</span></span>
+<span id="cb341-25"><a href="single-para-model.html#cb341-25"></a><span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">expand =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.1</span>), <span class="dt">breaks =</span> <span class="ot">NULL</span>) <span class="op">+</span></span>
+<span id="cb341-26"><a href="single-para-model.html#cb341-26"></a><span class="st">  </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="st">&#39;lightblue&#39;</span>, <span class="dt">labels =</span> <span class="st">&#39;95% posterior interval&#39;</span>) <span class="op">+</span></span>
+<span id="cb341-27"><a href="single-para-model.html#cb341-27"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&#39;bottom&#39;</span>, <span class="dt">legend.title =</span> <span class="kw">element_blank</span>())</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:08-intro-to-Bayesfig2"></span>
+<img src="bookdown_files/figure-html/08-intro-to-Bayesfig2-1.png" alt="Probability of a girl given placenta previa (BDA3, p.37), same figure in ggplot format." width="90%" />
+<p class="caption">
+圖 42.2: Probability of a girl given placenta previa (BDA3, p.37), same figure in ggplot format.
+</p>
+</div>
+<p>可以看到這裡我們計算獲得的事後可信區間是 [0.415, 0.477]，它的上限也低於總體人群的女嬰出生概率= 0.485。所以，應該可以認為如果有孕期有前置胎盤，女嬰出生的概率比人群水平更低。</p>
+<div class="sourceCode" id="cb342"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb342-1"><a href="single-para-model.html#cb342-1"></a>L;U</span></code></pre></div>
+<pre><code>## [1] 0.41506549</code></pre>
+<pre><code>## [1] 0.47719977</code></pre>
 </div>
 </div>
 <div id="貝葉斯理論下的事後二項分佈概率密度方程-notation-for-probability-density-functions-in-binomial-data" class="section level2" number="42.2">
@@ -1839,7 +1877,7 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 <div class="figure" style="text-align: center"><span id="fig:beta-distr"></span>
 <img src="bookdown_files/figure-html/beta-distr-1.png" alt="Beta distribution functions for various values of a, b" width="90%" />
 <p class="caption">
-圖 42.2: Beta distribution functions for various values of a, b
+圖 42.3: Beta distribution functions for various values of a, b
 </p>
 </div>
 <p>你會發現，beta分佈的圖形特徵由它的兩個超參數 (hyperparameter) <code>a, b</code> 決定。當相對地 <code>a</code> 比較大的時候，beta分佈的概率多傾向於較靠近橫軸右邊，也就是1的位置（較高概率），相對地 <code>b</code> 比較大的時候，beta分佈的曲線多傾向於靠近橫軸左邊，也就是0的位置（較低概率）。如果 <code>a</code> 和 <code>b</code>同時都在變大的話，beta分佈的曲線就變得比較“瘦”。這樣決定概率分佈形狀的參數，又被叫做<strong>形狀參數 (shape parameters)</strong></p>
@@ -1856,7 +1894,7 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 <p>其中
 <span class="math display">\[B(a,b)=\frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)} = \int_0^1\theta^{a-1}(1-\theta)^{b-1}\text{d}\theta\]</span></p>
 <p><strong>莫要混淆 B 函數和 Beta 方程。B 函數的性質和詳細定義可以參照<a href="https://zh.wikipedia.org/wiki/%CE%92%E5%87%BD%E6%95%B0">其維基百科頁面</a>。</strong></p>
-<p>利用 Beta 方程作爲先驗概率顯得十分便捷且靈活。圖 <a href="single-para-model.html#fig:beta-distr">42.2</a> 展示的是 6 種不同的 <span class="math inline">\((a,b)\)</span> 取值下的先驗概率分佈示意圖。其實我們可以看到，包括均一分佈在內的各種可能性都可以通過 Beta 分佈實現。其中 <span class="math inline">\((a,b)\)</span> 被叫做超參數 (hyperparameter)。<span class="math inline">\((a,b)\)</span> 取值越大，先驗概率分佈的方差越小。</p>
+<p>利用 Beta 方程作爲先驗概率顯得十分便捷且靈活。圖 <a href="single-para-model.html#fig:beta-distr">42.3</a> 展示的是 6 種不同的 <span class="math inline">\((a,b)\)</span> 取值下的先驗概率分佈示意圖。其實我們可以看到，包括均一分佈在內的各種可能性都可以通過 Beta 分佈實現。其中 <span class="math inline">\((a,b)\)</span> 被叫做超參數 (hyperparameter)。<span class="math inline">\((a,b)\)</span> 取值越大，先驗概率分佈的方差越小。</p>
 <p>關於 Beta 分佈的幾個性質：</p>
 <ol style="list-style-type: decimal">
 <li>均值：<span class="math inline">\(\text{mean}=\frac{a}{a+b}\)</span>；</li>
@@ -1945,61 +1983,61 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 <p><strong>解</strong></p>
 <p>根據 Section <a href="single-para-model.html#conjugate">42.3.2</a> 的公式，當先驗概率爲 <span class="math inline">\(\pi_{\Theta|r}(\theta|r)=\text{Beta}(a=0.5,b=0.5)\)</span> ，數據 <span class="math inline">\(n=5, r=3\)</span>。參數 <span class="math inline">\(\theta\)</span> 的事後概率分佈 <span class="math inline">\(\pi_{\Theta|r}(\theta|r)=\text{Beta}(a+r,b+n-r)=\text{Beta}(3.5,2.5)\)</span>。</p>
 <p>在 <a href="https://www.r-project.org/">R</a> 裏進行貝葉斯計算十分簡便：</p>
-<div class="sourceCode" id="cb341"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb341-1"><a href="single-para-model.html#cb341-1"></a><span class="co"># 95% Credible Intervals</span></span>
-<span id="cb341-2"><a href="single-para-model.html#cb341-2"></a>L &lt;-<span class="st"> </span><span class="kw">qbeta</span>(<span class="fl">0.025</span>, <span class="fl">3.5</span>, <span class="fl">2.5</span>)</span>
-<span id="cb341-3"><a href="single-para-model.html#cb341-3"></a>U &lt;-<span class="st"> </span><span class="kw">qbeta</span>(<span class="fl">0.975</span>, <span class="fl">3.5</span>, <span class="fl">2.5</span>)</span>
-<span id="cb341-4"><a href="single-para-model.html#cb341-4"></a></span>
-<span id="cb341-5"><a href="single-para-model.html#cb341-5"></a><span class="kw">print</span>(<span class="kw">c</span>(L,U))</span></code></pre></div>
+<div class="sourceCode" id="cb345"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb345-1"><a href="single-para-model.html#cb345-1"></a><span class="co"># 95% Credible Intervals</span></span>
+<span id="cb345-2"><a href="single-para-model.html#cb345-2"></a>L &lt;-<span class="st"> </span><span class="kw">qbeta</span>(<span class="fl">0.025</span>, <span class="fl">3.5</span>, <span class="fl">2.5</span>)</span>
+<span id="cb345-3"><a href="single-para-model.html#cb345-3"></a>U &lt;-<span class="st"> </span><span class="kw">qbeta</span>(<span class="fl">0.975</span>, <span class="fl">3.5</span>, <span class="fl">2.5</span>)</span>
+<span id="cb345-4"><a href="single-para-model.html#cb345-4"></a></span>
+<span id="cb345-5"><a href="single-para-model.html#cb345-5"></a><span class="kw">print</span>(<span class="kw">c</span>(L,U))</span></code></pre></div>
 <pre><code>## [1] 0.20941666 0.90560967</code></pre>
 <p>事後分佈 <span class="math inline">\(\pi_{\Theta|r}(\theta|r)=\text{Beta}(3.5,2.5)\)</span> 的分佈圖形如下：</p>
-<div class="sourceCode" id="cb343"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb343-1"><a href="single-para-model.html#cb343-1"></a>post &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, <span class="fl">3.5</span>, <span class="fl">2.5</span>))</span>
-<span id="cb343-2"><a href="single-para-model.html#cb343-2"></a></span>
-<span id="cb343-3"><a href="single-para-model.html#cb343-3"></a><span class="co"># Illustration</span></span>
-<span id="cb343-4"><a href="single-para-model.html#cb343-4"></a>x &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dt">length=</span><span class="dv">10000</span>)</span>
-<span id="cb343-5"><a href="single-para-model.html#cb343-5"></a>y &lt;-<span class="st"> </span><span class="kw">post</span>(x)</span>
-<span id="cb343-6"><a href="single-para-model.html#cb343-6"></a><span class="kw">plot</span>(x,y, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">xlab=</span><span class="op">~</span>theta, <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>)</span>
-<span id="cb343-7"><a href="single-para-model.html#cb343-7"></a></span>
-<span id="cb343-8"><a href="single-para-model.html#cb343-8"></a><span class="kw">polygon</span>(<span class="kw">c</span>(L, x[x<span class="op">&gt;=</span>L <span class="op">&amp;</span><span class="st"> </span>x<span class="op">&lt;=</span><span class="st"> </span>U], U), <span class="kw">c</span>(<span class="dv">0</span>, y[x<span class="op">&gt;=</span>L <span class="op">&amp;</span><span class="st"> </span>x<span class="op">&lt;=</span>U], <span class="dv">0</span>), <span class="dt">col=</span><span class="st">&quot;grey&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb347"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb347-1"><a href="single-para-model.html#cb347-1"></a>post &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, <span class="fl">3.5</span>, <span class="fl">2.5</span>))</span>
+<span id="cb347-2"><a href="single-para-model.html#cb347-2"></a></span>
+<span id="cb347-3"><a href="single-para-model.html#cb347-3"></a><span class="co"># Illustration</span></span>
+<span id="cb347-4"><a href="single-para-model.html#cb347-4"></a>x &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dt">length=</span><span class="dv">10000</span>)</span>
+<span id="cb347-5"><a href="single-para-model.html#cb347-5"></a>y &lt;-<span class="st"> </span><span class="kw">post</span>(x)</span>
+<span id="cb347-6"><a href="single-para-model.html#cb347-6"></a><span class="kw">plot</span>(x,y, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">xlab=</span><span class="op">~</span>theta, <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>)</span>
+<span id="cb347-7"><a href="single-para-model.html#cb347-7"></a></span>
+<span id="cb347-8"><a href="single-para-model.html#cb347-8"></a><span class="kw">polygon</span>(<span class="kw">c</span>(L, x[x<span class="op">&gt;=</span>L <span class="op">&amp;</span><span class="st"> </span>x<span class="op">&lt;=</span><span class="st"> </span>U], U), <span class="kw">c</span>(<span class="dv">0</span>, y[x<span class="op">&gt;=</span>L <span class="op">&amp;</span><span class="st"> </span>x<span class="op">&lt;=</span>U], <span class="dv">0</span>), <span class="dt">col=</span><span class="st">&quot;grey&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:Bayes03"></span>
 <img src="bookdown_files/figure-html/Bayes03-1.png" alt="Posterior distribution of Beta(3.5,2.5)" width="80%" />
 <p class="caption">
-圖 42.3: Posterior distribution of Beta(3.5,2.5)
+圖 42.4: Posterior distribution of Beta(3.5,2.5)
 </p>
 </div>
 <p>我們可以自己寫一個求可信區間的公式來計算：</p>
-<div class="sourceCode" id="cb344"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb344-1"><a href="single-para-model.html#cb344-1"></a><span class="co"># Credible Interval function:</span></span>
-<span id="cb344-2"><a href="single-para-model.html#cb344-2"></a><span class="co"># a, b : shape / super parameters</span></span>
-<span id="cb344-3"><a href="single-para-model.html#cb344-3"></a><span class="co"># level: probability level (0,1)</span></span>
-<span id="cb344-4"><a href="single-para-model.html#cb344-4"></a></span>
-<span id="cb344-5"><a href="single-para-model.html#cb344-5"></a>cred.int &lt;-<span class="st"> </span><span class="cf">function</span>(a,b,level){</span>
-<span id="cb344-6"><a href="single-para-model.html#cb344-6"></a>  L &lt;-<span class="st"> </span><span class="kw">qbeta</span>((<span class="dv">1</span><span class="op">-</span>level)<span class="op">/</span><span class="dv">2</span>, a, b) <span class="co"># Lower limit</span></span>
-<span id="cb344-7"><a href="single-para-model.html#cb344-7"></a>  U &lt;-<span class="st"> </span><span class="kw">qbeta</span>((<span class="dv">1</span><span class="op">+</span>level)<span class="op">/</span><span class="dv">2</span>, a, b) <span class="co"># Upper limit</span></span>
-<span id="cb344-8"><a href="single-para-model.html#cb344-8"></a>  <span class="kw">return</span>(<span class="kw">c</span>(L,U))</span>
-<span id="cb344-9"><a href="single-para-model.html#cb344-9"></a>}</span>
-<span id="cb344-10"><a href="single-para-model.html#cb344-10"></a></span>
-<span id="cb344-11"><a href="single-para-model.html#cb344-11"></a><span class="kw">cred.int</span>(<span class="fl">3.5</span>,<span class="fl">2.5</span>,<span class="fl">0.95</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb348"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb348-1"><a href="single-para-model.html#cb348-1"></a><span class="co"># Credible Interval function:</span></span>
+<span id="cb348-2"><a href="single-para-model.html#cb348-2"></a><span class="co"># a, b : shape / super parameters</span></span>
+<span id="cb348-3"><a href="single-para-model.html#cb348-3"></a><span class="co"># level: probability level (0,1)</span></span>
+<span id="cb348-4"><a href="single-para-model.html#cb348-4"></a></span>
+<span id="cb348-5"><a href="single-para-model.html#cb348-5"></a>cred.int &lt;-<span class="st"> </span><span class="cf">function</span>(a,b,level){</span>
+<span id="cb348-6"><a href="single-para-model.html#cb348-6"></a>  L &lt;-<span class="st"> </span><span class="kw">qbeta</span>((<span class="dv">1</span><span class="op">-</span>level)<span class="op">/</span><span class="dv">2</span>, a, b) <span class="co"># Lower limit</span></span>
+<span id="cb348-7"><a href="single-para-model.html#cb348-7"></a>  U &lt;-<span class="st"> </span><span class="kw">qbeta</span>((<span class="dv">1</span><span class="op">+</span>level)<span class="op">/</span><span class="dv">2</span>, a, b) <span class="co"># Upper limit</span></span>
+<span id="cb348-8"><a href="single-para-model.html#cb348-8"></a>  <span class="kw">return</span>(<span class="kw">c</span>(L,U))</span>
+<span id="cb348-9"><a href="single-para-model.html#cb348-9"></a>}</span>
+<span id="cb348-10"><a href="single-para-model.html#cb348-10"></a></span>
+<span id="cb348-11"><a href="single-para-model.html#cb348-11"></a><span class="kw">cred.int</span>(<span class="fl">3.5</span>,<span class="fl">2.5</span>,<span class="fl">0.95</span>)</span></code></pre></div>
 <pre><code>## [1] 0.20941666 0.90560967</code></pre>
 <p>95%可信區間 <span class="math inline">\((0.2094, 0.9056)\)</span> 告訴我們，參數 <span class="math inline">\(\theta\in(0.2094, 0.9056)\)</span> 的概率是 <span class="math inline">\(0.95\)</span>。</p>
 <p>下面我們嘗試寫 Beta 分佈的其他統計量：均值，衆數，方差等。</p>
-<div class="sourceCode" id="cb346"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb346-1"><a href="single-para-model.html#cb346-1"></a><span class="co"># a, b: shape / super parameters</span></span>
-<span id="cb346-2"><a href="single-para-model.html#cb346-2"></a>MeanBeta &lt;-<span class="st"> </span><span class="cf">function</span>(a,b) a<span class="op">/</span>(a<span class="op">+</span>b)</span>
-<span id="cb346-3"><a href="single-para-model.html#cb346-3"></a>ModeBeta &lt;-<span class="st"> </span><span class="cf">function</span>(a,b) {</span>
-<span id="cb346-4"><a href="single-para-model.html#cb346-4"></a>  m &lt;-<span class="st"> </span><span class="kw">ifelse</span>(a<span class="op">&gt;</span><span class="dv">1</span> <span class="op">&amp;</span><span class="st"> </span>b<span class="op">&gt;</span><span class="dv">1</span>, (a<span class="dv">-1</span>)<span class="op">/</span>(a<span class="op">+</span>b<span class="dv">-2</span>), <span class="ot">NA</span>)</span>
-<span id="cb346-5"><a href="single-para-model.html#cb346-5"></a>  <span class="kw">return</span>(m)</span>
-<span id="cb346-6"><a href="single-para-model.html#cb346-6"></a>}</span>
-<span id="cb346-7"><a href="single-para-model.html#cb346-7"></a>VarianceBeta &lt;-<span class="st"> </span><span class="cf">function</span>(a,b) (a<span class="op">*</span>b)<span class="op">/</span>((a<span class="op">+</span>b)<span class="op">^</span><span class="dv">2</span><span class="op">*</span>(a<span class="op">+</span>b<span class="op">+</span><span class="dv">1</span>))</span>
-<span id="cb346-8"><a href="single-para-model.html#cb346-8"></a></span>
-<span id="cb346-9"><a href="single-para-model.html#cb346-9"></a><span class="co"># mean</span></span>
-<span id="cb346-10"><a href="single-para-model.html#cb346-10"></a><span class="kw">MeanBeta</span>(<span class="fl">3.5</span>,<span class="fl">2.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb350"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb350-1"><a href="single-para-model.html#cb350-1"></a><span class="co"># a, b: shape / super parameters</span></span>
+<span id="cb350-2"><a href="single-para-model.html#cb350-2"></a>MeanBeta &lt;-<span class="st"> </span><span class="cf">function</span>(a,b) a<span class="op">/</span>(a<span class="op">+</span>b)</span>
+<span id="cb350-3"><a href="single-para-model.html#cb350-3"></a>ModeBeta &lt;-<span class="st"> </span><span class="cf">function</span>(a,b) {</span>
+<span id="cb350-4"><a href="single-para-model.html#cb350-4"></a>  m &lt;-<span class="st"> </span><span class="kw">ifelse</span>(a<span class="op">&gt;</span><span class="dv">1</span> <span class="op">&amp;</span><span class="st"> </span>b<span class="op">&gt;</span><span class="dv">1</span>, (a<span class="dv">-1</span>)<span class="op">/</span>(a<span class="op">+</span>b<span class="dv">-2</span>), <span class="ot">NA</span>)</span>
+<span id="cb350-5"><a href="single-para-model.html#cb350-5"></a>  <span class="kw">return</span>(m)</span>
+<span id="cb350-6"><a href="single-para-model.html#cb350-6"></a>}</span>
+<span id="cb350-7"><a href="single-para-model.html#cb350-7"></a>VarianceBeta &lt;-<span class="st"> </span><span class="cf">function</span>(a,b) (a<span class="op">*</span>b)<span class="op">/</span>((a<span class="op">+</span>b)<span class="op">^</span><span class="dv">2</span><span class="op">*</span>(a<span class="op">+</span>b<span class="op">+</span><span class="dv">1</span>))</span>
+<span id="cb350-8"><a href="single-para-model.html#cb350-8"></a></span>
+<span id="cb350-9"><a href="single-para-model.html#cb350-9"></a><span class="co"># mean</span></span>
+<span id="cb350-10"><a href="single-para-model.html#cb350-10"></a><span class="kw">MeanBeta</span>(<span class="fl">3.5</span>,<span class="fl">2.5</span>)</span></code></pre></div>
 <pre><code>## [1] 0.58333333</code></pre>
-<div class="sourceCode" id="cb348"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb348-1"><a href="single-para-model.html#cb348-1"></a><span class="co"># mode</span></span>
-<span id="cb348-2"><a href="single-para-model.html#cb348-2"></a><span class="kw">ModeBeta</span>(<span class="fl">3.5</span>,<span class="fl">2.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb352"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb352-1"><a href="single-para-model.html#cb352-1"></a><span class="co"># mode</span></span>
+<span id="cb352-2"><a href="single-para-model.html#cb352-2"></a><span class="kw">ModeBeta</span>(<span class="fl">3.5</span>,<span class="fl">2.5</span>)</span></code></pre></div>
 <pre><code>## [1] 0.625</code></pre>
-<div class="sourceCode" id="cb350"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb350-1"><a href="single-para-model.html#cb350-1"></a><span class="co"># Variance</span></span>
-<span id="cb350-2"><a href="single-para-model.html#cb350-2"></a><span class="kw">VarianceBeta</span>(<span class="fl">3.5</span>, <span class="fl">2.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb354"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb354-1"><a href="single-para-model.html#cb354-1"></a><span class="co"># Variance</span></span>
+<span id="cb354-2"><a href="single-para-model.html#cb354-2"></a><span class="kw">VarianceBeta</span>(<span class="fl">3.5</span>, <span class="fl">2.5</span>)</span></code></pre></div>
 <pre><code>## [1] 0.034722222</code></pre>
-<div class="sourceCode" id="cb352"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb352-1"><a href="single-para-model.html#cb352-1"></a><span class="co"># SD</span></span>
-<span id="cb352-2"><a href="single-para-model.html#cb352-2"></a><span class="kw">sqrt</span>(<span class="kw">VarianceBeta</span>(<span class="fl">3.5</span>, <span class="fl">2.5</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb356"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb356-1"><a href="single-para-model.html#cb356-1"></a><span class="co"># SD</span></span>
+<span id="cb356-2"><a href="single-para-model.html#cb356-2"></a><span class="kw">sqrt</span>(<span class="kw">VarianceBeta</span>(<span class="fl">3.5</span>, <span class="fl">2.5</span>))</span></code></pre></div>
 <pre><code>## [1] 0.186339</code></pre>
 </div>
 <div id="q2" class="section level3" number="42.5.2">
@@ -2015,56 +2053,56 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 </ol>
 <p><strong>解</strong></p>
 <p>先來嘗試寫一個計算貝葉斯二項分佈的方程：</p>
-<div class="sourceCode" id="cb354"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb354-1"><a href="single-para-model.html#cb354-1"></a><span class="co"># binbayes function in R</span></span>
-<span id="cb354-2"><a href="single-para-model.html#cb354-2"></a><span class="co">#------------------------------</span></span>
-<span id="cb354-3"><a href="single-para-model.html#cb354-3"></a><span class="co"># a, b: shape / super parameters</span></span>
-<span id="cb354-4"><a href="single-para-model.html#cb354-4"></a><span class="co"># r   : number of successes</span></span>
-<span id="cb354-5"><a href="single-para-model.html#cb354-5"></a><span class="co"># n   : number of trials</span></span>
-<span id="cb354-6"><a href="single-para-model.html#cb354-6"></a></span>
-<span id="cb354-7"><a href="single-para-model.html#cb354-7"></a>binbayes &lt;-<span class="st"> </span><span class="cf">function</span>(a, b, r, n) {</span>
-<span id="cb354-8"><a href="single-para-model.html#cb354-8"></a>  prior &lt;-<span class="st"> </span><span class="kw">c</span>(a, b, <span class="ot">NA</span>, <span class="kw">MeanBeta</span>(a,b), <span class="kw">sqrt</span>(<span class="kw">VarianceBeta</span>(a, b)), <span class="kw">qbeta</span>(<span class="fl">0.025</span>, a, b), <span class="kw">qbeta</span>(<span class="fl">0.5</span>, a, b), <span class="kw">qbeta</span>(<span class="fl">0.975</span>, a, b))</span>
-<span id="cb354-9"><a href="single-para-model.html#cb354-9"></a>  posterior &lt;-<span class="st"> </span><span class="kw">c</span>(a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r, r<span class="op">/</span>n, <span class="kw">MeanBeta</span>(a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r), <span class="kw">sqrt</span>(<span class="kw">VarianceBeta</span>(a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r)), <span class="kw">qbeta</span>(<span class="fl">0.025</span>, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r), <span class="kw">qbeta</span>(<span class="fl">0.5</span>, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r), <span class="kw">qbeta</span>(<span class="fl">0.975</span>, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r))</span>
-<span id="cb354-10"><a href="single-para-model.html#cb354-10"></a>  out &lt;-<span class="st"> </span><span class="kw">rbind</span>(prior, posterior)</span>
-<span id="cb354-11"><a href="single-para-model.html#cb354-11"></a>  out &lt;-<span class="st"> </span><span class="kw">round</span>(out, <span class="dv">4</span>)</span>
-<span id="cb354-12"><a href="single-para-model.html#cb354-12"></a>  <span class="kw">colnames</span>(out) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;a&quot;</span>,<span class="st">&quot;b&quot;</span>,<span class="st">&quot;r/n&quot;</span>,<span class="st">&quot;Mean&quot;</span>, <span class="st">&quot;SD&quot;</span>, <span class="st">&quot;2.5%&quot;</span>, <span class="st">&quot;50%&quot;</span>, <span class="st">&quot;97.5%&quot;</span>)</span>
-<span id="cb354-13"><a href="single-para-model.html#cb354-13"></a>  <span class="kw">return</span>(out)</span>
-<span id="cb354-14"><a href="single-para-model.html#cb354-14"></a>}</span>
-<span id="cb354-15"><a href="single-para-model.html#cb354-15"></a></span>
-<span id="cb354-16"><a href="single-para-model.html#cb354-16"></a><span class="co"># a=1, b=4, r=1, n=5</span></span>
-<span id="cb354-17"><a href="single-para-model.html#cb354-17"></a><span class="kw">binbayes</span>(<span class="dv">1</span>,<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb358"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb358-1"><a href="single-para-model.html#cb358-1"></a><span class="co"># binbayes function in R</span></span>
+<span id="cb358-2"><a href="single-para-model.html#cb358-2"></a><span class="co">#------------------------------</span></span>
+<span id="cb358-3"><a href="single-para-model.html#cb358-3"></a><span class="co"># a, b: shape / super parameters</span></span>
+<span id="cb358-4"><a href="single-para-model.html#cb358-4"></a><span class="co"># r   : number of successes</span></span>
+<span id="cb358-5"><a href="single-para-model.html#cb358-5"></a><span class="co"># n   : number of trials</span></span>
+<span id="cb358-6"><a href="single-para-model.html#cb358-6"></a></span>
+<span id="cb358-7"><a href="single-para-model.html#cb358-7"></a>binbayes &lt;-<span class="st"> </span><span class="cf">function</span>(a, b, r, n) {</span>
+<span id="cb358-8"><a href="single-para-model.html#cb358-8"></a>  prior &lt;-<span class="st"> </span><span class="kw">c</span>(a, b, <span class="ot">NA</span>, <span class="kw">MeanBeta</span>(a,b), <span class="kw">sqrt</span>(<span class="kw">VarianceBeta</span>(a, b)), <span class="kw">qbeta</span>(<span class="fl">0.025</span>, a, b), <span class="kw">qbeta</span>(<span class="fl">0.5</span>, a, b), <span class="kw">qbeta</span>(<span class="fl">0.975</span>, a, b))</span>
+<span id="cb358-9"><a href="single-para-model.html#cb358-9"></a>  posterior &lt;-<span class="st"> </span><span class="kw">c</span>(a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r, r<span class="op">/</span>n, <span class="kw">MeanBeta</span>(a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r), <span class="kw">sqrt</span>(<span class="kw">VarianceBeta</span>(a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r)), <span class="kw">qbeta</span>(<span class="fl">0.025</span>, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r), <span class="kw">qbeta</span>(<span class="fl">0.5</span>, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r), <span class="kw">qbeta</span>(<span class="fl">0.975</span>, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r))</span>
+<span id="cb358-10"><a href="single-para-model.html#cb358-10"></a>  out &lt;-<span class="st"> </span><span class="kw">rbind</span>(prior, posterior)</span>
+<span id="cb358-11"><a href="single-para-model.html#cb358-11"></a>  out &lt;-<span class="st"> </span><span class="kw">round</span>(out, <span class="dv">4</span>)</span>
+<span id="cb358-12"><a href="single-para-model.html#cb358-12"></a>  <span class="kw">colnames</span>(out) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;a&quot;</span>,<span class="st">&quot;b&quot;</span>,<span class="st">&quot;r/n&quot;</span>,<span class="st">&quot;Mean&quot;</span>, <span class="st">&quot;SD&quot;</span>, <span class="st">&quot;2.5%&quot;</span>, <span class="st">&quot;50%&quot;</span>, <span class="st">&quot;97.5%&quot;</span>)</span>
+<span id="cb358-13"><a href="single-para-model.html#cb358-13"></a>  <span class="kw">return</span>(out)</span>
+<span id="cb358-14"><a href="single-para-model.html#cb358-14"></a>}</span>
+<span id="cb358-15"><a href="single-para-model.html#cb358-15"></a></span>
+<span id="cb358-16"><a href="single-para-model.html#cb358-16"></a><span class="co"># a=1, b=4, r=1, n=5</span></span>
+<span id="cb358-17"><a href="single-para-model.html#cb358-17"></a><span class="kw">binbayes</span>(<span class="dv">1</span>,<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
 <pre><code>##           a b r/n Mean     SD   2.5%    50%  97.5%
 ## prior     1 4  NA  0.2 0.1633 0.0063 0.1591 0.6024
 ## posterior 2 8 0.2  0.2 0.1206 0.0281 0.1796 0.4825</code></pre>
-<div class="sourceCode" id="cb356"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb356-1"><a href="single-para-model.html#cb356-1"></a><span class="co"># a=10, b=40, r=1, n=5</span></span>
-<span id="cb356-2"><a href="single-para-model.html#cb356-2"></a><span class="kw">binbayes</span>(<span class="dv">10</span>,<span class="dv">40</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb360"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb360-1"><a href="single-para-model.html#cb360-1"></a><span class="co"># a=10, b=40, r=1, n=5</span></span>
+<span id="cb360-2"><a href="single-para-model.html#cb360-2"></a><span class="kw">binbayes</span>(<span class="dv">10</span>,<span class="dv">40</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
 <pre><code>##            a  b r/n Mean     SD   2.5%    50%  97.5%
 ## prior     10 40  NA  0.2 0.0560 0.1024 0.1960 0.3202
 ## posterior 11 44 0.2  0.2 0.0535 0.1063 0.1963 0.3143</code></pre>
 <p>通過繪製先驗概率分佈圖和事後概率分佈圖來比較二者的變化：</p>
-<div class="sourceCode" id="cb358"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb358-1"><a href="single-para-model.html#cb358-1"></a><span class="co"># Prior vs posterior graphs</span></span>
-<span id="cb358-2"><a href="single-para-model.html#cb358-2"></a><span class="co"># a,b : shape / super parameters</span></span>
-<span id="cb358-3"><a href="single-para-model.html#cb358-3"></a><span class="co"># r   : number of successes</span></span>
-<span id="cb358-4"><a href="single-para-model.html#cb358-4"></a><span class="co"># n   : number of trials</span></span>
-<span id="cb358-5"><a href="single-para-model.html#cb358-5"></a>graph.binbayes &lt;-<span class="st"> </span><span class="cf">function</span>(a,b,r,n) {</span>
-<span id="cb358-6"><a href="single-para-model.html#cb358-6"></a>  prior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a,b))</span>
-<span id="cb358-7"><a href="single-para-model.html#cb358-7"></a>  posterior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r))</span>
-<span id="cb358-8"><a href="single-para-model.html#cb358-8"></a>  YL &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">prior</span>(<span class="kw">seq</span>(<span class="fl">0.001</span>,<span class="fl">0.999</span>,<span class="dt">by=</span><span class="fl">0.001</span>)),<span class="kw">posterior</span>(<span class="kw">seq</span>(<span class="fl">0.001</span>,<span class="fl">0.999</span>,<span class="dt">by=</span><span class="fl">0.001</span>)))</span>
-<span id="cb358-9"><a href="single-para-model.html#cb358-9"></a>  <span class="kw">curve</span>(prior, <span class="dt">xlab=</span><span class="op">~</span>theta, <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">lwd=</span><span class="dv">1</span>, <span class="dt">lty=</span><span class="dv">2</span>,<span class="dt">n=</span><span class="dv">10000</span>,<span class="dt">ylim=</span><span class="kw">c</span>(<span class="dv">0</span>,YL), <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>)</span>
-<span id="cb358-10"><a href="single-para-model.html#cb358-10"></a>  <span class="kw">curve</span>(posterior, <span class="dt">xlab=</span><span class="op">~</span>theta,<span class="dt">lwd=</span><span class="dv">2</span>,<span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">add=</span>T,<span class="dt">n=</span><span class="dv">10000</span>)</span>
-<span id="cb358-11"><a href="single-para-model.html#cb358-11"></a>}</span>
-<span id="cb358-12"><a href="single-para-model.html#cb358-12"></a></span>
-<span id="cb358-13"><a href="single-para-model.html#cb358-13"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>,<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb362"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb362-1"><a href="single-para-model.html#cb362-1"></a><span class="co"># Prior vs posterior graphs</span></span>
+<span id="cb362-2"><a href="single-para-model.html#cb362-2"></a><span class="co"># a,b : shape / super parameters</span></span>
+<span id="cb362-3"><a href="single-para-model.html#cb362-3"></a><span class="co"># r   : number of successes</span></span>
+<span id="cb362-4"><a href="single-para-model.html#cb362-4"></a><span class="co"># n   : number of trials</span></span>
+<span id="cb362-5"><a href="single-para-model.html#cb362-5"></a>graph.binbayes &lt;-<span class="st"> </span><span class="cf">function</span>(a,b,r,n) {</span>
+<span id="cb362-6"><a href="single-para-model.html#cb362-6"></a>  prior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a,b))</span>
+<span id="cb362-7"><a href="single-para-model.html#cb362-7"></a>  posterior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a<span class="op">+</span>r, b<span class="op">+</span>n<span class="op">-</span>r))</span>
+<span id="cb362-8"><a href="single-para-model.html#cb362-8"></a>  YL &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">prior</span>(<span class="kw">seq</span>(<span class="fl">0.001</span>,<span class="fl">0.999</span>,<span class="dt">by=</span><span class="fl">0.001</span>)),<span class="kw">posterior</span>(<span class="kw">seq</span>(<span class="fl">0.001</span>,<span class="fl">0.999</span>,<span class="dt">by=</span><span class="fl">0.001</span>)))</span>
+<span id="cb362-9"><a href="single-para-model.html#cb362-9"></a>  <span class="kw">curve</span>(prior, <span class="dt">xlab=</span><span class="op">~</span>theta, <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">lwd=</span><span class="dv">1</span>, <span class="dt">lty=</span><span class="dv">2</span>,<span class="dt">n=</span><span class="dv">10000</span>,<span class="dt">ylim=</span><span class="kw">c</span>(<span class="dv">0</span>,YL), <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>)</span>
+<span id="cb362-10"><a href="single-para-model.html#cb362-10"></a>  <span class="kw">curve</span>(posterior, <span class="dt">xlab=</span><span class="op">~</span>theta,<span class="dt">lwd=</span><span class="dv">2</span>,<span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">add=</span>T,<span class="dt">n=</span><span class="dv">10000</span>)</span>
+<span id="cb362-11"><a href="single-para-model.html#cb362-11"></a>}</span>
+<span id="cb362-12"><a href="single-para-model.html#cb362-12"></a></span>
+<span id="cb362-13"><a href="single-para-model.html#cb362-13"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>,<span class="dv">4</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-2"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-2-1.png" alt="Prior (dashed) Beta(1,4) vs. Posterior (cont.) Beta(2,8)" width="80%" />
 <p class="caption">
-圖 42.4: Prior (dashed) Beta(1,4) vs. Posterior (cont.) Beta(2,8)
+圖 42.5: Prior (dashed) Beta(1,4) vs. Posterior (cont.) Beta(2,8)
 </p>
 </div>
-<div class="sourceCode" id="cb359"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb359-1"><a href="single-para-model.html#cb359-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">10</span>,<span class="dv">40</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb363"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb363-1"><a href="single-para-model.html#cb363-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">10</span>,<span class="dv">40</span>,<span class="dv">1</span>,<span class="dv">5</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-3"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-3-1.png" alt="Prior (dashed) Beta(10,40) vs. Posterior (cont.) Beta(11, 44)" width="80%" />
 <p class="caption">
-圖 42.5: Prior (dashed) Beta(10,40) vs. Posterior (cont.) Beta(11, 44)
+圖 42.6: Prior (dashed) Beta(10,40) vs. Posterior (cont.) Beta(11, 44)
 </p>
 </div>
 <p>我們可以很清楚的看見，先驗概率相同時，<span class="math inline">\(\text{Beta} (a,b)\)</span> 的超參數如果越大，先驗概率的分佈就越趨近與對稱圖形，且極大值也就越出現在均值的地方 (本例中是 <span class="math inline">\(0.2\)</span>)。而且也會使事後概率的 HPD (highest posterior density) 的區間更狹窄 (意爲對事後概率的預測越準確)，同時事後概率分佈也更加接近左右對稱。</p>
@@ -2073,70 +2111,70 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 <h3><span class="header-section-number">42.5.3</span> Q3</h3>
 <p>我們事先估計某個事件在 <span class="math inline">\(n=20\)</span> 名患者中發生的概率爲 <span class="math inline">\(15\%\)</span>。當實際觀察數據爲 <span class="math inline">\(n=15,r=3\)</span> 時，計算相應的事後概率。</p>
 <p><strong>解</strong></p>
-<div class="sourceCode" id="cb360"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb360-1"><a href="single-para-model.html#cb360-1"></a><span class="co"># because 15% events happened in 20 subjects, assuming prior Beta(a=3, b=17)</span></span>
-<span id="cb360-2"><a href="single-para-model.html#cb360-2"></a><span class="co"># observed n=15, r=3</span></span>
-<span id="cb360-3"><a href="single-para-model.html#cb360-3"></a><span class="kw">binbayes</span>(<span class="dv">3</span>,<span class="dv">17</span>,<span class="dv">3</span>,<span class="dv">15</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb364"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb364-1"><a href="single-para-model.html#cb364-1"></a><span class="co"># because 15% events happened in 20 subjects, assuming prior Beta(a=3, b=17)</span></span>
+<span id="cb364-2"><a href="single-para-model.html#cb364-2"></a><span class="co"># observed n=15, r=3</span></span>
+<span id="cb364-3"><a href="single-para-model.html#cb364-3"></a><span class="kw">binbayes</span>(<span class="dv">3</span>,<span class="dv">17</span>,<span class="dv">3</span>,<span class="dv">15</span>)</span></code></pre></div>
 <pre><code>##           a  b r/n   Mean     SD   2.5%    50%  97.5%
 ## prior     3 17  NA 0.1500 0.0779 0.0338 0.1383 0.3314
 ## posterior 6 29 0.2 0.1714 0.0628 0.0676 0.1651 0.3106</code></pre>
-<div class="sourceCode" id="cb362"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb362-1"><a href="single-para-model.html#cb362-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">3</span>,<span class="dv">17</span>,<span class="dv">3</span>,<span class="dv">15</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb366"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb366-1"><a href="single-para-model.html#cb366-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">3</span>,<span class="dv">17</span>,<span class="dv">3</span>,<span class="dv">15</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-5"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-5-1.png" alt="Prior (dashed) Beta(3,17) vs. Posterior (cont.) Beta(6,29)" width="80%" />
 <p class="caption">
-圖 42.6: Prior (dashed) Beta(3,17) vs. Posterior (cont.) Beta(6,29)
+圖 42.7: Prior (dashed) Beta(3,17) vs. Posterior (cont.) Beta(6,29)
 </p>
 </div>
-<p>試着繪製先驗概率服從 <span class="math inline">\(\text{Beta} (1,1)\)</span>，回憶之前本章開頭的圖 <a href="single-para-model.html#fig:beta-distr">42.2</a>，這個先驗概率的含義就是我們沒有任何背景知識，對數據完全陌生的情況：</p>
-<div class="sourceCode" id="cb363"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb363-1"><a href="single-para-model.html#cb363-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">15</span>)</span></code></pre></div>
+<p>試着繪製先驗概率服從 <span class="math inline">\(\text{Beta} (1,1)\)</span>，回憶之前本章開頭的圖 <a href="single-para-model.html#fig:beta-distr">42.3</a>，這個先驗概率的含義就是我們沒有任何背景知識，對數據完全陌生的情況：</p>
+<div class="sourceCode" id="cb367"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb367-1"><a href="single-para-model.html#cb367-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">15</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-6"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-6-1.png" alt="Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4,13)" width="80%" />
 <p class="caption">
-圖 42.7: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4,13)
+圖 42.8: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4,13)
 </p>
 </div>
 </div>
 <div id="q4" class="section level3" number="42.5.4">
 <h3><span class="header-section-number">42.5.4</span> Q4</h3>
 <p>試給出上面各題中參數 <span class="math inline">\(\theta\)</span> 落在 <span class="math inline">\((0.1,0.25)\)</span> 之間的概率。</p>
-<div class="sourceCode" id="cb364"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb364-1"><a href="single-para-model.html#cb364-1"></a><span class="co"># function to calculate probabilities in a interval</span></span>
-<span id="cb364-2"><a href="single-para-model.html#cb364-2"></a><span class="co"># a, b: super parameters</span></span>
-<span id="cb364-3"><a href="single-para-model.html#cb364-3"></a><span class="co"># r   : number of successes</span></span>
-<span id="cb364-4"><a href="single-para-model.html#cb364-4"></a><span class="co"># n   : number of trials</span></span>
-<span id="cb364-5"><a href="single-para-model.html#cb364-5"></a><span class="co"># L   : Lower limit of the probability interval</span></span>
-<span id="cb364-6"><a href="single-para-model.html#cb364-6"></a><span class="co"># U   : Upper limit of the probability interval</span></span>
-<span id="cb364-7"><a href="single-para-model.html#cb364-7"></a></span>
-<span id="cb364-8"><a href="single-para-model.html#cb364-8"></a>prob.int &lt;-<span class="st"> </span><span class="cf">function</span>(a,b,r,n,L,U){</span>
-<span id="cb364-9"><a href="single-para-model.html#cb364-9"></a>prior0 &lt;-<span class="st"> </span><span class="kw">pbeta</span>(U,a,b) <span class="op">-</span><span class="st"> </span><span class="kw">pbeta</span>(L,a,b)</span>
-<span id="cb364-10"><a href="single-para-model.html#cb364-10"></a>posterior0 &lt;-<span class="st"> </span><span class="kw">pbeta</span>(U,a<span class="op">+</span>r,n<span class="op">-</span>r<span class="op">+</span>b) <span class="op">-</span><span class="st"> </span><span class="kw">pbeta</span>(L,a<span class="op">+</span>r,n<span class="op">-</span>r<span class="op">+</span>b)</span>
-<span id="cb364-11"><a href="single-para-model.html#cb364-11"></a>prob &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">c</span>(prior0, posterior0))</span>
-<span id="cb364-12"><a href="single-para-model.html#cb364-12"></a>prob &lt;-<span class="st"> </span><span class="kw">round</span>(prob,<span class="dv">4</span>)</span>
-<span id="cb364-13"><a href="single-para-model.html#cb364-13"></a><span class="kw">colnames</span>(prob) &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Probability of theta lies between the Interval&quot;</span>, L, U)</span>
-<span id="cb364-14"><a href="single-para-model.html#cb364-14"></a><span class="kw">rownames</span>(prob) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Prior&quot;</span>,<span class="st">&quot;Posterior&quot;</span>)</span>
-<span id="cb364-15"><a href="single-para-model.html#cb364-15"></a>  <span class="kw">return</span>(prob)</span>
-<span id="cb364-16"><a href="single-para-model.html#cb364-16"></a>}</span>
-<span id="cb364-17"><a href="single-para-model.html#cb364-17"></a></span>
-<span id="cb364-18"><a href="single-para-model.html#cb364-18"></a><span class="co"># Prior Beta(0.317,1.286) n = 5, r=1</span></span>
-<span id="cb364-19"><a href="single-para-model.html#cb364-19"></a><span class="kw">binbayes</span>(<span class="fl">0.317</span>, <span class="fl">1.286</span>, <span class="dv">1</span>, <span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb368"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb368-1"><a href="single-para-model.html#cb368-1"></a><span class="co"># function to calculate probabilities in a interval</span></span>
+<span id="cb368-2"><a href="single-para-model.html#cb368-2"></a><span class="co"># a, b: super parameters</span></span>
+<span id="cb368-3"><a href="single-para-model.html#cb368-3"></a><span class="co"># r   : number of successes</span></span>
+<span id="cb368-4"><a href="single-para-model.html#cb368-4"></a><span class="co"># n   : number of trials</span></span>
+<span id="cb368-5"><a href="single-para-model.html#cb368-5"></a><span class="co"># L   : Lower limit of the probability interval</span></span>
+<span id="cb368-6"><a href="single-para-model.html#cb368-6"></a><span class="co"># U   : Upper limit of the probability interval</span></span>
+<span id="cb368-7"><a href="single-para-model.html#cb368-7"></a></span>
+<span id="cb368-8"><a href="single-para-model.html#cb368-8"></a>prob.int &lt;-<span class="st"> </span><span class="cf">function</span>(a,b,r,n,L,U){</span>
+<span id="cb368-9"><a href="single-para-model.html#cb368-9"></a>prior0 &lt;-<span class="st"> </span><span class="kw">pbeta</span>(U,a,b) <span class="op">-</span><span class="st"> </span><span class="kw">pbeta</span>(L,a,b)</span>
+<span id="cb368-10"><a href="single-para-model.html#cb368-10"></a>posterior0 &lt;-<span class="st"> </span><span class="kw">pbeta</span>(U,a<span class="op">+</span>r,n<span class="op">-</span>r<span class="op">+</span>b) <span class="op">-</span><span class="st"> </span><span class="kw">pbeta</span>(L,a<span class="op">+</span>r,n<span class="op">-</span>r<span class="op">+</span>b)</span>
+<span id="cb368-11"><a href="single-para-model.html#cb368-11"></a>prob &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">c</span>(prior0, posterior0))</span>
+<span id="cb368-12"><a href="single-para-model.html#cb368-12"></a>prob &lt;-<span class="st"> </span><span class="kw">round</span>(prob,<span class="dv">4</span>)</span>
+<span id="cb368-13"><a href="single-para-model.html#cb368-13"></a><span class="kw">colnames</span>(prob) &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;Probability of theta lies between the Interval&quot;</span>, L, U)</span>
+<span id="cb368-14"><a href="single-para-model.html#cb368-14"></a><span class="kw">rownames</span>(prob) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Prior&quot;</span>,<span class="st">&quot;Posterior&quot;</span>)</span>
+<span id="cb368-15"><a href="single-para-model.html#cb368-15"></a>  <span class="kw">return</span>(prob)</span>
+<span id="cb368-16"><a href="single-para-model.html#cb368-16"></a>}</span>
+<span id="cb368-17"><a href="single-para-model.html#cb368-17"></a></span>
+<span id="cb368-18"><a href="single-para-model.html#cb368-18"></a><span class="co"># Prior Beta(0.317,1.286) n = 5, r=1</span></span>
+<span id="cb368-19"><a href="single-para-model.html#cb368-19"></a><span class="kw">binbayes</span>(<span class="fl">0.317</span>, <span class="fl">1.286</span>, <span class="dv">1</span>, <span class="dv">5</span>)</span></code></pre></div>
 <pre><code>##               a     b r/n   Mean     SD  2.5%    50%  97.5%
 ## prior     0.317 1.286  NA 0.1978 0.2469 0.000 0.0823 0.8516
 ## posterior 1.317 5.286 0.2 0.1995 0.1449 0.013 0.1684 0.5493</code></pre>
-<div class="sourceCode" id="cb366"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb366-1"><a href="single-para-model.html#cb366-1"></a><span class="kw">prob.int</span>(<span class="fl">0.317</span>, <span class="fl">1.286</span>, <span class="dv">1</span>, <span class="dv">5</span>,<span class="fl">0.1</span>,<span class="fl">0.25</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb370"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb370-1"><a href="single-para-model.html#cb370-1"></a><span class="kw">prob.int</span>(<span class="fl">0.317</span>, <span class="fl">1.286</span>, <span class="dv">1</span>, <span class="dv">5</span>,<span class="fl">0.1</span>,<span class="fl">0.25</span>)</span></code></pre></div>
 <pre><code>##           Probability of theta lies between the Interval 0.1 0.25
 ## Prior                                                      0.1711
 ## Posterior                                                  0.3911</code></pre>
-<div class="sourceCode" id="cb368"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb368-1"><a href="single-para-model.html#cb368-1"></a><span class="kw">graph.binbayes</span>(<span class="fl">0.317</span>, <span class="fl">1.286</span>, <span class="dv">1</span>, <span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb372"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb372-1"><a href="single-para-model.html#cb372-1"></a><span class="kw">graph.binbayes</span>(<span class="fl">0.317</span>, <span class="fl">1.286</span>, <span class="dv">1</span>, <span class="dv">5</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-8"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-8-1.png" alt="Prior (dashed) Beta(0.317,1.286) vs. Posterior (cont.) Beta(1.317, 5.286)" width="80%" />
 <p class="caption">
-圖 42.8: Prior (dashed) Beta(0.317,1.286) vs. Posterior (cont.) Beta(1.317, 5.286)
+圖 42.9: Prior (dashed) Beta(0.317,1.286) vs. Posterior (cont.) Beta(1.317, 5.286)
 </p>
 </div>
-<div class="sourceCode" id="cb369"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb369-1"><a href="single-para-model.html#cb369-1"></a><span class="co"># Prior Beta(10,40) n = 5, r=1</span></span>
-<span id="cb369-2"><a href="single-para-model.html#cb369-2"></a><span class="kw">binbayes</span>(<span class="dv">10</span>, <span class="dv">40</span>, <span class="dv">1</span>, <span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb373"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb373-1"><a href="single-para-model.html#cb373-1"></a><span class="co"># Prior Beta(10,40) n = 5, r=1</span></span>
+<span id="cb373-2"><a href="single-para-model.html#cb373-2"></a><span class="kw">binbayes</span>(<span class="dv">10</span>, <span class="dv">40</span>, <span class="dv">1</span>, <span class="dv">5</span>)</span></code></pre></div>
 <pre><code>##            a  b r/n Mean     SD   2.5%    50%  97.5%
 ## prior     10 40  NA  0.2 0.0560 0.1024 0.1960 0.3202
 ## posterior 11 44 0.2  0.2 0.0535 0.1063 0.1963 0.3143</code></pre>
-<div class="sourceCode" id="cb371"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb371-1"><a href="single-para-model.html#cb371-1"></a><span class="kw">prob.int</span>(<span class="dv">10</span>, <span class="dv">40</span>, <span class="dv">1</span>, <span class="dv">5</span>,<span class="fl">0.1</span>,<span class="fl">0.25</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb375"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb375-1"><a href="single-para-model.html#cb375-1"></a><span class="kw">prob.int</span>(<span class="dv">10</span>, <span class="dv">40</span>, <span class="dv">1</span>, <span class="dv">5</span>,<span class="fl">0.1</span>,<span class="fl">0.25</span>)</span></code></pre></div>
 <pre><code>##           Probability of theta lies between the Interval 0.1 0.25
 ## Prior                                                      0.7951
 ## Posterior                                                  0.8099</code></pre>
@@ -2148,74 +2186,74 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 <ol style="list-style-type: decimal">
 <li>兩個階段都使用 <span class="math inline">\(\text{Beta}(1,1)\)</span> 作先驗概率。求兩個實驗階段參數 <span class="math inline">\(\theta&lt;0.1\)</span> 的概率。</li>
 </ol>
-<div class="sourceCode" id="cb373"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb373-1"><a href="single-para-model.html#cb373-1"></a><span class="co"># Phase I</span></span>
-<span id="cb373-2"><a href="single-para-model.html#cb373-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">10</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb377"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb377-1"><a href="single-para-model.html#cb377-1"></a><span class="co"># Phase I</span></span>
+<span id="cb377-2"><a href="single-para-model.html#cb377-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">10</span>)</span></code></pre></div>
 <pre><code>##           a  b r/n   Mean     SD   2.5%   50%  97.5%
 ## prior     1  1  NA 0.5000 0.2887 0.0250 0.500 0.9750
 ## posterior 2 10 0.1 0.1667 0.1034 0.0228 0.148 0.4128</code></pre>
-<div class="sourceCode" id="cb375"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb375-1"><a href="single-para-model.html#cb375-1"></a><span class="kw">prob.int</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">10</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb379"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb379-1"><a href="single-para-model.html#cb379-1"></a><span class="kw">prob.int</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">10</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
 <pre><code>##           Probability of theta lies between the Interval 0 0.1
 ## Prior                                                   0.1000
 ## Posterior                                               0.3026</code></pre>
-<div class="sourceCode" id="cb377"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb377-1"><a href="single-para-model.html#cb377-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">10</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb381"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb381-1"><a href="single-para-model.html#cb381-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">10</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-11"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-11-1.png" alt="Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 10)" width="80%" />
 <p class="caption">
-圖 42.9: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 10)
+圖 42.10: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 10)
 </p>
 </div>
-<div class="sourceCode" id="cb378"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb378-1"><a href="single-para-model.html#cb378-1"></a><span class="co"># Phase II</span></span>
-<span id="cb378-2"><a href="single-para-model.html#cb378-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb382"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb382-1"><a href="single-para-model.html#cb382-1"></a><span class="co"># Phase II</span></span>
+<span id="cb382-2"><a href="single-para-model.html#cb382-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
 <pre><code>##           a  b r/n   Mean     SD   2.5%    50%  97.5%
 ## prior     1  1  NA 0.5000 0.2887 0.0250 0.5000 0.9750
 ## posterior 6 46 0.1 0.1154 0.0439 0.0444 0.1105 0.2141</code></pre>
-<div class="sourceCode" id="cb380"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb380-1"><a href="single-para-model.html#cb380-1"></a><span class="kw">prob.int</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">5</span>,<span class="dv">50</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb384"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb384-1"><a href="single-para-model.html#cb384-1"></a><span class="kw">prob.int</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">5</span>,<span class="dv">50</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
 <pre><code>##           Probability of theta lies between the Interval 0 0.1
 ## Prior                                                   0.1000
 ## Posterior                                               0.4024</code></pre>
-<div class="sourceCode" id="cb382"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb382-1"><a href="single-para-model.html#cb382-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb386"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb386-1"><a href="single-para-model.html#cb386-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-13"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-13-1.png" alt="Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(6, 46)" width="80%" />
 <p class="caption">
-圖 42.10: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(6, 46)
+圖 42.11: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(6, 46)
 </p>
 </div>
 <ol start="2" style="list-style-type: decimal">
 <li>繼續使用先驗概率分佈 <span class="math inline">\(\text{Beta}(1,1)\)</span>，合併兩個實驗階段，求此時的事後概率分佈，以及參數 <span class="math inline">\(\theta&lt;0.1\)</span> 的概率。</li>
 </ol>
-<div class="sourceCode" id="cb383"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb383-1"><a href="single-para-model.html#cb383-1"></a><span class="co"># Combining both phases</span></span>
-<span id="cb383-2"><a href="single-para-model.html#cb383-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">6</span>, <span class="dv">60</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb387"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb387-1"><a href="single-para-model.html#cb387-1"></a><span class="co"># Combining both phases</span></span>
+<span id="cb387-2"><a href="single-para-model.html#cb387-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">6</span>, <span class="dv">60</span>)</span></code></pre></div>
 <pre><code>##           a  b r/n   Mean     SD   2.5%    50%  97.5%
 ## prior     1  1  NA 0.5000 0.2887 0.0250 0.5000 0.9750
 ## posterior 7 55 0.1 0.1129 0.0399 0.0474 0.1087 0.2019</code></pre>
-<div class="sourceCode" id="cb385"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb385-1"><a href="single-para-model.html#cb385-1"></a><span class="kw">prob.int</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">6</span>,<span class="dv">60</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb389"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb389-1"><a href="single-para-model.html#cb389-1"></a><span class="kw">prob.int</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">6</span>,<span class="dv">60</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
 <pre><code>##           Probability of theta lies between the Interval 0 0.1
 ## Prior                                                   0.1000
 ## Posterior                                               0.4105</code></pre>
-<div class="sourceCode" id="cb387"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb387-1"><a href="single-para-model.html#cb387-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">6</span>, <span class="dv">60</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb391"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb391-1"><a href="single-para-model.html#cb391-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">6</span>, <span class="dv">60</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-15"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-15-1.png" alt="Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(7, 55)" width="80%" />
 <p class="caption">
-圖 42.11: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(7, 55)
+圖 42.12: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(7, 55)
 </p>
 </div>
 <ol start="3" style="list-style-type: decimal">
 <li>用第一階段的實驗結果做第二階段實驗的先驗概率分佈，再計算事後概率分佈，以及 <span class="math inline">\(\theta&lt;0.1\)</span> 的概率。</li>
 </ol>
-<div class="sourceCode" id="cb388"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb388-1"><a href="single-para-model.html#cb388-1"></a><span class="co"># Using Phase I results as a prior for Phase II</span></span>
-<span id="cb388-2"><a href="single-para-model.html#cb388-2"></a><span class="kw">binbayes</span>(<span class="dv">2</span>, <span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb392"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb392-1"><a href="single-para-model.html#cb392-1"></a><span class="co"># Using Phase I results as a prior for Phase II</span></span>
+<span id="cb392-2"><a href="single-para-model.html#cb392-2"></a><span class="kw">binbayes</span>(<span class="dv">2</span>, <span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
 <pre><code>##           a  b r/n   Mean     SD   2.5%    50%  97.5%
 ## prior     2 10  NA 0.1667 0.1034 0.0228 0.1480 0.4128
 ## posterior 7 55 0.1 0.1129 0.0399 0.0474 0.1087 0.2019</code></pre>
-<div class="sourceCode" id="cb390"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb390-1"><a href="single-para-model.html#cb390-1"></a><span class="kw">prob.int</span>(<span class="dv">2</span>,<span class="dv">10</span>,<span class="dv">5</span>,<span class="dv">50</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb394"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb394-1"><a href="single-para-model.html#cb394-1"></a><span class="kw">prob.int</span>(<span class="dv">2</span>,<span class="dv">10</span>,<span class="dv">5</span>,<span class="dv">50</span>,<span class="dv">0</span>,<span class="fl">0.1</span>)</span></code></pre></div>
 <pre><code>##           Probability of theta lies between the Interval 0 0.1
 ## Prior                                                   0.3026
 ## Posterior                                               0.4105</code></pre>
-<div class="sourceCode" id="cb392"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb392-1"><a href="single-para-model.html#cb392-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">2</span>, <span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb396"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb396-1"><a href="single-para-model.html#cb396-1"></a><span class="kw">graph.binbayes</span>(<span class="dv">2</span>, <span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">50</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-17"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-17-1.png" alt="Prior (dashed) Beta(2,10) vs. Posterior (cont.) Beta(7, 55)" width="80%" />
 <p class="caption">
-圖 42.12: Prior (dashed) Beta(2,10) vs. Posterior (cont.) Beta(7, 55)
+圖 42.13: Prior (dashed) Beta(2,10) vs. Posterior (cont.) Beta(7, 55)
 </p>
 </div>
 <p>第2，3兩個小問題提示我們，無論是將第一階段實驗結果作爲第二階段實驗的先驗假設還是將兩次實驗合併，最終的結果是不會改變的。Both approaches are equivalent.</p>
@@ -2227,80 +2265,80 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 <li>先使用單一分佈作爲先驗概率 (uniform prior: <span class="math inline">\(\text{Beta}(1,1)\)</span>)。求藥物 A 和藥物 B 各自發生不良反應的事後概率。</li>
 </ol>
 <p><strong>藥物 A</strong></p>
-<div class="sourceCode" id="cb393"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb393-1"><a href="single-para-model.html#cb393-1"></a><span class="co"># Drug A</span></span>
-<span id="cb393-2"><a href="single-para-model.html#cb393-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>,<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5000</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb397"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb397-1"><a href="single-para-model.html#cb397-1"></a><span class="co"># Drug A</span></span>
+<span id="cb397-2"><a href="single-para-model.html#cb397-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>,<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5000</span>)</span></code></pre></div>
 <pre><code>##           a    b    r/n   Mean     SD   2.5%    50%  97.5%
 ## prior     1    1     NA 0.5000 0.2887 0.0250 0.5000 0.9750
 ## posterior 4 4998 0.0006 0.0008 0.0004 0.0002 0.0007 0.0018</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-19"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-19-1.png" alt="Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4, 4998)" width="80%" />
 <p class="caption">
-圖 42.13: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4, 4998)
+圖 42.14: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(4, 4998)
 </p>
 </div>
 <p><strong>藥物 B</strong></p>
-<div class="sourceCode" id="cb395"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb395-1"><a href="single-para-model.html#cb395-1"></a><span class="co"># Drug B</span></span>
-<span id="cb395-2"><a href="single-para-model.html#cb395-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>,<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">7000</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb399"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb399-1"><a href="single-para-model.html#cb399-1"></a><span class="co"># Drug B</span></span>
+<span id="cb399-2"><a href="single-para-model.html#cb399-2"></a><span class="kw">binbayes</span>(<span class="dv">1</span>,<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">7000</span>)</span></code></pre></div>
 <pre><code>##           a    b    r/n   Mean     SD  2.5%    50%  97.5%
 ## prior     1    1     NA 0.5000 0.2887 0.025 0.5000 0.9750
 ## posterior 2 7000 0.0001 0.0003 0.0002 0.000 0.0002 0.0008</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-21"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-21-1.png" alt="Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 7000)" width="80%" />
 <p class="caption">
-圖 42.14: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 7000)
+圖 42.15: Prior (dashed) Beta(1,1) vs. Posterior (cont.) Beta(2, 7000)
 </p>
 </div>
 <ol start="2" style="list-style-type: decimal">
 <li>使用 <span class="math inline">\(\text{Beta}(0.00001,0.00001)\)</span> 作爲先驗概率，重複上面的計算</li>
 </ol>
 <p><strong>藥物 A</strong></p>
-<div class="sourceCode" id="cb397"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb397-1"><a href="single-para-model.html#cb397-1"></a><span class="co"># Drug A</span></span>
-<span id="cb397-2"><a href="single-para-model.html#cb397-2"></a><span class="kw">binbayes</span>(<span class="fl">0.00001</span>, <span class="fl">0.00001</span>, <span class="dv">3</span>, <span class="dv">5000</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb401"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb401-1"><a href="single-para-model.html#cb401-1"></a><span class="co"># Drug A</span></span>
+<span id="cb401-2"><a href="single-para-model.html#cb401-2"></a><span class="kw">binbayes</span>(<span class="fl">0.00001</span>, <span class="fl">0.00001</span>, <span class="dv">3</span>, <span class="dv">5000</span>)</span></code></pre></div>
 <pre><code>##           a    b    r/n   Mean     SD   2.5%    50%  97.5%
 ## prior     0    0     NA 0.5000 0.5000 0.0000 0.5000 1.0000
 ## posterior 3 4997 0.0006 0.0006 0.0003 0.0001 0.0005 0.0014</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-23"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-23-1.png" alt="Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(3, 4997)" width="80%" />
 <p class="caption">
-圖 42.15: Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(3, 4997)
+圖 42.16: Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(3, 4997)
 </p>
 </div>
 <p><strong>藥物 B</strong></p>
-<div class="sourceCode" id="cb399"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb399-1"><a href="single-para-model.html#cb399-1"></a><span class="co"># Drug B</span></span>
-<span id="cb399-2"><a href="single-para-model.html#cb399-2"></a><span class="kw">binbayes</span>(<span class="fl">0.00001</span>, <span class="fl">0.00001</span>, <span class="dv">1</span>, <span class="dv">7000</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb403"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb403-1"><a href="single-para-model.html#cb403-1"></a><span class="co"># Drug B</span></span>
+<span id="cb403-2"><a href="single-para-model.html#cb403-2"></a><span class="kw">binbayes</span>(<span class="fl">0.00001</span>, <span class="fl">0.00001</span>, <span class="dv">1</span>, <span class="dv">7000</span>)</span></code></pre></div>
 <pre><code>##           a    b    r/n   Mean     SD 2.5%    50%  97.5%
 ## prior     0    0     NA 0.5000 0.5000    0 0.5000 1.0000
 ## posterior 1 6999 0.0001 0.0001 0.0001    0 0.0001 0.0005</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-25"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-25-1.png" alt="Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(1, 6999)" width="80%" />
 <p class="caption">
-圖 42.16: Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(1, 6999)
+圖 42.17: Prior (dashed) Beta(0.00001,0.00001) vs. Posterior (cont.) Beta(1, 6999)
 </p>
 </div>
 <ol start="3" style="list-style-type: decimal">
 <li>現在使用概率論的計算信賴區間 (confidence intervals) 的方法，求上面數據的精確二項分佈 95% 信賴區間。之前兩問中使用的哪個先驗概率更加接近概率論算法？</li>
 </ol>
-<div class="sourceCode" id="cb401"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb401-1"><a href="single-para-model.html#cb401-1"></a><span class="co">#------------------------------------------------</span></span>
-<span id="cb401-2"><a href="single-para-model.html#cb401-2"></a><span class="co"># Binomial confidence intervals</span></span>
-<span id="cb401-3"><a href="single-para-model.html#cb401-3"></a><span class="co">#------------------------------------------------</span></span>
-<span id="cb401-4"><a href="single-para-model.html#cb401-4"></a><span class="co"># r    : number of successes</span></span>
-<span id="cb401-5"><a href="single-para-model.html#cb401-5"></a><span class="co"># n    : number of trials</span></span>
-<span id="cb401-6"><a href="single-para-model.html#cb401-6"></a><span class="co"># level: confidence level</span></span>
-<span id="cb401-7"><a href="single-para-model.html#cb401-7"></a>binom.confint &lt;-<span class="st"> </span><span class="cf">function</span>(r,n,level){</span>
-<span id="cb401-8"><a href="single-para-model.html#cb401-8"></a> p &lt;-<span class="st"> </span>r<span class="op">/</span>n</span>
-<span id="cb401-9"><a href="single-para-model.html#cb401-9"></a>conf &lt;-<span class="st">  </span><span class="kw">as.vector</span>(<span class="kw">binom.test</span>(r,n,<span class="dt">conf.level =</span> <span class="fl">0.95</span>)<span class="op">$</span>conf.int)</span>
-<span id="cb401-10"><a href="single-para-model.html#cb401-10"></a>out &lt;-<span class="st"> </span><span class="kw">c</span>(p,conf)</span>
-<span id="cb401-11"><a href="single-para-model.html#cb401-11"></a>out &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">t</span>(<span class="kw">round</span>(out,<span class="dv">8</span>)))</span>
-<span id="cb401-12"><a href="single-para-model.html#cb401-12"></a><span class="kw">colnames</span>(out) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;MLE&quot;</span>, <span class="st">&quot;L&quot;</span>, <span class="st">&quot;U&quot;</span>)</span>
-<span id="cb401-13"><a href="single-para-model.html#cb401-13"></a><span class="kw">return</span>(out)</span>
-<span id="cb401-14"><a href="single-para-model.html#cb401-14"></a>}</span>
-<span id="cb401-15"><a href="single-para-model.html#cb401-15"></a></span>
-<span id="cb401-16"><a href="single-para-model.html#cb401-16"></a><span class="co"># Drug A</span></span>
-<span id="cb401-17"><a href="single-para-model.html#cb401-17"></a><span class="kw">binom.confint</span>(<span class="dv">3</span>,<span class="dv">5000</span>,<span class="fl">0.95</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb405"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb405-1"><a href="single-para-model.html#cb405-1"></a><span class="co">#------------------------------------------------</span></span>
+<span id="cb405-2"><a href="single-para-model.html#cb405-2"></a><span class="co"># Binomial confidence intervals</span></span>
+<span id="cb405-3"><a href="single-para-model.html#cb405-3"></a><span class="co">#------------------------------------------------</span></span>
+<span id="cb405-4"><a href="single-para-model.html#cb405-4"></a><span class="co"># r    : number of successes</span></span>
+<span id="cb405-5"><a href="single-para-model.html#cb405-5"></a><span class="co"># n    : number of trials</span></span>
+<span id="cb405-6"><a href="single-para-model.html#cb405-6"></a><span class="co"># level: confidence level</span></span>
+<span id="cb405-7"><a href="single-para-model.html#cb405-7"></a>binom.confint &lt;-<span class="st"> </span><span class="cf">function</span>(r,n,level){</span>
+<span id="cb405-8"><a href="single-para-model.html#cb405-8"></a> p &lt;-<span class="st"> </span>r<span class="op">/</span>n</span>
+<span id="cb405-9"><a href="single-para-model.html#cb405-9"></a>conf &lt;-<span class="st">  </span><span class="kw">as.vector</span>(<span class="kw">binom.test</span>(r,n,<span class="dt">conf.level =</span> <span class="fl">0.95</span>)<span class="op">$</span>conf.int)</span>
+<span id="cb405-10"><a href="single-para-model.html#cb405-10"></a>out &lt;-<span class="st"> </span><span class="kw">c</span>(p,conf)</span>
+<span id="cb405-11"><a href="single-para-model.html#cb405-11"></a>out &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">t</span>(<span class="kw">round</span>(out,<span class="dv">8</span>)))</span>
+<span id="cb405-12"><a href="single-para-model.html#cb405-12"></a><span class="kw">colnames</span>(out) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;MLE&quot;</span>, <span class="st">&quot;L&quot;</span>, <span class="st">&quot;U&quot;</span>)</span>
+<span id="cb405-13"><a href="single-para-model.html#cb405-13"></a><span class="kw">return</span>(out)</span>
+<span id="cb405-14"><a href="single-para-model.html#cb405-14"></a>}</span>
+<span id="cb405-15"><a href="single-para-model.html#cb405-15"></a></span>
+<span id="cb405-16"><a href="single-para-model.html#cb405-16"></a><span class="co"># Drug A</span></span>
+<span id="cb405-17"><a href="single-para-model.html#cb405-17"></a><span class="kw">binom.confint</span>(<span class="dv">3</span>,<span class="dv">5000</span>,<span class="fl">0.95</span>)</span></code></pre></div>
 <pre><code>##         MLE          L          U
 ## [1,] 0.0006 0.00012375 0.00175244</code></pre>
-<div class="sourceCode" id="cb403"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb403-1"><a href="single-para-model.html#cb403-1"></a><span class="co"># Drug B</span></span>
-<span id="cb403-2"><a href="single-para-model.html#cb403-2"></a><span class="kw">binom.confint</span>(<span class="dv">1</span>,<span class="dv">7000</span>,<span class="fl">0.95</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb407"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb407-1"><a href="single-para-model.html#cb407-1"></a><span class="co"># Drug B</span></span>
+<span id="cb407-2"><a href="single-para-model.html#cb407-2"></a><span class="kw">binom.confint</span>(<span class="dv">1</span>,<span class="dv">7000</span>,<span class="fl">0.95</span>)</span></code></pre></div>
 <pre><code>##             MLE        L          U
 ## [1,] 0.00014286 3.62e-06 0.00079569</code></pre>
 <p>明顯可以看到，先驗概率使用 <span class="math inline">\(\text{Beta}(0.00001,0.00001)\)</span> 時，事後概率的均值和可信區間的下限值更接近概率論算法。使用先驗概率 <span class="math inline">\(\text{Beta}(1,1)\)</span> 時，事後概率的可信區間的上限值更接近概率論算法。</p>
@@ -2310,104 +2348,104 @@ E(\text{var}(\theta | y)) + \text{var}(E(\theta | y)) &amp; = E(E(\theta^2 | y) 
 <p><strong>解</strong></p>
 <p><strong>貝葉斯</strong></p>
 <p>在計算機的輔助下，這是一個十分簡單的計算。我們從各自的事後分佈中採集大量隨機樣本，然後求 <span class="math inline">\(\theta_B-\theta_A\)</span> 然後看有多少比例這個數值是小於零的就可以得出結論：</p>
-<div class="sourceCode" id="cb405"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb405-1"><a href="single-para-model.html#cb405-1"></a><span class="co"># Simulating from each posterior</span></span>
-<span id="cb405-2"><a href="single-para-model.html#cb405-2"></a><span class="kw">set.seed</span>(<span class="dv">1001</span>)</span>
-<span id="cb405-3"><a href="single-para-model.html#cb405-3"></a>post.thetaA &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">3</span>, <span class="dv">4997</span>)</span>
-<span id="cb405-4"><a href="single-para-model.html#cb405-4"></a>post.thetaB &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">1</span>, <span class="dv">6999</span>)</span>
-<span id="cb405-5"><a href="single-para-model.html#cb405-5"></a></span>
-<span id="cb405-6"><a href="single-para-model.html#cb405-6"></a><span class="co"># Taking the differences</span></span>
-<span id="cb405-7"><a href="single-para-model.html#cb405-7"></a>theta.diff0 &lt;-<span class="st"> </span>post.thetaB <span class="op">-</span><span class="st"> </span>post.thetaA</span></code></pre></div>
-<div class="sourceCode" id="cb406"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb406-1"><a href="single-para-model.html#cb406-1"></a><span class="co"># Histogram of the differences</span></span>
-<span id="cb406-2"><a href="single-para-model.html#cb406-2"></a><span class="kw">hist</span>(theta.diff0,<span class="dt">probability =</span> <span class="ot">TRUE</span>, <span class="dt">breaks =</span> <span class="dv">50</span>, <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]),<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
-<span id="cb406-3"><a href="single-para-model.html#cb406-3"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb406-4"><a href="single-para-model.html#cb406-4"></a><span class="kw">box</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb409"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb409-1"><a href="single-para-model.html#cb409-1"></a><span class="co"># Simulating from each posterior</span></span>
+<span id="cb409-2"><a href="single-para-model.html#cb409-2"></a><span class="kw">set.seed</span>(<span class="dv">1001</span>)</span>
+<span id="cb409-3"><a href="single-para-model.html#cb409-3"></a>post.thetaA &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">3</span>, <span class="dv">4997</span>)</span>
+<span id="cb409-4"><a href="single-para-model.html#cb409-4"></a>post.thetaB &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">1</span>, <span class="dv">6999</span>)</span>
+<span id="cb409-5"><a href="single-para-model.html#cb409-5"></a></span>
+<span id="cb409-6"><a href="single-para-model.html#cb409-6"></a><span class="co"># Taking the differences</span></span>
+<span id="cb409-7"><a href="single-para-model.html#cb409-7"></a>theta.diff0 &lt;-<span class="st"> </span>post.thetaB <span class="op">-</span><span class="st"> </span>post.thetaA</span></code></pre></div>
+<div class="sourceCode" id="cb410"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb410-1"><a href="single-para-model.html#cb410-1"></a><span class="co"># Histogram of the differences</span></span>
+<span id="cb410-2"><a href="single-para-model.html#cb410-2"></a><span class="kw">hist</span>(theta.diff0,<span class="dt">probability =</span> <span class="ot">TRUE</span>, <span class="dt">breaks =</span> <span class="dv">50</span>, <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]),<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb410-3"><a href="single-para-model.html#cb410-3"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
+<span id="cb410-4"><a href="single-para-model.html#cb410-4"></a><span class="kw">box</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-28"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-28-1.png" alt="Histogram of  Drug B - Drug A" width="80%" />
 <p class="caption">
-圖 42.17: Histogram of Drug B - Drug A
+圖 42.18: Histogram of Drug B - Drug A
 </p>
 </div>
 <p>也可以不採用直方圖而是使用連續曲線：</p>
-<div class="sourceCode" id="cb407"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb407-1"><a href="single-para-model.html#cb407-1"></a><span class="co"># Continuous version</span></span>
-<span id="cb407-2"><a href="single-para-model.html#cb407-2"></a><span class="kw">plot</span>(<span class="kw">density</span>(theta.diff0), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">main =</span> <span class="st">&quot;&quot;</span>, <span class="dt">frame=</span><span class="ot">FALSE</span>)</span>
-<span id="cb407-3"><a href="single-para-model.html#cb407-3"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb407-4"><a href="single-para-model.html#cb407-4"></a><span class="kw">box</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb411"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb411-1"><a href="single-para-model.html#cb411-1"></a><span class="co"># Continuous version</span></span>
+<span id="cb411-2"><a href="single-para-model.html#cb411-2"></a><span class="kw">plot</span>(<span class="kw">density</span>(theta.diff0), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">main =</span> <span class="st">&quot;&quot;</span>, <span class="dt">frame=</span><span class="ot">FALSE</span>)</span>
+<span id="cb411-3"><a href="single-para-model.html#cb411-3"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
+<span id="cb411-4"><a href="single-para-model.html#cb411-4"></a><span class="kw">box</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-29"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-29-1.png" alt="Density of Drug B - Drug A" width="80%" />
 <p class="caption">
-圖 42.18: Density of Drug B - Drug A
+圖 42.19: Density of Drug B - Drug A
 </p>
 </div>
 <p>計算 <span class="math inline">\(\text{Pr}(\theta_B &lt; \theta_A|data)\)</span> 和可信區間：</p>
-<div class="sourceCode" id="cb408"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb408-1"><a href="single-para-model.html#cb408-1"></a><span class="co"># P(theta[B] &lt; theta[A] | Data)</span></span>
-<span id="cb408-2"><a href="single-para-model.html#cb408-2"></a><span class="kw">mean</span>(theta.diff0 <span class="op">&lt;</span><span class="dv">0</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb412"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb412-1"><a href="single-para-model.html#cb412-1"></a><span class="co"># P(theta[B] &lt; theta[A] | Data)</span></span>
+<span id="cb412-2"><a href="single-para-model.html#cb412-2"></a><span class="kw">mean</span>(theta.diff0 <span class="op">&lt;</span><span class="dv">0</span>)</span></code></pre></div>
 <pre><code>## [1] 0.927829</code></pre>
-<div class="sourceCode" id="cb410"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb410-1"><a href="single-para-model.html#cb410-1"></a><span class="co"># Credible interval for theta[B] - theta[A]</span></span>
-<span id="cb410-2"><a href="single-para-model.html#cb410-2"></a><span class="kw">quantile</span>(theta.diff0, <span class="kw">c</span>(<span class="fl">0.05</span>,<span class="fl">0.95</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb414"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb414-1"><a href="single-para-model.html#cb414-1"></a><span class="co"># Credible interval for theta[B] - theta[A]</span></span>
+<span id="cb414-2"><a href="single-para-model.html#cb414-2"></a><span class="kw">quantile</span>(theta.diff0, <span class="kw">c</span>(<span class="fl">0.05</span>,<span class="fl">0.95</span>))</span></code></pre></div>
 <pre><code>##              5%             95% 
 ## -0.001142862872  0.000052484912</code></pre>
-<div class="sourceCode" id="cb412"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb412-1"><a href="single-para-model.html#cb412-1"></a><span class="kw">quantile</span>(theta.diff0, <span class="kw">c</span>(<span class="fl">0.10</span>,<span class="fl">0.90</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb416"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb416-1"><a href="single-para-model.html#cb416-1"></a><span class="kw">quantile</span>(theta.diff0, <span class="kw">c</span>(<span class="fl">0.10</span>,<span class="fl">0.90</span>))</span></code></pre></div>
 <pre><code>##            10%            90% 
 ## -0.00094605885 -0.00004674857</code></pre>
-<div class="sourceCode" id="cb414"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb414-1"><a href="single-para-model.html#cb414-1"></a><span class="co"># Simulating from each posterior</span></span>
-<span id="cb414-2"><a href="single-para-model.html#cb414-2"></a><span class="kw">set.seed</span>(<span class="dv">1001</span>)</span>
-<span id="cb414-3"><a href="single-para-model.html#cb414-3"></a>post.thetaA &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">4</span>, <span class="dv">4998</span>)</span>
-<span id="cb414-4"><a href="single-para-model.html#cb414-4"></a>post.thetaB &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">2</span>, <span class="dv">7000</span>)</span>
-<span id="cb414-5"><a href="single-para-model.html#cb414-5"></a></span>
-<span id="cb414-6"><a href="single-para-model.html#cb414-6"></a><span class="co"># Taking the differences</span></span>
-<span id="cb414-7"><a href="single-para-model.html#cb414-7"></a>theta.diff1 &lt;-<span class="st"> </span>post.thetaB <span class="op">-</span><span class="st"> </span>post.thetaA</span></code></pre></div>
-<div class="sourceCode" id="cb415"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb415-1"><a href="single-para-model.html#cb415-1"></a><span class="kw">hist</span>(theta.diff1,<span class="dt">probability =</span> <span class="ot">TRUE</span>, <span class="dt">breaks =</span> <span class="dv">50</span>, <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]),<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
-<span id="cb415-2"><a href="single-para-model.html#cb415-2"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb415-3"><a href="single-para-model.html#cb415-3"></a><span class="kw">box</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb418"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb418-1"><a href="single-para-model.html#cb418-1"></a><span class="co"># Simulating from each posterior</span></span>
+<span id="cb418-2"><a href="single-para-model.html#cb418-2"></a><span class="kw">set.seed</span>(<span class="dv">1001</span>)</span>
+<span id="cb418-3"><a href="single-para-model.html#cb418-3"></a>post.thetaA &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">4</span>, <span class="dv">4998</span>)</span>
+<span id="cb418-4"><a href="single-para-model.html#cb418-4"></a>post.thetaB &lt;-<span class="st"> </span><span class="kw">rbeta</span>(<span class="dv">1000000</span>, <span class="dv">2</span>, <span class="dv">7000</span>)</span>
+<span id="cb418-5"><a href="single-para-model.html#cb418-5"></a></span>
+<span id="cb418-6"><a href="single-para-model.html#cb418-6"></a><span class="co"># Taking the differences</span></span>
+<span id="cb418-7"><a href="single-para-model.html#cb418-7"></a>theta.diff1 &lt;-<span class="st"> </span>post.thetaB <span class="op">-</span><span class="st"> </span>post.thetaA</span></code></pre></div>
+<div class="sourceCode" id="cb419"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb419-1"><a href="single-para-model.html#cb419-1"></a><span class="kw">hist</span>(theta.diff1,<span class="dt">probability =</span> <span class="ot">TRUE</span>, <span class="dt">breaks =</span> <span class="dv">50</span>, <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]),<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb419-2"><a href="single-para-model.html#cb419-2"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
+<span id="cb419-3"><a href="single-para-model.html#cb419-3"></a><span class="kw">box</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-32"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-32-1.png" alt="Histogram of  Drug B - Drug A" width="80%" />
 <p class="caption">
-圖 42.19: Histogram of Drug B - Drug A
+圖 42.20: Histogram of Drug B - Drug A
 </p>
 </div>
-<div class="sourceCode" id="cb416"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb416-1"><a href="single-para-model.html#cb416-1"></a><span class="co"># Continuous version</span></span>
-<span id="cb416-2"><a href="single-para-model.html#cb416-2"></a><span class="kw">plot</span>(<span class="kw">density</span>(theta.diff1), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">lwd=</span><span class="dv">2</span>,<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
-<span id="cb416-3"><a href="single-para-model.html#cb416-3"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb416-4"><a href="single-para-model.html#cb416-4"></a><span class="kw">box</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb420"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb420-1"><a href="single-para-model.html#cb420-1"></a><span class="co"># Continuous version</span></span>
+<span id="cb420-2"><a href="single-para-model.html#cb420-2"></a><span class="kw">plot</span>(<span class="kw">density</span>(theta.diff1), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">lwd=</span><span class="dv">2</span>,<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb420-3"><a href="single-para-model.html#cb420-3"></a><span class="kw">abline</span>(<span class="dt">v=</span><span class="dv">0</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
+<span id="cb420-4"><a href="single-para-model.html#cb420-4"></a><span class="kw">box</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-33"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-33-1.png" alt="Density of  Drug B - Drug A" width="80%" />
 <p class="caption">
-圖 42.20: Density of Drug B - Drug A
+圖 42.21: Density of Drug B - Drug A
 </p>
 </div>
 <p>計算 <span class="math inline">\(\text{Pr}(\theta_B &lt; \theta_A|data)\)</span> 和可信區間：</p>
-<div class="sourceCode" id="cb417"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb417-1"><a href="single-para-model.html#cb417-1"></a><span class="co"># P(theta[B] &lt; theta[A] | Data)</span></span>
-<span id="cb417-2"><a href="single-para-model.html#cb417-2"></a></span>
-<span id="cb417-3"><a href="single-para-model.html#cb417-3"></a><span class="kw">mean</span>(theta.diff1 <span class="op">&lt;</span><span class="dv">0</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb421"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb421-1"><a href="single-para-model.html#cb421-1"></a><span class="co"># P(theta[B] &lt; theta[A] | Data)</span></span>
+<span id="cb421-2"><a href="single-para-model.html#cb421-2"></a></span>
+<span id="cb421-3"><a href="single-para-model.html#cb421-3"></a><span class="kw">mean</span>(theta.diff1 <span class="op">&lt;</span><span class="dv">0</span>)</span></code></pre></div>
 <pre><code>## [1] 0.899677</code></pre>
-<div class="sourceCode" id="cb419"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb419-1"><a href="single-para-model.html#cb419-1"></a><span class="co"># Credible interval for theta[B] - theta[A]</span></span>
-<span id="cb419-2"><a href="single-para-model.html#cb419-2"></a><span class="kw">quantile</span>(theta.diff1, <span class="kw">c</span>(<span class="fl">0.05</span>,<span class="fl">0.95</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb423"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb423-1"><a href="single-para-model.html#cb423-1"></a><span class="co"># Credible interval for theta[B] - theta[A]</span></span>
+<span id="cb423-2"><a href="single-para-model.html#cb423-2"></a><span class="kw">quantile</span>(theta.diff1, <span class="kw">c</span>(<span class="fl">0.05</span>,<span class="fl">0.95</span>))</span></code></pre></div>
 <pre><code>##             5%            95% 
 ## -0.00131289334  0.00013423126</code></pre>
-<div class="sourceCode" id="cb421"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb421-1"><a href="single-para-model.html#cb421-1"></a><span class="kw">quantile</span>(theta.diff1, <span class="kw">c</span>(<span class="fl">0.10</span>,<span class="fl">0.90</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb425"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb425-1"><a href="single-para-model.html#cb425-1"></a><span class="kw">quantile</span>(theta.diff1, <span class="kw">c</span>(<span class="fl">0.10</span>,<span class="fl">0.90</span>))</span></code></pre></div>
 <pre><code>##            10%            90% 
 ## -1.0955252e-03  6.5146438e-07</code></pre>
 <p><strong>概率論算法</strong></p>
-<div class="sourceCode" id="cb423"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb423-1"><a href="single-para-model.html#cb423-1"></a><span class="co"># Normal Approximation</span></span>
-<span id="cb423-2"><a href="single-para-model.html#cb423-2"></a>diff_mle &lt;-<span class="st"> </span>(<span class="dv">1</span><span class="op">/</span><span class="dv">7000</span>)<span class="op">-</span>(<span class="dv">3</span><span class="op">/</span><span class="dv">5000</span>)</span>
-<span id="cb423-3"><a href="single-para-model.html#cb423-3"></a>diff_se &lt;-<span class="st"> </span><span class="kw">sqrt</span>( <span class="dv">1</span><span class="op">*</span><span class="dv">6999</span><span class="op">/</span><span class="dv">7000</span><span class="op">^</span><span class="dv">3</span> <span class="op">+</span><span class="st"> </span><span class="dv">3</span><span class="op">*</span><span class="dv">4997</span><span class="op">/</span><span class="dv">5000</span><span class="op">^</span><span class="dv">3</span> )</span>
-<span id="cb423-4"><a href="single-para-model.html#cb423-4"></a>U &lt;-<span class="st"> </span>diff_mle <span class="op">+</span><span class="st"> </span><span class="fl">1.28</span><span class="op">*</span>diff_se</span>
-<span id="cb423-5"><a href="single-para-model.html#cb423-5"></a>L &lt;-<span class="st"> </span>diff_mle <span class="op">-</span><span class="st"> </span><span class="fl">1.28</span><span class="op">*</span>diff_se</span>
-<span id="cb423-6"><a href="single-para-model.html#cb423-6"></a><span class="kw">print</span>(<span class="kw">c</span>(U,L))</span></code></pre></div>
+<div class="sourceCode" id="cb427"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb427-1"><a href="single-para-model.html#cb427-1"></a><span class="co"># Normal Approximation</span></span>
+<span id="cb427-2"><a href="single-para-model.html#cb427-2"></a>diff_mle &lt;-<span class="st"> </span>(<span class="dv">1</span><span class="op">/</span><span class="dv">7000</span>)<span class="op">-</span>(<span class="dv">3</span><span class="op">/</span><span class="dv">5000</span>)</span>
+<span id="cb427-3"><a href="single-para-model.html#cb427-3"></a>diff_se &lt;-<span class="st"> </span><span class="kw">sqrt</span>( <span class="dv">1</span><span class="op">*</span><span class="dv">6999</span><span class="op">/</span><span class="dv">7000</span><span class="op">^</span><span class="dv">3</span> <span class="op">+</span><span class="st"> </span><span class="dv">3</span><span class="op">*</span><span class="dv">4997</span><span class="op">/</span><span class="dv">5000</span><span class="op">^</span><span class="dv">3</span> )</span>
+<span id="cb427-4"><a href="single-para-model.html#cb427-4"></a>U &lt;-<span class="st"> </span>diff_mle <span class="op">+</span><span class="st"> </span><span class="fl">1.28</span><span class="op">*</span>diff_se</span>
+<span id="cb427-5"><a href="single-para-model.html#cb427-5"></a>L &lt;-<span class="st"> </span>diff_mle <span class="op">-</span><span class="st"> </span><span class="fl">1.28</span><span class="op">*</span>diff_se</span>
+<span id="cb427-6"><a href="single-para-model.html#cb427-6"></a><span class="kw">print</span>(<span class="kw">c</span>(U,L))</span></code></pre></div>
 <pre><code>## [1]  0.000022358961 -0.000936644675</code></pre>
-<div class="sourceCode" id="cb425"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb425-1"><a href="single-para-model.html#cb425-1"></a>norm.app &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(x) <span class="kw">dnorm</span>(x,diff_mle,diff_se))</span></code></pre></div>
-<div class="sourceCode" id="cb426"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb426-1"><a href="single-para-model.html#cb426-1"></a><span class="co"># Comparison</span></span>
-<span id="cb426-2"><a href="single-para-model.html#cb426-2"></a><span class="kw">plot</span>(<span class="kw">density</span>(theta.diff0), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">xlim=</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">0.002</span>,<span class="fl">0.001</span>), <span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>,<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
-<span id="cb426-3"><a href="single-para-model.html#cb426-3"></a><span class="kw">points</span>(<span class="kw">density</span>(theta.diff1), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;blue&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb426-4"><a href="single-para-model.html#cb426-4"></a><span class="kw">curve</span>(norm.app,<span class="op">-</span><span class="fl">0.0045</span>,<span class="fl">0.002</span>,<span class="dt">add=</span>T,<span class="dt">lwd=</span><span class="dv">2</span>,<span class="dt">n=</span><span class="dv">10000</span>)</span>
-<span id="cb426-5"><a href="single-para-model.html#cb426-5"></a><span class="kw">legend</span>(<span class="op">-</span><span class="fl">0.0021</span>, <span class="dv">1300</span>, <span class="kw">c</span>(<span class="st">&quot;Posterior with B(0,0)&quot;</span>,<span class="st">&quot;Posterior with B(1,1)&quot;</span>,<span class="st">&quot;Frequentist Normal App&quot;</span>), <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;red&quot;</span>,<span class="st">&quot;blue&quot;</span>,<span class="st">&quot;black&quot;</span>),</span>
-<span id="cb426-6"><a href="single-para-model.html#cb426-6"></a>       <span class="dt">text.col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lty =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>), <span class="dt">lwd =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>),</span>
-<span id="cb426-7"><a href="single-para-model.html#cb426-7"></a>       <span class="dt">merge =</span> <span class="ot">TRUE</span>, <span class="dt">bg =</span> <span class="st">&quot;gray90&quot;</span>,<span class="dt">cex=</span><span class="fl">0.8</span>)</span>
-<span id="cb426-8"><a href="single-para-model.html#cb426-8"></a><span class="kw">box</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb429"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb429-1"><a href="single-para-model.html#cb429-1"></a>norm.app &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(x) <span class="kw">dnorm</span>(x,diff_mle,diff_se))</span></code></pre></div>
+<div class="sourceCode" id="cb430"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb430-1"><a href="single-para-model.html#cb430-1"></a><span class="co"># Comparison</span></span>
+<span id="cb430-2"><a href="single-para-model.html#cb430-2"></a><span class="kw">plot</span>(<span class="kw">density</span>(theta.diff0), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">xlim=</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">0.002</span>,<span class="fl">0.001</span>), <span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>,<span class="dt">main =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb430-3"><a href="single-para-model.html#cb430-3"></a><span class="kw">points</span>(<span class="kw">density</span>(theta.diff1), <span class="dt">xlab=</span><span class="kw">expression</span>(theta[B] <span class="op">-</span><span class="st"> </span>theta[A]), <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;blue&quot;</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
+<span id="cb430-4"><a href="single-para-model.html#cb430-4"></a><span class="kw">curve</span>(norm.app,<span class="op">-</span><span class="fl">0.0045</span>,<span class="fl">0.002</span>,<span class="dt">add=</span>T,<span class="dt">lwd=</span><span class="dv">2</span>,<span class="dt">n=</span><span class="dv">10000</span>)</span>
+<span id="cb430-5"><a href="single-para-model.html#cb430-5"></a><span class="kw">legend</span>(<span class="op">-</span><span class="fl">0.0021</span>, <span class="dv">1300</span>, <span class="kw">c</span>(<span class="st">&quot;Posterior with B(0,0)&quot;</span>,<span class="st">&quot;Posterior with B(1,1)&quot;</span>,<span class="st">&quot;Frequentist Normal App&quot;</span>), <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;red&quot;</span>,<span class="st">&quot;blue&quot;</span>,<span class="st">&quot;black&quot;</span>),</span>
+<span id="cb430-6"><a href="single-para-model.html#cb430-6"></a>       <span class="dt">text.col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lty =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>), <span class="dt">lwd =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">2</span>,<span class="dv">2</span>),</span>
+<span id="cb430-7"><a href="single-para-model.html#cb430-7"></a>       <span class="dt">merge =</span> <span class="ot">TRUE</span>, <span class="dt">bg =</span> <span class="st">&quot;gray90&quot;</span>,<span class="dt">cex=</span><span class="fl">0.8</span>)</span>
+<span id="cb430-8"><a href="single-para-model.html#cb430-8"></a><span class="kw">box</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:08-Intro-to-Bayes-36"></span>
 <img src="bookdown_files/figure-html/08-Intro-to-Bayes-36-1.png" alt="Comparison of different prior distribution and frequentist approximation" width="80%" />
 <p class="caption">
-圖 42.21: Comparison of different prior distribution and frequentist approximation
+圖 42.22: Comparison of different prior distribution and frequentist approximation
 </p>
 </div>
 </div>

@@ -95,8 +95,8 @@ $$
 
 當先驗概率分佈使用均一分佈 (uniform distribution: $\theta \sim \text{Beta}(a = 1, b = 1)$) 時，我們獲得的數據是 $n = 980, y = 437$。那麼根據共軛的性質可以計算出事後概率分佈是服從另一個 Beta 分佈: $p(\theta | y,n) = \text{Beta}(a + y, b + n - y) = \text{Beta}(438, 544)$
 
-```{r 08-intro-to-Bayesfig1, fig.height=4, fig.width=5, fig.cap='Probability of a girl given placenta previa (BDA3, p.37).', fig.align='center', out.width='90%', cache=TRUE}
-# 95% Credible Intervals
+```{r 08-intro-to-Bayesfig1, fig.height=4.5, fig.width=6, fig.cap='Probability of a girl given placenta previa (BDA3, p.37).', fig.align='center', out.width='90%', cache=TRUE}
+# 95% Credible Intervals  
 L <- qbeta(0.025, 438, 544)
 U <- qbeta(0.975, 438, 544)
 
@@ -111,6 +111,46 @@ plot(x1, y1, type = "l", xlab=~theta, ylab="Density",
 abline(v = 0.488, col = "blue", lty = 3, lwd = 2)
 
 polygon(c(L, x1[x1>=L & x1<= U], U), c(0, y1[x1>=L & x1<=U], 0), col="lightblue")
+```
+
+
+使用 `ggplot2` 繪圖的方法如下，參考原作者的[代碼](https://avehtari.github.io/BDA_R_demos/demos_ch2/demo2_1.html)
+
+```{r 08-intro-to-Bayesfig2, fig.height=4.5, fig.width=6, fig.cap='Probability of a girl given placenta previa (BDA3, p.37), same figure in ggplot format.', fig.align='center', out.width='90%', cache=TRUE}
+# seq creates evenly spaced values
+df1 <- data.frame(theta = seq(0.375, 0.525, 0.001)) 
+a <- 438
+b <- 544
+# dbeta computes the posterior density
+df1$p <- dbeta(df1$theta, a, b)
+
+## 計算95%可信區間
+# seq creates evenly spaced values from 2.5% quantile
+# to 97.5% quantile (i.e., 95% central interval)
+# qbeta computes the value for a given quantile given parameters a and b
+df2 <- data.frame(theta = seq(qbeta(0.025, a, b), qbeta(0.975, a, b), length.out = 100))
+# compute the posterior density
+df2$p <- dbeta(df2$theta, a, b)
+
+
+ggplot(mapping = aes(theta, p)) +
+  geom_line(data = df1) +
+  # Add a layer of colorized 95% posterior interval
+  geom_area(data = df2, aes(fill='1')) +
+  # Add the proportion of girl babies in general population
+  geom_vline(xintercept = 0.488, linetype='dotted') +
+  # Decorate the plot a little
+  labs(title='Uniform prior -> Posterior is Beta(438,544)', y = '') +
+  scale_y_continuous(expand = c(0, 0.1), breaks = NULL) +
+  scale_fill_manual(values = 'lightblue', labels = '95% posterior interval') +
+  theme(legend.position = 'bottom', legend.title = element_blank())
+```
+
+
+可以看到這裡我們計算獲得的事後可信區間是 [0.415, 0.477]，它的上限也低於總體人群的女嬰出生概率= 0.485。所以，應該可以認為如果有孕期有前置胎盤，女嬰出生的概率比人群水平更低。
+
+```{r}
+L;U
 ```
 
 
