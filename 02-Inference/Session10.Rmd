@@ -1,0 +1,301 @@
+前一章介紹單樣本和雙樣本 $t$ 檢驗時已經接觸到了 2 個未知參數情況下的檢驗統計量推導，本章把之前用到的方法擴展到 2 個以上參數的情況。帶你推導兩個以上參數的似然比檢驗 likelihood ratio test，Wald 檢驗，和 Score 檢驗推論。
+
+## 多參數 multiple parameters - LRT
+
+### 似然 likelihood
+
+如果一個觀察數據 $\underline{x} = (x_1, \cdots, x_n)$ 相互獨立，可以用含有 $k$ 個參數 $\theta_1,\cdots,\theta_k$ 的數學模型 $f$ 來描述，那麼它的似然公式爲：
+
+$$
+L(\theta_1,\cdots,\theta_k | \underline{x}) = f(\underline{x} | \theta_1,\cdots,\theta_k) = \prod^n_{i=1}f(x_i|\theta_1,\cdots,\theta_k)
+$$
+
+它的對數似然公式爲：
+
+$$
+\ell(\theta_1,\cdots,\theta_k|\underline{x}) = \sum^n_{i=1}\text{log}f(x_1|\theta_1,\cdots,\theta_k)
+$$
+
+每個參數的 $\text{MLE}$ 通過解下面的 $k$ 個連立方程組獲得：
+
+$$
+\left\{
+\begin{array}{c}
+\frac{\partial \ell}{\partial \theta_1} = \ell^\prime(\theta_1) = 0 \\
+\frac{\partial \ell}{\partial \theta_2} = \ell^\prime(\theta_k) = 0 \\
+\vdots \\
+\frac{\partial \ell}{\partial \theta_k} = \ell^\prime(\theta_k) = 0 \\
+\end{array}
+\right.
+$$
+
+- 這些連立方程有時被叫做 **score equations**；
+- $\text{MLE}$ 的恆定性，不變性 invariance 在多個參數時同樣適用。
+
+- 當參數只有一個 $\theta$ 時，其 $\text{MLE}$ 的方差是 $S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}}$
+- 當參數有多個時，$k$ 個 $\text{MLE}$ 的方差是一個 $k\times k$ 的對稱矩陣，其中二次微分矩陣 \@ref(eq:hessian-matrix) 的昵稱是**海森矩陣 Hessian matrix**：
+
+$$
+\begin{equation}
+\underline{\ell^{\prime\prime}(\theta)} = \left(
+\begin{array}{c}
+\frac{\partial^2\ell}{\partial\theta^2_1} & \frac{\partial^2\ell}{\partial\theta_2\partial\theta_1} & \cdots & \frac{\partial^2\ell}{\partial\theta_k\partial\theta_1}  \\
+\frac{\partial^2\ell}{\partial\theta_1\partial\theta_2} & \frac{\partial^2\ell}{\partial\theta^2_2} & \cdots & \frac{\partial^2\ell}{\partial\theta_k\partial\theta_2}  \\
+\vdots & \vdots & \ddots & \vdots  \\
+\frac{\partial^2\ell}{\partial\theta_1\partial\theta_k} & \frac{\partial^2\ell}{\partial\theta_2\partial\theta_k} & \cdots & \frac{\partial^2\ell}{\partial\theta^2_k}  \\
+\end{array}
+\right)
+\end{equation}
+(\#eq:hessian-matrix)
+$$
+
+
+$$
+\Rightarrow \underline{\ell^{\prime\prime}(\theta)} |_{\color{red}{\theta=\hat\theta}} =  \left(
+\begin{array}{c}
+\frac{\partial^2\ell}{\partial\theta^2_1} & \frac{\partial^2\ell}{\partial\theta_2\partial\theta_1} & \cdots & \frac{\partial^2\ell}{\partial\theta_k\partial\theta_1}  \\
+\frac{\partial^2\ell}{\partial\theta_1\partial\theta_2} & \frac{\partial^2\ell}{\partial\theta^2_2} & \cdots & \frac{\partial^2\ell}{\partial\theta_k\partial\theta_2}  \\
+\vdots & \vdots & \ddots & \vdots  \\
+\frac{\partial^2\ell}{\partial\theta_1\partial\theta_k} & \frac{\partial^2\ell}{\partial\theta_2\partial\theta_k} & \cdots & \frac{\partial^2\ell}{\partial\theta^2_k} \\
+\end{array}
+\right)_{\color{red}{\theta=\hat\theta}}
+$$
+
+$$
+\Rightarrow \underline{\text{Var}(\hat\theta)} = - \left(
+\begin{array}{c}
+\frac{\partial^2\ell}{\partial\theta^2_1} & \frac{\partial^2\ell}{\partial\theta_2\partial\theta_1} & \cdots & \frac{\partial^2\ell}{\partial\theta_k\partial\theta_1}  \\
+\frac{\partial^2\ell}{\partial\theta_1\partial\theta_2} & \frac{\partial^2\ell}{\partial\theta^2_2} & \cdots & \frac{\partial^2\ell}{\partial\theta_k\partial\theta_2}  \\
+\vdots & \vdots & \ddots & \vdots  \\
+\frac{\partial^2\ell}{\partial\theta_1\partial\theta_k} & \frac{\partial^2\ell}{\partial\theta_2\partial\theta_k} & \cdots & \frac{\partial^2\ell}{\partial\theta^2_k}  \\
+\end{array}
+\right)^{\color{red}{-1}}_{\color{red}{\theta=\hat\theta}}
+$$
+
+### 對數似然比檢驗
+
+多個參數未知時的對數似然比檢驗可以被這樣拓展：
+
+$$
+\begin{aligned}
+& \text{H}_0: \underline{\theta} = \underline{\theta_0} \\
+& \Rightarrow -2llr(\underline{\theta_0}) = -2(\ell(\underline{\theta_0})- \ell(\hat{\underline{\theta}})) \stackrel{\cdot}{\sim} \chi^2_r \\
+& \text{Where } r \text{ is the number of parameters restricted under H}_0
+\end{aligned}
+$$
+
+## 多參數 Wald 檢驗 - Wald test
+
+單個參數時的 Wald 檢驗的檢驗統計量：
+
+$$
+\begin{aligned}
+& \text{H}_0: \theta=\theta_0 \Rightarrow W_\theta = (\frac{M-\theta_0}{S})^2 \stackrel{\cdot}{\sim} \chi^2_1 \\
+& \text{Where } M=\hat\theta, S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}} \\
+& \Rightarrow W=(\hat\theta-\theta_0)^2(-\ell^{\prime\prime}(\hat\theta)) \stackrel{\cdot}{\sim} \chi^2_1
+\end{aligned}
+$$
+
+如果是兩個參數 $\lambda, \psi$ 的 Wald 檢驗： $\text{H}_0: \lambda=\lambda_0, \psi=\psi_0 \text{ v.s. H}_1: \lambda \neq \lambda_0 \text{ or } \psi \neq \psi_0$。
+
+- 我們可以先一個一個考慮參數：
+
+$$
+\begin{aligned}
+& W_\lambda  = (\hat\lambda-\lambda_0)^2(-\ell^{\prime\prime}(\hat\lambda)) \stackrel{\cdot}{\sim} \chi^2_1 \\
+& W_\psi     = (\hat\psi-\psi_0)^2(-\ell^{\prime\prime}(\hat\psi)) \stackrel{\cdot}{\sim} \chi^2_1 \\
+& \Rightarrow W_\lambda + W_\psi \stackrel{\cdot}{\sim} \chi^2_2 \\
+& \Rightarrow W = (\hat\lambda-\lambda_0)^2(-\ell^{\prime\prime}(\hat\lambda)) + (\hat\psi-\psi_0)^2(-\ell^{\prime\prime}(\hat\psi)) \stackrel{\cdot}{\sim} \chi^2_2
+\end{aligned}
+$$
+
+- 也可以一開始就兩個參數一起考慮：
+
+$$
+\underline{\ell^\prime} = \left(
+\begin{array}{c}
+\frac{\partial\ell}{\partial\lambda}\\
+\frac{\partial\ell}{\partial\psi}
+\end{array}
+\right)
+\Rightarrow \underline{\ell^{\prime\prime}} = \left(
+\begin{array}{c}
+\frac{\partial^2\ell}{\partial\lambda^2} & \frac{\partial^2\ell}{\partial\lambda\partial\psi} \\
+\frac{\partial^2\ell}{\partial\psi\partial\lambda} & \frac{\partial^2\ell}{\partial\psi^2}
+\end{array}
+\right)
+$$
+
+然後單參數時 $W$ 的分子 $(\theta_0-\hat\theta)^2$ 此時變爲：
+
+$$
+(\hat\lambda-\lambda_0)^2+(\hat\psi-\psi_0)^2 = (\hat\lambda-\lambda_0, \hat\psi-\psi_0)\left(
+\begin{array}{c}
+\hat\lambda-\lambda_0 \\
+\hat\psi-\psi_0
+\end{array}
+\right)
+$$
+
+所以兩個參數時的 Wald 檢驗統計量爲：
+
+$$
+\begin{aligned}
+W = & (\hat\lambda-\lambda_0, \hat\psi-\psi_0)(-\underline{\ell^{\prime\prime}}(\hat\lambda,\hat\psi))\left(
+\begin{array}{c}
+\hat\lambda-\lambda_0 \\
+\hat\psi-\psi_0
+\end{array}
+\right) \\
+= & - (\hat\lambda-\lambda_0, \hat\psi-\psi_0)\left(
+\begin{array}{c}
+\frac{\partial^2\ell}{\partial\lambda^2} & \frac{\partial^2\ell}{\partial\lambda\partial\psi} \\
+\frac{\partial^2\ell}{\partial\psi\partial\lambda} & \frac{\partial^2\ell}{\partial\psi^2}
+\end{array}
+\right)_{\hat\lambda,\hat\psi}
+\left(
+\begin{array}{c}
+\hat\lambda-\lambda_0 \\
+\hat\psi-\psi_0
+\end{array}
+\right)\\
+ & \text{ Because } \lambda \text{ and } \psi \text{ are independent,} \\
+ & \text{ so their covariance } \frac{\partial^2\ell}{\partial\lambda\partial\psi} = \frac{\partial^2\ell}{\partial\psi\partial\lambda} = 0\\
+ \Rightarrow  = & - (\hat\lambda-\lambda_0, \hat\psi-\psi_0)\left(
+ \begin{array}{c}
+ \ell^{\prime\prime}(\hat\lambda)  & 0 \\
+ 0 & \ell^{\prime\prime}(\hat\psi)
+ \end{array}
+ \right)
+ \left(
+ \begin{array}{c}
+ \hat\lambda-\lambda_0 \\
+ \hat\psi-\psi_0
+ \end{array}
+ \right)\\
+ = &  - (\hat\lambda-\lambda_0, \hat\psi-\psi_0)\left(
+ \begin{array}{c}
+ \ell^{\prime\prime}(\hat\lambda)(\hat\lambda-\lambda_0) \\
+ \ell^{\prime\prime}(\hat\psi)(\hat\psi-\psi_0)
+ \end{array}
+ \right) \\
+= & (\hat\lambda-\lambda_0)^2(-\ell^{\prime\prime}(\hat\lambda)) + (\hat\psi-\psi_0)^2(-\ell^{\prime\prime}(\hat\psi)) \stackrel{\cdot}{\sim} \chi^2_2
+\end{aligned}
+$$
+
+由此可見，兩個參數分開來考慮之後把統計量相加，和一開始就把兩個參數放在一起，利用矩陣計算後獲得的檢驗統計量完全相同。用矩陣的好處是可以把上面的推導過程直接擴展成 $k$ 個參數的形式，且標記簡便：
+
+$$
+W = -(\hat{\underline{\theta}} - \underline{\theta_0})^T\underline{\ell^{\prime\prime}(\hat\theta)}(\underline{\hat\theta} - \underline{\theta_0})  \stackrel{\cdot}{\sim} \chi^2_k
+$$
+
+## 多參數 Score 檢驗 - Score test
+
+單個參數時的 Score 檢驗的檢驗統計量：
+
+$$
+ \text{H}_0: \theta=\theta_0 \text{ v.s. H}_1: \theta \neq \theta_0 \\
+ \frac{U^2}{V} \stackrel{\cdot}{\sim} \chi^2_1 \\
+ \text{Where } U=\ell^\prime(\theta_0), V=E[-\ell^{\prime\prime}(\theta_0)]
+$$
+
+類似 Wald 檢驗法的矩陣推導過程和標記法，$k$ 個參數的 Score 檢驗的統計量可以標記爲：
+
+$$
+\underline{U}^T\underline{V}^{-1}\underline{U} \stackrel{\cdot}{\sim} \chi^2_k \\
+\text{Where } \underline{U} = \left.\frac{\partial\ell}{\partial\underline{\theta}} \right\vert_{\underline{\theta}=\underline{\theta_0}},
+\underline{V} = E[-\underline{\ell^{\prime\prime}(\theta)}]_{\underline{\theta}=\underline{\theta_0}}
+$$
+
+所以如果是兩個參數 $\lambda, \psi$ 那麼檢驗 $\text{H}_0:\lambda = \lambda_0, \psi = \psi_0 \text{ v.s. H}_1: \lambda \neq \lambda_0 \text{ or } \psi\neq\psi_0$ 的 Score 檢驗統計量是：
+
+$$
+(\frac{\partial\ell}{\partial\lambda}, \frac{\partial\ell}{\partial\psi})_{\lambda_0, \psi_0}\left(
+E\left[
+-\left(
+\begin{array}{c}
+\frac{\partial^2\ell}{\partial\lambda^2} & \frac{\partial^2\ell}{\partial\lambda\partial\psi} \\
+\frac{\partial^2\ell}{\partial\psi\partial\lambda} & \frac{\partial^2\ell}{\partial\psi^2}
+\end{array}
+\right)_{\lambda_0,\psi_0}
+\right]
+\right)^{-1}\left(
+\begin{array}{c}
+\frac{\partial\ell}{\partial\lambda}\\
+\frac{\partial\ell}{\partial\psi}
+\end{array}
+\right)_{\lambda_0,\psi_0} \stackrel{\cdot}{\sim} \chi^2_2
+$$
+
+## 條件似然 conditional likelihood {#condilikeli}
+
+現實的例子中，參數可能有非常多，但是我們可能只關心其中幾個。下章介紹的子集似然函數 (profile likelihood) 是可以在多種情況下應用的好方法。本節介紹的方法是**條件似然法**。簡單原理是，把模型中不能提供我們感興趣的參數的有效信息的那些參數 ("nuisance" parameters) 當作是固定的 (fixed)。由此可以定義一個新的概率模型 -- **條件概率模型 conditional probability model**。
+
+我們用泊松模型來解釋如何建立這樣的模型。
+
+兩個獨立的人羣追蹤樣本，在 $p_0, p_1$ 人年的隨訪中發生事件 A 的次數分別是 $k_0, k_1$。假設我們只關心兩組的事件 A 發生率的比 $\text{Rate ratio:} \theta=\frac{\lambda_1}{\lambda_0}$。
+
+合併兩個人羣，發生事件 A 的總次數爲 $k=k_0+k_1$。只知道 $k$ 並不能讓我們推算兩個人羣中各發生了多少次事件 A，也無法用它來計算發生率的比 $\theta$，而這個 $k$ 就是條件概率模型中的條件。
+
+$$
+K_0 \sim Po(\mu_0); K_1 \sim Po(\mu_1) ; \text{ where } \mu_0 = \lambda_0 p_0 \mu_1 = \lambda_1 p_1\\
+k=k_0 + k_1 \Rightarrow K_0+K_1 \sim Po(\mu_0 + \mu_1)
+$$
+
+$$
+\begin{aligned}
+  & \text{Prob}(k_0 \text{events in group 0} | k \text{ events in total}) \\
+= & \frac{\text{Prob}(k_0 \text{ events in group }0 \text{ and } k-k_0 \text{ events in  group } 1)}
+ {\text{Prob}(k \text{ events in total})} \\
+\end{aligned}
+(\#eq:infer9-1)
+$$
+
+由於兩個樣本是來自獨立的人羣，所以公式 \@ref(eq:infer9-1) 的分母，和分子分別是
+
+$$
+\begin{aligned}
+\text{Prob}(k &\text{ events in total}) \\
+ = & \frac{(\lambda_0 p_0 + \lambda_1 p_1)^k e^{-(\lambda_0 p_0 + \lambda_1 p_1)}}{k!} \\
+\text{Prob}(k_0 &\text{ events in group }0 \text{ and } k-k_0 \text{ events in  group } 1) \\
+ = & \frac{(\lambda_0 p_0)^{k_0}e^{-\lambda_0 p_0}}{k_0!}\times\frac{(\lambda_1 p_1)^{k-k_0}e^{-\lambda_1 p_1}}{(k-k_0)!}
+\end{aligned}
+$$
+
+所以公式 \@ref(eq:infer9-1) 可以整理成：
+
+$$
+\begin{aligned}
+& \frac{\frac{(\lambda_0 p_0)^{k_0}e^{-\lambda_0 p_0}}{k_0!}\times\frac{(\lambda_1 p_1)^{k-k_0}e^{-\lambda_1 p_1}}{(k-k_0)!}}
+{\frac{(\lambda_0 p_0 + \lambda_1 p_1)^k e^{-(\lambda_0 p_0 + \lambda_1 p_1)}}{k!}} \\
+= &  \frac{e^{-(\lambda_0 p_0 + \lambda_1 p_1)}(\lambda_0 p_0)^{k_0}(\lambda_1 p_1)^{k-k_0}\cdot k!}{e^{-(\lambda_0 p_0 + \lambda_1 p_1)}(\lambda_0p_0+\lambda_1p_1)^k\cdot k_0!\cdot (k-k_0)!}\\
+= & (\frac{\lambda_0 p_0}{\lambda_0 p_0+\lambda_1 p_1})^{k_0}(\frac{\lambda_1 p_1}{\lambda_0 p_0+\lambda_1 p_1})^{k-k_0}\cdot\frac{k!}{k_0!(k-k_0)!} \\
+= & (\pi)^{k_0}(1-\pi)^{k-k_0}\cdot\frac{k!}{k_0!(k-k_0)!} \\
+\text{Where } & \pi = \frac{\lambda_0 p_0}{\lambda_0 p_0 + \lambda_1 p_1} = \frac{p_0}{p_0+(\lambda_1/\lambda_0)p_1} = \frac{p_0}{p_0+\theta p_1}\\
+\Rightarrow &\text{ Given } K_0+K_1=K, K_0 \sim Bin(k, \pi=\frac{p_0}{p_0+\theta p_1})
+\end{aligned}
+$$
+
+我們就把兩個泊松分佈的模型，變形成爲了一個條件二項分佈，而且只有一個未知參數 $\theta$。之後就可以用二項分佈的對數似然方程進行下一步的假設檢驗的構建：
+
+$$
+\begin{aligned}
+               L(\pi) & = (\pi)^{k_0}(1-\pi)^{k-k_0}  \\
+\Rightarrow \ell(\pi) & = k_0 \text{log}\pi + (k-k_0)\text{log} (1-\pi) \\
+\text{Because }  \pi  & = \frac{p_0}{p_0+\theta p_1} \\
+        \ell_c(\theta)  & = k_0 \text{log}(\frac{\pi}{1-\pi}) + k\text{log}(1-\pi) \\
+                      & = k_0 \text{log}(\frac{p_0}{\theta p_1}) + k\text{log}(\frac{\theta p_1}{p_0 + \theta p_1}) \\
+\text{Ignoring} & \text{ terms not involving } \theta \\
+        \ell_c(\theta)& = k_1 \text{log}\theta - k\text{log}(p_0 + \theta p_1)
+\end{aligned}
+(\#eq:inference9-2)
+$$
+
+至此，推導發生率比 $\theta = \frac{\lambda_1}{\lambda_0}$ 的條件對數似然就完成了。Elegant and Bravo!
+
+關於條件對數似然：
+
+1. 推導出的條件對數似然是一個**真實**的以觀察數據爲條件的對數似然，可以用於假設檢驗；
+2. 條件似然過程依賴於我們能否找到這樣一個“條件似然”，使得模型的對數似然**只取決於我們關心的參數**，我們幸運地找到了發生率比的對數似然方程，**但是至今沒有人找到發生率差 $\lambda_1-\lambda_0$ 的條件對數似然**；
+3. 與此相對地是，下一章介紹的子集似然函數 (profile likelihood)，可以用於幾乎所有的多參數模型的假設檢驗之構建；
+4. 但是，條件對數似然相當之重要，特別是它作爲 Cox proportional hazard model 模型的基本模型構架在生存分析 (survival analysis) 中的應用，以及在配對病例對照分析 (matched case-control study) 中用於條件邏輯迴歸 (conditional logistic regression) 的理論基礎 (將會在第二學期的碩士課程中介紹，敬請期待)。
