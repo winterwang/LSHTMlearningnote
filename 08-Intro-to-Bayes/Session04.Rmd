@@ -1,0 +1,155 @@
+## 正（常）態分佈僅均值已知（方差未知） Normal distribution with known mean but unknown variance
+
+
+對於獨立同分佈 (i.i.d) 數據 $y_1, y_2, \dots, y_n$ 如果它服從均值 $\theta$ 已知，但方差未知的正（常）態分佈，$p(y | \theta, \sigma^2) = N(y | \theta, \sigma^2)$，那麼它的似然 likelihood 可以寫作：
+
+$$
+\begin{aligned}
+p(y | \sigma^2) & \propto (\frac{1}{\sqrt{\sigma^2}})^n \exp(-\frac{1}{2\sigma^2}\sum_{i = 1}^n(y_i - \theta)^2) \\
+                & = (\sigma^2)^{ - \frac{n}{2}} \exp(-\frac{n}{2\sigma^2}v)
+\end{aligned}
+$$
+
+
+其中，
+
+$$
+v = \frac{1}{n}\sum_{i =1}^n(y_i - \theta)^2
+$$
+
+是該未知方差的充分統計量 (sufficient statistic)。
+
+這個似然方長對應的共軛先驗概率分佈是[伽馬負分佈 (inverse-gamma distribution)](https://distribution-explorer.github.io/continuous/inverse_gamma.html)
+
+$$
+p(\sigma^2) \propto (\sigma^2)^{-(\alpha + 1 )}\exp(-\beta/{\sigma^2})
+$$
+
+
+其超參數是 $(\alpha, \beta)$。
+
+更加方便的是，我們使用伽馬負分佈的近親-- 縮放比例為 $\sigma_0^2$，自由度為 $\nu$ [卡方負分佈](https://en.wikipedia.org/wiki/Scaled_inverse_chi-squared_distribution) (inverse-$\chi^2$)。也就是說，我們可以使用 $\sigma^2 \sim \text{Inv-}\chi^2(\nu_0, \sigma_0^2)$ 作未知方差的先驗概率密度。由此，我們可以獲得未知方差的事後概率分佈：
+
+
+$$
+\begin{aligned}
+p(\sigma^2 |y) & \propto p(\sigma^2)\times p(y | \sigma^2) \\
+               & \propto (\frac{\sigma_0^2}{\sigma^2})^{\frac{\nu_0}{2} + 1} \exp\left( - \frac{\nu_0\sigma_0^2}{2\sigma^2}\right)  \times (\sigma^2)^{ - \frac{n}{2}} \exp(-\frac{n}{2\sigma^2}v) \\
+               & \propto (\sigma^2)^{-(\frac{n + \nu_0}{2} +1)}\exp\left( -\frac{1}{2\sigma^2}(\nu_0\sigma_0^2 + n v) \right) \\
+\Rightarrow \sigma^2|y & \sim \text{Inv-}\chi^2\left(n + \nu_0, \frac{\nu_0\sigma_0^2 + nv}{n + \nu_0}\right)              
+\end{aligned}
+$$
+
+
+所以你看見未知方差的事後概率分佈在使用了對應的縮放卡方負分佈(scaled inverse-$\chi^2$)作先驗概率分佈之後獲得的事後概率分佈依然還是一個縮放卡方負分佈，更新後的參數中，自由度是先驗概率分佈的自由度和觀測數據自由度之和，縮放參數是先驗概率分佈的縮放比例和觀測數據的縮放比例的權重之和。
+
+
+
+## 泊松分佈模型的貝葉斯思路 Poisson distribution model under Bayesian framework
+
+泊松分佈是一種常見的離散分佈，其特徵詳見 (Chapter \@ref(poisson))。對單一觀察對象 $y$ 來說，它如果服從泊松分佈，他的概率計算方法為：
+
+$$
+p(y|\theta) = \frac{\theta^y e^{-\theta}}{y !} \text{, for } y = 0, 1, 2, \dots
+$$
+
+那對於一組來自泊松分佈的獨立同分佈數據來說，它的似然函數 likelihood 就是：
+
+$$
+\begin{aligned}
+p(y | \theta) & = \prod_{i = 1}^n \frac{1}{y_i!} \theta^{y_i} e^{-\theta} \\
+& \propto \theta^{t(y)}e^{-n\theta}
+\end{aligned}
+$$
+
+其中，$t(y) = \sum_{i = 1}^n y_i$ 是上述似然函數的充分統計量 (sufficient statistic)。
+
+上述似然函數可以改寫成指數的形式：
+
+$$
+p(y|\theta) \propto e^{-n\theta} e^{t(y) \log\theta}
+$$
+
+
+仔細觀察可以判斷，它的自然共軛先驗概率分佈是超參數 (hyperparameters) 為 $(\eta, \nu)$ 的函數：
+
+$$
+p(\theta) \propto (e^{-\theta})^\eta e^{\nu \log\theta}
+$$
+
+或者從另一個角度來看這個似然函數，它的形式是 $\theta^a e^{-b\theta}$，所以它對應的先驗概率函數也最好是相似的結構：$p(\theta) \propto \theta^A e^{-B\theta}$。如果說你熟悉[伽馬分佈 Gamma distribution](https://distribution-explorer.github.io/continuous/gamma.html#gamma)，可能一眼就看出了它就是泊松分佈似然的先驗概率函數的最佳選擇：
+
+$$
+p(\theta) \propto e^{-\beta \theta} \theta^{\alpha - 1}
+$$
+
+這個伽馬分佈的概率密度函數的超參數是 $\Gamma(\alpha, \beta)$。比較似然函數和這個伽馬分佈構成的先驗概率分佈函數，不難看出，他們結合之後的事後概率分佈是也是一個 $\Gamma$ 分佈，它更新以後的參數分別是 $\alpha + n\bar{y}, \beta + n$：
+
+$$
+\theta | y \sim \Gamma (\alpha + n\bar{y}, \beta + n)
+$$
+
+由於泊松分佈似然，伽馬分佈的概率密度函數都是閉合式可以有算數解的。它們二者結合之後可以用來計算並獲取整個數據的邊際分佈 (marginal distribution) $p(y)$，當只有一個觀察變量時：
+
+$$
+\begin{aligned}
+p(y) & = \frac{p(y | \theta) p(\theta)}{p(\theta | y)} \\ 
+& = \frac{\text{Poisson}(y | \theta) \text{Gamma}(\theta | \alpha, \beta)}{\text{Gamma}(\theta | \alpha + y, \beta + 1)} \\ 
+& = \frac{\frac{1}{y !}\theta^y e^{-\theta} \times \frac{1}{\Gamma(\alpha)}\frac{(\beta\theta)^\alpha}{\theta}e^{-\beta\theta}}{\frac{1}{\Gamma(\alpha + y)}\frac{[(1 + \beta)\theta]^{\alpha +y} e^{-(1 + \beta)\theta}}{\theta}} \\
+& = \frac{\Gamma(\alpha + y) \beta^\alpha}{\Gamma(\alpha) y! (1 + \beta)^{\alpha + y}}
+\end{aligned}
+$$
+
+
+於是，上面這個邊際分佈函數可以再次變形為：
+
+$$
+p(y) = {\alpha + y -1\choose \alpha -1}\left( \frac{\beta}{\beta + 1} \right)^\alpha \left( \frac{1}{\beta + 1} \right)^y
+$$
+
+
+這就是大名鼎鼎的**[負二項分佈的概率函數(negative binomial density)](https://distribution-explorer.github.io/discrete/negative_binomial.html)**。
+
+上面的推導過程同時也證明了，負二項分佈其實是泊松分佈和伽馬分佈的混合體，其中泊松分佈中的參數 $\theta$ 是來自一個參數為 $\alpha, \beta$ 的伽馬分佈。
+
+$$
+\text{Neg-bin}(y | \alpha, \beta) = \int \text{Poisson}(y | \theta) \text{Gamma}(\theta | \alpha, \beta) d\theta
+$$
+
+
+## 泊松模型的其他表達形式  poisson model parameterized in terms of rate and exposure 
+
+在許多流行病學的應用中，大家可能更加熟悉的泊松分佈模型是下面的表達方式（參考 Chapter \@ref(likelihood-poi)）：
+
+$$
+y_i \sim \text{Poisson}(x_i \theta)
+$$
+
+其中你可能熟悉的解釋是上述模型中的 $\theta$ 是某些事件（如死亡或新發生疾病的）發生率 (rate)。$x_i$ 則是每一名觀察對象的觀察時間，也就是一個非負的解釋變量 (positive explanatory variable)。
+
+那麼這個模型的似然函數 likelihood 可以表達為：
+
+$$
+p(y | \theta) \propto \theta^{\sum_i y_i} e^{-(\sum_i x_i)\theta }
+$$
+
+類似地，伽馬分佈也可以作它的共軛先驗概率分佈，
+
+$$
+\theta \sim \text{Gamma}(\alpha, \beta)
+$$
+
+
+獲得的事後概率分佈的參數也一樣被更新：
+
+
+$$
+\theta | y \sim  \text{Gamma}\left( \alpha + \sum_{i = 1}^n y_i , \beta + \sum_{i = 1}^nx_i \right)
+$$
+
+
+
+
+
+
+
