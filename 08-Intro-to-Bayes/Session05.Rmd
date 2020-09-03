@@ -1,0 +1,80 @@
+## 把不需要的噪音參數平均出去 Averaging over 'nuisance parameters'
+
+從數學上表達聯合事後分佈 (joint posterior distribution) 和邊際事後分佈 (marginal posterior distribution) 其實不困難，可以想像我們想要了解的參數 $\theta$ 其實是有兩個部分的，用 $\theta = (\theta_1, \theta_2)$ 表示。更進一步想像，我們其實真正只對這兩部分參數中的其中一個 $\theta_1$ 感興趣。那麼另一個就是所謂的“噪音參數 nuisance parameter”。例如我們在使用正（常）態分佈數據時，有兩個未知的參數，均值 $\mu$，和方差 $\sigma^2$。但是實際上有時候我們可能只對其中一個感興趣，更多時候僅僅是均值，也有的時候是方差。
+
+$$
+y | \mu, \sigma^2 \sim N(\mu, \sigma^2)
+$$
+
+那麼我們就需要尋找，其中一部分的參數在收集到的數據的條件下的分佈，$p(\theta_1 | y)$。
+
+這裡需要仔細解釋一下如何求上述的數據條件參數分佈。當給定了數據 $y$，通過微分思想，可以認為，未知參數 $\theta$ 的期望值（或均值），可以通過在 $y$ 的每一個小段的區間上的值的均值來獲得：
+
+$$
+E_{p(\theta | y)}[\theta] \approx \frac{1}{S}\sum_{S = 1}^S \theta^{(S)}
+$$
+
+當這個區間 $S  \rightarrow 0$，也就是趨近於零時，上面的式子就轉化成了一個積分方程式：
+
+
+$$
+E_{p(\theta | y)}[\theta] \approx \frac{1}{S}\sum_{S = 1}^S \theta^{(S)} = \int\theta p(\theta | y)
+$$
+
+那麼當參數不只一個的時候，它們的事後聯合分佈 (Joint posterior distribution)，可以認為是： 
+
+$$
+p(\theta_1, \theta_2 | y) \propto p(y | \theta_1, \theta_2) p(\theta_1, \theta_2)
+$$
+
+
+之後的任務是要把 $p(\theta_1, \theta_2 | y)$ 中的噪音參數 $\theta_2$ 通過積分的方法去除掉。類似地，使用微分思想，我們把 $p(\theta_2|y)$ 這個分佈分割成無數小的區間來計算每個區間裡的 $\theta_1$，再求它的均值：
+
+$$
+p(\theta_1 |y) \approx \frac{1}{S} \sum_{S = 1}^S p(\theta_1, \theta_2^{(S)} | y)
+$$
+其中，$\theta_2$ 可以使用蒙特卡洛 (Monte Carlo) 過程從 $p(\theta_2 | y)$ 中隨機採集。當這個無數小的區間的面積無限趨近於零時，$S \rightarrow 0$，上面的方程式就變成了一個關於 $\theta_2$ 的積分方程式：
+
+$$
+p(\theta_1 |y) \approx \frac{1}{S} \sum_{S = 1}^S p(\theta_1, \theta_2^{(S)} | y) = \int p(\theta_1, \theta_2 | y) d\theta_2
+$$
+
+這個過程被叫做**邊際化 (marginalization)**。進一步地，上面的積分方程中間的 $p(\theta_1, \theta_2 | y)$ 又可以被理解成由兩個部分組成：一個是 $p(\theta_1 | \theta_2, y)$，即增加了噪音參數 $\theta_2$ 的條件事後分佈 (conditional posterior distribution given the nuisance parameter)；另一個是 $p(\theta_2 | y)$，也就是給定了數據 $y$ 之後不同的 $\theta_2$ 的取值的權重 (weighting function for the different possible values of $\theta_2$)：
+
+
+$$
+p(\theta_1 | y) = \int p(\theta_1 |\theta_2 , y) p(\theta_2 | y) d\theta_2
+$$
+
+
+## 未知均值也未知方差的正（常）態分佈數據 normal data with unknown mean and variance
+
+作為一個經典的例子，我們思考從數據中估計一個未知的平均值。假設該數據是一維的 $n$ 個獨立樣本 $y$ 服從正（常）態分佈 $N(\mu, \sigma^2)$。
+
+### 無信息先驗概率分佈 noninformative prior distribution
+
+根據 [Jeffreys prior](https://en.wikipedia.org/wiki/Jeffreys_prior) 對無信息先驗概率分佈的定義，我們給這個未知均值也未知方差的數據的兩個參數的無信息先驗概率分佈分別是：均值 $\mu$ 使用均一分佈 (uniform distribution)，方差 $\sigma^2$ 使用 $\sigma^{-2}$：
+
+$$
+p(\mu, \sigma^2) \propto \sigma^{-2}
+$$
+
+於是，該數據的聯合事後概率分佈可以被推導為：
+
+$$
+\begin{aligned}
+p(\mu, \sigma^2 | y) & \propto \sigma^{-2} \prod_{i =1}^n \frac{1}{\sqrt{2\pi} \sigma} \exp\left( -\frac{1}{2\sigma^2}(y_i - \mu)^2 \right) \\
+& = \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\sum_{i =1}^n (y_i - \mu)^2 \right) \\
+& = \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\sum_{i =1}^n (y_i^2 - 2y_i\mu + \mu^2) \right) \\
+& = \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\sum_{i =1}^n (y_i^2 - 2y_i\mu + \mu^2 -\bar{y}^2 + \bar{y}^2 - 2y_i\bar{y} + 2y_i\bar{y} ) \right) \\
+& = \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\left[\sum_{i =1}^n (y_i^2 - 2y_i\bar{y} + \bar{y}^2) + \sum_{i = 1}^n(\mu^2 - 2y_i\mu - \bar{y}^2 + 2y_i\bar{y})  \right]\right) \\
+& = \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\left[\sum_{i =1}^n (y_i^2 - 2y_i\bar{y} + \bar{y}^2) + n(\mu^2 - 2\bar{y}\mu - \bar{y}^2 + 2\bar{y}^2)  \right]\right) \\
+& = \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\left[\sum_{i =1}^n (y - \bar{y})^2 + n(\bar{y} - \mu)^2  \right]\right) \\
+\color{darkred}{\text{Where } \bar{y}} & \color{darkred}{= \frac{1}{n}\sum_{i = 1}^n y_i} \\
+& = \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\left[(n - 1)s^2 + n(\bar{y} - \mu)^2  \right]\right) \\
+\color{darkred}{\text{Where } s^2} & \color{darkred}{= \frac{1}{n - 1}\sum_{i = 1}^n (y_i - \bar{y})^2} \\
+\end{aligned}
+$$
+
+
+
