@@ -1,0 +1,146 @@
+
+線性迴歸部分目前爲止我們討論過如何用多元迴歸模型來控制 (或調整) 特定的預測變量 $(X)$ 之外的變量。多元迴歸的目的之一是爲了估計預測變量和因變量之間的迴歸係數的同時，保持其他 (想要被調整的) 變量不變。如此一來，其實等於是假定了無論其餘的調整變量取值如何，$X,Y$ 之間的迴歸係數**總是相同** (繪製的迴歸線是一組平行線)。本章討論的交互作用，就是探討其中某個變量**改變了 $X,Y$ 之間的關係 (modification effect)** 的情況。放寬了之前強制所有直線都平行的限制，探討兩個變量之間的線性關係是否因爲某個變量而發生了質的改變。這樣的關係，在流行病學中被定義爲 **交互作用 interaction**。
+
+本站會探討如何利用線性迴歸模型分析交互作用，如何理解並解釋統計忍者包輸出的報告結果的意義。具體涉及的例子爲：兩個連續型變量，兩個分類型變量，以及一個連續型，一個分類型變量之間的關係的交互作用。
+
+
+## 兩個預測變量之間的線性模型交互作用
+
+### 交互作用線性模型的一般表達式
+
+假如準備擬合的模型是一個因變量 $Y$，兩個預測變量 $X_1, X_2$。同時模型考慮根據 $X_2$ 的值，$X_1, Y$ 之間關係的迴歸係數可以不相等 (直線的斜率不同，即會出現兩條相交的迴歸直線)。這樣的模型其實只要在原有的兩個預測變量的迴歸線性模型中增加一個新的預測變量，新的預測變量是 $X_1, X_2$ 的乘積即可。很簡單，不是麼？
+
+$$
+\begin{aligned}
+y_i  & = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3 x_{3i} + \varepsilon_i \\
+\text{Where, } & \varepsilon_i \sim \text{NID}(0,\sigma^2) \\
+y_i  & = \text{value of the dependent variable} \\
+x_{1i} & = \text{value of the first predictor variable} \\
+x_{2i} & = \text{value of the second predictor variable} \\
+x_{3i} & = x_{1i} \times x_{2i} \\
+\end{aligned}
+(\#eq:lm7-1)
+$$
+
+爲什麼增加一個 $X_1\times X_2$ 就能夠分析交互作用呢 (不同直線的斜率)？ 要理解其中的奧妙，我們可以這樣來理解：當像普通的線性迴歸模型那樣調整了 $X_2$ 之後，也就是當 $X_2$ 固定不變時 $(X_2=k)$，迴歸方程 \@ref(eq:lm7-1)，就變成了：
+
+$$
+\begin{equation}
+y_i  = (\alpha + \beta_2 k) + (\beta_1 + \beta_3 k)x_{1i} + \varepsilon_i
+\end{equation}
+(\#eq:lm7-2)
+$$
+
+此時的 $X_1$ 的斜率從 $\beta_1$ 變成了 $(\beta_1 + \beta_3 k)$，截距從 $\alpha$ 變成了 $(\alpha + \beta_2 k)$。
+
+
+### 連續型變量和二分類變量之間的交互作用 {#interaction-cont-bin}
+
+一個連續型變臉一個二分類變量的交互作用迴歸方程十分容易理解 (利用啞變量建立模型)：
+
+$$
+\begin{array}{ll}
+y_i  = \alpha + \beta_1 x_1i + \varepsilon_i  &   \text{ when } X_2 = 0 \\
+y_i  = (\alpha + \beta_2) + (\beta_1+\beta_3)x_{1i} + \varepsilon_i & \text{ when } X_2 =1
+\end{array}
+(\#eq:lm7-4)
+$$
+
+所以，$X_2$ 取零 或者 取 $1$ 代表了不同的分組，上面的迴歸方程就可以擬合 $Y, X_1$ 在 $X_2$ 的兩組中不同截距，不同斜率的兩條直線。其中各個參數估計，用人話來解釋就是：
+
+1. $\alpha$ 是當 $X_2 = 0$ 時的**截距**；
+2. $\alpha + \beta_2$ 是當 $X_2 = 1$ 時的截距，所以 $\beta_2$ 就是二分類預測變量 $X_2$ 的兩組之間**截距的差**；
+3. $\beta_1$ 是當 $X_2 = 0$ 時的**斜率**；
+4. $(\beta_1+\beta_3)$ 是當 $X_2 = 1$ 時的截距，所以 $\beta_3$ 就是二分類預測變量 $X_2$ 的兩組之間**斜率的差**。
+
+
+### 兩個二分類變量之間的交互作用
+
+當兩個預測變量都是二分類變量時，可以用兩個啞變量來編碼各自的分組，擬合下面的迴歸模型：
+
+$$
+\begin{array}{lll}
+y_i = \alpha + \varepsilon_i   &  \text{ when } X_1 = 0 \& X_2 = 0  & \mu_{00} \\
+y_i = \alpha + \beta_1 + \varepsilon_i & \text{ when } X_1 = 1 \& X_2 =0  & \mu_{10} \\
+y_i = \alpha + \beta_2 + \varepsilon_i & \text{ when } X_1 = 0 \& X_2 =1  & \mu_{01} \\
+y_i = \alpha + \beta_1 + \beta_2+ \beta_3 + \varepsilon_i & \text{ when } X_1 = 1 \& X_2 = 1 & \mu_{11}
+\end{array}
+(\#eq:lm7-5)
+$$
+
+如果用 $\mu_{ij}$ 表示 $X_1 = i, X_2 = j$ 時的總體均值 (population mean)，那麼模型 \@ref(eq:lm7-5) 各個參數估計及其意義爲：
+
+
+1. $\alpha$ 是當 $X_1 = 0, \& X_2 = 0$ 時 $Y$ 的均值估計 $(\mu_{00})$；
+2. $\alpha+\beta_1$ 是當 $X_1 = 1 \& X_2 = 0$ 時 $Y$ 的均值估計 $\mu_{10}$，所以 $\beta_1$ 是 $X_2 = 0$ 時 $X_1$ 的兩組之間 $Y$ 的均值差，$\mu_{10}-\mu_{00}$；
+3. $\alpha+\beta_2$ 是當 $X_1 = 0 \& X_2 = 1$ 時 $Y$ 的均值估計 $\mu_{01}$，所以 $\beta_2$ 是 $X_1 = 0$ 時 $X_2$ 的兩組之間 $Y$ 的均值差，$\mu_{01}-\mu_{00}$；
+4. $\alpha + \beta_1 + \beta_2 + \beta_3$ 是當 $X_1 = 1 \& X_2 = 1$ 時的均值估計 $\mu_{11}$，所以 $\beta_3$ 是 $X_1 = 1$ 時，$X_2$ 的兩組之間 $Y$ 的均值差 $\mu_{11}-\mu_{10}$ **減去** $X_2 = 0$ 時，$X_1$ 的兩組之間的均值差 $\mu_{01}-\mu_{00}$：$(\mu_{11}-\mu_{10}) - (\mu_{01}-\mu_{00})$。
+
+
+當 $X_1$ 是連續型變量時，交互作用項的迴歸係數 $\beta_3$ 的幾何意義是兩個迴歸直線斜率的差。但是本例中，兩個預測變量都是二分類變量的情況下，$\beta_3$ 的實際意義就變成了，被 $X_2$ 定義的兩組 $X_1$ 之間因變量差的差，$(\mu_{11}-\mu_{10}) - (\mu_{01}-\mu_{00})$。
+
+
+### 兩個連續變量之間的交互作用
+
+
+前面 (Section \@ref(interaction-cont-bin)) 已經討論過，一個是連續型變量 $X_1$，另一個是分類變量時 $X_2$，線性迴歸的交互作用項迴歸係數的含義是因變量 $Y$ 和連續性變量 $X_1$ 在不同的 $X_2$ 組中的迴歸係數之差(斜率之差)。但是，當兩個預測變量 $X_1, X_2$ 都是連續型變量時，交互作用項的迴歸係數該如何解釋呢？直觀的說，此時的交互作用項迴歸係數應該被理解爲：**預測變量 $X_2$ 每增加一個單位時，$Y, X_1$ 之間關係的迴歸方程的斜率變化**。爲了更好地解釋這個概念，我們沿用前面兒童年齡和身長預測其身高的模型 (Section \@ref(globalsig))，加入年齡和身高的交互作用項結果如下：
+
+
+
+```{r LM48, cache=TRUE}
+growgam1 <- read_dta("../backupfiles/growgam1.dta")
+growgam1$sex <- as.factor(growgam1$sex)
+
+Model1 <- lm(wt ~ age + len + age*len, data=growgam1)
+# or equivalently use lm(wt ~  age*len, data=growgam1)
+
+summary(Model1)
+confint(Model1)
+```
+
+這裏的模型中，兒童的身長和年齡相乘的部分構成了一個交互作用項。我們用這個擬合的迴歸方程寫出當兒童年齡爲 12 個月時，身長預測體重的方程：
+
+$$
+\begin{aligned}
+E(\text{weight|age}=12) & = (-4.5196 - 0.2849\times12) \\
+                        & \;\;\;\;\;\;\;\;+ (0.1878 + 0.0034\times12)\times\text{Length} \\
+                        & = -7.9384 + 0.2286\times \text{Length}
+\end{aligned}
+$$
+
+類似地，年齡 13 個月時， 預測體重的方程是：
+
+$$
+\begin{aligned}
+E(\text{weight|age}=13) & = (-4.5196 - 0.2849\times13) \\
+                        & \;\;\;\;\;\;\;\;+ (0.1878 + 0.0034\times13)\times\text{Length} \\
+                        & = -8.2233 + 0.2320\times \text{Length}
+\end{aligned}
+$$
+
+年齡 13 個月時， 預測體重的方程是：
+
+$$
+\begin{aligned}
+E(\text{weight|age}=14) & = (-4.5196 - 0.2849\times14) \\
+                        & \;\;\;\;\;\;\;\;+ (0.1878 + 0.0034\times14)\times\text{Length} \\
+                        & = -8.5082 + 0.2354\times \text{Length}
+\end{aligned}
+$$
+
+所以你會看到每個給定的兒童年齡時的方程身長預測體重的方程都是線性方程，截距和斜率都在變化。兒童的年齡每增加 $1$ 個月，身長和體重的相關係數增加 $0.0034 \text{kg/cm}$。除了迴歸係數，其餘的數字都是不能用正常的數據來理解的 (沒有兒童身長 或者 體重會等於零)。如果非要解釋，那麼需要把數據全部中心化 (Section \@ref(centring))。
+
+
+
+```{r LM49, cache=TRUE}
+epiDisplay::summ(growgam1$age, graph=FALSE); epiDisplay::summ(growgam1$len, graph=FALSE)
+growgam1$age_c <- growgam1$age-mean(growgam1$age)
+growgam1$len_c <- growgam1$len-mean(growgam1$len)
+
+Model2 <- lm(wt ~ age_c + len_c + age_c*len_c, data=growgam1)
+# or equivalently use lm(wt ~  age_c*len_c, data=growgam1)
+summary(Model2)
+confint(Model2)
+```
+
+你會解釋上面中心化數據以後擬合的迴歸方程的結果，和各個參數估計的意義嗎？

@@ -1,0 +1,755 @@
+
+在線性回歸目前為止介紹的內容中，我們最多只談到了預測變量為兩個的情況。本章，我們要把這些概念推廣到三個或者三個以上預測變量的情況。同時，多重線性回歸時採用的假設檢驗也會被談及。其實最常見的就是 $F$ 檢驗。而且我們也見識過了，當預測變量只有一個的時候，$F$ 檢驗和 $t$ 檢驗是等價的。
+
+重要的概念我們都已經介紹完畢。前一章的多重回歸模型中也強調了，我們之所以希望把多個預測變量放進模型，最大的目的就是想了解這些預測變量之間的相互關係，當他們得到調整 (adjustment) 之後，彼此之間的關係是怎樣的。這樣的關係我們稱之為條件關係 (conditional relationships)。當我們使用條件關係的稱呼時，需要同時指明我們說的是哪個變量，在那個變量不變的條件下，與因變量的關係是如何如何。
+
+本章節最後的部分將會著重關注共線性 (collinearity) 的問題。
+
+
+
+## 線性回歸模型的矩陣/非矩陣標記法
+
+### 模型標記：
+
+假如，因變量用 $Y$ 表示，預測變量有 $p$ 個之多 $(X_1,\cdots, X_p)$。該模型的非矩陣標記法如下：
+$$
+\begin{equation}
+y_i  = \alpha + \beta_1 x_{1i}+ \beta_2 x_{2i} + \cdots +  \beta_p x_{pi} + \varepsilon_i \text{ with } \varepsilon_i \sim \text{NID}(0, \sigma^2)
+\end{equation}
+(\#eq:nonmatrixlm)
+$$
+其中，
+
+- $y_i =$ 第 $i$ 名觀察對象的因變量數據；
+- $x_{pi} =$ 第 $i$ 名觀察對象的第 $p$ 個預測變量的觀察數據。
+
+上面的非矩陣標記法，等同於如下的矩陣標記法：
+$$
+\begin{equation}
+\textbf{Y} = \textbf{X}\beta+\varepsilon, \text{ where } \varepsilon \sim N(0, \textbf{I}\sigma^2) \\
+\left(
+\begin{array}{c}
+y_1\\
+y_2\\
+\vdots\\
+y_n
+\end{array}
+\right) = \left(
+\begin{array}{c}
+1&  x_{11} & \cdots & x_{p1}  \\
+1&  x_{12} & \cdots & x_{p2} \\
+\vdots &   \vdots& \vdots & \vdots \\
+1&   x_{1n}& \cdots &x_{pn} \\
+\end{array}
+\right)\left(
+\begin{array}{c}
+\alpha \\
+\beta_1\\
+\beta_2 \\
+\vdots \\
+\beta_p
+\end{array}
+\right)+\left(
+\begin{array}{c}
+\varepsilon_1\\
+\varepsilon_2\\
+\vdots\\
+\varepsilon_n\\
+\end{array}
+\right)
+\end{equation}
+(\#eq:matrixlm2)
+$$
+此公式 \@ref(eq:matrixlm2) 中
+
+- $\textbf{X}$ 是一個 $n\times(p+1)$ 的矩陣；
+- $\textbf{Y}$ 和 $\varepsilon$ 分別是長度為 $n$ 的列向量；
+- $\beta$ 是長度為 $p+1$ 的列向量，且第一個元素是 $\alpha$，偶爾被人誤寫成 $\beta_0$。
+
+殘差被認為服從**多元正態分佈 (multivariate normal distribution)**，這個多元正態分佈的方差協方差矩陣等於 $\sigma^2$ 與單位矩陣相乘獲得的矩陣。這其實等價於認為殘差服從獨立正態且方差為 $\sigma^2$ 的分佈，
+
+## 解讀參數
+
+模型中的參數的涵義為：
+
+- $\alpha$ 是截距，所有的預測變量都是零的時候，因變量 $Y$ 的期待值大小；
+- $\beta_j$ 是預測變量 $X_j$ 升高一個單位，且其他變量保持不變的同時，因變量 $Y$ 的期待值的變化；
+- $\beta_j$ 都是偏回歸係數，每個偏回歸係數，測量的都是該預測變量調整了其他預測變量之後對於因變量期待值的影響。
+
+### 最小二乘估計
+
+還是同之前一樣，我們對殘差的平方和最小化，來獲取我們關心的預測變量的回歸變量。
+
+$$
+\begin{aligned}
+SS_{RES} & = \sum_{i=1}^n \hat\varepsilon_i^2 =  \sum_{i=1}^n(y_i-\hat{y})^2 \\
+& = \sum_{i=1}^n (y_i-\hat\alpha-\hat\beta_1x_{1i}-\hat\beta_2x_{2i}-\cdots-\hat\beta_px_{pi})^2
+\end{aligned}
+(\#eq:lsemulti)
+$$
+
+下面用矩陣標記法計算 $\hat\beta$：
+
+$$
+\begin{aligned}
+\text{Because } \mathbf{Y} & = \mathbf{X\hat\beta + \varepsilon} \\
+\Rightarrow \mathbf{\varepsilon} & = \mathbf{Y - X\hat\beta}\\
+\Rightarrow \mathbf{SS_{RES}} & = \varepsilon_1\times \varepsilon_1 + \varepsilon_2\times \varepsilon_2 + \cdots + \varepsilon_n\times \varepsilon_n \\
+                     & = (\varepsilon_1, \varepsilon_2, \cdots, \varepsilon_n)\left(
+                     \begin{array}{c}
+                     \varepsilon_1\\
+                     \varepsilon_2\\
+                     \vdots\\
+                     \varepsilon_n
+                     \end{array}
+                     \right) \\
+                     & = \mathbf{\varepsilon^\prime} \mathbf{\varepsilon} \\
+                     & = \mathbf{(Y-X\hat\beta)^\prime(Y-X\hat\beta)} \\
+                     & = \mathbf{Y^\prime Y - X^\prime\hat\beta^\prime Y - Y^\prime X\hat\beta + X^\prime\hat\beta^\prime X \hat\beta} \\
+\text{Because} &\text{ transpose of a scalar is a scalar:} \\
+ \mathbf{Y^\prime X\hat\beta} & = \mathbf{(Y^\prime X\hat\beta)^\prime = X^\prime\hat\beta^\prime Y} \\
+\Rightarrow  \mathbf{SS_{RES}} & = \mathbf{Y^\prime Y - 2X^\prime\hat\beta^\prime Y + X^\prime\hat\beta^\prime X \hat\beta}\\
+\Rightarrow \mathbf{\frac{\partial SS_{RES}}{\partial \hat\beta}} & = \mathbf{-2X^\prime Y + 2 X^\prime X \hat\beta} = 0 \\
+\Rightarrow \mathbf{\hat\beta} & = \mathbf{(X^\prime X)^{-1}X^\prime Y}
+\end{aligned}
+(\#eq:lm5-4)
+$$
+
+公式 \@ref(eq:lm5-4) 是參數矩陣 $\mathbf{\beta}$ 的無偏估計，且服從方差協方差矩陣爲 $\mathbf{(X^\prime X)^{-1}\sigma^2}$ 的多元正態分佈：
+
+$$
+\begin{equation}
+\mathbf{\hat\beta} \sim  N(\mathbf{\beta, (X^\prime X)^{-1}\sigma^2})
+\end{equation}
+(\#eq:lm5-5)
+$$
+
+另外可以被證明的是，多元線性迴歸模型的殘差方差的估計量計算公式爲：
+
+$$
+\begin{aligned}
+\hat\sigma^2 & = \sum^n_{i=1}\frac{\hat\varepsilon^2_i}{[n-(p+1)]} \\
+             & = \sum^n_{i=1}\frac{\sum_{i=1}^n (y_i-\hat\alpha-\hat\beta_1x_{1i}-\hat\beta_2x_{2i}-\cdots-\hat\beta_px_{pi})^2}{[n-(p+1)]} \\
+\text{Where } & p \text{ is the number of predictors}
+\end{aligned}
+(\#eq:lm5-6)
+$$
+
+### 因變量的期待值 $\mathbf{\hat Y}$
+
+因變量的期待值矩陣 $\mathbf{\hat Y}$ 根據公式 \@ref(eq:lm5-4) 推導：
+
+$$
+\begin{aligned}
+\mathbf{\hat Y} & = \mathbf{X\hat\beta} \\
+                & = \mathbf{X(X^\prime X)^{-1}X^\prime Y}= \mathbf{PY} \\
+\text{Where } \mathbf{P} &= \mathbf{X(X^\prime X)^{-1}X^\prime}
+\end{aligned}
+(\#eq:lm5-7)
+$$
+
+這裏的 $n\times n$ 的正方形矩陣 $\mathbf{P}$ 在多元線性迴歸中是一個極爲重要的矩陣。
+
+- 它常被叫做“帽子/映射 (hat/projection)”矩陣，因爲它把觀察值 $\mathbf{Y}$ 和觀察值的擬合值一一映射；
+- 帽子矩陣的第 $i$ 個對角元素，是第 $i$ 名觀察值的影響值 (leverage)，會用在下章節的模型診斷中；
+- 擬合值矩陣的方差協方差矩陣被定義爲：
+
+$$
+\begin{equation}
+\text{Var}(\mathbf{\hat Y}) = \mathbf{P}\sigma^2
+\end{equation}
+(\#eq:lm5-8)
+$$
+
+### 殘差
+
+殘差的觀察值 $\mathbf{\hat\varepsilon}$ 被定義爲觀察值和擬合值的差。根據前節 \@ref(eq:lm5-8) 推導：
+
+$$
+\begin{equation}
+\mathbf{\hat\varepsilon} = \mathbf{Y - \hat Y} = \mathbf{Y - PY} = \mathbf{(I - P)Y}
+\end{equation}
+(\#eq:lm5-9)
+$$
+
+這個觀察殘差的方差被定義爲：
+
+$$
+\begin{equation}
+\text{Var}(\mathbf{\hat\varepsilon}) = \mathbf{(I - P)}\sigma^2
+\end{equation}
+(\#eq:lm5-10)
+$$
+
+- 一般地，$\mathbf{P}$ 不是一個對角矩陣，意思是觀察殘差之間無法保證是獨立的；
+- $\mathbf{P}$ 的對角元素也不全都相等，意思是觀察殘差的方差無法保證是恆定不變的。
+
+## 方差分析一般化和 $F$ 檢驗
+
+### 多元線性迴歸時的決定係數和殘差方差
+
+和簡單線性迴歸一樣，因變量的校正平方和可以被分割成兩部分：迴歸模型能夠解釋的平方和；模型無法解釋的殘差平方和。類比方差分析章節 (Section \@ref(ANOVA)) 的公式 \@ref(eq:SSres-partition)：
+
+$$
+\begin{aligned}
+\sum_{i=1}^n(y_i-\bar{y})^2 & = \sum_{i=1}^n(\hat{y}_i - \bar{y})^2 + \sum_{i=1}^n(y_i - \hat{y}_i)^2 \\
+SS_{yy}  & = SS_{REG} + SS_{RES}
+\end{aligned}
+(\#eq:lm5-11)
+$$
+
+和簡單線性迴歸也一樣，多元線性迴歸時的模型決定係數 (coefficient of determination) 的定義爲：
+
+
+$$
+\begin{aligned}
+R^2 & = \frac{SS_{yy}-SS_{RES}}{SS_{yy}} = 1- \frac{SS_{RES}}{SS_{yy}} \\
+    & = 1 - \frac{\sum_{i=1}^n(y_i-\hat{y}_i)^2}{\sum_{i=1}^n(y_i - \bar{y})^2}
+\end{aligned}
+(\#eq:lm5-12)
+$$
+
+這裏的 $R^2$ 也一樣可以被解釋爲模型能夠解釋的因變量變動部分的百分比 (proportion of the variability in the dependent variable explained by the model)。值得注意的是，當模型中預測變量不減少，每加入一個新的預測變量，決定係數也會增加，相反殘差平方和卻絕不會增加。
+
+### 方差分析表格
+
+下表和簡單線性迴歸的方差分析表格很類似，也可以用來作假設檢驗 (迴歸方程的顯著性檢驗 Global $F-\text{test}$，和偏 $F$ 檢驗 Partial $F-\text{test}$)。
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 30.1: Analysis of Variance table for a liear regression model with $p$ predictor variables</caption>
+ <thead><tr>
+<th style="text-align:center;"> Source of <br>Variation </th>
+   <th style="text-align:center;"> Sum of <br>Squares </th>
+   <th style="text-align:center;"> Degrees of <br>Freedom </th>
+   <th style="text-align:center;"> Mean Sum of <br>Squares </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:center;"> Regression (model) </td>
+   <td style="text-align:center;"> $SS_{REG}$ </td>
+   <td style="text-align:center;"> $p$ </td>
+   <td style="text-align:center;"> $MS_{REG} = \frac{SS_{REG}}{p}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Residual </td>
+   <td style="text-align:center;"> $SS_{RES}$ </td>
+   <td style="text-align:center;"> $n-(p+1)$ </td>
+   <td style="text-align:center;"> $MS_{RES} = \frac{SS_{RES}}{[n-(p+1)]}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> $SS_{yy}$ </td>
+   <td style="text-align:center;"> $n-1$ </td>
+   <td style="text-align:center;"> $\frac{SS_{yy}}{(n-1)}$ </td>
+  </tr>
+</tbody>
+</table>
+
+
+### 迴歸方程的顯著性檢驗 {#globalsig}
+
+整個方程的顯著性檢驗，檢驗的是所有的迴歸係數都等於零的零假設，其對應的替代假設則是：“迴歸係數**不全爲零**”。就是至少有一個不等於零。
+
+在零假設條件下，檢驗統計量的計算公式爲：
+
+$$
+\begin{equation}
+F = \frac{MS_{REG}}{MS_{RES}} \sim F_{p, [n-(p+1)]}
+\end{equation}
+(\#eq:lm5-13)
+$$
+
+在零假設條件下，$F$ 的期望值接近 $1$，而替代假設條件下的 $F$ 總是會大於此，所以和 $F$ 分佈比較特徵值時只需要比較單側的 (右側的) 值，即可獲得雙側 $p$ 值。
+
+在 R 裏面，迴歸方程的結果的最底下會出現統計量 $F$ 的大小，但是 $MS_{REG}, MS_{RES}$ 要用 `anova()` 代碼獲得：
+
+```{r LM25, cache=TRUE}
+growgam1 <- read_dta("../backupfiles/growgam1.dta")
+growgam1$sex <- as.factor(growgam1$sex)
+
+Model1 <- lm(wt ~ age + len, data=growgam1)
+print(summary(Model1), digits = 5)
+print(anova(Model1), digits = 5)
+```
+
+可以看到 `summary()` 輸出結果的最後一行是關於迴歸方程整體的 $F$ 檢驗結果 `F-statistic: 270.84 on 2 and 187 DF,  p-value: < 2.22e-16`，從 `anova()` 結果中可以獲得 $MS_{REG} = \frac{359.0632 + 134.5153}{2} = 246.7892$。$F_{2,187} = \frac{246.7892}{0.9111833} = 270.84$。這個檢驗結果證明了，兩個預測變量 “體重” 和 “身長” 至少有一個的迴歸係數不等於零。
+
+### $\text{partial }F$ 檢驗 {#partialF}
+
+如果我們建立兩個模型，一個稍微複雜一些 $(B)$，比起略簡單的模型 $(A)$，增加了 $k$ 個預測變量。兩個模型放在一起的方差分析表格可以歸納成：
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 30.2: Analysis of Variance table comparing the fit of a model $(B)$ with $p$ predictor variables with that of one (model $A$) with $p-k$ predictor variables</caption>
+ <thead><tr>
+<th style="text-align:center;"> Source of <br>Variation </th>
+   <th style="text-align:center;"> Sum of <br>Squares </th>
+   <th style="text-align:center;"> Degrees of <br>Freedom </th>
+   <th style="text-align:center;"> Mean Sum of <br>Squares </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:center;"> Explained by <br> model $A$</td>
+   <td style="text-align:center;"> $SS_{REG_A}$ </td>
+   <td style="text-align:center;"> $p-k$ </td>
+   <td style="text-align:center;"> $MS_{REG_A} = \frac{SS_{REG_A}}{p-k}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Extra Explained <br> by model $B$</td>
+   <td style="text-align:center;"> $SS_{REG_B}-SS_{REG_A}$ </td>
+   <td style="text-align:center;"> $k$ </td>
+   <td style="text-align:center;"> $\frac{SS_{REG_B}-SS_{REG_A}}{k}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Residual from <br> model $B$ </td>
+   <td style="text-align:center;"> $SS_{RES_B}$ </td>
+   <td style="text-align:center;"> $n-(p+1)$ </td>
+   <td style="text-align:center;"> $MS_{RES_B} = \frac{SS_{RES_B}}{[n-(p+1)]}$ </td>
+  </tr>
+<tr>
+<td style="text-align:center;"> Total </td>
+   <td style="text-align:center;"> $SS_{yy}$ </td>
+   <td style="text-align:center;"> $n-1$ </td>
+   <td style="text-align:center;"> $\frac{SS_{yy}}{(n-1)}$ </td>
+  </tr>
+</tbody>
+</table>
+
+那麼偏 $F$ 檢驗的零假設就是：$B$ 模型中包含，$A$ 模型中不包含的 $k$ 個預測變量的迴歸係數都等於零。
+
+$$
+\begin{equation}
+F=\frac{(SS_{REG-B}-SS_{REG-A})/k}{MS_{RES-B}} \sim F_{k, [n-(p+1)]}
+\end{equation}
+(\#eq:lm5-14)
+$$
+
+在 R 裏建立兩個模型：
+
+
+```{r LM26, cache=TRUE}
+Model1 <- lm(wt ~ len, data=growgam1)
+print(summary(Model1), digits = 5)
+print(anova(Model1), digits = 5)
+
+Model2 <- lm(wt ~ len + age + sex, data = growgam1)
+print(summary(Model2), digits = 5)
+print(anova(Model2), digits = 5)
+```
+
+根據公式 \@ref(eq:lm5-14)，$F=\frac{0.4116944+1.7330862}{2\times0.9067645} = 1.18$。$p$ 值可以在 R 裏面這樣計算：
+
+```{r LM27, cache=TRUE}
+1 - pf(df1 = 2,df2 = 186,q = (0.4116944+1.7330862)/(2*0.9067645))
+```
+
+更方便的是直接用 `anova()` 進行偏 $F$ 檢驗：
+
+
+
+```{r LM28, cache=TRUE}
+print(anova(Model1, Model2), digits = 5)
+```
+
+## 添加新變量對迴歸模型的影響
+
+當你決定給建立的模型 $\mathbf{A}$ 增加新的預測變量時，輸出的結果**改變**的有：
+
+1. 模型 $\mathbf{A}$ 原先的預測變量的**偏迴歸係數**會改變；
+2. 模型 $\mathbf{A}$ 原先的預測變量的**偏迴歸係數的方差**會改變；
+3. 模型 $\mathbf{A}$ 原先的預測變量的**偏迴歸係數的檢驗結果**會改變；
+4. 模型 $\mathbf{A}$ 原先的 **擬合值 (predicted values/fitted values)**會改變；
+5. 決定係數 $R^2$ 會改變。
+
+### 偏迴歸係數方差的改變
+
+偏迴歸係數矩陣 $\mathbf{\hat\beta}$ 的方差 $\mathbf{(X^\prime X)^{-1}\sigma^2}$ \@ref(eq:lm5-5)，取決於
+
+1. 殘差方差 (residual variance) $\sigma^2$；
+2. 樣本量大小 (sample size) $n$；
+3. 預測變量之間的協方差 (covariance between the predictor variable in question and the others)。
+
+在簡單線性迴歸中，預測變量的變化性 (variability，用方差或標準差衡量) 越大，迴歸係數的估計就越精確。類似地，多元線性迴歸中，預測變量之間的協方差之所以重要，因爲它決定了**其他預測變量保持不變時**，該預測變量的變化性。如果某兩個預測變量之間高度相關 (high covariance)，那麼當一個預測變量保持不變時，另一個的變化性就很小。
+
+所以當給一個模型加入新的預測變量時，可能觀察的現象是原先模型中已有的預測變量的偏迴歸係數的方差**可能升高，也可能降低**。
+
+- 如果新加入的變量能解釋很大比例的殘差方差，那麼其他原有變量的偏迴歸係數會降低 (變精確)；
+- 如果新加入的變量和原模型中的某個變量高度相關，那麼加入新變量後，原模型中與之高度相關的預測變量的方差會升高 (不精確)，這個現象會在共線性 (collinearity) 中繼續討論。
+
+### 偏迴歸係數檢驗結果的改變
+
+加入新預測變量時，原有的偏迴歸係數的檢驗結果發生的改變可以歸類成兩種情況：
+
+1. 估計的偏迴歸係數本身發生了改變；
+2. 偏迴歸係數的方差改變，導致了檢驗結果發生變化。
+
+
+### 擬合值的改變
+
+很明顯，當模型中加入新的變量，觀察對象的擬合值會發生改變，但是通常這樣的影響要遠遠小於對偏迴歸係數估計 (和其方差) 的影響。
+
+
+### 決定係數的改變
+
+模型中增加新的預測變量，那麼模型的決定係數不會減少，只會增加。
+
+### 共線性 collinearity
+
+當預測變量 $X_1$ 和另一個預測變量 $X_2$ 之間呈高度線性關係時被定義爲共線性現象。如果這兩個變量的關係是**完全線性 (exact linear)**，那麼多元迴歸其實是無法進行的，因爲這兩個變量中的一個隨着另一個改變，無法像我們設想的那樣把其中一個變量保持不變，從而估計另一個變量的迴歸係數。用矩陣表示多元預測變量時 $\mathbf{X}$ 是**[奇異矩陣 singular matrix](https://www.youtube.com/watch?v=UqyN7-tRS00)**，$\mathbf{(X^\prime X)^{-1}}$ 是不存在的。
+
+完全線性的最佳例子是我們在對分類變量使用啞變量的情況下。每個啞變量之間都是完全線性的關係，因而我們只能用 $0,1$ 來編碼啞變量，當某個啞變量存在時，其餘的啞變量取 $0$ 從模型中消失。否則模型將無法擬合。
+
+如果某兩個變量之間高度相關，那麼他們的預測變量矩陣接近 **奇異矩陣**，把這兩個變量同時作爲預測變量放入模型中會引起共線性現象，表現出來的形式有：
+
+1. 偏迴歸係數的方差變得很大；
+2. 偏迴歸係數本身的絕對值變得異常大；
+3. 某些已知的重要預測變量的偏迴歸係數變得過小且不再有意義；
+4. 雖然會有 1-3 描述的異常現象出現，但是擬合值的變化卻可能微不足道。
+
+所以擬合多元線性迴歸模型時，**極爲重要的一點是要避免共線性**。如果有些變量高度相關，必須考慮改變他們放入模型的形式：
+
+1. 收縮期血壓，舒張期血壓兩個變量是高度相關的，不能一起放入模型中。如果需要同時考慮兩個變量，可以用其中一個，另一個預測變量用二者之差；
+2. 身高，體重常常是高度相關的，儘量不要一起放入模型中，可以使用他們的結合形式體質指數 (BMI, $\text{kg/m}^2$)；
+3. 當使用二次方程進行模型擬合的時候，用 $(x_i - \bar{x})^2$ 取代 $x_i^2$。
+
+## 實戰演習
+
+### 血清維生素 C 濃度的預測變量
+
+數據來自與某個橫斷面研究，其目的是找出與血清維生素 C 濃度相關的預測變量。
+
+數據中個變量含義如下表所示。
+
+
+```{r 04-Linear-Regression-1, echo=FALSE, eval=FALSE}
+library(knitr)
+library(kableExtra)
+dt <- read.csv("../backupfiles/vitC.csv", header = T)
+kable(dt, "html",  col.names = c("Variable name","content"), align = "l",caption = "Data set of serum vitamin C level explained") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"))
+```
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 30.3: Data set of serum vitamin C level explained</caption>
+ <thead><tr>
+<th style="text-align:left;"> Variable name </th>
+   <th style="text-align:left;"> content </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;"> `serial` </td>
+   <td style="text-align:left;"> Patient identifier </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `age` </td>
+   <td style="text-align:left;"> Age of subjects in years </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `height` </td>
+   <td style="text-align:left;"> Height in metres </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `cigs` </td>
+   <td style="text-align:left;"> Smoking status (0=non-smoker; 1=smoker) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `weight` </td>
+   <td style="text-align:left;"> Weight in kg </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `sex` </td>
+   <td style="text-align:left;"> Gender (0=men; 1=women) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `seruvitc` </td>
+   <td style="text-align:left;"> Serum Vitamin C level ($\mu\text{mol/L}$) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `ctakers` </td>
+   <td style="text-align:left;"> Vitamin C supplements taken (1=yes, 0=no) </td>
+  </tr>
+</tbody>
+</table>
+
+1. 在 R 裏讀入數據，並對數據內容總結，對維生素C濃度和其他連續性變量作散點圖，對分類變量如性別，吸菸狀況，和維生素C補充劑服用與否之間的維生素 C 濃度作初步的分析表格。
+
+```{r LM29, cache=TRUE, message=FALSE}
+library(haven)
+vitC <- read_dta("../backupfiles/vitC.dta")
+
+##########################################
+# Recoding the categorical variables     #
+##########################################
+
+vitC <- vitC %>% 
+  mutate(sex = as.factor(sex)) %>% 
+  mutate(sex = fct_recode(sex, 
+                          Men = "0",
+                          Women = "1")) %>% 
+  mutate(cigs = as.factor(cigs)) %>% 
+  mutate(cigs = fct_recode(cigs,
+                           "Non-smoker" = "0",
+                           "Smoker" = "1")) %>% 
+  mutate(ctakers = as.factor(ctakers)) %>% 
+  mutate(ctakers = fct_recode(ctakers, 
+                              No = "0",
+                              Yes = "1"))
+
+############################################
+# End of recoding the categorical variables#
+############################################
+
+summary(vitC) #Basic summary without any package
+head(vitC) #See the first 6 observations
+library(psych) #some detailed summary function from this package
+describe(vitC)
+
+vitC$serial[which(is.na(vitC$height))]
+vitC$serial[which(is.na(vitC$weight))]
+```
+
+從初步的熟悉數據結構和歸納結果可以看出，身高體重兩個數據有出現缺損值 (編號 24 的患者)。
+
+```{r LM30, cache=TRUE}
+# You can also get similar detailed descriptive statistics by groups from package "psych"
+describeBy(vitC$seruvitc, group = vitC$sex)
+describeBy(vitC$seruvitc, group = vitC$cigs)
+describeBy(vitC$seruvitc, group = vitC$ctakers)
+```
+
+所以，血清維生素水平在女性，非吸菸者，和服用補充劑(廢話) 的人中較高。
+
+
+
+```{r practicalfig1, fig.width=7, fig.height=6.5, fig.cap='Scatter plots between serum ascorbate and age/weight/height', fig.align='center', out.width='80%',cache=TRUE}
+par(mfrow=c(2,2))
+plot(vitC$age, vitC$seruvitc, pch = 20, xlab = "age on study entry", ylab = "Serum ascorbate")
+plot(vitC$weight, vitC$seruvitc, pch = 20, xlab = "Clothed weight", ylab = "Serum ascorbate")
+plot(vitC$height, vitC$seruvitc, pch = 20, xlab = "Height", ylab = "Serum ascorbate")
+```
+
+散點圖似乎沒有證據提示血清維生素 C 濃度和連續型變量，年齡，身高，體重之間有什麼相關性。
+
+2. 建立維生素 C 和其他預測變量的簡單線性迴歸模型，你有什麼結論？
+
+```{r LM300, cache=TRUE}
+summary(lm(seruvitc ~ age, data = vitC))
+confint(lm(seruvitc ~ age, data = vitC))
+```
+
+血清維生素 C 濃度隨着年齡增加遞減，但是迴歸係數不具有統計學意義 ($p=0.32$)。年齡每增加 1 歲，血清維生素平均下降 $0.864 \:\mu\text{mol/L， 95% CI:} (-2.57, 0.840)$，
+
+
+```{r LM31, cache=TRUE}
+summary(lm(seruvitc ~ height, data = vitC))
+confint(lm(seruvitc ~ height, data = vitC))
+```
+
+血清維生素 C 濃度隨着身高增加遞減，但是迴歸係數不具有統計學意義 ($p=0.134$)。身高每增加 1cm，血清維生素平均下降 $0.378 \:\mu\text{mol/L， 95% CI:} (-0.874, 0.118)$，
+
+
+```{r LM32, cache=TRUE}
+summary(lm(seruvitc ~ cigs, data = vitC))
+confint(lm(seruvitc ~ cigs, data = vitC))
+```
+
+血清維生素 C 濃度與在吸菸人羣中較低，與不吸菸人羣相比，吸菸人羣的血清維生素 C 濃度平均低 $14.8 \:\mu\text{mol/L， 95% CI:} (0.394, 29.2)$，這個濃度差具有臨界統計學意義 $(p=0.044)$。
+
+```{r LM33, cache=TRUE}
+summary(lm(seruvitc ~ weight, data = vitC))
+confint(lm(seruvitc ~ weight, data = vitC))
+```
+
+維生素濃度和體重關係幾乎可以忽略 $(p=0.96)$。
+
+```{r LM34, cache=TRUE}
+summary(lm(seruvitc ~ sex, data = vitC))
+confint(lm(seruvitc ~ sex, data = vitC))
+```
+
+血清維生素 C 濃度與在女性中較高，與男性相比，女性的血清維生素 C 濃度平均高 $13.6 \:\mu\text{mol/L， 95% CI:} (4.12, 23.2)$，這個濃度差具有顯著統計學意義 $(p=0.005)$。
+
+```{r LM35, cache=TRUE}
+summary(lm(seruvitc ~ ctakers, data = vitC))
+confint(lm(seruvitc ~ ctakers, data = vitC))
+```
+
+血清維生素 C 濃度與在服用補充劑的人中較高，與不服用補充劑的人相比，服用者的血清維生素 C 濃度平均高 $22.1 \:\mu\text{mol/L， 95% CI:} (10.7, 33.4)$，這個濃度差具有顯著統計學意義 $(p=0.00021)$。
+
+
+3. 擬合一個多元線性迴歸模型，因變量爲血清維生素 C 濃度，預測變量使用 性別，吸菸狀態，和 是否服用維生素補充劑。解釋輸出結果的數字的含義。跟這些預測變量單獨和血清維生素 C 濃度建立的簡單線性迴歸模型作比較。說明哪些結果發生了改變，爲什麼。
+
+```{r LM36, cache=TRUE}
+summary(lm(seruvitc ~ sex + cigs + ctakers, data = vitC))
+print(anova(lm(seruvitc ~ sex + cigs + ctakers, data = vitC)), digits = 5)
+confint(lm(seruvitc ~ sex + cigs + ctakers, data = vitC))
+```
+
+從這個多元線性迴歸的輸出報告來看，血清維生素 C 濃度
+
+- 在吸菸者中較低 $-11.6 \:\mu\text{mol/L， 95% CI:} (-24.8, +1.67), p = 0.086$；
+- 在女性中較高 $+10.7 \:\mu\text{mol/L， 95% CI:} (1.69, 19.6), p = 0.020$；
+- 在服用維生素補充劑的人中較高 $+20.3 \:\mu\text{mol/L， 95% CI:} (9.29, 31.2), p = 0.0004$。
+
+故，本次數據告訴我們，服用維生素補充劑是最強的預測變量。在多元線性迴歸模型的結果中可以看到：
+
+- 性別之間維生素 C 濃度差變小了 ($+13.6 \rightarrow +10.7$) <br> 這是因爲女性中有較多人服用維生素補充劑。即便如此，性別差在多元線性迴歸模型中仍然是有意義的。
+
+```{r LM37, cache=TRUE}
+a <- Epi::stat.table(list("Vitamin C taker"=ctakers, "Gender" = sex), list(count(),percent(ctakers)), data = vitC, margins = TRUE)
+print(a, digits = c(percent = 2))
+```
+
+- 吸菸與非吸菸者之間的維生素 C 濃度差也變小了 ($-14.8 \rightarrow -11.6$)，因爲儘管吸菸與非吸菸者的維生素補充劑服用比例差不不大，但是吸菸者中大部分是男性。(詳見下表) <br> 吸菸者和非吸菸者之間維生素 C 濃度差經過多元線性迴歸調整後變得不再有統計學意義 $(p=0.086)$。
+
+
+```{r LM38, cache=TRUE}
+a <- Epi::stat.table(list("Vitamin C taker"=ctakers, "Smoker" = cigs), list(count(),percent(ctakers)), data = vitC, margins = TRUE)
+print(a, digits = c(percent = 2))
+a <- Epi::stat.table(list("Gender" = sex, "Smoker" = cigs), list(count(),percent(sex)), data = vitC, margins = TRUE)
+print(a, digits = c(percent = 2))
+```
+
+4. 在前一個模型中加入年齡，身高，體重作爲新的預測變量。先解釋新的模型中報告的個數值的意義，利用方差分析表格比較兩個模型的差別 (先手計算，再用 R 計算確認你的答案)。
+
+由於身高體重有缺損值(serial=24)，所以要比較預測變量增加前後的模型，需要先把之前的模型中 serial=24 的觀察對象刪除掉才公平。
+
+```{r LM39, cache=TRUE}
+Model1 <- lm(seruvitc ~ sex + cigs + ctakers, data = vitC[-24,])
+summary(Model1);anova(Model1)
+
+Model2 <- lm(seruvitc ~ sex + cigs + ctakers + age + weight + height, data = vitC[-24,])
+summary(Model2);anova(Model2)
+```
+
+利用偏 $F$ 檢驗的公式
+
+$$
+F=\frac{(205.2889295+132.9899543+0.6280691)/3}{38079.42/84} = 0.2492713
+$$
+
+
+```{r LM40, cache=TRUE}
+anova(Model1, Model2)
+```
+
+所以檢驗統計量對應的 $p=0.86$ 告訴我們沒有證明據證明調整了性別，吸菸狀況，服用補充劑與否之後，增加的年齡，體重，身高作爲預測變量和觀察對象的血清維生素 C 濃度有關係。模型 2 比模型 1 不能解釋更多的模型殘差 (不比模型 1 更加擬合數據)。
+
+### 紅細胞容積與血紅蛋白
+
+
+<table class="table table-striped table-bordered" style="margin-left: auto; margin-right: auto;">
+<caption>表 30.4: Data set of haemoglobin and PCV explained</caption>
+ <thead><tr>
+<th style="text-align:left;"> Variable name </th>
+   <th style="text-align:left;"> content </th>
+  </tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;"> `hb` </td>
+   <td style="text-align:left;"> Haemoglobin (gm/dl) </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `pcv` </td>
+   <td style="text-align:left;"> Pack cell volume % </td>
+  </tr>
+<tr>
+<td style="text-align:left;"> `age` </td>
+   <td style="text-align:left;"> Age (years) </td>
+  </tr>
+<tr>
+</tbody>
+</table>
+
+5. 把數據導入 R，並且建立因變量爲血紅蛋白，預測變量爲 PCV 和 年齡的多元線性迴歸模型
+
+```{r LM41, cache=TRUE, message=FALSE}
+library(haven)
+haem <- read_dta("../backupfiles/haem.dta")
+psych::describe(haem)
+Model3 <- lm(hb ~ pcv + age, data = haem)
+summary(Model3)
+haem$e_hat <- Model3$residuals
+haem$y_hat <- Model3$fitted.values
+print(haem)
+```
+6. 利用 R 的矩陣計算重現迴歸模型的計算結果
+
+- 計算因變量和兩個預測變量各自的和
+```{r LM42, cache=TRUE}
+sumy <- sum(haem$hb)
+sumx1 <- sum(haem$pcv)
+sumx2 <- sum(haem$age)
+```
+
+- 計算因變量和兩個預測變量各自的平方和
+```{r LM43, cache=TRUE}
+sumy2 <- sum((haem$hb)^2)
+sumx1y <- sum(haem$hb*haem$pcv)
+sumx2y <- sum(haem$hb*haem$age)
+sumx12 <- sum((haem$pcv)^2)
+sumx22 <- sum((haem$age)^2)
+sumx1x2 <- sum(haem$pcv*haem$age)
+```
+
+- 生成一個數值爲 1 的變量，名爲 `one`
+```{r 04-Linear-Regression-2}
+one <- rep(1,12)
+```
+
+- 用 `matrix()` 命令生成矩陣
+```{r LM44, cache=TRUE}
+Rownames <- NULL
+for(i in 1:12) {
+  a <- paste("row", i, sep = "")
+  Rownames <- c(Rownames,a); rm(a)
+  }
+
+Y <- matrix(haem$hb ,dimnames = list(Rownames, "hb"))
+Y
+
+X <- matrix(c(one, haem$pcv, haem$age), nrow = 12, dimnames = list(Rownames, c("one", "pcv", "age")))
+X
+```
+
+- 用公式 \@ref(eq:lm5-4) 計算估計 $\mathbf{\hat\beta}$ 矩陣
+```{r LM45, cache=TRUE}
+XX <- t(X) %*% X # these are the sum of squares of each variable and the sum of the cross products of the pairs of variables
+XX
+(data.frame(sumx1,sumx12,sumx2,sumx22, sumx1x2))
+XY <- t(X) %*% Y # this is the cross-product matrix of predictors against outcome
+XY
+(data.frame(sumy, sumx1y, sumx2y))
+betahat <- solve( t(X) %*% X ) %*% t(X) %*% Y
+betahat
+###or equivalently you can use
+betahat <- solve( crossprod(X) ) %*% crossprod( X, Y )
+betahat
+```
+可以看到 `betahat` 的結果和多元迴歸模型輸出的迴歸係數估計是一致的。
+
+- 計算擬合值
+
+```{r 04-Linear-Regression-3 }
+Fitted <- X%*%betahat
+Fitted
+```
+
+- 估計迴歸係數的方差協方差矩陣
+
+```{r LM46, cache=TRUE}
+e_hat <- Y-Fitted # residuals
+e_hat
+SSres <- t(e_hat) %*% e_hat # residual sum of squares
+SSres
+Sigma2 <- SSres %*% (1/(12-(2+1))) # residual variance
+Sigma2
+
+# multiply the inverse of the cross-product matrix for the predictors
+# by the residual variance to get the variance-covariance matrix of
+# the coefficients
+V <- solve( crossprod(X) ) * as.numeric(Sigma2)
+V
+# the square root of the diagonal terms in the above matrix are the standard errors shown in the regression output
+sqrt(diag(V))
+```

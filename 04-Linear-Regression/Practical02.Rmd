@@ -1,0 +1,40 @@
+
+數據同前一章練習部分數據相同 \@ref(exeChol)：
+
+```{r LM15, cache=TRUE, message=FALSE,cache=TRUE, warning=FALSE, fig.align='center', out.width='80%'}
+# 數據讀入
+Chol <- read_dta("../backupfiles/chol.dta")
+Model <- lm(chol2~chol1, data=Chol)
+print(summary(Model), digit=6)
+print(anova(Model), digit=6)
+
+# 計算截距和迴歸係數的 P 值 HAND CALCULATIONS twosided p-value in R can be obtained by pt(t, df) function
+
+## p value for intercept:
+
+110.42466/20.01133 #=5.518107
+
+2*pt(5.518107, 97, lower.tail = FALSE)
+
+## p value for beta:
+
+0.57868/0.07476 #= 7.740503
+
+2*pt(7.740503, 97, lower.tail = FALSE)
+
+# add fitted regression lines 95% CIs and reference range
+temp_var <- predict(Model, interval="prediction")
+
+new_df <- cbind(Chol, temp_var)
+
+ggplot(new_df, aes(x=chol1, y=chol2)) + geom_point(shape=20, colour="grey40") +
+  stat_smooth(method = lm, se=TRUE, size=0.5)  +
+  geom_line(aes(y=lwr), color = "red", linetype = "dashed")+
+    geom_line(aes(y=upr), color = "red", linetype = "dashed")+
+   scale_x_continuous(breaks=seq(150, 400, 50),limits = c(150, 355))+
+  scale_y_continuous(breaks=seq(150, 400, 50),limits = c(150, 355)) +
+   theme_stata() +labs(x = "Cholesterol at visit 1 (mg/100ml)", y = "Cholesterol at visit 2 (mg/100ml)")
+```
+
+圖中可見，95% 置信帶變化顯著，距離均值越遠的地方，置信帶越寬。然而預測帶基本是平行的沒有變化。因爲預測帶的涵義是，95%的觀察數據都在這個區間範圍內。
+
