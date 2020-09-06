@@ -759,7 +759,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul></li>
 <li class="chapter" data-level="44" data-path="-other-standard-single-parameter-models.html"><a href="-other-standard-single-parameter-models.html"><i class="fa fa-check"></i><b>44</b> 其他典型的單一參數模型 Other standard single-parameter models</a>
 <ul>
-<li class="chapter" data-level="44.1" data-path="-other-standard-single-parameter-models.html"><a href="-other-standard-single-parameter-models.html#正常態分佈僅均值已知方差未知-normal-distribution-with-known-mean-but-unknown-variance"><i class="fa fa-check"></i><b>44.1</b> 正（常）態分佈僅均值已知（方差未知） Normal distribution with known mean but unknown variance</a></li>
+<li class="chapter" data-level="44.1" data-path="-other-standard-single-parameter-models.html"><a href="-other-standard-single-parameter-models.html#unknownvarBayes"><i class="fa fa-check"></i><b>44.1</b> 正（常）態分佈僅均值已知（方差未知） Normal distribution with known mean but unknown variance</a></li>
 <li class="chapter" data-level="44.2" data-path="-other-standard-single-parameter-models.html"><a href="-other-standard-single-parameter-models.html#泊松分佈模型的貝葉斯思路-poisson-distribution-model-under-bayesian-framework"><i class="fa fa-check"></i><b>44.2</b> 泊松分佈模型的貝葉斯思路 Poisson distribution model under Bayesian framework</a></li>
 <li class="chapter" data-level="44.3" data-path="-other-standard-single-parameter-models.html"><a href="-other-standard-single-parameter-models.html#泊松模型的其他表達形式-poisson-model-parameterized-in-terms-of-rate-and-exposure"><i class="fa fa-check"></i><b>44.3</b> 泊松模型的其他表達形式 poisson model parameterized in terms of rate and exposure</a></li>
 </ul></li>
@@ -1747,6 +1747,45 @@ p(\mu, \sigma^2 | y) &amp; \propto \sigma^{-2} \prod_{i =1}^n \frac{1}{\sqrt{2\p
 \color{darkred}{\text{Where } s^2} &amp; \color{darkred}{= \frac{1}{n - 1}\sum_{i = 1}^n (y_i - \bar{y})^2} \\
 \end{aligned}
 \]</span></p>
+<p>此時，其實我們有兩種邊際分佈選擇，一種是把方差作為噪音參數，另一種是把均值作為噪音參數。先是 <span class="math inline">\(\mu\)</span> 的邊際分佈，它是通過把 <span class="math inline">\(\sigma\)</span> 積分出去獲得的：</p>
+<p><span class="math display">\[
+p(\mu | y) = \int p(\mu, \sigma^2 | y) d\sigma^2
+\]</span></p>
+<p>其次是 <span class="math inline">\(\sigma^2\)</span> 的邊際分佈，它是通過把 <span class="math inline">\(\mu\)</span> 積分出去獲得的：</p>
+<p><span class="math display">\[
+p(\sigma^2 | \mu) = \int p(\mu, \sigma^2 | y) d \mu
+\]</span></p>
+<p>下面我們來推導把均值積分出去的過程：</p>
+<p><span class="math display">\[
+\begin{aligned}
+p(\sigma^2 | y) &amp; \propto \int p(\mu, \sigma^2 | y) d \mu \\ 
+&amp; \propto \int \sigma^{-n - 2} \exp\left(-\frac{1}{2\sigma^2}\left[(n - 1)s^2 + n(\bar{y} - \mu)^2  \right]\right)  d\mu \\ 
+\text{Move terms } &amp; \text{does not include } \mu \text{ outside of the intergral } \\
+&amp; \propto  \sigma^{-n - 2} \exp\left( -\frac{1}{2\sigma^2}(n - 1)s^2 \right) \int\exp\left( -\frac{n}{2\sigma^2}(\bar{y} - \mu)^2 \right) d\mu \\
+\because  \int \frac{1}{\sqrt{2\pi\sigma^2}}  &amp; \exp\left(- \frac{1}{2\sigma^2}(y - \theta)  \right)d\theta = 1 \text{ integration of the pdf curve of a normal distribution} \\
+&amp; \propto  \sigma^{-n - 2} \exp\left( -\frac{1}{2\sigma^2}(n - 1)s^2 \right) \times \sqrt{\frac{2\pi\sigma^2}{n}} \\
+&amp; \propto (\sigma^2)^{-(\frac{n -1}{2} + 1)} \exp\left( -\frac{(n -1 )s^2}{2\sigma^2} \right)
+\end{aligned}
+\]</span>
+你會發現這個邊際分佈的概率函數竟然成了一個負卡方分佈：</p>
+<p><span class="math display">\[
+p(\sigma^2 | y) = \text{Inv-}\chi^2 (\sigma^2 | n - 1, s^2)
+\]</span></p>
+<p>對比正常態分佈數據已知均值，求它方差的邊際分佈的時候我們用到的負卡方分佈的特徵值如下 （參考 Chapter <a href="-other-standard-single-parameter-models.html#unknownvarBayes">44.1</a>）：</p>
+<p><span class="math display">\[
+ \begin{aligned}
+ \sigma^2 | y &amp; \sim \text{Inv-}\chi^2(\sigma^2| n, v) \\
+ \text{Where } v &amp; = \frac{1}{n}\sum_{i =1}^n(y_i - \theta)^2
+ \end{aligned}
+ \]</span></p>
+<p>而此時我們推導出的未知均值，需要用樣本均值來估計時的方差邊際分佈為：</p>
+<p><span class="math display">\[
+ \begin{aligned}
+ \sigma^2 | y &amp; \sim \text{Int-}\chi^2(n - 1, s^2) \\
+ \text{Where } s^2 &amp; = \frac{1}{n -1}\sum_{i = 1}^n(y_i - \bar{y})^2
+ \end{aligned}
+ \]</span></p>
+<p>也就是說，在均值未知時，由於此時需要對均值作額外的估計，它本身的不確定性使得方差在估計的時候也增加了不確定性（雙側尾部變厚）。</p>
 
 </div>
 </div>
