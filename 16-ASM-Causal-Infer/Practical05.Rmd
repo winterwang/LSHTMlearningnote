@@ -1,0 +1,225 @@
+
+數據還是和前一章節一樣的數據。傾向性評分的 R 包有很多，下面用 R 來進行大多數的計算。
+
+### 初步熟悉數據內容
+
+```{r CI-05-03,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/RFAcat.dta" 
+describe
+
+**********************
+*  Explore the data  *
+**********************
+
+/*  Question 1  */
+* Exposure and outcome
+tab rfa
+tab dodp rfa, col
+
+* New (categorised) variables: 
+tab1 agecat nodcat durcat diacat, m
+
+```
+
+
+### 把連續型變量以分類型數據的形式放入模型中:  
+
+```
+***************************
+*  Regression adjustment  *
+***************************
+
+/*  Question 2  */
+// teffects ra (dodp   i.agecat gender i.smoke i.hospital i.nodcat ///
+// i.mets i.durcat i.diacat i.primary i.position, 	///
+// logit) (rfa)
+```
+
+你會發現 STATA 停不下來，計算永遠都不會收斂。這是因爲我們在這個模型中結果部分加入了太多的分類型變量，但數據又沒辦法進行足夠的計算。
+
+### 用相同的模型結構估計每個人的傾向性評分
+
+
+```{r  CI-05-exe00, cache=TRUE, echo=TRUE}
+RFAcat <- read_dta("../backupfiles/RFAcat.dta")
+RFAcat <- RFAcat %>%
+  mutate(gender = factor(gender, labels = c("men", "women")), 
+         smoke = factor(smoke, labels = c("never", "ex", "current")),
+         hospital = as.factor(hospital),
+         primary = factor(primary, labels =  c("bladder", 
+                                     "breast", 
+                                     "colorectal",
+                                     "gullet", 
+                                     "kidney",
+                                     "prostate",
+                                     "skin",
+                                     "stomach", 
+                                     "testicular")),
+         position = factor(position, labels = c("easy", "moderate", "difficult")),
+         nodcat = factor(nodcat, labels = c("1","2","3","4","5-9","10+")),
+         mets = as.factor(mets), 
+         agecat = factor(agecat, labels = c("< 45", "45-49", "50-54", "55-59", "60-64","65+")), 
+         durcat = factor(durcat, labels = c("< 10m", "10-19m", "20-29m", "30-39m", "40+m")), 
+         diacat = factor(diacat, labels = c("<1.5cm", "1.5-1.9cm", "2-2.4cm", "2.5-2.9cm", 
+                                            "3cm+")))
+Pros_Score <- glm(rfa ~ agecat + gender + smoke + hospital + nodcat + mets + 
+                    durcat + diacat + primary + position, family = binomial(link = logit), 
+                  data = RFAcat)
+summary(Pros_Score)
+```
+
+```{r CI-05-exe01, cache=TRUE, echo=TRUE, fig.height=6, fig.width=8, fig.cap='Density and histogram of the estimated propensity score in the two exposure groups, **with confounders and predictors of outcome included in the PS model.**', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+RFAcat$Score <- Pros_Score$fitted.values # extract the fitted scores
+ggthemr('fresh', layout = 'scientific')
+RFAcat %>%
+  ggplot(aes(x = Score, y= ..density.., fill = as.factor(rfa))) + 
+  geom_histogram(position = "identity", color = "black", alpha = 0.5) +
+  geom_density(alpha = 0.2) +
+  theme(axis.title = element_text(size = 17), axis.text = element_text(size = 14),
+        axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank()) +
+ theme(legend.text = element_text(size = 19), 
+  legend.title = element_text(size = 19),
+  legend.position = "bottom", legend.direction = "horizontal") +
+  labs(fill = "Treatment Methods") + 
+  scale_fill_discrete(labels = c("Standard surgery", "RFA")); ggthemr_reset()
+```
+
+概率密度分布圖和直方圖的內容告訴我們兩個暴露組患者的評分分布的交叉部分十分令人滿意，positivity 的前提假設可認爲得到滿足 (每個患者都有非零的概率接受 RFA 或者標準手術療法)。
+
+
+一種比較組與組之間不同量的指標: standardized (mean) difference [@Austin2011]，可以用下面的方法來計算，使用 `tableone` 這個方便的 R 包: 
+
+```{r CI-05-exe02, cache=TRUE, echo=TRUE}
+# covariates
+Cov <- c("agecat", "gender", "smoke", "hospital", "nodcat", "mets", "durcat", "diacat", 
+         "primary", "position")
+## Construct a table
+tabUnmatched <- CreateTableOne(vars = Cov, strata = "rfa", data = RFAcat, test = FALSE)
+## Show table with SMD
+print(tabUnmatched, smd = TRUE)
+## Count covariates with important imbalance
+addmargins(table(ExtractSmd(tabUnmatched) > 0.08))
+```
+
+嚴重不平衡的變量有 5 個: `hospital, nodcat, diaact, primary, position`。
+
+### 用 PS 評分來把對象分層 stratification
+
+```{r CI-05-exe03, cache=TRUE, echo=TRUE}
+RFAcat <- RFAcat %>%
+  mutate(psblock = ntile(Score, 4))
+
+RFAcat %>%
+  group_by(psblock) %>%
+    summarise(n(), min(Score), max(Score))
+```
+
+但是你看每層的傾向性評分其實範圍有點寬，提示使用分層的方法可能殘餘的混雜有點多。
+
+看每層內數據的平衡: 
+
+```{r CI-05-exe04, cache=TRUE, echo=TRUE}
+# Cov <- c("diacat", "position")
+#---------------------------------------------#
+#  in strata == 1                             #
+#                                             #
+#---------------------------------------------#
+## Construct a table
+tabUnmatched <- CreateTableOne(vars = Cov, strata = "rfa", data = RFAcat[RFAcat$psblock == 1,], test = FALSE)
+## Show table with SMD
+print(tabUnmatched, smd = TRUE)
+## Count covariates with important imbalance
+addmargins(table(ExtractSmd(tabUnmatched) > 0.08))
+#---------------------------------------------#
+#  in strata == 2                             #
+#                                             #
+#---------------------------------------------#
+## Construct a table
+tabUnmatched <- CreateTableOne(vars = Cov, strata = "rfa", data = RFAcat[RFAcat$psblock == 2,], test = FALSE)
+## Show table with SMD
+print(tabUnmatched, smd = TRUE)
+## Count covariates with important imbalance
+addmargins(table(ExtractSmd(tabUnmatched) > 0.08))
+#---------------------------------------------#
+#  in strata == 3                             #
+#                                             #
+#---------------------------------------------#
+## Construct a table
+tabUnmatched <- CreateTableOne(vars = Cov, strata = "rfa", data = RFAcat[RFAcat$psblock == 3,], test = FALSE)
+## Show table with SMD
+print(tabUnmatched, smd = TRUE)
+## Count covariates with important imbalance
+addmargins(table(ExtractSmd(tabUnmatched) > 0.08))
+#---------------------------------------------#
+#  in strata == 4                             #
+#                                             #
+#---------------------------------------------#
+## Construct a table
+tabUnmatched <- CreateTableOne(vars = Cov, strata = "rfa", data = RFAcat[RFAcat$psblock == 4,], test = FALSE)
+## Show table with SMD
+print(tabUnmatched, smd = TRUE)
+## Count covariates with important imbalance
+addmargins(table(ExtractSmd(tabUnmatched) > 0.08))
+```
+
+可以看出其實分層法中每層的數據依然還有很多的不平衡。分層法不是合理的利用傾向性評分的理想辦法。
+
+#### 計算每層評分組內，暴露和結果之間的關系
+
+```{r  CI-05-exe05, cache=TRUE, echo=TRUE}
+(lm(dodp ~ rfa, data = RFAcat[RFAcat$psblock == 1, ]))
+(lm(dodp ~ rfa, data = RFAcat[RFAcat$psblock == 2, ]))
+(lm(dodp ~ rfa, data = RFAcat[RFAcat$psblock == 3, ]))
+(lm(dodp ~ rfa, data = RFAcat[RFAcat$psblock == 4, ]))
+```
+
+
+#### 計算 ACE
+
+```{r  CI-05-exe06, cache=TRUE, echo=TRUE}
+(888*0.1132561 + 888*0.0991608 + 888*(-0.0417308) + 887*(-0.1680047))/3551
+```
+
+
+### 用配對法計算 ACE
+
+
+
+
+```{r CI-05-exe07,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/RFAcat.dta" 
+*  Question 10  
+teffects psmatch (dodp) (rfa i.agecat gender i.smoke i.hospital i.nodcat i.mets i.durcat i.diacat i.primary i.position, logit)
+```
+
+ 
+### 模型校正 PS
+
+```{r  CI-05-exe08, cache=TRUE, echo=TRUE}
+RFAcat$rfanew <- RFAcat$rfa
+Log_ps <- glm(dodp ~ as.factor(rfanew)*Score, data = RFAcat, family = binomial(link = "logit"))
+summary(Log_ps)
+
+RFAcat <- RFAcat %>%
+  mutate(rfanew = 1)
+newdata <- subset(RFAcat, select = c(rfanew, Score))
+
+RFAcat$Po1<- predict(Log_ps, newdata, type = "response")
+
+
+RFAcat <- RFAcat %>%
+  mutate(rfanew = 0)
+newdata1 <- subset(RFAcat, select = c(rfanew, Score))
+
+RFAcat$Po0 <- predict(Log_ps, newdata1, type = "response")
+
+
+with(RFAcat, epiDisplay::summ(Po1, graph = F))
+with(RFAcat, epiDisplay::summ(Po0, graph = F))
+
+with(RFAcat, epiDisplay::summ(Po1 - Po0, graph = F))
+```
+
+

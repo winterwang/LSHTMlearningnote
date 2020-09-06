@@ -1,0 +1,508 @@
+## 用於對連續型結果變量做因果推斷的被估計量 
+
+邊際潛在結果 marginal potential outcomes:
+
+$$
+E\{ Y(1) - Y(0) \}
+$$
+
+或者是條件潛在結果 conditional potential outcomes:
+
+$$
+E\{ Y(1) - Y(2) | \mathbf{V = v} \}
+$$
+
+邊際潛在結果，有專門的名字: the *Average Causal Effect (ACE) 平均因果效應* 或者叫 *Average Treatment Effect 平均治療效應*。這裏的 "treatment" 其實不是特指某種藥物或者醫學治療，而是泛指所有我們想要比較的暴露。
+
+## 鑑定 identification - revision
+
+### 條件因果均差 conditional causal mean difference
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0) | \mathbf{C = c} \} & =  E\{ Y(1) | \mathbf{C=c} \} - E\{ Y(0) | \mathbf{C=c} \} \\
+ \text{(By} & \text{ conditional exchangeability given } \mathbf{C}:) \\
+&= E\{  Y(1) | X = 1, \mathbf{C=c} \} - E\{  Y(0) | X = 0, \mathbf{C=c} \}  \\
+ \text{(By} & \text{ consistency:)} \\ 
+& =   E\{  Y | X = 1, \mathbf{C=c} \} - E\{  Y | X = 0, \mathbf{C=c} \}  \\
+\end{aligned}
+$$
+
+
+### 簡單分類型條件變量 $C$ 的 ACE
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0)\}  & = \sum_cE\{ Y(1) | C=c \}\text{Pr}(C = c) - \sum_c E\{ Y(0) | C=c \}\text{Pr}(C=c) \\
+ \text{(By} & \text{ the law of total probability }\uparrow) \\ 
+& =  \sum_cE\{  Y(1) | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) \\
+& \;\;\;\;\;\;\;\;\;- \sum_cE\{  Y(0) | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
+ \text{(By} & \text{ conditional exchangeability }\uparrow) \\
+& = \sum_cE\{  Y | X = 1, \mathbf{C=c} \}\text{Pr}(C=c) \\ 
+& \;\;\;\;\;\;\;\;\;- \sum_cE\{  Y | X = 0, \mathbf{C=c} \} \text{Pr}(C = c) \\
+ \text{(By} & \text{ consistency }\uparrow) \\ 
+& = \sum_c\{ E(Y|X = 1, C=c) -E(Y|X=0, C=c) \}\text{Pr}(C=c)
+\end{aligned}
+(\#eq:causalinfer3-2)
+$$
+
+### 簡單連續型條件變量 $C$ 的ACE
+
+
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0)\}  & = \int_cE\{ Y(1) | C=c \}f_C(c)\text{d}c - \int_c E\{ Y(0) | C=c \}f_C(c)\text{d}c \\
+& =  \int_cE\{  Y(1) | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c \\ 
+ & \;\;\;\;\;\;\;\;\;- \int_cE\{  Y(0) | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
+& = \int_cE\{  Y | X = 1, \mathbf{C=c} \}f_C(c)\text{d}c \\
+& \;\;\;\;\;\;\;\;\;- \int_cE\{  Y | X = 0, \mathbf{C=c} \} f_C(c)\text{d}c \\
+& = \int_c\{ E(Y|X = 1, C=c) -E(Y|X=0, C=c) \}f_C(c)\text{d}c
+\end{aligned}
+(\#eq:causalinfer3-3)
+$$
+
+
+
+## 通過線性回歸模型來估計 ACE
+
+### 條件因果均值差
+
+假設$Y,X$分別表示結果變量和暴露變量，有三個變量需要調整 (做爲條件變量): $C_1$ 連續型，$C_2$ 二分類型(0/1)，$C_3$ 分類型(0/1/2/3)，然後我們擬合的線性回歸模型如下: 
+
+$$
+\begin{aligned}
+E(Y|X = x, C_1 = c_1, C_2 = c_2, C_3 = c_3) & = \alpha + \beta_Xx + \gamma_{C_1}c_1 + \gamma_{C_2}c_2 \\
+ \;\;\; +\gamma_{C_{31}}I(c_3 =1)+&\gamma_{C_{32}}I(c_3 =2)+\gamma_{C_{33}}I(c_3 =3)
+\end{aligned}
+(\#eq:causalinfer3-4)
+$$
+
+
+如果，**無相互幹擾 no interference，一致性 consistency，條件可置換性 conditional exchangeability**三個最主要的前提條件得到滿足，加上，公式 \@ref(eq:causalinfer3-4) 中三個條件變量得到了正確的模型敘述 (specification of the model is correct)。那麼，這個模型估計的回歸系數 $\beta_Xx$ 就可以被賦予因果關系的解讀: 
+
+$$
+E\{ Y(1) -Y(0) |\mathbf{C=c}\}
+$$
+
+
+```{example 16-ASM-Causal-infer-19}
+**孕期吸煙和嬰兒出生體重的關系**: 數據來自[@Cattaneo2010d]
+  結果變量是出生體重 `bweight`，暴露變量是孕期母親是否吸煙 `mbsmoke`。這裏先只考慮3個條件變量: 懷孕時的年齡 `mage`，嬰兒是否是該母親的第一個孩子 `fbaby`，三個懷孕階段中，該母親第一次訪問婦產科醫生的時間段 `prenatal`，那麼我們可以擬合的最簡單模型其實是這樣的: 
+```
+
+```{r CI-3-1, echo=TRUE, eval = TRUE, cache=TRUE}
+cattaneo2 <- read_dta("backupfiles/cattaneo2.dta")
+Cat_mod <- lm(bweight ~ as.factor(mbsmoke) + mage + as.factor(fbaby) + as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod)
+```
+
+在**無相互幹擾 no interference，一致性 consistency，條件可置換性 conditional exchangeability，和該模型是正確模型**的前提下，線性回歸的結果 `-252.26` 可以被賦予因果推斷的解釋: **在懷孕年齡，嬰兒是否是第一胎，第一次訪問婦產科醫生的孕期時期都相同的條件下，如果比較一個懷孕母親全部都在吸煙，和另一個懷孕母親全部都沒有在吸煙的兩個潛在世界，孕期吸煙的世界的母親生的嬰兒平均出生體重比另一個全部都不吸煙的母親生的嬰兒的出生體重輕 252.3 克。且在我們擬合的模型中，認爲這個新生兒體重的差在其他條件變量取任何值時都保持不變。**
+
+**模型是正確的**這個前提其實是可以放寬的，因爲你可能會擬合這樣一個線性回歸模型: 
+
+
+```{r CI-3-2, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod2 <- lm(bweight ~ as.factor(mbsmoke) + mage + I(mage^2) + as.factor(fbaby)*as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod2)
+```
+
+
+這個模型裏，我們給懷孕時年齡擬合了二次項，又允許 `fbaby` 和 `prenatal` 之間有交互作用，但是，這並不妨礙我們對我們最關心的因果關系 `mbsmke` 的回歸系數的解讀，因爲這兩個模型的結果基本沒有差別。
+
+還有別人可能給出的模型是這樣的: 
+
+```{r CI-3-3, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod3 <- lm(bweight ~ as.factor(mbsmoke)*as.factor(fbaby) + mage + I(mage^2) + as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod3)
+```
+
+
+模型 `Cat_mod3` 中，`mbsmoke` 和新生兒體重之間的因果關系的解釋發生了變化，因爲我們對 `mbsmoke` 和 `fbaby` 之間的交互作用進行了檢驗，是有意義的 `p = 0.0024*`。這時候，在**無相互幹擾 no interference，一致性 consistency，條件可置換性 conditional exchangeability，和該模型是正確模型**的前提下，且模型 `Cat_mod3` 是正確的話，數據中的因果關系解釋及就不止一個了: `-304.71` 的條件因果關系均差 (conditional causal mean difference) 是針對那些已經有過孩子媽媽來說的; `-304.71 + 132.784 = -171.9` 這一條件因果關系均差 (conditional causal mean difference) 是對那些第一次懷孕當媽媽的人來說的。吸煙這個本來應該十分有害的行爲，對新生兒體重的影響因果關系似乎在第一次當媽媽的人當中影響較小 (這個因果關系陳述以相同懷孕年齡，和有相同的第一次訪問產科醫生時期爲前提)。
+
+
+### 效應修正 effect modification 和 交互作用 interaction
+
+
+在上文中模型 `Cat_mod3` 中，如果模型是正確的，且無互相幹擾，一致性，條件可置換性前提都得到滿足時，嬰兒是否是第一胎 `fbaby` 這一變量，對於我們研究的暴露變量 `mbsmoke` (孕期吸煙) 和結果變量 `bweight` (新生兒體重) 之間的關系起到了效應修正作用 (effect modification)。因爲我們看到該模型的結果是孕期吸煙對新生兒體重的影響因爲嬰兒是否是第一胎而發生了很大的變化。流行病學中把這個稱爲交互作用 (interaction)。但是，在因果推斷的研究領域中，傾向於把效應修正和交互作用加以區分。效應修正指對我們關心的關系造成效應修正的變量本身，並沒有因果關系的解釋 (effect modification is not causal with respect to the second variable)，**對因果關系造成了效應修正的變量本身，沒有"無互相幹擾，一致性，條件可置換性"前提的要求**。它只是衆多的條件變量之一。
+
+**相反，因果推斷的研究中，把交互作用的專有名詞保留給兩個暴露變量之間，也就是發生了交互作用的兩個變量，都是要研究的暴露變量，都有和結果變量之間因果關系的討論，所以兩個發生了交互作用的暴露變量，都需要滿足"無互相幹擾，一致性，條件可置換性"前提。**
+
+
+假如不光研究孕期吸煙，研究者還想一起研究孕期飲酒習慣 $(X_2)$，和吸煙習慣 $(X_1)$ 共同對新生兒體重的因果關系影響:
+
+$$
+\{ X_1, X_2 \} \perp\perp Y(x_1, x_2) | \mathbf{C}, \forall x_1,x_2
+$$
+
+
+所以，只有當暴露變量有兩個時 (因爲要同時對飲酒習慣和吸煙習慣兩個暴露變量做潛在結果分析 potential outcome)，才會用到交互作用 (interaction)。
+
+### 分類型條件變量的平均因果效應 (ACE) 
+
+Average Causal Effect (ACE) 平均因果效應: 
+
+$$
+E\{ Y(1) - Y(0) \}
+$$
+
+在只有一個分類型條件變量的情況下，我們推導過其 ACE (See equations: \@ref(eq:causalinfer3-2)):
+
+$$
+\sum_c\{ E(Y|X=1, C=c) - E(Y|X=0, C=c) \}\text{Pr}(C=c)
+$$
+
+假設分類條件變量 $C$ 有四個水平 $0/1/2/3$，那麼我們可以針對 $C$ 的每一層水平擬合線性回歸模型:
+
+$$
+\begin{aligned}
+E(Y|X=x, C=c) & = \alpha + \beta_0 x + \gamma_1 I(c=1) + \gamma_2 I(c=2) + \gamma_3 I(c=3) \\
+& \;\;\; + \beta_1 xI(c = 1) + \beta_2 x I(c=2)  + \beta_3 x I (c=3)
+\end{aligned}
+(\#eq:CI-3-5)
+$$
+
+
+模型 \@ref(eq:CI-3-5) 是一個飽和模型，因爲 X 和 C 之間一共只有四種分組組合，我們又擬合了一個含有 8 個參數的模型。也就是說，這個模型允許這 8 種 X 和 C 之間的分組，每組都有不同的結果。
+
+$$
+\begin{aligned}
+          \beta_0 & = E(Y|X=1,C=0) - E(Y|X=0, C=0) \\
+\beta_0 + \beta_1 & = E(Y|X=1,C=1) - E(Y|X=0, C=1) \\
+\beta_0 + \beta_2 & = E(Y|X=1,C=2) - E(Y|X=0, C=2) \\
+\beta_0 + \beta_3 & = E(Y|X=1,C=3) - E(Y|X=0, C=3) \\
+\end{aligned}
+$$
+
+
+爲了簡便起見，給他們分別命名: 
+
+$$
+\begin{aligned}
+\beta_0 & = \eta_0 \\
+\beta_0 + \beta_1 & = \eta_1 \\
+\beta_0 + \beta_2 & = \eta_2 \\
+\beta_0 + \beta_3 & = \eta_3
+\end{aligned}
+$$
+
+
+在只有一個分類型條件變量時，當無相互幹擾，一致性，和條件可置換性的前提被滿足，我們可以把公式 \@ref(eq:causalinfer3-2) 中的 $E(Y|X=1, C=c) - E(Y|X=0, c=c)$ 全部替換成爲 $\eta_c$: 
+
+$$
+\begin{aligned}
+E\{ Y(1) - Y(0) \} & = \sum_c\{ E(Y|X=1, C=c) - E(Y|X=0, c=c)\}\text{Pr}(C = c) \\
+& = \sum_c \eta_c \text{Pr}(C=c)
+\end{aligned}
+$$
+
+
+
+```{r CI-3-4, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod4 <- lm(bweight ~ as.factor(mbsmoke)*as.factor(prenatal), data = cattaneo2)
+summary(Cat_mod4)
+```
+
+$$
+\begin{aligned}
+\widehat{\eta_0} & = -317.2 \\
+\widehat{\eta_1} & = -317.2 + 35.9 = -281.2 \\
+\widehat{\eta_2} & = -317.2 + 163.5 = -153.7\\
+\widehat{\eta_3} & = -317.2 + 87.2 = -230.0 \\
+\end{aligned}
+$$
+
+
+爲了估計平均因果效應，我們還需要 `prenatal` 的分布概率: 
+
+```{r CI-3-5, echo=TRUE, eval = TRUE, cache=TRUE} 
+with(cattaneo2, tab1(prenatal, graph = F))
+```
+
+所以: 
+
+$$
+\begin{aligned}
+\widehat{ACE} & = \sum_c \widehat{\eta_c}\widehat{\text{Pr}}(C=c) \\
+& = -317.2 \times \frac{70}{4642} -281.2\times\frac{3720}{4642} -153.7\times\frac{697}{4642}-230.0\times\frac{155}{4642} \\
+& = -260.9
+\end{aligned}
+$$
+
+
+### Positivity 非零性
+ 
+當我們用下面的飽和模型的時候，八個可能的分組中，每個格子裏都不能是零，這一前提條件被成爲非零性 (positivity)。
+
+```{r CI-3-6, echo=TRUE, eval = FALSE, cache=TRUE}
+Cat_mod4 <- lm(bweight ~ as.factor(mbsmoke)*as.factor(prenatal), data = cattaneo2)
+```
+
+用概率來表達，就是，在所有可能的 $c$ 層中的對象，其中暴露變量爲 1 的概率必須在 0, 1 之間: 
+
+$$
+\textbf{Positivity: } \text{if Pr}(C=c) > 0 \text{ then: } 0<\text{Pr}(X=1|C=c) <1  
+$$
+
+### 連續型變量的平均因果效應
+
+
+
+```{r CI-3-7, echo=TRUE, eval = TRUE, cache=TRUE}
+Cat_mod5 <- lm(bweight ~ factor(mbsmoke) + mage*factor(mbsmoke) + I(mage^2)*factor(mbsmoke), data = cattaneo2)
+
+summary(Cat_mod5)
+
+with(cattaneo2, epiDisplay::summ(mage, graph = F))
+with(cattaneo2, epiDisplay::summ(mage^2, graph = F))
+
+
+Y <- cattaneo2$bweight
+# X <- with(cattaneo2, cbind(fbaby, mmarried, alcohol, fedu, mage))
+X <- with(cattaneo2, cbind(mage, mage^2))
+treat <- cattaneo2$mbsmoke
+fit1<-ATE(Y,treat,X)
+
+summary(fit1)
+
+```
+
+$$
+\begin{aligned}
+\widehat{\beta_0} & = 1121.035 \\
+\widehat{\beta_1} & = -92.690 \\ 
+\widehat{\beta_2} & = 1.444 \\
+\Rightarrow \widehat{ACE} & = 1121.035 - 92.690\times26.505 + 1.444\times734.056 \\ 
+& = -275.7
+\end{aligned}
+$$
+
+
+和 STATA 的 `teffects ra` 結果做個對比: 
+
+```
+. teffects ra (bweight mage mage2) (mbsmoke)
+
+Iteration 0:   EE criterion =  9.667e-23  
+Iteration 1:   EE criterion =  7.554e-27  
+
+Treatment-effects estimation                    Number of obs     =      4,642
+Estimator      : regression adjustment
+Outcome model  : linear
+Treatment model: none
+----------------------------------------------------------------------------------------
+                       |               Robust
+               bweight |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-----------------------+----------------------------------------------------------------
+ATE                    |
+               mbsmoke |
+(smoker vs nonsmoker)  |  -275.9901   22.74918   -12.13   0.000    -320.5777   -231.4025
+-----------------------+----------------------------------------------------------------
+POmean                 |
+               mbsmoke |
+            nonsmoker  |   3409.482   9.284654   367.22   0.000     3391.284    3427.679
+----------------------------------------------------------------------------------------
+```
+
+小數點以後的略差異應該是四舍五入的差異。別的估計包括 Robust Std. Err. 都是十分接近的。
+
+## Practical03 - causal inference
+
+
+
+注意: 這裏的練習使用的是STATA 因爲，我在 R 裏找不到像 STATA 的 `teffects` 這樣靈活且方便的命令，如果你知道，歡迎告訴我: abelardccwang@gmail.com。
+
+
+
+
+
+數據還是吸煙和新生兒體重的關系的數據: 
+
+
+```{r , engine='stata', echo=FALSE}
+use "backupfiles/cattaneo2.dta"
+
+describe
+tab mbsmoke
+
+summ bweight, detail
+
+*1. 用簡單線性回顧分析一下 `mbsmoke` 和 `bweight` 之間的關系: 
+*a) 
+regress bweight i.mbsmoke
+
+
+*b) 
+
+regress bweight i.mbsmoke i.fbaby
+```
+
+2. 調整了 `fbaby` 之後，暴露和結果之間的關系發生了怎樣的變化？
+說明 `fbaby` 是什麼類型的混雜因子？
+看兩個結果的報告，吸煙的線性回歸系數從調整 `fbaby` 前的 `-275.25`，
+ 絕對值變大爲 `-281.06`，這是一種負方向混雜 (negative confounding)。
+ 這種混雜可以分析 `fbaby` 和 `mbsmoke` 以及 `bweight`
+ 各自的關系看出，懷第一胎的母親比較少吸煙，且第一胎嬰兒的出生體重
+ 均值比不是第一胎嬰兒的出生體重要低: 
+
+```{r , engine='stata', echo=FALSE}
+use "backupfiles/cattaneo2.dta"
+
+tab fbaby mbsmoke, row
+
+tabstat bweight, by(fbaby)
+
+tabstat bweight, by(mbsmoke)
+```
+
+
+// 這裏需要重新強調的是，通過比較調整新變量前後的回歸系數的變化，
+// 能且僅僅只能在線性回歸模型 (可壓縮模型) 時使用，邏輯回歸中不適用。
+
+
+*3 在怎樣的假設條件下，這裏的線性回歸模型的回歸系數 `mbsmoke` 
+// 可以被賦予因果關系？
+
+// 1. 無相互幹擾 no interference: 一個懷孕母親吸煙與否，和另一個母親
+//    生下的嬰兒的出生體重之間沒有關系。
+// 2. 一致性 consistency: 實際觀察到的孕期吸煙母親的嬰兒出生體重，和
+//    潛在條件下 (當一個懷孕母親被強制吸煙時) 的嬰兒出生體重 (潛在結果)
+//    是相同的。同樣地，在另一種潛在條件下 (懷孕母親被禁止吸煙時) 的
+//    嬰兒出生體重 (潛在結果)，和實際觀察到的不吸煙的母親生下的嬰兒體重
+//    是相同的。
+// 3. 條件可置換性 conditional exchangeability: 在 `fbaby` 的各個組別中，
+//    兩種潛在暴露造成的潛在結果，調整了其它共變量之後，和她們真實的暴露情況
+//    (母親是否吸煙)之間是相互獨立的。在這個模型裏，我們只調整了 `fbaby` 
+//    一個共變量，所以如果要給它的回歸系數加上因果關系結論，還必須假設 (雖然
+//    很可能不合理) 控制 `fbaby` 這個單一的變量，就完全調整了了母親孕期吸煙和
+//    新生兒體重之間關系的全部混雜因素。
+// 4. 模型被正確擬合 correct specification of the regression model: 這是指，
+//    模型中加入的變量與變量之間的關系，被正確地擬合了，因爲目前只有兩個
+//    分類型變量在模型中，且該模型沒有加入交互作用項，那麼這條前提假設的含義
+//    就是，我們認爲 `fbaby` 對孕期吸煙和新生兒體重之間的關系沒有交互作用。
+
+*4 在前面解釋過的因果關系的前提條件下，要給 `mbsmoke` 一個因果關系的解釋
+// 的話，(b) 模型的回歸系數該怎麼解釋呢？用潛在結果的概念解釋。
+
+//    在 3. 的前提條件下， `mbsmoke` 的回歸系數的因果關系解讀可以是: 
+//    當條件變量 `fbaby` 嬰兒是否是第一胎的變量保持不變時，281.0638 是暴露
+//    (孕期吸煙) 導致的新生兒體重下降的量，其95%信賴區間是 (238.9961, 323.1314)。
+//    這是一個潛在結果的差，所以假如所有的媽媽孕期都吸煙，和所有的媽媽孕期都
+//    不吸煙相比(潛在暴露)，嬰兒的出生平均體重要輕 281.0638 克: 
+//     E{Y(1) | C = c} - E{Y(0) | C = c} = 281.0638
+
+*5 用 STATA 的 `teffects ra` 命令擬合相同的模型: 
+
+```{r  engine='stata', echo=FALSE}
+use "backupfiles/cattaneo2.dta"
+
+
+teffects ra (bweight fbaby) (mbsmoke)
+```
+
+// 因果均差 (ACE) 的估計在 STATA 被叫做 `ATE`，但是估計的結果略低於
+// 模型 (b) 的結果: -273.1552 vs. -281.0638。
+
+*6 在線性回歸模型中加入 `i.mbsmoke##i.fbaby` 的交互作用項，試着計算
+// `fbaby` 爲 0/1 時各自的 `mbsmoke` 回歸系數: 
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
+
+regress bweight i.mbsmoke##i.fbaby
+
+*to get the stratum specific effects: 
+
+lincom 1.mbsmoke  // when baby is not first born 
+
+lincom 1.mbsmoke + 1.mbsmoke#1.fbaby // when baby is first born
+```
+
+
+
+*7 計算 `fbaby` 各組所佔的百分比: (爲了計算孕期吸煙導致的新生兒體重下降
+* 的邊際效應 marginal effect)
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
+
+tab fbaby
+
+*8 用 6, 7 的結果，手動計算一下 ACE 的估計量: 
+  
+
+
+regress bweight i.mbsmoke##i.fbaby
+
+lincom 0.562*1.mbsmoke  + 0.438*(1.mbsmoke + 1.mbsmoke#1.fbaby)
+
+margins, dydx(mbsmoke) 
+* 你也可以用這個 margins 的命令，很方便，但是它估計的標準誤不使用穩健統計學方法，所以略有不同。
+```
+
+
+*9 爲什麼沒有加交互作用項的模型 (b) 給出的回歸系數估計和 `teffects ra`  的結果相差很大？
+
+*   這是因爲如果給模型 (b) 的回歸系數賦予因果關系的解釋的話，第四個前提假設
+*   -- 模型選擇正確且變量在模型中的形式也是正確 -- 太過樂觀了。這個前提假設
+*   認爲沒有交互作用，但是，如果你看加交互作用項的第三個模型中，交互作用項
+*   的回顧系數其實是有意義的 (有證據顯示交互作用存在): 
+* mbsmoke#|
+*       fbaby |
+* smoker#Yes  |   152.2046   44.02482     3.46   0.001     65.89506    238.5142  
+
+*10 現在給模型中加入更多的共變量，用兩種命令分別擬合，比較其結果:
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
+  
+regress bweight mbsmoke fbaby mmarried alcohol fedu mage
+
+
+teffects ra (bweight fbaby mmarried alcohol fedu mage) (mbsmoke)
+```
+
+*   此時我們發現，簡單現行回歸估計的因果均值差(ATE)總是和考慮了更復雜關系的模型相比相差較多。
+
+*11 你可以用下面的非 teffects 代碼還原上面的計算: 
+
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
+  
+qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==0
+predict Y0
+
+qui regress bweight mbsmoke fbaby mmarried alcohol fedu mage if mbsmoke==1
+predict Y1
+
+sum Y0
+gen E0=r(mean) 
+
+sum Y1
+gen E1=r(mean)
+
+gen ACE = E1-E0 
+sum ACE 
+```
+
+*或者使用方便的 margins
+ 
+```{r engine='stata', echo=FALSE} 
+use "backupfiles/cattaneo2.dta"
+
+
+qui regress bweight i.mbsmoke fbaby mmarried alcohol fedu mage 		i.mbsmoke#i.fbaby i.mbsmoke#i.mmarried i.mbsmoke#i.alcohol i.mbsmoke#c.fedu 		i.mbsmoke#c.mage
+		
+margins, dydx(mbsmoke)
+```
+
+
+* 值得注意的是，即使是使用 `teffects ra` 我們可能對模型形式的指定還是過於簡
+* 單，例如上面的模型中加入了許多變量，但是 STATA 其實並沒有考慮有三個或者三
+* 個以上變量之間發生交互作用的情況，而且， `fedu, mage` 被認爲和結果變量 
+* `bweight` 呈簡單一次的線性關系。
+
