@@ -212,6 +212,147 @@ ggplot(data = df2) +
 
 不難觀察到，隨著先驗概率分佈的信息量增加（越往下的圖中先驗概率分佈的樣本量越多），事後概率分佈會被先驗概率分佈帶著往先驗概率的方向（也就是上圖中的右側）走，這始終顯示了事後概率分佈是先驗概率和數據本身相互妥協的結果。
 
+
+
+### 從已知的事後概率分佈中採樣，對採集的事後樣本數據轉換
+
+參考[原作者代碼](https://avehtari.github.io/BDA_R_demos/demos_ch2/demo2_3.html)
+
+
+```{r 08-intro-to-Bayesfig4, fig.height=5, fig.width=5, fig.cap='Probability of a girl given placenta previa (BDA3, p.37), simulate samples from Beta(438, 544), draw a histogram with quantiles, and do the same for a transformed variable (the odds ratio).', fig.align='center', out.width='90%', cache=TRUE}
+
+# 我們從事後概率分佈 Beta(438, 544) 中採集事後樣本，存儲到向量 `theta` 中
+a <- 438 
+b <- 544 
+
+theta <- rbeta(10000, a, b)
+
+# 計算每一個採集樣本的比值比 odds ratio
+
+phi <- (1 - theta) / theta
+
+# 計算事後概率分佈樣本，及其轉換之後的比值比的的 2.5% 和 97.5% 位點估計
+
+quantiles <- c(0.025, 0.975)
+thetaq <- quantile(theta, quantiles)
+phiq <- quantile(phi, quantiles)
+
+# 繪製事後樣本（及轉換的比值比）的 histogram 
+
+# merge the data into one data frame for plotting
+df1 <- data.frame(phi,theta) %>% gather()
+# merge quantiles into one data frame for plotting
+df2 <- data.frame(phi = phiq, theta = thetaq) %>% gather()
+
+ggplot() +
+  geom_histogram(data = df1, aes(value), bins = 30) +
+  geom_vline(data = df2, aes(xintercept = value), linetype = 'dotted') +
+  facet_wrap(~key, ncol = 1, scales = 'free_x')  +
+  labs(x = '', y = '') +
+  scale_y_continuous(breaks = NULL)
+
+
+```
+
+### 使用非共軛先驗概率計算事後概率分佈
+
+當使用非共軛先驗概率分佈時，事後概率分佈的計算就是直接用該非共軛先驗概率乘以數據的似然 (multiplying the non-conjugate prior and the likelihood at each data point)。從計算獲得的事後概率分佈中再採集樣本。
+
+參考原[作者的代碼](https://avehtari.github.io/BDA_R_demos/demos_ch2/demo2_4.html)。
+
+
+```{r 08-intro-to-Bayesfig5, fig.height=5.5, fig.width=5, fig.cap='Probability of a girl given placenta previa (BDA3, p.37). Calculate the posterior distribution on a discrete grid of points by multiplying the likelihood and a non-conjugate prior at each point, and normalizing over the points.', fig.align='center', out.width='90%', cache=TRUE}
+
+# 觀察數據 (437, 543)
+
+a <- 437 
+b <- 543
+
+# 計算0.1~1之間相同間距(0.001)的事後概率密度（使用單一分佈Beta(1,1)作為先驗概率分佈）
+
+df1 <- data.frame(theta = seq(0.1, 1, 0.001))
+df1$con <- dbeta(df1$theta, a, b)
+
+# 計算離散型非共軛先驗概率分佈的數據點上的概率密度
+
+pp <- rep(1, nrow(df1))
+pi <- sapply(c(0.388, 0.488, 0.588), function(pi) which(df1$theta == pi))
+pm <- 11
+pp[pi[1]:pi[2]] <- seq(1, pm, length.out = length(pi[1]:pi[2]))
+pp[pi[3]:pi[2]] <- seq(1, pm, length.out = length(pi[3]:pi[2]))
+
+# 除以概率密度總和 normalize the prior
+
+df1$nc_p <- pp / sum(pp)
+
+# 計算每個離散點上的非共軛事後概率分佈
+
+po <- dbeta(df1$theta, a, b) * pp
+
+# 除以事後概率分佈的總和 normalize the posterior
+
+df1$nc_po <- po / sum(po)
+
+# 繪製使用單一分佈後的事後概率，非共軛概率分佈本身，及其對應的非共軛事後概率分佈 
+
+# gather the data frame into key-value pairs
+# and change variable names for plotting
+df2 <- gather(df1, grp, p, -theta, factor_key = T) 
+levels(df2$grp) <- c('Posterior with uniform prior',
+                     'Non-conjugate prior', 'Non-conjugate posterior')
+ggplot(data = df2) +
+  geom_line(aes(theta, p)) +
+  facet_wrap(~grp, ncol = 1, scales = 'free_y') +
+  coord_cartesian(xlim = c(0.35,0.6)) +
+  scale_y_continuous(breaks=NULL) +
+  labs(x = '', y = '')
+```
+
+下面從非共軛事後概率分佈中採集樣本，使用逆累積密度函數 (inverse cdf sampling)
+
+```{r 08-intro-to-Bayesfig6, fig.height=5.5, fig.width=5, fig.cap='Probability of a girl given placenta previa (BDA3, p.37). Simulate samples from the resulting non-standard posterior distribution using inverse cdf and the discrete grid.', fig.align='center', out.width='90%', cache=TRUE}
+
+# 計算事後累積密度
+
+df1$cs_po <- cumsum(df1$nc_po)
+
+# 從單一分佈中採樣 Uniform(0, 1)
+set.seed(2601)
+# runif(k) returns k uniform random numbers from interval [0,1]
+r <- runif(10000)
+
+# 逆累積密度函數樣本採集 inverse-cdf sampling
+# function to find the smallest value theta at which the cumulative
+# sum of the posterior densities is greater than r.
+invcdf <- function(r, df) df$theta[sum(df$cs_po < r) + 1]
+# sapply function for each sample r. The returned values s are now
+# random draws from the distribution.
+s <- sapply(r, invcdf, df1)
+
+# 繪製三個圖形 p1 是非共軛事後概率分佈；p2 是非共軛事後概率分佈的累積密度函數；p3 為從非共軛事後概率分佈中採集的樣本直方圖
+
+
+p1 <- ggplot(data = df1) +
+  geom_line(aes(theta, nc_po)) +
+  coord_cartesian(xlim = c(0.35, 0.6)) +
+  labs(title = 'Non-conjugate posterior', x = '', y = '') +
+  scale_y_continuous(breaks = NULL)
+p2 <- ggplot(data = df1) +
+  geom_line(aes(theta, cs_po)) +
+  coord_cartesian(xlim = c(0.35, 0.6)) +
+  labs(title = 'Posterior-cdf', x = '', y = '') +
+  scale_y_continuous(breaks = NULL)
+p3 <- ggplot() +
+  geom_histogram(aes(s), binwidth = 0.003) +
+  coord_cartesian(xlim = c(0.35, 0.6)) +
+  labs(title = 'Histogram of posterior samples', x = '', y = '') +
+  scale_y_continuous(breaks = NULL)
+# combine the plots
+grid.arrange(p1, p2, p3)
+```
+
+
+
 ## 貝葉斯理論下的事後二項分佈概率密度方程 notation for probability density functions in binomial data
 
 
