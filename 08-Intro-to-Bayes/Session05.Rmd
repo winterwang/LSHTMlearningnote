@@ -101,14 +101,14 @@ p(\sigma^2 | y) & \propto \int p(\mu, \sigma^2 | y) d \mu \\
 & \propto (\sigma^2)^{-(\frac{n -1}{2} + 1)} \exp\left( -\frac{(n -1 )s^2}{2\sigma^2} \right)
 \end{aligned}
 $$
-你會發現這個邊際分佈的概率函數竟然成了一個負卡方分佈：
+你會發現這個邊際分佈的概率函數竟然成了一個逆卡方分佈：
 
 $$
 p(\sigma^2 | y) = \text{Inv-}\chi^2 (\sigma^2 | n - 1, s^2)
 $$
 
  
- 對比正常態分佈數據已知均值，求它方差的邊際分佈的時候我們用到的負卡方分佈的特徵值如下 （參考 Chapter \@ref(unknownvarBayes)）：
+ 對比正常態分佈數據已知均值，求它方差的邊際分佈的時候我們用到的逆卡方分佈的特徵值如下 （參考 Chapter \@ref(unknownvarBayes)）：
  
  $$
  \begin{aligned}
@@ -180,5 +180,84 @@ p(\mu | y) & \propto A^{-n/2} \int_0^\infty z^{(n - 2)/2} \exp(-z)dz \\
 $$
 我們成功推導出未知方差未知均值的正常態數據的事後概率分佈是一個 $t$ 分佈。
 
+
+### R 演示 正常態數據但均值方差均未知
+
+參考[原著作者代碼](https://avehtari.github.io/BDA_R_demos/demos_ch3/demo3_1_4.html)
+
+
+- 一串可能是正常態分佈的數據
+
+```{r introBayes05-01, cache=TRUE}
+y <- c(93, 112, 122, 135, 122, 150, 118, 90, 124, 114)
+```
+
+
+- 該數據的充分統計量    
+
+
+```{r introBayes05-02, cache=TRUE}
+n <- length(y)
+s2 <- var(y)
+my <- mean(y)
+```
+
+
+- 我們希望採集樣本的事後聯合分佈可以被理解為兩個條件分佈的乘積：
+
+$$
+p(\mu, \sigma^2 | y) = p(\sigma^2 | y) p(\mu | \sigma^2, y)
+$$
+
+
+由於我們知道方差的事後概率分佈是逆縮放卡方分佈 (scaled inverse chi-squared distribution)，我們需要兩個輔助函數，一個是隨機採樣函數，一個是概率密度函數：
+
+```{r introBayes05-03, cache=TRUE}
+# random sampler for scaled inverse chi-squared distribution
+rsinvchisq <- function(n, nu, s2, ...) nu*s2 / rchisq(n, nu, ...)
+
+# probabilityb density function for scaled inverse chi-squared distribution
+dsinvchisq <- function(x, nu, s2){
+        exp(log(nu/2)*nu/2 - lgamma(nu/2) + log(s2)/2*nu - log(x)*(nu/2+1) - (nu*s2/2)/x)
+}
+
+# 上述概率密度函數其實是把縮放逆卡方分佈的概率密度函數本身先取對數，再作 exp
+```
+
+- 從 $p(\sigma^s | y)$ 中採集 1000 個樣本
+
+```{r introBayes05-04, cache=TRUE}
+ns <- 1000
+sigma2  <- rsinvchisq(ns, n-1, s2)
+```
+
+
+- 從 $p(\mu | \sigma^2 , y)$ 中採集樣本
+
+```{r introBayes05-05, cache=TRUE}
+mu <- rnorm(ns, my, sqrt(sigma2/n))
+# or equivalently 
+# mu <- my + sqrt(sigma2/n)*rnorm(length(sigma2)
+```
+
+
+- 從預測分佈中採集樣本 $p(\tilde{y} | y)$
+
+```{r introBayes05-06, cache=TRUE}
+sigma <- sqrt(sigma2)
+ynew <- rnorm(ns, mu, sigma)
+```
+
+- 計算 `sigma, mu, ynew` 在一些範圍內的小區隔之間的密度準備
+
+
+```{r introBayes05-07, cache=TRUE}
+t1l <- c(90, 150)
+t2l <- c(10, 60)
+nl <- c(50, 185)
+t1 <- seq(t1l[1], t1l[2], length.out = ns)
+t2 <- seq(t2l[1], t2l[2], length.out = ns)
+xynew <- seq(nl[1], nl[2], length.out = ns)
+```
 
 

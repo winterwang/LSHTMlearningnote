@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-09-07" />
+<meta name="date" content="2020-09-08" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -772,6 +772,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="45.2.1" data-path="-introduction-to-multiparameter-models.html"><a href="-introduction-to-multiparameter-models.html#無信息先驗概率分佈-noninformative-prior-distribution"><i class="fa fa-check"></i><b>45.2.1</b> 無信息先驗概率分佈 noninformative prior distribution</a></li>
 <li class="chapter" data-level="45.2.2" data-path="-introduction-to-multiparameter-models.html"><a href="-introduction-to-multiparameter-models.html#均值的事後邊際概率分佈-marginal-posterior-distribution-of-mu"><i class="fa fa-check"></i><b>45.2.2</b> 均值的事後邊際概率分佈 marginal posterior distribution of <span class="math inline">\(\mu\)</span></a></li>
+<li class="chapter" data-level="45.2.3" data-path="-introduction-to-multiparameter-models.html"><a href="-introduction-to-multiparameter-models.html#r-演示-正常態數據但均值方差均未知"><i class="fa fa-check"></i><b>45.2.3</b> R 演示 正常態數據但均值方差均未知</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -1770,11 +1771,11 @@ p(\sigma^2 | y) &amp; \propto \int p(\mu, \sigma^2 | y) d \mu \\
 &amp; \propto (\sigma^2)^{-(\frac{n -1}{2} + 1)} \exp\left( -\frac{(n -1 )s^2}{2\sigma^2} \right)
 \end{aligned}
 \]</span>
-你會發現這個邊際分佈的概率函數竟然成了一個負卡方分佈：</p>
+你會發現這個邊際分佈的概率函數竟然成了一個逆卡方分佈：</p>
 <p><span class="math display">\[
 p(\sigma^2 | y) = \text{Inv-}\chi^2 (\sigma^2 | n - 1, s^2)
 \]</span></p>
-<p>對比正常態分佈數據已知均值，求它方差的邊際分佈的時候我們用到的負卡方分佈的特徵值如下 （參考 Chapter <a href="-other-standard-single-parameter-models.html#unknownvarBayes">44.1</a>）：</p>
+<p>對比正常態分佈數據已知均值，求它方差的邊際分佈的時候我們用到的逆卡方分佈的特徵值如下 （參考 Chapter <a href="-other-standard-single-parameter-models.html#unknownvarBayes">44.1</a>）：</p>
 <p><span class="math display">\[
  \begin{aligned}
  \sigma^2 | y &amp; \sim \text{Inv-}\chi^2(\sigma^2| n, v) \\
@@ -1829,6 +1830,61 @@ p(\mu | y) &amp; \propto A^{-n/2} \int_0^\infty z^{(n - 2)/2} \exp(-z)dz \\
 \end{aligned}
 \]</span>
 我們成功推導出未知方差未知均值的正常態數據的事後概率分佈是一個 <span class="math inline">\(t\)</span> 分佈。</p>
+</div>
+<div id="r-演示-正常態數據但均值方差均未知" class="section level3" number="45.2.3">
+<h3><span class="header-section-number">45.2.3</span> R 演示 正常態數據但均值方差均未知</h3>
+<p>參考<a href="https://avehtari.github.io/BDA_R_demos/demos_ch3/demo3_1_4.html">原著作者代碼</a></p>
+<ul>
+<li>一串可能是正常態分佈的數據</li>
+</ul>
+<div class="sourceCode" id="cb435"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb435-1"><a href="-introduction-to-multiparameter-models.html#cb435-1"></a>y &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">93</span>, <span class="dv">112</span>, <span class="dv">122</span>, <span class="dv">135</span>, <span class="dv">122</span>, <span class="dv">150</span>, <span class="dv">118</span>, <span class="dv">90</span>, <span class="dv">124</span>, <span class="dv">114</span>)</span></code></pre></div>
+<ul>
+<li>該數據的充分統計量</li>
+</ul>
+<div class="sourceCode" id="cb436"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb436-1"><a href="-introduction-to-multiparameter-models.html#cb436-1"></a>n &lt;-<span class="st"> </span><span class="kw">length</span>(y)</span>
+<span id="cb436-2"><a href="-introduction-to-multiparameter-models.html#cb436-2"></a>s2 &lt;-<span class="st"> </span><span class="kw">var</span>(y)</span>
+<span id="cb436-3"><a href="-introduction-to-multiparameter-models.html#cb436-3"></a>my &lt;-<span class="st"> </span><span class="kw">mean</span>(y)</span></code></pre></div>
+<ul>
+<li>我們希望採集樣本的事後聯合分佈可以被理解為兩個條件分佈的乘積：</li>
+</ul>
+<p><span class="math display">\[
+p(\mu, \sigma^2 | y) = p(\sigma^2 | y) p(\mu | \sigma^2, y)
+\]</span></p>
+<p>由於我們知道方差的事後概率分佈是逆縮放卡方分佈 (scaled inverse chi-squared distribution)，我們需要兩個輔助函數，一個是隨機採樣函數，一個是概率密度函數：</p>
+<div class="sourceCode" id="cb437"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb437-1"><a href="-introduction-to-multiparameter-models.html#cb437-1"></a><span class="co"># random sampler for scaled inverse chi-squared distribution</span></span>
+<span id="cb437-2"><a href="-introduction-to-multiparameter-models.html#cb437-2"></a>rsinvchisq &lt;-<span class="st"> </span><span class="cf">function</span>(n, nu, s2, ...) nu<span class="op">*</span>s2 <span class="op">/</span><span class="st"> </span><span class="kw">rchisq</span>(n, nu, ...)</span>
+<span id="cb437-3"><a href="-introduction-to-multiparameter-models.html#cb437-3"></a></span>
+<span id="cb437-4"><a href="-introduction-to-multiparameter-models.html#cb437-4"></a><span class="co"># probabilityb density function for scaled inverse chi-squared distribution</span></span>
+<span id="cb437-5"><a href="-introduction-to-multiparameter-models.html#cb437-5"></a>dsinvchisq &lt;-<span class="st"> </span><span class="cf">function</span>(x, nu, s2){</span>
+<span id="cb437-6"><a href="-introduction-to-multiparameter-models.html#cb437-6"></a>        <span class="kw">exp</span>(<span class="kw">log</span>(nu<span class="op">/</span><span class="dv">2</span>)<span class="op">*</span>nu<span class="op">/</span><span class="dv">2</span> <span class="op">-</span><span class="st"> </span><span class="kw">lgamma</span>(nu<span class="op">/</span><span class="dv">2</span>) <span class="op">+</span><span class="st"> </span><span class="kw">log</span>(s2)<span class="op">/</span><span class="dv">2</span><span class="op">*</span>nu <span class="op">-</span><span class="st"> </span><span class="kw">log</span>(x)<span class="op">*</span>(nu<span class="op">/</span><span class="dv">2</span><span class="op">+</span><span class="dv">1</span>) <span class="op">-</span><span class="st"> </span>(nu<span class="op">*</span>s2<span class="op">/</span><span class="dv">2</span>)<span class="op">/</span>x)</span>
+<span id="cb437-7"><a href="-introduction-to-multiparameter-models.html#cb437-7"></a>}</span>
+<span id="cb437-8"><a href="-introduction-to-multiparameter-models.html#cb437-8"></a></span>
+<span id="cb437-9"><a href="-introduction-to-multiparameter-models.html#cb437-9"></a><span class="co"># 上述概率密度函數其實是把縮放逆卡方分佈的概率密度函數本身先取對數，再作 exp</span></span></code></pre></div>
+<ul>
+<li>從 <span class="math inline">\(p(\sigma^s | y)\)</span> 中採集 1000 個樣本</li>
+</ul>
+<div class="sourceCode" id="cb438"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb438-1"><a href="-introduction-to-multiparameter-models.html#cb438-1"></a>ns &lt;-<span class="st"> </span><span class="dv">1000</span></span>
+<span id="cb438-2"><a href="-introduction-to-multiparameter-models.html#cb438-2"></a>sigma2  &lt;-<span class="st"> </span><span class="kw">rsinvchisq</span>(ns, n<span class="dv">-1</span>, s2)</span></code></pre></div>
+<ul>
+<li>從 <span class="math inline">\(p(\mu | \sigma^2 , y)\)</span> 中採集樣本</li>
+</ul>
+<div class="sourceCode" id="cb439"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb439-1"><a href="-introduction-to-multiparameter-models.html#cb439-1"></a>mu &lt;-<span class="st"> </span><span class="kw">rnorm</span>(ns, my, <span class="kw">sqrt</span>(sigma2<span class="op">/</span>n))</span>
+<span id="cb439-2"><a href="-introduction-to-multiparameter-models.html#cb439-2"></a><span class="co"># or equivalently </span></span>
+<span id="cb439-3"><a href="-introduction-to-multiparameter-models.html#cb439-3"></a><span class="co"># mu &lt;- my + sqrt(sigma2/n)*rnorm(length(sigma2)</span></span></code></pre></div>
+<ul>
+<li>從預測分佈中採集樣本 <span class="math inline">\(p(\tilde{y} | y)\)</span></li>
+</ul>
+<div class="sourceCode" id="cb440"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb440-1"><a href="-introduction-to-multiparameter-models.html#cb440-1"></a>sigma &lt;-<span class="st"> </span><span class="kw">sqrt</span>(sigma2)</span>
+<span id="cb440-2"><a href="-introduction-to-multiparameter-models.html#cb440-2"></a>ynew &lt;-<span class="st"> </span><span class="kw">rnorm</span>(ns, mu, sigma)</span></code></pre></div>
+<ul>
+<li>計算 <code>sigma, mu, ynew</code> 在一些範圍內的小區隔之間的密度準備</li>
+</ul>
+<div class="sourceCode" id="cb441"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb441-1"><a href="-introduction-to-multiparameter-models.html#cb441-1"></a>t1l &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">90</span>, <span class="dv">150</span>)</span>
+<span id="cb441-2"><a href="-introduction-to-multiparameter-models.html#cb441-2"></a>t2l &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">10</span>, <span class="dv">60</span>)</span>
+<span id="cb441-3"><a href="-introduction-to-multiparameter-models.html#cb441-3"></a>nl &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">50</span>, <span class="dv">185</span>)</span>
+<span id="cb441-4"><a href="-introduction-to-multiparameter-models.html#cb441-4"></a>t1 &lt;-<span class="st"> </span><span class="kw">seq</span>(t1l[<span class="dv">1</span>], t1l[<span class="dv">2</span>], <span class="dt">length.out =</span> ns)</span>
+<span id="cb441-5"><a href="-introduction-to-multiparameter-models.html#cb441-5"></a>t2 &lt;-<span class="st"> </span><span class="kw">seq</span>(t2l[<span class="dv">1</span>], t2l[<span class="dv">2</span>], <span class="dt">length.out =</span> ns)</span>
+<span id="cb441-6"><a href="-introduction-to-multiparameter-models.html#cb441-6"></a>xynew &lt;-<span class="st"> </span><span class="kw">seq</span>(nl[<span class="dv">1</span>], nl[<span class="dv">2</span>], <span class="dt">length.out =</span> ns)</span></code></pre></div>
 
 </div>
 </div>
