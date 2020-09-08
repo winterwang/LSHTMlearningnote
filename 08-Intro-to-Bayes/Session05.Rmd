@@ -181,7 +181,7 @@ $$
 我們成功推導出未知方差未知均值的正常態數據的事後概率分佈是一個 $t$ 分佈。
 
 
-### R 演示 正常態數據但均值方差均未知
+## R 演示 正常態數據但均值方差均未知
 
 參考[原著作者代碼](https://avehtari.github.io/BDA_R_demos/demos_ch3/demo3_1_4.html)
 
@@ -221,7 +221,7 @@ dsinvchisq <- function(x, nu, s2){
         exp(log(nu/2)*nu/2 - lgamma(nu/2) + log(s2)/2*nu - log(x)*(nu/2+1) - (nu*s2/2)/x)
 }
 
-# 上述概率密度函數其實是把縮放逆卡方分佈的概率密度函數本身先取對數，再作 exp
+# 上述概率密度函數其實是把縮放逆卡方分佈的概率密度函數本身先取對數，再作 exp 提高計算效率
 ```
 
 - 從 $p(\sigma^s | y)$ 中採集 1000 個樣本
@@ -248,7 +248,7 @@ sigma <- sqrt(sigma2)
 ynew <- rnorm(ns, mu, sigma)
 ```
 
-- 計算 `sigma, mu, ynew` 在一些範圍內的小區隔之間的密度準備
+- 為計算 `sigma, mu, ynew` 在一些範圍內的小區隔之間的密度準備
 
 
 ```{r introBayes05-07, cache=TRUE}
@@ -260,4 +260,200 @@ t2 <- seq(t2l[1], t2l[2], length.out = ns)
 xynew <- seq(nl[1], nl[2], length.out = ns)
 ```
 
+
+- 計算 $\mu$ 的精確邊際分佈密度 (the exact marginal density of $p(\mu)$)，記得它是一個自由度為 $n-1$ 的 t 分佈。
+
+```{r introBayes05-08, cache=TRUE}
+# multiplication by 1./sqrt(s2/n) is due to the transformation of
+# variable z=(x-mean(y))/sqrt(s2/n)
+pm <- dt((t1-my) / sqrt(s2/n), n-1) / sqrt(s2/n)
+```
+
+- 從採集的均值樣本推算以這些均值的高斯內核近似估計：(estimate the marginal density using samples and ad hoc Gaussian kernel approximation)
+
+
+```{r introBayes05-090, cache=TRUE}
+pmk <- density(mu, adjust = 2, n = ns, from = t1l[1], to = t1l[2])$y
+```
+
+- 類似地，計算標準差本身的精確邊際分佈密度 (the marginal density of $p(\sigma^2)$)，它是一個逆縮放卡方分佈，自由度是 $n-1$，縮放尺度是 $s^2$
+
+```{r introBayes05-09, cache=TRUE}
+# the multiplication by 2*t2 is due to the transformation of
+# variable z=t2^2, see BDA3 p. 21
+ps <- dsinvchisq(t2^2, n-1, s2) * 2*t2
+```
+
+- 計算採集得到的事後標準差樣本本身的高斯內核估計 (estimate the marginal density using samples and ad hoc Gaussian kernel approximation)
+
+
+```{r introBayes05-10, cache=TRUE}
+psk <- density(sigma, n = ns, from = t2l[1], to = t2l[2])$y
+```
+
+- 計算精確的預測值本身的分佈密度 (compute the exact predictive density)
+
+```{r introBayes05-11, cache=TRUE}
+# multiplication by 1./sqrt(s2/n) is due to the transformation of variable
+# see BDA3 p. 21
+p_new <- dt((xynew-my) / sqrt(s2*(1+1/n)), n-1) / sqrt(s2*(1+1/n))
+```
+
+- 估計事後聯合分佈的密度。
+
+```{r introBayes05-12, cache=TRUE}
+# Combine grid points into another data frame
+# with all pairwise combinations
+dfj <- data.frame(t1 = rep(t1, each = length(t2)),
+                  t2 = rep(t2, length(t1)))
+dfj$z <- dsinvchisq(dfj$t2^2, n-1, s2) * 2*dfj$t2 * dnorm(dfj$t1, my, dfj$t2/sqrt(n))
+# breaks for plotting the contours
+cl <- seq(1e-5, max(dfj$z), length.out = 6)
+```
+
+### 繪製聯合事後密度分佈及均值和方差各自的邊際分佈 visualise the joint and marginal densities
+
+- 下面的代碼用於生成均值的邊際分佈
+
+```{r introBayes05-13, cache=TRUE}
+dfm <- data.frame(t1, Exact = pm, Empirical = pmk) %>% gather(grp, p, -t1)
+margmu <- ggplot(dfm) +
+  geom_line(aes(t1, p, color = grp)) +
+  coord_cartesian(xlim = t1l) +
+  labs(title = 'Marginal of mu', x = '', y = '') +
+  scale_y_continuous(breaks = NULL) +
+  theme(legend.background = element_blank(),
+        legend.position = c(0.75, 0.8),
+        legend.title = element_blank())
+```
+
+- 下面的代碼用於生成標準差的邊際分佈
+
+```{r introBayes05-14, cache=TRUE}
+dfs <- data.frame(t2, Exact = ps, Empirical = psk) %>% gather(grp, p, -t2)
+margsig <- ggplot(dfs) +
+  geom_line(aes(t2, p, color = grp)) +
+  coord_cartesian(xlim = t2l) +
+  coord_flip() +
+  labs(title = 'Marginal of sigma', x = '', y = '') +
+  scale_y_continuous(breaks = NULL) +
+  theme(legend.background = element_blank(),
+        legend.position = c(0.75, 0.8),
+        legend.title = element_blank())
+```
+
+- 下面的代碼用於繪製聯合事後分佈密度
+
+```{r introBayes05-15, cache=TRUE}
+joint1labs <- c('Samples','Exact contour')
+joint1 <- ggplot() +
+  geom_point(data = data.frame(mu,sigma), aes(mu, sigma, col = '1'), size = 0.1) +
+  geom_contour(data = dfj, aes(t1, t2, z = z, col = '2'), breaks = cl) +
+  coord_cartesian(xlim = t1l,ylim = t2l) +
+  labs(title = 'Joint posterior', x = '', y = '') +
+  scale_y_continuous(labels = NULL) +
+  scale_x_continuous(labels = NULL) +
+  scale_color_manual(values=c('blue', 'black'), labels = joint1labs) +
+  guides(color = guide_legend(nrow  = 1, override.aes = list(
+    shape = c(16, NA), linetype = c(0, 1), size = c(2, 1)))) +
+  theme(legend.background = element_blank(),
+        legend.position = c(0.5, 0.9),
+        legend.title = element_blank())
+```
+
+
+- 合併上面三個圖
+
+
+```{r introBayes05-16, fig.height=4.5, fig.width=6, fig.cap='The joint density and marginal densities of the posterior of normal distribution with unknown mean and variance', fig.align='center', out.width='90%', cache=TRUE}
+# blank plot for combining the plots
+bp <- grid.rect(gp = gpar(col = 'white'))
+grid.arrange(joint1, margsig, margmu, bp, nrow = 2)
+```
+
+
+### 單獨繪製邊際分佈的每一個部分
+
+- 繪製另外一個聯合事後分佈橢圓等高線圖
+
+```{r introBayes05-17, cache=TRUE}
+# data frame for the conditional of mu and marginal of sigma
+dfc <- data.frame(mu = t1, marg = rep(sigma[1], length(t1)),
+                  cond = sigma[1] + dnorm(t1 ,my, sqrt(sigma2[1]/n)) * 100) %>%
+  gather(grp, p, marg, cond)
+# legend labels for the following plot
+joint2labs <- c('Exact contour plot', 'Sample from joint post.',
+               'Cond. distribution of mu', 'Sample from the marg. of sigma')
+joint2 <- ggplot() +
+  geom_contour(data = dfj, aes(t1, t2, z = z, col = '1'), breaks = cl) +
+  geom_point(data = data.frame(m = mu[1], s = sigma[1]), aes(m , s, color = '2')) +
+  geom_line(data = dfc, aes(mu, p, color = grp), linetype = 'dashed') +
+  coord_cartesian(xlim = t1l,ylim = t2l) +
+  labs(title = 'Joint posterior', x = '', y = '') +
+  scale_x_continuous(labels = NULL) +
+  scale_color_manual(values=c('blue', 'darkgreen','darkgreen','black'), labels = joint2labs) +
+  guides(color = guide_legend(nrow  = 2, override.aes = list(
+    shape = c(NA, 16, NA, NA), linetype = c(1, 0, 1, 1)))) +
+  theme(legend.background = element_blank(),
+        legend.position = c(0.5, 0.85),
+        legend.title = element_blank())
+```
+
+- 繪製標準差的邊際密度函數
+
+```{r introBayes05-18, cache=TRUE}
+margsig2 <- ggplot(data = data.frame(t2, ps)) +
+  geom_line(aes(t2, ps), color = 'blue') +
+  coord_cartesian(xlim = t2l) +
+  coord_flip() +
+  labs(title = 'Marginal of sigma', x = '', y = '') +
+  scale_y_continuous(labels = NULL)
+```
+- 合併兩個圖
+
+```{r introBayes05-19, fig.height=4.5, fig.width=9, fig.cap='Visualise factored sampling and the corresponding marginal and conditional densities.', fig.align='center', out.width='90%', cache=TRUE}
+grid.arrange(joint2, margsig2, ncol = 2)
+```
+
+### 繪製事後均值的概率密度分佈
+
+- 計算每一個樣本的概率密度分佈
+
+```{r introBayes05-20, cache=TRUE}
+condpdfs <- sapply(t1, function(x) dnorm(x, my, sqrt(sigma2/n)))
+```
+
+- 繪製其中25個樣本
+
+```{r introBayes05-21, cache=TRUE}
+# data frame of 25 first samples
+dfm25 <- data.frame(t1, t(condpdfs[1:25,])) %>% gather(grp, p, -t1)
+condmu <- ggplot(data = dfm25) +
+  geom_line(aes(t1, p, group = grp), linetype = 'dashed') +
+  labs(title = 'Conditional distribution of mu for first 25 samples', y = '', x = '') +
+  scale_y_continuous(breaks = NULL)
+```
+
+- 繪製這些事後均值樣本的均值
+
+```{r introBayes05-22, cache=TRUE}
+dfsam <- data.frame(t1, colMeans(condpdfs), pm) %>% gather(grp,p,-t1)
+# labels
+mulabs <- c('avg of sampled conds', 'exact marginal of mu')
+meanmu <- ggplot(data = dfsam) +
+  geom_line(aes(t1, p, size = grp, color = grp)) +
+  labs(y = '', x = 'mu') +
+  scale_y_continuous(breaks = NULL) +
+  scale_size_manual(values = c(2, 0.8), labels = mulabs) +
+  scale_color_manual(values = c('orange', 'black'), labels = mulabs) +
+  theme(legend.position = c(0.8, 0.8),
+        legend.background = element_blank(),
+        legend.title = element_blank())
+```
+
+- 合併
+
+```{r introBayes05-23, fig.height=6.5, fig.width=6, fig.cap='Visualise the marginal distribution of mu', fig.align='center', out.width='90%', cache=TRUE}
+grid.arrange(condmu, meanmu, ncol = 1)
+```
 
