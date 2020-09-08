@@ -779,6 +779,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="45.3.2" data-path="-introduction-to-multiparameter-models.html"><a href="-introduction-to-multiparameter-models.html#單獨繪製邊際分佈的每一個部分"><i class="fa fa-check"></i><b>45.3.2</b> 單獨繪製邊際分佈的每一個部分</a></li>
 <li class="chapter" data-level="45.3.3" data-path="-introduction-to-multiparameter-models.html"><a href="-introduction-to-multiparameter-models.html#繪製事後均值的概率密度分佈"><i class="fa fa-check"></i><b>45.3.3</b> 繪製事後均值的概率密度分佈</a></li>
 </ul></li>
+<li class="chapter" data-level="45.4" data-path="-introduction-to-multiparameter-models.html"><a href="-introduction-to-multiparameter-models.html#r-演示-分析二進制數據-bda3-p.74"><i class="fa fa-check"></i><b>45.4</b> R 演示 分析二進制數據 (BDA3 P.74)</a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="46" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>46</b> 重要概念複習</a>
@@ -2077,8 +2078,181 @@ p(\mu, \sigma^2 | y) = p(\sigma^2 | y) p(\mu | \sigma^2, y)
 圖 45.4: Visualise the marginal distribution of mu
 </p>
 </div>
-
 </div>
+</div>
+<div id="r-演示-分析二進制數據-bda3-p.74" class="section level2" number="45.4">
+<h2><span class="header-section-number">45.4</span> R 演示 分析二進制數據 (BDA3 P.74)</h2>
+<p>在藥物研發，或者化學物品毒性測量的試驗中，常常需要對試驗動物使用不同的藥物或者毒性劑量做劑量反應試驗。一般來說，動物試驗的時候我們多數情況下會使用死亡/生存，或者發生腫瘤/未發生腫瘤作為該劑量反應觀察的結果。這樣的實驗獲得的數據結果基本上是這樣形式的：</p>
+<p><span class="math display">\[
+(x_i, n_i, y_i); i = 1, \dots, k
+\]</span>
+其中，</p>
+<ul>
+<li><span class="math inline">\(k\)</span> 是藥物/毒物劑量水平的分組；</li>
+<li><span class="math inline">\(x_i\)</span> 是第 <span class="math inline">\(i\)</span> 劑量組的實際藥物濃度，通常會取對數；</li>
+<li><span class="math inline">\(n_i\)</span> 是第 <span class="math inline">\(i\)</span> 劑量組的實驗動物數量；</li>
+<li><span class="math inline">\(y_i\)</span> 是第 <span class="math inline">\(i\)</span> 劑量組的實驗動物死亡（或發現腫瘤的動物）數量。</li>
+</ul>
+<p>某個實驗的結果如下，實驗一共使用了20只動物，其中每個劑量組有五隻，每個劑量組死亡動物數分別是 0, 1, 3, 5：</p>
+<div class="sourceCode" id="cb462"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb462-1"><a href="-introduction-to-multiparameter-models.html#cb462-1"></a>df1 &lt;-<span class="st"> </span><span class="kw">data.frame</span>(</span>
+<span id="cb462-2"><a href="-introduction-to-multiparameter-models.html#cb462-2"></a>  <span class="dt">x =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">0.86</span>, <span class="fl">-0.30</span>, <span class="fl">-0.05</span>, <span class="fl">0.73</span>),</span>
+<span id="cb462-3"><a href="-introduction-to-multiparameter-models.html#cb462-3"></a>  <span class="dt">n =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>),</span>
+<span id="cb462-4"><a href="-introduction-to-multiparameter-models.html#cb462-4"></a>  <span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>)</span>
+<span id="cb462-5"><a href="-introduction-to-multiparameter-models.html#cb462-5"></a>)</span>
+<span id="cb462-6"><a href="-introduction-to-multiparameter-models.html#cb462-6"></a>df1</span></code></pre></div>
+<pre><code>##       x n y
+## 1 -0.86 5 0
+## 2 -0.30 5 1
+## 3 -0.05 5 3
+## 4  0.73 5 5</code></pre>
+<p>根據我們的假設，第 <span class="math inline">\(i\)</span> 劑量組內的實驗動物本身是可以替換的 (exchangeable)，相互獨立的 (independent)，死亡概率應該在相同的劑量下是相同的 (equal probabilities)，那麼這樣的數據測量到的 <span class="math inline">\(y_i\)</span> 是一個典型的服從二項分佈的數據：</p>
+<p><span class="math display">\[
+y_i|\theta_i \sim  \text{Bin}(n_i, \theta_i)
+\]</span></p>
+<p>其中，</p>
+<ul>
+<li><span class="math inline">\(\theta_i\)</span> 是第<span class="math inline">\(i\)</span>劑量組實驗動物的死亡概率，該組劑量是 <span class="math inline">\(x_i\)</span>；</li>
+</ul>
+<p>那麼該數據的標準解決方案是使用羅輯回歸模型：</p>
+<p><span class="math display" id="eq:logisticregression">\[
+\begin{equation}
+\text{logit}(\theta_i) = \log(\frac{\theta_i}{1 - \theta_i})\\
+\text{logit}(\theta_i) = \alpha + \beta x_i
+\end{equation}
+\tag{45.1}
+\]</span></p>
+<ul>
+<li>繪製該數據的散點圖</li>
+</ul>
+<div class="sourceCode" id="cb464"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb464-1"><a href="-introduction-to-multiparameter-models.html#cb464-1"></a><span class="kw">ggplot</span>(df1, <span class="kw">aes</span>(<span class="dt">x=</span>x, <span class="dt">y=</span>y)) <span class="op">+</span></span>
+<span id="cb464-2"><a href="-introduction-to-multiparameter-models.html#cb464-2"></a><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">size=</span><span class="dv">2</span>, <span class="dt">color=</span><span class="st">&#39;red&#39;</span>) <span class="op">+</span></span>
+<span id="cb464-3"><a href="-introduction-to-multiparameter-models.html#cb464-3"></a><span class="st">    </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> df1<span class="op">$</span>x, <span class="dt">minor_breaks=</span><span class="ot">NULL</span>, <span class="dt">limits =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>)) <span class="op">+</span></span>
+<span id="cb464-4"><a href="-introduction-to-multiparameter-models.html#cb464-4"></a><span class="st">    </span><span class="kw">scale_y_continuous</span>(<span class="dt">breaks =</span> <span class="dv">0</span><span class="op">:</span><span class="dv">5</span>, <span class="dt">minor_breaks=</span><span class="ot">NULL</span>) <span class="op">+</span></span>
+<span id="cb464-5"><a href="-introduction-to-multiparameter-models.html#cb464-5"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&#39;Bioassay&#39;</span>, <span class="dt">x =</span> <span class="st">&#39;Dose (log g/ml)&#39;</span>, <span class="dt">y =</span> <span class="st">&#39;Number of deaths&#39;</span>) <span class="op">+</span></span>
+<span id="cb464-6"><a href="-introduction-to-multiparameter-models.html#cb464-6"></a><span class="st">    </span><span class="kw">theme</span>(<span class="dt">panel.grid.major =</span> <span class="kw">element_blank</span>())</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes05-25"></span>
+<img src="bookdown_files/figure-html/introBayes05-25-1.png" alt="The Bioassay example data." width="90%" />
+<p class="caption">
+圖 45.5: The Bioassay example data.
+</p>
+</div>
+<p>根據該數據的模型函數 (Model <a href="-introduction-to-multiparameter-models.html#eq:logisticregression">(45.1)</a>)，我們可以寫下本數據的似然 likelihood：</p>
+<p><span class="math display" id="eq:logisticlikelihood">\[
+\begin{equation}
+p(y_i|\alpha, \beta) \propto \left[ \text{logit}^{-1}(\alpha + \beta x_i) \right]^{y_i}\left[ 1- \text{logit}^{-1}(\alpha + \beta x_i) \right]^{n_i - y_i} 
+\end{equation}
+\tag{45.2}
+\]</span></p>
+<p>於是該模型的事後概率分佈為：</p>
+<p><span class="math display" id="eq:jointpostalphabeta">\[
+\begin{aligned}
+p(\alpha, \beta | y) &amp; \propto p(\alpha, \beta) p(y | \alpha, \beta) \\ 
+&amp; \propto p(\alpha, \beta) \prod_{i = 1}^k p(y | \alpha, \beta)
+\end{aligned}
+\tag{45.3}
+\]</span></p>
+<p>為了便於計算，可推導似然函數 (Likelihood function <a href="-introduction-to-multiparameter-models.html#eq:logisticlikelihood">(45.2)</a>) 變成如下的對數似然 (log-likelihood)：</p>
+<p><span class="math display">\[
+\ell_i \propto y_i(\alpha + \beta x_i) - n_i \log\left[ 1 + \exp(\alpha + \beta x_i) \right]
+\]</span>
+- 在 R 裡設定好這個對數似然函數：</p>
+<div class="sourceCode" id="cb465"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb465-1"><a href="-introduction-to-multiparameter-models.html#cb465-1"></a>logl &lt;-<span class="st"> </span><span class="cf">function</span>(df, a, b) </span>
+<span id="cb465-2"><a href="-introduction-to-multiparameter-models.html#cb465-2"></a>        df[<span class="st">&#39;y&#39;</span>]<span class="op">*</span>(a <span class="op">+</span><span class="st"> </span>b <span class="op">*</span><span class="st"> </span>df[<span class="st">&#39;x&#39;</span>]) <span class="op">-</span><span class="st"> </span>df[<span class="st">&#39;n&#39;</span>]<span class="op">*</span><span class="kw">log1p</span>(<span class="kw">exp</span>(a <span class="op">+</span><span class="st"> </span>b <span class="op">*</span><span class="st"> </span>df[<span class="st">&#39;x&#39;</span>]))</span></code></pre></div>
+<ul>
+<li>設定參數 <span class="math inline">\(\alpha, \beta\)</span> 可能的範圍，然後準備好用於事後概率密度採樣使用的小格子</li>
+</ul>
+<div class="sourceCode" id="cb466"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb466-1"><a href="-introduction-to-multiparameter-models.html#cb466-1"></a>A =<span class="st"> </span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">4</span>, <span class="dv">8</span>, <span class="dt">length.out =</span> <span class="dv">50</span>)</span>
+<span id="cb466-2"><a href="-introduction-to-multiparameter-models.html#cb466-2"></a>B =<span class="st"> </span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">10</span>, <span class="dv">40</span>, <span class="dt">length.out =</span> <span class="dv">50</span>)</span>
+<span id="cb466-3"><a href="-introduction-to-multiparameter-models.html#cb466-3"></a>cA &lt;-<span class="st"> </span><span class="kw">rep</span>(A, <span class="dt">each =</span> <span class="kw">length</span>(B))</span>
+<span id="cb466-4"><a href="-introduction-to-multiparameter-models.html#cb466-4"></a>cB &lt;-<span class="st"> </span><span class="kw">rep</span>(B, <span class="kw">length</span>(A))</span></code></pre></div>
+<ul>
+<li>計算該數據 <code>df1</code> 的似然：</li>
+</ul>
+<div class="sourceCode" id="cb467"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb467-1"><a href="-introduction-to-multiparameter-models.html#cb467-1"></a>p &lt;-<span class="st"> </span><span class="kw">apply</span>(df1, <span class="dv">1</span>, logl, cA, cB) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb467-2"><a href="-introduction-to-multiparameter-models.html#cb467-2"></a><span class="st">        </span><span class="kw">rowSums</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">exp</span>()</span></code></pre></div>
+<ul>
+<li>從這些小格子裡根據似然來採集樣本（with replacement）</li>
+</ul>
+<div class="sourceCode" id="cb468"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb468-1"><a href="-introduction-to-multiparameter-models.html#cb468-1"></a>nsamp &lt;-<span class="st"> </span><span class="dv">1000</span></span>
+<span id="cb468-2"><a href="-introduction-to-multiparameter-models.html#cb468-2"></a>samp_indices &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="kw">length</span>(p), <span class="dt">size =</span> nsamp, </span>
+<span id="cb468-3"><a href="-introduction-to-multiparameter-models.html#cb468-3"></a>                       <span class="dt">replace =</span> T, <span class="dt">prob =</span> p<span class="op">/</span><span class="kw">sum</span>(p))</span>
+<span id="cb468-4"><a href="-introduction-to-multiparameter-models.html#cb468-4"></a>samp_A &lt;-<span class="st"> </span>cA[samp_indices[<span class="dv">1</span><span class="op">:</span>nsamp]]</span>
+<span id="cb468-5"><a href="-introduction-to-multiparameter-models.html#cb468-5"></a>samp_B &lt;-<span class="st"> </span>cB[samp_indices[<span class="dv">1</span><span class="op">:</span>nsamp]]</span>
+<span id="cb468-6"><a href="-introduction-to-multiparameter-models.html#cb468-6"></a></span>
+<span id="cb468-7"><a href="-introduction-to-multiparameter-models.html#cb468-7"></a><span class="co"># Add random jitter, see BDA3 p. 76</span></span>
+<span id="cb468-8"><a href="-introduction-to-multiparameter-models.html#cb468-8"></a></span>
+<span id="cb468-9"><a href="-introduction-to-multiparameter-models.html#cb468-9"></a>samp_A &lt;-<span class="st"> </span>samp_A <span class="op">+</span><span class="st"> </span><span class="kw">runif</span>(nsamp, (A[<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>A[<span class="dv">2</span>])<span class="op">/</span><span class="dv">2</span>, (A[<span class="dv">2</span>] <span class="op">-</span><span class="st"> </span>A[<span class="dv">1</span>])<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb468-10"><a href="-introduction-to-multiparameter-models.html#cb468-10"></a>samp_B &lt;-<span class="st"> </span>samp_B <span class="op">+</span><span class="st"> </span><span class="kw">runif</span>(nsamp, (B[<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>B[<span class="dv">2</span>])<span class="op">/</span><span class="dv">2</span>, (B[<span class="dv">2</span>] <span class="op">-</span><span class="st"> </span>B[<span class="dv">1</span>])<span class="op">/</span><span class="dv">2</span>)</span></code></pre></div>
+<ul>
+<li>生成樣本數據</li>
+</ul>
+<div class="sourceCode" id="cb469"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb469-1"><a href="-introduction-to-multiparameter-models.html#cb469-1"></a>samps &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">ind =</span> <span class="dv">1</span><span class="op">:</span>nsamp, <span class="dt">alpha =</span> samp_A, <span class="dt">beta =</span> samp_B) <span class="op">%&gt;%</span></span>
+<span id="cb469-2"><a href="-introduction-to-multiparameter-models.html#cb469-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ld50 =</span> <span class="op">-</span><span class="st"> </span>alpha<span class="op">/</span>beta)</span></code></pre></div>
+<ul>
+<li>繪製採集的邏輯曲線</li>
+</ul>
+<div class="sourceCode" id="cb470"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb470-1"><a href="-introduction-to-multiparameter-models.html#cb470-1"></a>invlogit &lt;-<span class="st"> </span>plogis</span>
+<span id="cb470-2"><a href="-introduction-to-multiparameter-models.html#cb470-2"></a>xr &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="op">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>, <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb470-3"><a href="-introduction-to-multiparameter-models.html#cb470-3"></a>dff &lt;-<span class="st"> </span><span class="kw">pmap_df</span>(samps[<span class="dv">1</span><span class="op">:</span><span class="dv">100</span>,], <span class="op">~</span><span class="st"> </span><span class="kw">tibble</span>(<span class="dt">x =</span> xr, <span class="dt">id=</span>..<span class="dv">1</span>,</span>
+<span id="cb470-4"><a href="-introduction-to-multiparameter-models.html#cb470-4"></a>                                   <span class="dt">f =</span> <span class="kw">invlogit</span>(..<span class="dv">2</span> <span class="op">+</span><span class="st"> </span>..<span class="dv">3</span><span class="op">*</span>x)))</span>
+<span id="cb470-5"><a href="-introduction-to-multiparameter-models.html#cb470-5"></a>ppost &lt;-<span class="st"> </span><span class="kw">ggplot</span>(df1, <span class="kw">aes</span>(<span class="dt">x=</span>x, <span class="dt">y=</span>y<span class="op">/</span>n)) <span class="op">+</span></span>
+<span id="cb470-6"><a href="-introduction-to-multiparameter-models.html#cb470-6"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="dt">data=</span>dff, <span class="kw">aes</span>(<span class="dt">x=</span>x, <span class="dt">y=</span>f, <span class="dt">group=</span>id), <span class="dt">linetype=</span><span class="dv">1</span>, <span class="dt">color=</span><span class="st">&#39;blue&#39;</span>, <span class="dt">alpha=</span><span class="fl">0.2</span>) <span class="op">+</span></span>
+<span id="cb470-7"><a href="-introduction-to-multiparameter-models.html#cb470-7"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">size=</span><span class="dv">2</span>, <span class="dt">color=</span><span class="st">&#39;red&#39;</span>) <span class="op">+</span></span>
+<span id="cb470-8"><a href="-introduction-to-multiparameter-models.html#cb470-8"></a><span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> df1<span class="op">$</span>x, <span class="dt">minor_breaks=</span><span class="ot">NULL</span>, <span class="dt">limits =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>)) <span class="op">+</span></span>
+<span id="cb470-9"><a href="-introduction-to-multiparameter-models.html#cb470-9"></a><span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,<span class="dt">length.out=</span><span class="dv">3</span>), <span class="dt">minor_breaks=</span><span class="ot">NULL</span>) <span class="op">+</span></span>
+<span id="cb470-10"><a href="-introduction-to-multiparameter-models.html#cb470-10"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&#39;Bioassay&#39;</span>, <span class="dt">x =</span> <span class="st">&#39;Dose (log g/ml)&#39;</span>, <span class="dt">y =</span> <span class="st">&#39;Proportion of deaths&#39;</span>) <span class="op">+</span></span>
+<span id="cb470-11"><a href="-introduction-to-multiparameter-models.html#cb470-11"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">panel.grid.major =</span> <span class="kw">element_blank</span>())</span>
+<span id="cb470-12"><a href="-introduction-to-multiparameter-models.html#cb470-12"></a></span>
+<span id="cb470-13"><a href="-introduction-to-multiparameter-models.html#cb470-13"></a><span class="co"># add 50% death line and LD50 dots</span></span>
+<span id="cb470-14"><a href="-introduction-to-multiparameter-models.html#cb470-14"></a>ppost <span class="op">+</span><span class="st"> </span><span class="kw">geom_hline</span>(<span class="dt">yintercept =</span> <span class="fl">0.5</span>, <span class="dt">linetype =</span> <span class="st">&#39;dashed&#39;</span>, <span class="dt">color =</span> <span class="st">&#39;gray&#39;</span>) <span class="op">+</span></span>
+<span id="cb470-15"><a href="-introduction-to-multiparameter-models.html#cb470-15"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">data=</span>samps[<span class="dv">1</span><span class="op">:</span><span class="dv">100</span>,], <span class="kw">aes</span>(<span class="dt">x=</span>ld50, <span class="dt">y=</span><span class="fl">0.5</span>), <span class="dt">color=</span><span class="st">&#39;blue&#39;</span>, <span class="dt">alpha=</span><span class="fl">0.2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes05-31"></span>
+<img src="bookdown_files/figure-html/introBayes05-31-1.png" alt="Draws of logistic curves of the bioassay data, with 50% deaths line and LD50 dots." width="90%" />
+<p class="caption">
+圖 45.6: Draws of logistic curves of the bioassay data, with 50% deaths line and LD50 dots.
+</p>
+</div>
+<ul>
+<li>繪製事後概率密度圖</li>
+</ul>
+<div class="sourceCode" id="cb471"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb471-1"><a href="-introduction-to-multiparameter-models.html#cb471-1"></a><span class="co"># limits for the plots</span></span>
+<span id="cb471-2"><a href="-introduction-to-multiparameter-models.html#cb471-2"></a>xl &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">8</span>)</span>
+<span id="cb471-3"><a href="-introduction-to-multiparameter-models.html#cb471-3"></a>yl &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">40</span>)</span>
+<span id="cb471-4"><a href="-introduction-to-multiparameter-models.html#cb471-4"></a>pos &lt;-<span class="st"> </span><span class="kw">ggplot</span>(<span class="dt">data =</span> <span class="kw">data.frame</span>(cA ,cB, p), <span class="kw">aes</span>(cA, cB)) <span class="op">+</span></span>
+<span id="cb471-5"><a href="-introduction-to-multiparameter-models.html#cb471-5"></a><span class="st">  </span><span class="kw">geom_raster</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> p, <span class="dt">alpha =</span> p), <span class="dt">interpolate =</span> T) <span class="op">+</span></span>
+<span id="cb471-6"><a href="-introduction-to-multiparameter-models.html#cb471-6"></a><span class="st">  </span><span class="kw">geom_contour</span>(<span class="kw">aes</span>(<span class="dt">z =</span> p), <span class="dt">colour =</span> <span class="st">&#39;black&#39;</span>, <span class="dt">size =</span> <span class="fl">0.2</span>) <span class="op">+</span></span>
+<span id="cb471-7"><a href="-introduction-to-multiparameter-models.html#cb471-7"></a><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> xl, <span class="dt">ylim =</span> yl) <span class="op">+</span></span>
+<span id="cb471-8"><a href="-introduction-to-multiparameter-models.html#cb471-8"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&#39;Posterior density evaluated in grid&#39;</span>, <span class="dt">x =</span> <span class="st">&#39;alpha&#39;</span>, <span class="dt">y =</span> <span class="st">&#39;beta&#39;</span>) <span class="op">+</span></span>
+<span id="cb471-9"><a href="-introduction-to-multiparameter-models.html#cb471-9"></a><span class="st">  </span><span class="kw">scale_fill_gradient</span>(<span class="dt">low =</span> <span class="st">&#39;yellow&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red&#39;</span>, <span class="dt">guide =</span> F) <span class="op">+</span></span>
+<span id="cb471-10"><a href="-introduction-to-multiparameter-models.html#cb471-10"></a><span class="st">  </span><span class="kw">scale_alpha</span>(<span class="dt">range =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="dt">guide =</span> F)</span>
+<span id="cb471-11"><a href="-introduction-to-multiparameter-models.html#cb471-11"></a></span>
+<span id="cb471-12"><a href="-introduction-to-multiparameter-models.html#cb471-12"></a>sam &lt;-<span class="st"> </span><span class="kw">ggplot</span>(<span class="dt">data =</span> samps) <span class="op">+</span></span>
+<span id="cb471-13"><a href="-introduction-to-multiparameter-models.html#cb471-13"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(alpha, beta), <span class="dt">color =</span> <span class="st">&#39;blue&#39;</span>) <span class="op">+</span></span>
+<span id="cb471-14"><a href="-introduction-to-multiparameter-models.html#cb471-14"></a><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> xl, <span class="dt">ylim =</span> yl) <span class="op">+</span></span>
+<span id="cb471-15"><a href="-introduction-to-multiparameter-models.html#cb471-15"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&#39;Posterior draws&#39;</span>, <span class="dt">x =</span> <span class="st">&#39;alpha&#39;</span>, <span class="dt">y =</span> <span class="st">&#39;beta&#39;</span>)</span>
+<span id="cb471-16"><a href="-introduction-to-multiparameter-models.html#cb471-16"></a><span class="kw">grid.arrange</span>(pos, sam, <span class="dt">nrow=</span><span class="dv">2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes05-32"></span>
+<img src="bookdown_files/figure-html/introBayes05-32-1.png" alt="Plot of the posterior joint density." width="90%" />
+<p class="caption">
+圖 45.7: Plot of the posterior joint density.
+</p>
+</div>
+<ul>
+<li>繪製事後 LD50 的直方圖，這裡 LD50 的含義是，在多大的濃度時，動物死亡/發生腫瘤的概率會是50%。</li>
+</ul>
+<div class="sourceCode" id="cb472"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb472-1"><a href="-introduction-to-multiparameter-models.html#cb472-1"></a>his &lt;-<span class="st"> </span><span class="kw">ggplot</span>(<span class="dt">data =</span> samps) <span class="op">+</span></span>
+<span id="cb472-2"><a href="-introduction-to-multiparameter-models.html#cb472-2"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(ld50), <span class="dt">binwidth =</span> <span class="fl">0.02</span>,</span>
+<span id="cb472-3"><a href="-introduction-to-multiparameter-models.html#cb472-3"></a>                 <span class="dt">fill =</span> <span class="st">&#39;steelblue&#39;</span>, <span class="dt">color =</span> <span class="st">&#39;black&#39;</span>) <span class="op">+</span></span>
+<span id="cb472-4"><a href="-introduction-to-multiparameter-models.html#cb472-4"></a><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">0.5</span>, <span class="fl">0.5</span>)) <span class="op">+</span></span>
+<span id="cb472-5"><a href="-introduction-to-multiparameter-models.html#cb472-5"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&#39;LD50 = -alpha/beta&#39;</span>)</span>
+<span id="cb472-6"><a href="-introduction-to-multiparameter-models.html#cb472-6"></a>his</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes05-33"></span>
+<img src="bookdown_files/figure-html/introBayes05-33-1.png" alt="Histogram of the draws from the posterior distribution of LD50 on the scale of log dose in g/ml." width="90%" />
+<p class="caption">
+圖 45.8: Histogram of the draws from the posterior distribution of LD50 on the scale of log dose in g/ml.
+</p>
+</div>
+
 </div>
 </div>
 

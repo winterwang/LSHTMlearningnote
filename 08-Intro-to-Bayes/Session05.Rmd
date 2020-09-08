@@ -457,3 +457,197 @@ meanmu <- ggplot(data = dfsam) +
 grid.arrange(condmu, meanmu, ncol = 1)
 ```
 
+## R 演示 分析二進制數據 (BDA3 P.74)
+
+在藥物研發，或者化學物品毒性測量的試驗中，常常需要對試驗動物使用不同的藥物或者毒性劑量做劑量反應試驗。一般來說，動物試驗的時候我們多數情況下會使用死亡/生存，或者發生腫瘤/未發生腫瘤作為該劑量反應觀察的結果。這樣的實驗獲得的數據結果基本上是這樣形式的：
+
+$$
+(x_i, n_i, y_i); i = 1, \dots, k
+$$
+其中，
+
+- $k$ 是藥物/毒物劑量水平的分組；
+- $x_i$ 是第 $i$ 劑量組的實際藥物濃度，通常會取對數；
+- $n_i$ 是第 $i$ 劑量組的實驗動物數量；
+- $y_i$ 是第 $i$ 劑量組的實驗動物死亡（或發現腫瘤的動物）數量。
+
+
+某個實驗的結果如下，實驗一共使用了20只動物，其中每個劑量組有五隻，每個劑量組死亡動物數分別是 0, 1, 3, 5：
+
+```{r introBayes05-24, cache=TRUE}
+df1 <- data.frame(
+  x = c(-0.86, -0.30, -0.05, 0.73),
+  n = c(5, 5, 5, 5),
+  y = c(0, 1, 3, 5)
+)
+df1
+```
+
+
+根據我們的假設，第 $i$ 劑量組內的實驗動物本身是可以替換的 (exchangeable)，相互獨立的 (independent)，死亡概率應該在相同的劑量下是相同的 (equal probabilities)，那麼這樣的數據測量到的 $y_i$ 是一個典型的服從二項分佈的數據：
+
+$$
+y_i|\theta_i \sim  \text{Bin}(n_i, \theta_i)
+$$
+
+其中，
+
+- $\theta_i$ 是第$i$劑量組實驗動物的死亡概率，該組劑量是 $x_i$；
+
+那麼該數據的標準解決方案是使用羅輯回歸模型：
+
+$$
+\begin{equation}
+\text{logit}(\theta_i) = \log(\frac{\theta_i}{1 - \theta_i})\\
+\text{logit}(\theta_i) = \alpha + \beta x_i
+\end{equation}
+(\#eq:logisticregression)
+$$
+
+
+- 繪製該數據的散點圖
+
+
+```{r introBayes05-25, fig.height=4, fig.width=4, fig.cap='The Bioassay example data.', fig.align='center', out.width='90%', cache=TRUE}
+ggplot(df1, aes(x=x, y=y)) +
+    geom_point(size=2, color='red') +
+    scale_x_continuous(breaks = df1$x, minor_breaks=NULL, limits = c(-1.5, 1.5)) +
+    scale_y_continuous(breaks = 0:5, minor_breaks=NULL) +
+    labs(title = 'Bioassay', x = 'Dose (log g/ml)', y = 'Number of deaths') +
+    theme(panel.grid.major = element_blank())
+```
+
+根據該數據的模型函數 (Model \@ref(eq:logisticregression))，我們可以寫下本數據的似然 likelihood：
+
+
+$$
+\begin{equation}
+p(y_i|\alpha, \beta) \propto \left[ \text{logit}^{-1}(\alpha + \beta x_i) \right]^{y_i}\left[ 1- \text{logit}^{-1}(\alpha + \beta x_i) \right]^{n_i - y_i} 
+\end{equation}
+(\#eq:logisticlikelihood)
+$$
+
+
+於是該模型的事後概率分佈為：
+
+
+$$
+\begin{aligned}
+p(\alpha, \beta | y) & \propto p(\alpha, \beta) p(y | \alpha, \beta) \\ 
+& \propto p(\alpha, \beta) \prod_{i = 1}^k p(y | \alpha, \beta)
+\end{aligned}
+(\#eq:jointpostalphabeta)
+$$
+
+
+
+為了便於計算，可推導似然函數 (Likelihood function \@ref(eq:logisticlikelihood)) 變成如下的對數似然 (log-likelihood)：
+
+
+$$
+\ell_i \propto y_i(\alpha + \beta x_i) - n_i \log\left[ 1 + \exp(\alpha + \beta x_i) \right]
+$$
+- 在 R 裡設定好這個對數似然函數：
+
+```{r introBayes05-26, cache=TRUE}
+logl <- function(df, a, b) 
+        df['y']*(a + b * df['x']) - df['n']*log1p(exp(a + b * df['x']))
+```
+
+
+
+
+- 設定參數 $\alpha, \beta$ 可能的範圍，然後準備好用於事後概率密度採樣使用的小格子
+
+
+```{r introBayes05-27, cache=TRUE}
+A = seq(-4, 8, length.out = 50)
+B = seq(-10, 40, length.out = 50)
+cA <- rep(A, each = length(B))
+cB <- rep(B, length(A))
+```
+
+- 計算該數據 `df1` 的似然：
+
+
+```{r introBayes05-28, cache=TRUE}
+p <- apply(df1, 1, logl, cA, cB) %>% 
+        rowSums() %>% exp()
+```
+
+- 從這些小格子裡根據似然來採集樣本（with replacement）
+
+```{r introBayes05-29, cache=TRUE}
+nsamp <- 1000
+samp_indices <- sample(length(p), size = nsamp, 
+                       replace = T, prob = p/sum(p))
+samp_A <- cA[samp_indices[1:nsamp]]
+samp_B <- cB[samp_indices[1:nsamp]]
+
+# Add random jitter, see BDA3 p. 76
+
+samp_A <- samp_A + runif(nsamp, (A[1] - A[2])/2, (A[2] - A[1])/2)
+samp_B <- samp_B + runif(nsamp, (B[1] - B[2])/2, (B[2] - B[1])/2)
+```
+
+
+- 生成樣本數據
+
+```{r introBayes05-30, cache=TRUE}
+samps <- tibble(ind = 1:nsamp, alpha = samp_A, beta = samp_B) %>%
+  mutate(ld50 = - alpha/beta)
+```
+
+
+- 繪製採集的邏輯曲線
+
+
+```{r introBayes05-31, cache=TRUE, fig.height=4.5, fig.width=5.5, fig.cap='Draws of logistic curves of the bioassay data, with 50% deaths line and LD50 dots.', fig.align='center', out.width='90%'}
+invlogit <- plogis
+xr <- seq(-1.5, 1.5, length.out = 100)
+dff <- pmap_df(samps[1:100,], ~ tibble(x = xr, id=..1,
+                                   f = invlogit(..2 + ..3*x)))
+ppost <- ggplot(df1, aes(x=x, y=y/n)) +
+  geom_line(data=dff, aes(x=x, y=f, group=id), linetype=1, color='blue', alpha=0.2) +
+  geom_point(size=2, color='red') +
+  scale_x_continuous(breaks = df1$x, minor_breaks=NULL, limits = c(-1.5, 1.5)) +
+  scale_y_continuous(breaks = seq(0,1,length.out=3), minor_breaks=NULL) +
+  labs(title = 'Bioassay', x = 'Dose (log g/ml)', y = 'Proportion of deaths') +
+  theme(panel.grid.major = element_blank())
+
+# add 50% death line and LD50 dots
+ppost + geom_hline(yintercept = 0.5, linetype = 'dashed', color = 'gray') +
+  geom_point(data=samps[1:100,], aes(x=ld50, y=0.5), color='blue', alpha=0.2)
+```
+
+- 繪製事後概率密度圖
+
+```{r introBayes05-32, cache=TRUE, fig.height=7, fig.width=5.5, fig.cap='Plot of the posterior joint density.', fig.align='center', out.width='90%'}
+# limits for the plots
+xl <- c(-2, 8)
+yl <- c(-2, 40)
+pos <- ggplot(data = data.frame(cA ,cB, p), aes(cA, cB)) +
+  geom_raster(aes(fill = p, alpha = p), interpolate = T) +
+  geom_contour(aes(z = p), colour = 'black', size = 0.2) +
+  coord_cartesian(xlim = xl, ylim = yl) +
+  labs(title = 'Posterior density evaluated in grid', x = 'alpha', y = 'beta') +
+  scale_fill_gradient(low = 'yellow', high = 'red', guide = F) +
+  scale_alpha(range = c(0, 1), guide = F)
+
+sam <- ggplot(data = samps) +
+  geom_point(aes(alpha, beta), color = 'blue') +
+  coord_cartesian(xlim = xl, ylim = yl) +
+  labs(title = 'Posterior draws', x = 'alpha', y = 'beta')
+grid.arrange(pos, sam, nrow=2)
+```
+
+- 繪製事後 LD50 的直方圖，這裡 LD50 的含義是，在多大的濃度時，動物死亡/發生腫瘤的概率會是50%。
+
+```{r introBayes05-33, cache=TRUE, fig.height=4, fig.width=5.5, fig.cap='Histogram of the draws from the posterior distribution of LD50 on the scale of log dose in g/ml.', fig.align='center', out.width='90%'}
+his <- ggplot(data = samps) +
+  geom_histogram(aes(ld50), binwidth = 0.02,
+                 fill = 'steelblue', color = 'black') +
+  coord_cartesian(xlim = c(-0.5, 0.5)) +
+  labs(x = 'LD50 = -alpha/beta')
+his
+```
