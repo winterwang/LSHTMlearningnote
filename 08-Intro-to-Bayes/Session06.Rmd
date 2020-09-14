@@ -1,7 +1,7 @@
 這裡的簡單筆記來自經典教學書 [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/)。
 
 
-## 為什麼正（常）態模型是正常的 why normal distribution is normal?
+## 為什麼正（常）態分佈是正常的 why normal distribution is normal?
 
 
 > Keep in mind that using a model is not equivalent to swearing an oath on it. The golem is your servant, not the other way around.
@@ -15,4 +15,136 @@ dnorm(0, 0, 0.1) # mean = 0, sd = 0.1
 ```
 
 是讓 R 幫助我們計算 $p(0 | 0, (\sqrt{0.1})^2)$ 的取值。其結果差不多要等於4。這並沒有出錯，**概率密度**的概念其實是累積概率的增長速率 (the rate of change in cumulative probability)。所以在概率密度函數的平滑曲線上，累積概率增加的越快的區間，它的增長速率，也就是概率密度很容易超過1。但是，概率密度函數的曲線下面積，則永遠不可能超過1。
+
+## 身高的高斯模型 Gaussian model of height
+
+
+```{r introBayes06-01, cache=TRUE, message=FALSE}
+library(rethinking)
+data("Howell1")
+
+d <- Howell1
+str(d)
+
+precis(d)
+
+# filter out non-adults
+
+d2 <- d[ d$age >= 18, ]
+
+```
+
+
+寫下身高的模型，
+
+$$
+\begin{aligned}
+h_i & \sim \text{Normal}(\mu, \sigma) &\text{     [Likelihood]} \\
+\mu & \sim \text{Normal}(178, 20)     &\text{     [prior for } \mu] \\
+\sigma & \sim \text{Uniform}(0, 50)          &\text{     [prior for } \sigma]\\
+\end{aligned}
+$$
+
+觀察一下我們設定的先驗概率分佈的形狀：
+
+```{r introBayes06-02, cache=TRUE, message=FALSE, fig.height=3, fig.width=4, fig.cap='The shape for prior distribution of the mean.', fig.align='center', out.width='90%'}
+curve( dnorm( x, 178, 20), from = 100, to = 250, xlab = ~mu)
+```
+
+```{r introBayes06-03, cache=TRUE, message=FALSE, fig.height=3, fig.width=4, fig.cap='The shape for prior distribution of the standard deviation.', fig.align='center', out.width='90%'}
+
+curve( dunif( x, 0, 50), from = -10, to = 60, xlab = ~sigma)
+```
+
+當你選定了參數 $h, \mu, \sigma$ 的先驗概率分佈時，你其實同時選定了他們的聯合分佈 (joint distribution)。從這個聯合先驗概率分佈中採集一些樣本，可以輔助我們判斷選擇這樣的先驗概率分佈是否是合適/不壞的。
+
+```{r introBayes06-04, cache=TRUE, message=FALSE, fig.height=3, fig.width=4, fig.cap='The shape for samplings from prior distribution of the height generated from the joint distrition chosen for the mean and standard deviation.', fig.align='center', out.width='90%'}
+sample_mu <- rnorm(10000, 178, 20)
+sample_sigma <- runif(10000, 0, 50)
+prior_h <- rnorm(10000, sample_mu, sample_sigma)
+dens( prior_h )
+```
+
+
+看起來身高的先驗概率分佈似乎合乎常理，可以暫且認為均值和標準差的先驗概率選擇並不太糟糕。
+
+
+當你刻意去選擇更加寬泛的先驗概率分佈給均值時，可能導致不合理的數據出現。如下圖 \@ref(fig:introBayes06-05) 中顯示的那樣，當刻意給身高的均值 $\mu$ 賦予更加“不含信息”，或者模糊的先驗概率 $\text{Normal}(178, 100)$，時給出的身高的先驗概率分佈中出現了不少身高為負數的情況，這就是不合理的先驗概率分佈。
+
+```{r introBayes06-05, cache=TRUE, message=FALSE, fig.height=3, fig.width=4, fig.cap='The shape for samplings from prior distribution of the height generated from the joint distrition chosen for the mean and standard deviation, with flatter and less information prior for the mean (mu ~ N(178, 100)).', fig.align='center', out.width='90%'}
+sample_mu <- rnorm(10000, 178, 100)
+prior_h <- rnorm(10000, sample_mu, sample_sigma)
+dens( prior_h )
+```
+
+
+模型的貝葉斯定理表達式：
+
+
+$$
+\text{Pr}(\mu, \sigma | h) = \frac{\prod_i \text{Normal}(h_i|\mu, \sigma)\text{Normal}(\mu | 178, 20)\text{Uniform}(\sigma|0,50)}{\int\int \prod_i \text{Normal}(h_i|\mu, \sigma)\text{Normal}(\mu | 178, 20)\text{Uniform}(\sigma|0,50) d\mu d\sigma}
+$$
+
+
+### 小方格估計法近似事後概率分佈
+
+
+```{r  introBayes06-06, cache=TRUE}
+# 在 150 - 160 之間產生100個數據區間
+mu_list <- seq( from = 150, to = 160, length.out = 100)
+
+# 在 7-9 之間產生 100 個數據區間
+sigma_list <- seq( from  = 7, to = 9, length.out = 100)
+
+# 用上面生成的方差和均值交叉做出 10000 個均值和方差的數據格子
+post <- expand.grid( mu = mu_list, sigma = sigma_list)
+
+# 在對數尺度上用加法運算，會節約計算成本
+post$LL <- sapply( 1:nrow(post), function(i) sum(
+  dnorm( d2$height, post$mu[i], post$sigma[i], log = TRUE)
+))
+
+# 計算取對數下的事後概率分佈的分母部分 
+post$prod <- post$LL + 
+  dnorm( post$mu, 178, 20, log = TRUE) + 
+  dunif(post$sigma, 0, 50, log = TRUE)
+
+# Scale all of the log-products by the maximum log-product
+
+post$prob <- exp( post$prod - max(post$prod))
+
+```
+
+
+可以繪製簡單的事後均值，事後標準差的等高圖分佈，登高線本身使用上面代碼計算的身高的相對事後概率分佈。
+
+```{r introBayes06-07, fig.height=3, fig.width=4, fig.cap='Simple contour plot of the posterior means and standard deviations of height with relative posterior probability distribution. ', fig.align='center', out.width='90%', cache=TRUE}
+contour_xyz( post$mu, post$sigma, post$prob)
+```
+
+```{r introBayes06-08, fig.height=3, fig.width=4, fig.cap='Simple heat map plot of the posterior means and standard deviations of height with relative posterior probability distribution. ', fig.align='center', out.width='90%', cache=TRUE}
+image_xyz(post$mu, post$sigma, post$prob)
+```
+
+
+### 從計算獲得的事後概率分佈中採樣
+
+
+```{r introBayes06-09, fig.height=3, fig.width=3, fig.cap='Samples from the posterior distribution for the heights data.', fig.align='center', out.width='90%', cache=TRUE}
+
+sample.rows <- sample(1 : nrow(post), size = 10000, replace = TRUE,
+                      prob = post$prob)
+sample.mu <- post$mu[ sample.rows ]
+sample.sigma <- post$sigma[ sample.rows]
+
+plot(sample.mu, sample.sigma, cex = 0.7, pch = 16, 
+     col = col.alpha(rangi2, 0.2))
+```
+
+```{r}
+dens(sample.mu)
+dens(sample.sigma)
+PI(sample.mu)
+PI(sample.sigma)
+```
 
