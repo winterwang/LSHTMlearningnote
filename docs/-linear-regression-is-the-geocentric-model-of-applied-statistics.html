@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-09-20" />
+<meta name="date" content="2020-09-21" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2061,6 +2061,112 @@ h_i &amp; \sim \text{Normal}(\mu_i, \sigma)  &amp; [\text{likelihood}]\\
 <img src="bookdown_files/figure-html/introBayes06-17-1.png" alt="Prior predictive simulation for the height and weight model. Simulation using the beta ~ log-normal(0, 1) prior, within much reasonable human ranges." width="576" />
 <p class="caption">
 圖 46.14: Prior predictive simulation for the height and weight model. Simulation using the beta ~ log-normal(0, 1) prior, within much reasonable human ranges.
+</p>
+</div>
+<blockquote>
+<p>A serious problem in contemporary applied statistics is “p-hacking,” the practice of adjusting the model and the data to achieve a desired result.
+The desired result is usually a p-value less than 5%.</p>
+<footer>
+— <a href="https://xcelab.net/rm/">Richard McElreath</a>
+</footer>
+</blockquote>
+<p>於是我們現在把修改了 <span class="math inline">\(\beta\)</span> 的先驗概率分佈之後的模型定義：</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_i &amp; \sim \text{Normal}(\mu_i, \sigma)  &amp; [\text{likelihood}]\\
+\mu_i &amp; = \alpha + \beta (x_i - \bar{x}) &amp; [\text{linear model}]\\
+\alpha &amp; \sim \text{Normal}(178, 20)    &amp; [\text{prior for } \alpha]\\
+\beta &amp; \sim \text{Log-Normal}(0, 1)       &amp; [\text{prior for } \beta]\\   
+\sigma &amp; \sim \text{Uniform}(0, 50)     &amp; [\text{prior for } \sigma]
+\end{aligned}
+\]</span></p>
+<p>於是用這個模型來獲取我們需要的事後概率分佈的方法就顯而易見了：</p>
+<div class="sourceCode" id="cb505"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb505-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-1"></a><span class="co"># define the average weight, x-bar</span></span>
+<span id="cb505-2"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-2"></a>xbar &lt;-<span class="st"> </span><span class="kw">mean</span>(d2<span class="op">$</span>weight)</span>
+<span id="cb505-3"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-3"></a></span>
+<span id="cb505-4"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-4"></a><span class="co"># fit model</span></span>
+<span id="cb505-5"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-5"></a></span>
+<span id="cb505-6"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-6"></a>m4<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb505-7"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-7"></a>  <span class="kw">alist</span>(</span>
+<span id="cb505-8"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-8"></a>    height <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ),</span>
+<span id="cb505-9"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-9"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b <span class="op">*</span><span class="st"> </span>(weight <span class="op">-</span><span class="st"> </span>xbar),</span>
+<span id="cb505-10"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-10"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">178</span>, <span class="dv">20</span>),</span>
+<span id="cb505-11"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-11"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dlnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>), </span>
+<span id="cb505-12"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-12"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dunif</span>( <span class="dv">0</span>, <span class="dv">50</span> )</span>
+<span id="cb505-13"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-13"></a>  ), <span class="dt">data =</span> d2</span>
+<span id="cb505-14"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-14"></a>)</span>
+<span id="cb505-15"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-15"></a></span>
+<span id="cb505-16"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-16"></a><span class="kw">precis</span>(m4<span class="fl">.3</span>)</span></code></pre></div>
+<pre><code>##               mean          sd         5.5%       94.5%
+## a     154.60136213 0.270307731 154.16935816 155.0333661
+## b       0.90328082 0.041923642   0.83627874   0.9702829
+## sigma   5.07188225 0.191154909   4.76637978   5.3773847</code></pre>
+<div class="sourceCode" id="cb507"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb507-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-1"></a>d2 &lt;-<span class="st"> </span>d2 <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb507-2"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">weight_c =</span> weight <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(weight))</span>
+<span id="cb507-3"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-3"></a></span>
+<span id="cb507-4"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-4"></a>b4<span class="fl">.3</span> &lt;-<span class="st"> </span></span>
+<span id="cb507-5"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-5"></a><span class="st">  </span><span class="kw">brm</span>(<span class="dt">data =</span> d2, </span>
+<span id="cb507-6"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-6"></a>      <span class="dt">family =</span> gaussian, </span>
+<span id="cb507-7"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-7"></a>      height <span class="op">~</span><span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span>weight_c,</span>
+<span id="cb507-8"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-8"></a>      <span class="dt">prior =</span> <span class="kw">c</span>(<span class="kw">prior</span>(<span class="kw">normal</span>(<span class="dv">178</span>, <span class="dv">20</span>), <span class="dt">class =</span> Intercept), </span>
+<span id="cb507-9"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-9"></a>                <span class="kw">prior</span>(<span class="kw">lognormal</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="dt">class =</span> b), </span>
+<span id="cb507-10"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-10"></a>                <span class="kw">prior</span>(<span class="kw">uniform</span>(<span class="dv">0</span>, <span class="dv">50</span>), <span class="dt">class =</span> sigma)), </span>
+<span id="cb507-11"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-11"></a>      <span class="dt">iter =</span> <span class="dv">28000</span>, <span class="dt">warmup =</span> <span class="dv">27000</span>, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb507-12"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb507-12"></a>      <span class="dt">seed =</span> <span class="dv">4</span>)</span></code></pre></div>
+<pre><code>## Warning: It appears as if you have specified a lower bounded prior on a parameter that has no natural lower bound.
+## If this is really what you want, please specify argument &#39;lb&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## b ~ lognormal(0, 1)</code></pre>
+<pre><code>## Warning: It appears as if you have specified an upper bounded prior on a parameter that has no natural upper bound.
+## If this is really what you want, please specify argument &#39;ub&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## sigma ~ uniform(0, 50)</code></pre>
+<div class="sourceCode" id="cb510"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb510-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb510-1"></a>b4<span class="fl">.3</span></span></code></pre></div>
+<pre><code>##  Family: gaussian 
+##   Links: mu = identity; sigma = identity 
+## Formula: height ~ 1 + weight_c 
+##    Data: d2 (Number of observations: 352) 
+## Samples: 4 chains, each with iter = 28000; warmup = 27000; thin = 1;
+##          total post-warmup samples = 4000
+## 
+## Population-Level Effects: 
+##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+## Intercept   154.61      0.27   154.08   155.14 1.00     4068     2258
+## weight_c      0.90      0.04     0.81     0.98 1.01      522      449
+## 
+## Family Specific Parameters: 
+##       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+## sigma     5.10      0.20     4.73     5.52 1.00     2190     1693
+## 
+## Samples were drawn using sampling(NUTS). For each parameter, Bulk_ESS
+## and Tail_ESS are effective sample size measures, and Rhat is the potential
+## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+<p>觀察各個參數事後樣本之間的協方差 (covariances)，幾乎可以忽略不計。</p>
+<div class="sourceCode" id="cb512"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb512-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb512-1"></a><span class="kw">round</span>( <span class="kw">vcov</span>(m4<span class="fl">.3</span>), <span class="dv">3</span>)</span></code></pre></div>
+<pre><code>##           a     b sigma
+## a     0.073 0.000 0.000
+## b     0.000 0.002 0.000
+## sigma 0.000 0.000 0.037</code></pre>
+<div class="sourceCode" id="cb514"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb514-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb514-1"></a><span class="kw">posterior_samples</span>(b4<span class="fl">.3</span>) <span class="op">%&gt;%</span></span>
+<span id="cb514-2"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb514-2"></a><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">select</span>(<span class="op">-</span>lp__) <span class="op">%&gt;%</span></span>
+<span id="cb514-3"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb514-3"></a><span class="st">  </span><span class="kw">cov</span>() <span class="op">%&gt;%</span></span>
+<span id="cb514-4"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb514-4"></a><span class="st">  </span><span class="kw">round</span>(<span class="dt">digits =</span> <span class="dv">3</span>)</span></code></pre></div>
+<pre><code>##             b_Intercept b_weight_c sigma
+## b_Intercept       0.072      0.000  0.00
+## b_weight_c        0.000      0.002  0.00
+## sigma             0.000      0.000  0.04</code></pre>
+<div class="sourceCode" id="cb516"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb516-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb516-1"></a><span class="kw">pairs</span>(m4<span class="fl">.3</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes06-21"></span>
+<img src="bookdown_files/figure-html/introBayes06-21-1.png" alt="Both marginal posteriors and the covariance." width="90%" />
+<p class="caption">
+圖 46.15: Both marginal posteriors and the covariance.
+</p>
+</div>
+<div class="sourceCode" id="cb517"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb517-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb517-1"></a><span class="kw">pairs</span>(b4<span class="fl">.3</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes06-22"></span>
+<img src="bookdown_files/figure-html/introBayes06-22-1.png" alt="Both marginal posteriors and the covariance." width="90%" />
+<p class="caption">
+圖 46.16: Both marginal posteriors and the covariance.
 </p>
 </div>
 

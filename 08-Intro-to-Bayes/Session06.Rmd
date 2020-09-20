@@ -344,3 +344,81 @@ tibble(n = 1:n_lines,
   theme_classic()
 ```
 
+> A serious problem in contemporary applied statistics is "p-hacking," the practice of adjusting the model and the data to achieve a desired result.
+> The desired result is usually a p-value less than 5%.
+>
+> `r tufte::quote_footer('--- [Richard McElreath](https://xcelab.net/rm/)')`
+
+
+於是我們現在把修改了 $\beta$ 的先驗概率分佈之後的模型定義：
+
+
+$$
+\begin{aligned}
+h_i & \sim \text{Normal}(\mu_i, \sigma)  & [\text{likelihood}]\\
+\mu_i & = \alpha + \beta (x_i - \bar{x}) & [\text{linear model}]\\
+\alpha & \sim \text{Normal}(178, 20)    & [\text{prior for } \alpha]\\
+\beta & \sim \text{Log-Normal}(0, 1)       & [\text{prior for } \beta]\\   
+\sigma & \sim \text{Uniform}(0, 50)     & [\text{prior for } \sigma]
+\end{aligned}
+$$
+
+於是用這個模型來獲取我們需要的事後概率分佈的方法就顯而易見了：
+
+```{r introBayes06-18, cache=TRUE}
+# define the average weight, x-bar
+xbar <- mean(d2$weight)
+
+# fit model
+
+m4.3 <- quap(
+  alist(
+    height ~ dnorm( mu, sigma ),
+    mu <- a + b * (weight - xbar),
+    a ~ dnorm(178, 20),
+    b ~ dlnorm(0, 1), 
+    sigma ~ dunif( 0, 50 )
+  ), data = d2
+)
+
+precis(m4.3)
+```
+
+
+```{r introBayes06-19, cache=TRUE, message=FALSE}
+
+d2 <- d2 %>% 
+  mutate(weight_c = weight - mean(weight))
+
+b4.3 <- 
+  brm(data = d2, 
+      family = gaussian, 
+      height ~ 1 + weight_c,
+      prior = c(prior(normal(178, 20), class = Intercept), 
+                prior(lognormal(0, 1), class = b), 
+                prior(uniform(0, 50), class = sigma)), 
+      iter = 28000, warmup = 27000, chains = 4, cores = 4,
+      seed = 4)
+
+b4.3
+```
+
+觀察各個參數事後樣本之間的協方差 (covariances)，幾乎可以忽略不計。
+
+```{r introBayes06-20, cache=TRUE, message=FALSE}
+round( vcov(m4.3), 3)
+
+posterior_samples(b4.3) %>%
+  dplyr::select(-lp__) %>%
+  cov() %>%
+  round(digits = 3)
+```
+
+
+```{r introBayes06-21, cache=TRUE, fig.asp=.7, fig.width=6,  fig.cap='Both marginal posteriors and the covariance.', fig.align='center', out.width='90%'}
+pairs(m4.3)
+```
+
+```{r introBayes06-22, cache=TRUE, fig.asp=.7, fig.width=6,  fig.cap='Both marginal posteriors and the covariance.', fig.align='center', out.width='90%'}
+pairs(b4.3)
+```
