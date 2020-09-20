@@ -179,7 +179,82 @@ precis( m4.1 )
 繪製該數據中身高曲線之間的關係圖：
 
 
-```{r introBayes06-11, fig.height=4, fig.width=4, fig.cap='Plot adults height against weight.', fig.align='center', out.width='90%', cache=TRUE} 
-plot(d2$height, d2$weight)
+```{r introBayes06-11, fig.height=4, fig.width=4.5, fig.cap='Plot adults height against weight.', fig.align='center', out.width='90%', cache=TRUE} 
+# plot(d2$height, d2$weight)
+ggplot(data = d2, 
+       aes(x = weight, y = height)) +
+  geom_point(shape = 1, size = 2) +
+  theme_bw() +
+  theme(panel.grid = element_blank())
 ```
 
+如何使用身高來做體重的預測變量，從而建立一個簡單線型回歸模型？
+
+
+$$
+\begin{aligned}
+h_i & \sim \text{Normal}(\mu_i, \sigma)  & [\text{likelihood}]\\
+\mu_i & = \alpha + \beta (x_i - \bar{x}) & [\text{linear model}]\\
+\alpha & \sim \text{Normal}(178, 20)    & [\text{prior for } \alpha]\\
+\beta & \sim \text{Normal}(0, 10)       & [\text{prior for } \beta]\\   
+\sigma & \sim \text{Uniform}(0, 50)     & [\text{prior for } \sigma]
+\end{aligned}
+$$
+
+#### 關於 $\beta$ 的先驗概率 Priors
+
+代碼來自書中(P95 Rcode 4.38)：
+
+```{r introBayes06-12, cache=TRUE, fig.height=4, fig.width=4, fig.cap='Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior.', fig.align='center', out.width='90%'}
+set.seed(2971)
+N <- 100 #n number of simulation lines
+
+a <- rnorm( N, 178, 20)
+b <- rnorm( N, 0, 10)
+
+plot( NULL, xlim = range(d2$weight) , ylim = c(-100, 400), 
+      xlab = "weight", ylab = "height")
+abline( h = 0, lty = 2)
+abline( h = 272, lty = 1, lwd = 0.5)
+mtext("b ~ dnorm(0, 10)" )
+
+xbar <- mean(d2$weight)
+
+for ( i in 1:N) curve( a[i] + b[i]*(x - xbar) ,
+  from = min(d2$weight), to = max(d2$weight), add = TRUE, 
+  col = col.alpha("black", 0.2)
+  )
+
+```
+
+
+相同圖形使用 tidyverse 和 ggplot2 來製作(參考 [Statistical rethinking with brms, ggplot2, and the tidyverse: Second edition](https://bookdown.org/content/4857/geocentric-models.html#a-gaussian-model-of-height)：
+
+```{r introBayes06-13, cache=TRUE, fig.height=4, fig.width=4, fig.cap='Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior.', fig.align='center', out.width='90%'}
+set.seed(4)
+# how many lines would you like?
+n_lines <- 100
+
+lines <-
+  tibble(n = 1:n_lines,
+         a = rnorm(n_lines, mean = 178, sd = 20),
+         b = rnorm(n_lines, mean = 0,   sd = 10)) %>% 
+  tidyr::expand(tidyr::nesting(n, a, b), weight = range(d2$weight)) %>% 
+  mutate(height = a + b * (weight - mean(d2$weight)))
+
+head(lines)
+
+lines %>% 
+  ggplot(aes(x = weight, y = height, group = n)) +
+  geom_hline(yintercept = c(0, 272), linetype = 2:1, size = 1/3) +
+  geom_line(alpha = 1/10) +
+  coord_cartesian(ylim = c(-100, 400)) +
+  ggtitle("b ~ dnorm(0, 10)") +
+  theme_classic()
+```
+
+可見這樣的身高作為先驗概率明顯是不合理的，因為有大量的數據低於 0 cm，甚至於大於人類的極限身高272cm。如何將這個關於身高的先驗概率合理化呢？解決方法的一種是使用對數正（常）態分佈。對數正（常）態分佈，其實就是指，一組取了對數之後的數值服從正（常）態分佈。
+
+$$
+\beta \sim \text{Log-Normal}(0, 1)
+$$

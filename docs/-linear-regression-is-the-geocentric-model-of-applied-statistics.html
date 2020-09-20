@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-09-17" />
+<meta name="date" content="2020-09-20" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1885,14 +1885,96 @@ h_i &amp; \sim \text{Normal}(\mu, \sigma) &amp;\text{     [Likelihood]} \\
 ## mu    154.6069052 0.41197187 153.9484946 155.2653158
 ## sigma   7.7309053 0.29134573   7.2652786   8.1965321</code></pre>
 <p>繪製該數據中身高曲線之間的關係圖：</p>
-<div class="sourceCode" id="cb496"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb496-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb496-1"></a><span class="kw">plot</span>(d2<span class="op">$</span>height, d2<span class="op">$</span>weight)</span></code></pre></div>
+<div class="sourceCode" id="cb496"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb496-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb496-1"></a><span class="co"># plot(d2$height, d2$weight)</span></span>
+<span id="cb496-2"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb496-2"></a><span class="kw">ggplot</span>(<span class="dt">data =</span> d2, </span>
+<span id="cb496-3"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb496-3"></a>       <span class="kw">aes</span>(<span class="dt">x =</span> weight, <span class="dt">y =</span> height)) <span class="op">+</span></span>
+<span id="cb496-4"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb496-4"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">shape =</span> <span class="dv">1</span>, <span class="dt">size =</span> <span class="dv">2</span>) <span class="op">+</span></span>
+<span id="cb496-5"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb496-5"></a><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span></span>
+<span id="cb496-6"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb496-6"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">panel.grid =</span> <span class="kw">element_blank</span>())</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes06-11"></span>
 <img src="bookdown_files/figure-html/introBayes06-11-1.png" alt="Plot adults height against weight." width="90%" />
 <p class="caption">
 圖 46.8: Plot adults height against weight.
 </p>
 </div>
+<p>如何使用身高來做體重的預測變量，從而建立一個簡單線型回歸模型？</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_i &amp; \sim \text{Normal}(\mu_i, \sigma)  &amp; [\text{likelihood}]\\
+\mu_i &amp; = \alpha + \beta (x_i - \bar{x}) &amp; [\text{linear model}]\\
+\alpha &amp; \sim \text{Normal}(178, 20)    &amp; [\text{prior for } \alpha]\\
+\beta &amp; \sim \text{Normal}(0, 10)       &amp; [\text{prior for } \beta]\\   
+\sigma &amp; \sim \text{Uniform}(0, 50)     &amp; [\text{prior for } \sigma]
+\end{aligned}
+\]</span></p>
+<div id="關於-beta-的先驗概率-priors" class="section level4" number="46.2.3.1">
+<h4><span class="header-section-number">46.2.3.1</span> 關於 <span class="math inline">\(\beta\)</span> 的先驗概率 Priors</h4>
+<p>代碼來自書中(P95 Rcode 4.38)：</p>
+<div class="sourceCode" id="cb497"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb497-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-1"></a><span class="kw">set.seed</span>(<span class="dv">2971</span>)</span>
+<span id="cb497-2"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-2"></a>N &lt;-<span class="st"> </span><span class="dv">100</span> <span class="co">#n number of simulation lines</span></span>
+<span id="cb497-3"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-3"></a></span>
+<span id="cb497-4"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-4"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>( N, <span class="dv">178</span>, <span class="dv">20</span>)</span>
+<span id="cb497-5"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-5"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>( N, <span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb497-6"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-6"></a></span>
+<span id="cb497-7"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-7"></a><span class="kw">plot</span>( <span class="ot">NULL</span>, <span class="dt">xlim =</span> <span class="kw">range</span>(d2<span class="op">$</span>weight) , <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">100</span>, <span class="dv">400</span>), </span>
+<span id="cb497-8"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-8"></a>      <span class="dt">xlab =</span> <span class="st">&quot;weight&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;height&quot;</span>)</span>
+<span id="cb497-9"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-9"></a><span class="kw">abline</span>( <span class="dt">h =</span> <span class="dv">0</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb497-10"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-10"></a><span class="kw">abline</span>( <span class="dt">h =</span> <span class="dv">272</span>, <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span>)</span>
+<span id="cb497-11"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-11"></a><span class="kw">mtext</span>(<span class="st">&quot;b ~ dnorm(0, 10)&quot;</span> )</span>
+<span id="cb497-12"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-12"></a></span>
+<span id="cb497-13"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-13"></a>xbar &lt;-<span class="st"> </span><span class="kw">mean</span>(d2<span class="op">$</span>weight)</span>
+<span id="cb497-14"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-14"></a></span>
+<span id="cb497-15"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-15"></a><span class="cf">for</span> ( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">curve</span>( a[i] <span class="op">+</span><span class="st"> </span>b[i]<span class="op">*</span>(x <span class="op">-</span><span class="st"> </span>xbar) ,</span>
+<span id="cb497-16"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-16"></a>  <span class="dt">from =</span> <span class="kw">min</span>(d2<span class="op">$</span>weight), <span class="dt">to =</span> <span class="kw">max</span>(d2<span class="op">$</span>weight), <span class="dt">add =</span> <span class="ot">TRUE</span>, </span>
+<span id="cb497-17"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-17"></a>  <span class="dt">col =</span> <span class="kw">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.2</span>)</span>
+<span id="cb497-18"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-18"></a>  )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes06-12"></span>
+<img src="bookdown_files/figure-html/introBayes06-12-1.png" alt="Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior." width="90%" />
+<p class="caption">
+圖 46.9: Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior.
+</p>
+</div>
+<p>相同圖形使用 tidyverse 和 ggplot2 來製作(參考 <a href="https://bookdown.org/content/4857/geocentric-models.html#a-gaussian-model-of-height">Statistical rethinking with brms, ggplot2, and the tidyverse: Second edition</a>：</p>
+<div class="sourceCode" id="cb498"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb498-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-1"></a><span class="kw">set.seed</span>(<span class="dv">4</span>)</span>
+<span id="cb498-2"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-2"></a><span class="co"># how many lines would you like?</span></span>
+<span id="cb498-3"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-3"></a>n_lines &lt;-<span class="st"> </span><span class="dv">100</span></span>
+<span id="cb498-4"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-4"></a></span>
+<span id="cb498-5"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-5"></a>lines &lt;-</span>
+<span id="cb498-6"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-6"></a><span class="st">  </span><span class="kw">tibble</span>(<span class="dt">n =</span> <span class="dv">1</span><span class="op">:</span>n_lines,</span>
+<span id="cb498-7"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-7"></a>         <span class="dt">a =</span> <span class="kw">rnorm</span>(n_lines, <span class="dt">mean =</span> <span class="dv">178</span>, <span class="dt">sd =</span> <span class="dv">20</span>),</span>
+<span id="cb498-8"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-8"></a>         <span class="dt">b =</span> <span class="kw">rnorm</span>(n_lines, <span class="dt">mean =</span> <span class="dv">0</span>,   <span class="dt">sd =</span> <span class="dv">10</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb498-9"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-9"></a><span class="st">  </span>tidyr<span class="op">::</span><span class="kw">expand</span>(tidyr<span class="op">::</span><span class="kw">nesting</span>(n, a, b), <span class="dt">weight =</span> <span class="kw">range</span>(d2<span class="op">$</span>weight)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb498-10"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">height =</span> a <span class="op">+</span><span class="st"> </span>b <span class="op">*</span><span class="st"> </span>(weight <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(d2<span class="op">$</span>weight)))</span>
+<span id="cb498-11"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-11"></a></span>
+<span id="cb498-12"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-12"></a><span class="kw">head</span>(lines)</span></code></pre></div>
+<pre><code>## # A tibble: 6 x 5
+##       n     a     b weight height
+##   &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     1  182.  6.85   31.1   87.0
+## 2     1  182.  6.85   63.0  306. 
+## 3     2  167. -1.15   31.1  183. 
+## 4     2  167. -1.15   63.0  146. 
+## 5     3  196. -3.56   31.1  245. 
+## 6     3  196. -3.56   63.0  132.</code></pre>
+<div class="sourceCode" id="cb500"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb500-1"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb500-1"></a>lines <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb500-2"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb500-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> weight, <span class="dt">y =</span> height, <span class="dt">group =</span> n)) <span class="op">+</span></span>
+<span id="cb500-3"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb500-3"></a><span class="st">  </span><span class="kw">geom_hline</span>(<span class="dt">yintercept =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">272</span>), <span class="dt">linetype =</span> <span class="dv">2</span><span class="op">:</span><span class="dv">1</span>, <span class="dt">size =</span> <span class="dv">1</span><span class="op">/</span><span class="dv">3</span>) <span class="op">+</span></span>
+<span id="cb500-4"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb500-4"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="dt">alpha =</span> <span class="dv">1</span><span class="op">/</span><span class="dv">10</span>) <span class="op">+</span></span>
+<span id="cb500-5"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb500-5"></a><span class="st">  </span><span class="kw">coord_cartesian</span>(<span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">100</span>, <span class="dv">400</span>)) <span class="op">+</span></span>
+<span id="cb500-6"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb500-6"></a><span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;b ~ dnorm(0, 10)&quot;</span>) <span class="op">+</span></span>
+<span id="cb500-7"><a href="-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb500-7"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes06-13"></span>
+<img src="bookdown_files/figure-html/introBayes06-13-1.png" alt="Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior." width="90%" />
+<p class="caption">
+圖 46.10: Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior.
+</p>
+</div>
+<p>可見這樣的身高作為先驗概率明顯是不合理的，因為有大量的數據低於 0 cm，甚至於大於人類的極限身高272cm。如何將這個關於身高的先驗概率合理化呢？解決方法的一種是使用對數正（常）態分佈。對數正（常）態分佈，其實就是指，一組取了對數之後的數值服從正（常）態分佈。</p>
+<p><span class="math display">\[
+\beta \sim \text{Log-Normal}(0, 1)
+\]</span></p>
 
+</div>
 </div>
 </div>
 </div>
