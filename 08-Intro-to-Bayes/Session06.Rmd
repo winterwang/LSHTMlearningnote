@@ -201,7 +201,7 @@ h_i & \sim \text{Normal}(\mu_i, \sigma)  & [\text{likelihood}]\\
 \end{aligned}
 $$
 
-#### 關於 $\beta$ 的先驗概率 Priors
+### 關於 $\beta$ 的先驗概率 Priors
 
 代碼來自書中(P95 Rcode 4.38)：
 
@@ -455,8 +455,297 @@ d2 %>%
 post <- extract.samples( m4.3 )
 
 post[1:5, ]
+
+postb <- posterior_samples(b4.3)
+postb %>% 
+  slice(1:5)
 ```
 
-這些 a, b 的無數配對，就是該線型回歸給出的
+這些 a, b 的無數配對，就是該線型回歸給出的事後回歸線的截距和斜率的無數的組合，每一個組合，是一條事後回歸直線。這些事後截距和事後斜率的均值，是圖 \@ref(fig:introBayes06-24) 和 \@ref(fig:introBayes06-23) 中的那條事後均值提供的直線。事實上，這些截距和斜率本身的不確定性才是更加值得關注的。
+
+下面的計算過程是先使用 `d2` 數據中前10個人的身高體重做相同的事後回歸直線分析，然後逐漸增加數據量，你會觀察到這些事後斜率和事後截距的不確定性在發生的一個動態變化：
+
+
+```{r introBayes06-26, cache=TRUE}
+N <- 10
+dN <- d2[1:N, ]
+mN <- quap(
+  alist(
+    height ~ dnorm( mu, sigma ), 
+    mu <- a + b*(weight - mean(weight)), 
+    a ~ dnorm( 178, 20 ), 
+    b ~ dlnorm( 0, 1 ), 
+    sigma ~ dunif( 0, 50 )
+  ), data = dN
+)
+```
+
+
+接下來繪製 `mN` 模型中給出的事後回歸直線的一部分：
+
+```{r introBayes06-27, cache=TRUE, fig.asp=.7, fig.width=6,  fig.cap='Samples from the quadratic approximate posterior distribution for the height/weight model with 20 samples of data. 20 Lines sampled from the posterior distribution.', fig.align='center'}
+# extract 20 samples from the posterior 
+post <- extract.samples( mN, n = 20)
+
+# display raw data and sample size
+
+plot(dN$weight, dN$height, 
+     xlim = range(d2$weight), ylim = range(d2$height), 
+     col = rangi2, xlab = "weight", ylab = "height")
+mtext(concat( "N = ", N)) 
+
+# plot the lines with transparency 
+
+for ( i in 1:20) 
+  curve( post$a[i] + post$b[i] * (x - mean(dN$weight)), 
+         col = col.alpha("black", 0.3), add = TRUE)
+
+```
+
+增加樣本量，你只需要修改上述 `N = 10` 中的數字，然後逐個繪圖就能觀察。下面的代碼使用 `brms` 包來實現：
+
+
+```{r introBayes06-28, cache=TRUE, message=FALSE}
+N <- 10 
+
+b4.3 <- 
+  brm(data =  d2 %>% 
+        slice(1:N), 
+      family = gaussian, 
+      height ~ 1 + weight_c, 
+      prior = c(prior(normal(178, 20), class = Intercept), 
+                prior(lognormal(0, 1), class = b), 
+                prior(uniform(0, 50), class = sigma)), 
+      iter = 28000, warmup = 27000, chains = 4, cores = 4, 
+      seed = 4)
+
+N <- 50 
+b4.3_50 <- 
+  brm(data =  d2 %>% 
+        slice(1:N), 
+      family = gaussian, 
+      height ~ 1 + weight_c, 
+      prior = c(prior(normal(178, 20), class = Intercept), 
+                prior(lognormal(0, 1), class = b), 
+                prior(uniform(0, 50), class = sigma)), 
+      iter = 28000, warmup = 27000, chains = 4, cores = 4, 
+      seed = 4)
+
+N <- 150 
+b4.3_150 <- 
+  brm(data =  d2 %>% 
+        slice(1:N), 
+      family = gaussian, 
+      height ~ 1 + weight_c, 
+      prior = c(prior(normal(178, 20), class = Intercept), 
+                prior(lognormal(0, 1), class = b), 
+                prior(uniform(0, 50), class = sigma)), 
+      iter = 28000, warmup = 27000, chains = 4, cores = 4, 
+      seed = 4)
+
+N <- 352 
+b4.3_352 <- 
+  brm(data =  d2 %>% 
+        slice(1:N), 
+      family = gaussian, 
+      height ~ 1 + weight_c, 
+      prior = c(prior(normal(178, 20), class = Intercept), 
+                prior(lognormal(0, 1), class = b), 
+                prior(uniform(0, 50), class = sigma)), 
+      iter = 28000, warmup = 27000, chains = 4, cores = 4, 
+      seed = 4)
+```
+
+
+
+```{r introBayes06-29, cache=TRUE, message=FALSE, fig.asp=.7, fig.width=10,  fig.cap='Samples from the quadratic approximate posterior distribution for the height/weight model with 20 to 352 (increasing) samples of data. 20 Lines sampled from the posterior distribution.', fig.align='center'}
+post010 <- posterior_samples(b4.3)
+post050 <- posterior_samples(b4.3_50)
+post150 <- posterior_samples(b4.3_150)
+post352 <- posterior_samples(b4.3_352)
+p1 <- 
+  ggplot(data =  d2[1:10 , ], 
+         aes(x = weight_c, y = height)) +
+  geom_abline(intercept = post010[1:20, 1], 
+              slope     = post010[1:20, 2],
+              size = 1/3, alpha = .3) +
+  geom_point(shape = 1, size = 2, color = "royalblue") +
+  coord_cartesian(xlim = range(d2$weight_c),
+                  ylim = range(d2$height)) +
+  labs(subtitle = "N = 10")
+
+p2 <-
+  ggplot(data =  d2[1:50 , ], 
+         aes(x = weight_c, y = height)) +
+  geom_abline(intercept = post050[1:20, 1], 
+              slope     = post050[1:20, 2],
+              size = 1/3, alpha = .3) +
+  geom_point(shape = 1, size = 2, color = "royalblue") +
+  coord_cartesian(xlim = range(d2$weight_c),
+                  ylim = range(d2$height)) +
+  labs(subtitle = "N = 50")
+
+p3 <-
+  ggplot(data =  d2[1:150 , ], 
+         aes(x = weight_c, y = height)) +
+  geom_abline(intercept = post150[1:20, 1], 
+              slope     = post150[1:20, 2],
+              size = 1/3, alpha = .3) +
+  geom_point(shape = 1, size = 2, color = "royalblue") +
+  coord_cartesian(xlim = range(d2$weight_c),
+                  ylim = range(d2$height)) +
+  labs(subtitle = "N = 150")
+
+p4 <- 
+  ggplot(data =  d2[1:352 , ], 
+         aes(x = weight_c, y = height)) +
+  geom_abline(intercept = post352[1:20, 1], 
+              slope     = post352[1:20, 2],
+              size = 1/3, alpha = .3) +
+  geom_point(shape = 1, size = 2, color = "royalblue") +
+  coord_cartesian(xlim = range(d2$weight_c),
+                  ylim = range(d2$height)) +
+  labs(subtitle = "N = 352")
+
+(p1 + p2 + p3 + p4) &
+  scale_x_continuous("weight",
+                     breaks = c(-10, 0, 10),
+                     labels = labels) &
+  theme_classic()
+```
+
+
+可以看見，當數據越多，事後直線估計給出的穩定性越好，不確定性越小。
+
+```{r introBayes06-30, cache=TRUE}
+post <- extract.samples( m4.3 )
+mu_at50 <- post$a + post$b * (50 - xbar)
+head(mu_at50)
+```
+
+也就是說，當體重為 50 kg 時，身高的事後概率分佈可以繪製為：
+
+```{r introBayes06-31, cache=TRUE, fig.asp=.7, fig.width=5,  fig.cap='The quadratic approximate posterior distribution of the mean height, when weight is 50 kg. ', fig.align='center'}
+dens(mu_at50, col = rangi2, lwd = 2, xlab = "mu | weight = 50")
+```
+
+相似的，完成上述圖形的不同代碼可以寫作：
+
+```{r introBayes06-32, cache=TRUE, fig.asp=.7, fig.width=5,  fig.cap='The quadratic approximate posterior distribution of the mean height, when weight is 50 kg. ', fig.align='center'}
+mu_at_50 <- postb %>% 
+  transmute(mu_at_50 = b_Intercept + b_weight_c + 5.01)
+
+head(mu_at_50)
+
+mu_at_50 %>%
+  ggplot(aes(x = mu_at_50, y = 0)) +
+  stat_halfeye(point_interval = mode_hdi, .width = .95,
+               fill = "royalblue") +
+  scale_y_continuous(NULL, breaks = NULL) +
+  xlab(expression(mu["height | weight = 50"])) +
+  theme_classic()
+```
+
+
+如果說你要給他增加一個可信區間，那麼當體重為 50 kg時，身高的事後預測89% 區間是：
+
+```{r introBayes06-33, cache=TRUE}
+PI(mu_at50, prob = 0.89)
+```
+
+但是其實我們更希望使用這事後概率分佈來繪製平均事後截距，平均事後斜率給出的直線本身的不確定性（也就是這條直線本身的89%區間）。函數 `link()` 提供了每一名參加實驗對象的事後身高均值的分佈。
+
+
+```{r introBayes06-34, cache=TRUE}
+mu <- link( m4.3 ) 
+str(mu)
+```
+
+
+然後我們使用一段體重的區間來做身高的預測值：
+
+```{r introBayes06-35, cache=TRUE}
+# define sequence of weights to compute predictions for 
+# these values will be on the horizontal axis
+
+weight.seq <- seq( from = 25, to = 70, by = 1)
+
+```
+
+使用 `link()` 函數來計算這些體重的事後身高分佈：
+
+```{r introBayes06-36, cache=TRUE}
+# use link to compute mu
+# for each sample from posterior 
+# and for each weight in weight.seq
+
+mu <- link(m4.3, data = data.frame(weight = weight.seq))
+str(mu)
+```
+
+
+繪製這些體重值上的預測事後身高均值：
+
+```{r introBayes06-37, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='The first 100 values in the distribution of mu at each weight value.', fig.align='center'}
+# use type = "n" to hide raw data
+plot( height ~ weight, d2, type = "n")
+
+# loop over samples and plot each mu value
+
+for ( i in 1:100)
+  points( weight.seq, mu[i, ], pch = 16, col = col.alpha(rangi2, 0.1))
+```
+
+可以看到每一個體重點上的事後身高預測分佈都是一個類似圖 \@ref(fig:introBayes06-31) 那樣的正（常）態分佈。而且也能注意到，身高的事後分佈的不確定性，他們每一個體重值上的事後身高分佈的方差其實是根據不同的身高而有大小區別之分。
+
+```{r introBayes06-38, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='The height data with 89% compatibility interval of the mean indicated by the shaded region. Compare this region to the distributions of blue points.', fig.align='center'}
+
+# summarize the distribution of mu
+mu.mean <- apply( mu, 2, mean )
+mu.PI <- apply( mu, 2, PI, prob = 0.89)
+
+# plot raw data
+# fading out points to make line and interval more visible 
+plot( height ~ weight, data = d2, col = col.alpha(rangi2, 0.5))
+
+# plot the MAP line, aka the mean mu for each weight 
+lines( weight.seq, mu.mean )
+
+# plot a shaded region for 89% PI
+
+shade( mu.PI, weight.seq )
+```
+
+
+考慮身高本身的方差進來：
+
+```{r introBayes06-39, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='89% prediction interval for height, as a function of weight. The solid line is the average line for the mean height at each weight. The two shaded regions show different 89% plausible regions. The narrow shaded interval around the line is the distribution of mu. The wider shaded region represents the region within which the model expects to find 89% of actual heights in the population, at each weight.', fig.align='center'}
+
+sim.height <- sim(m4.3, data = list(weight = weight.seq))
+str(sim.height)
+
+height.PI <- apply( sim.height,  2, PI, prob = 0.89)
+
+# plot raw data
+
+plot( height ~ weight, d2, col = col.alpha(rangi2, 0.5))
+
+# draw MAP line
+
+lines( weight.seq, mu.mean )
+
+# draw HPDI region for line
+# mu.HPDI <- HPDI()
+shade( mu.PI, weight.seq )
+
+# draw PI for simulated heights
+
+shade( height.PI, weight.seq)
+
+```
+
+
+
+### 從直線到曲線
 
 
