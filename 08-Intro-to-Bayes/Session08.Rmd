@@ -206,9 +206,213 @@ impliedConditionalIndependencies(DMA_dag1)
 
 多重線型回歸，其實是幫我們描述這樣一個問題：
 
-> 當已知的變量都已經控制了的時候，新增的一個變量，是否會對結果變量的信息還有任何可能的貢獻？
+> 當已知的變量都已經控制了的時候，新增的一個變量，是否會對結果變量的信息還有任何額外的貢獻？
 > Is there any additional value in knowing a variable, once I already know all of the other predictor variables?
 
+## 多重線性回歸模型的表達
+
+入果我們為離婚率數據設定結婚年齡中位數，和結婚率兩個變量作為預測變量的線性回歸模型，可以描述成；
 
 
+$$
+\begin{aligned}
+D_i & \sim \text{Normal}(\mu_i, \sigma)   & \text{[Probability of data]} \\
+\mu_i & = \alpha + \beta_M M_i + \beta_A A_i  & \text{[Linear model]} \\
+\alpha & \sim \text{Normal}(0, 0.2)  & \text{[Prior for } \alpha] \\
+\beta_M & \sim \text{Normal}(0, 0.5) & \text{[Prior for } \beta_M] \\
+\beta_A & \sim \text{Normal}(0, 0.5) & \text{[Prior for } \beta_A] \\ 
+\sigma  & \sim \text{Exponential}(1) & \text{[Prior for } \sigma]
+\end{aligned}
+$$
+
+實際運行這個模型：
+
+```{r introBayes08-09, cache=TRUE}
+m5.3 <- quap(
+  alist(
+    D ~ dnorm(mu, sigma),
+    mu <- a + bM * M + bA * A, 
+    a ~ dnorm(0, 0.2), 
+    bM ~ dnorm(0, 0.5),
+    bA ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d
+)
+precis(m5.3)
+```
+
+
+
+我們來比較一下 `bM, bA` 在不同模型中的表現：
+
+```{r introBayes08-fig07, cache=TRUE,  fig.width=5.5, fig.height=4,  fig.cap="The posterior distributions for parameters of bA and bM among all models.", fig.align='center'}
+plot( coeftab(m5.1, m5.2, m5.3), par = c("bA", "bM"), 
+      xlab = "Posterior with 89% credible intervals")
+text(-0.8, 9, "bA", font = 2)
+text(-0.3, 4, "bM", font = 2)
+```
+
+
+這個圖顯示的是回歸係數 `bA, bM` 在不同模型中的表現。
+
+- m5.1是只放了一個結婚率 M 
+- m5.2是只放了一個結婚年齡中位數 A
+- m5.3是同時放入結婚率M，和年齡中位數 A
+
+
+可以觀察到，年齡中位數的回歸係屬並不因為是否模型中加入了結婚率 M 這個變量有多大的變化。但是反過來，結婚率 M 和離婚率的關係的回歸係屬，只有在沒有加入年齡中位數變量的 m5.2 模型中才顯現出來，也就是說：“當我們已經知道了結婚年齡的中位數，增加結婚率這個變量並不會對我們了解離婚率有幫助。”
+
+上面廢話了這麼多，其實就是：$ D \perp\!\!\!\perp M |A$。所以我們探討的兩個描述這個數據的 DAG 圖 \@ref(fig:introBayes08-fig05) 和圖 \@ref(fig:introBayes08-fig06) 中，前者不能提供上述信息，它被排除了。保留圖 \@ref(fig:introBayes08-fig06) 作為合理的關係圖。也就是說，事實上在 m5.2 中我們看到的結婚率(M)和離婚率(D) 之間的關係事實上是一個虛假的，帶有欺騙性的關係 (spurious)。
+
+
+### 預測變量殘差圖 predictor residual plots 
+
+預測殘差圖展示的是結果變量 (outcome) 和預測變量殘差 (residual predictor)。有助於理解模型本身。
+
+在模型 m5.3 中，我們加入了兩個預測變量一個是結婚率 M，一個是結婚時年齡中位數 A。計算預測變量殘差，就是把其中一個預測變量做另一個預測變量的結果變量：
+
+$$
+\begin{aligned}
+M_i & \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i & = \alpha + \beta A_i\\
+\alpha & \sim \text{Normal}(0, 0.2)\\
+\beta  & \sim \text{Normal}(0, 0.5) \\
+\sigma & \sim \text{Exponential}(1) 
+\end{aligned}
+$$
+
+```{r introBayes08-10, cache=TRUE}
+m5.4 <- quap(
+  alist(
+    M ~ dnorm( mu, sigma ), 
+    mu <- a + bAM * A, 
+    a ~ dnorm(0, 0.2), 
+    bAM ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d
+)
+precis(m5.4)
+```
+之後，我們計算結婚率的殘差的方法就是取觀測到的結婚率和上述模型給出的預測結婚率：
+
+```{r introBayes08-11, cache=TRUE}
+mu <- link(m5.4)
+mu_mean <- apply( mu, 2, mean )
+mu_resid <- d$M - mu_mean
+```
+
+當一個州的結婚率殘差是正的，表示結婚率觀測值高於上述模型給出的已知該州結婚年齡中位數時的結婚率預測值。
+
+
+
+```{r introBayes08-fig08, cache=TRUE,  fig.width=5.5, fig.height=4,  fig.cap="Plotting marriage rate residuals against the outcome (divorce rate). Residual variation in marriage rate shows little association with divorce rate.", fig.align='center'}
+d$mu_res <- mu_resid
+m5.4res <- quap(
+  alist(
+    D ~ dnorm( mu, sigma ), 
+    mu <- a + bMres * mu_res, 
+    a ~ dnorm( 0, 0.2 ), 
+    bMres ~ dnorm( 0, 0.5 ), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+# compute percentile interval of mean
+M_seq <- seq(from = -1.8, to = 1.8, length.out = 30)
+mu <- link(m5.4res, data = list(mu_res = M_seq))
+mu.mean <- apply( mu, 2, mean )
+mu.PI <- apply(mu, 2, PI)
+
+
+# plot
+
+plot( D ~ mu_res, data = d, col = rangi2, 
+       xlab = "Marriage rate residuals", 
+     ylab = "Divorce rate (std, per/1000 adults)")
+lines( M_seq, mu.mean, lwd = 2)
+shade( mu.PI, M_seq )
+abline(v = 0, lty = 2)
+```
+
+我們使用相同的步驟，來繪製結婚時年齡中位數的預測殘差與結果變量之間的關係圖：
+
+
+```{r introBayes08-fig09, cache=TRUE,  fig.width=5.5, fig.height=4,  fig.cap="Plotting age at marriage residuals against the outcome (divorce rate). Divorce rate on age at marriage residuals, showing remaining variation, and this variation is associated with divorce rate.", fig.align='center'}
+# build the model A regress on M 
+m5.41 <- quap(
+  alist(
+    A ~ dnorm( mu, sigma ), 
+    mu <- a + bMA * M, 
+    a ~ dnorm(0, 0.2), 
+    bMA ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+# calculate the predictor residual for A
+mu <- link(m5.41)
+mu_mean <- apply( mu, 2, mean )
+mu_resid <- d$A - mu_mean
+
+# build model D regress on A residuals
+d$muA_res <- mu_resid
+m5.4Ares <- quap(
+  alist(
+    D ~ dnorm( mu, sigma ), 
+    mu <- a + bAres * muA_res, 
+    a ~ dnorm( 0, 0.2 ), 
+    bAres ~ dnorm( 0, 0.5 ), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+
+# compute percentile interval of mean
+M_seq <- seq(from = -1.8, to = 2.5, length.out = 30)
+mu <- link(m5.4Ares, data = list(muA_res = M_seq))
+mu.mean <- apply( mu, 2, mean )
+mu.PI <- apply(mu, 2, PI)
+
+
+# plot
+
+plot( D ~ muA_res, data = d, col = rangi2, 
+       xlab = "Age at marriage residuals", 
+     ylab = "Divorce rate (std, per/1000 adults)")
+lines( M_seq, mu.mean, lwd = 2)
+shade( mu.PI, M_seq )
+abline(v = 0, lty = 2)
+```
+
+
+### 事後分佈預測圖 posterior prediction plots
+
+
+```{r introBayes08-12, cache=TRUE}
+# call link without specifying new data
+# so it uses original data 
+mu <- link(m5.3)
+
+# summarize samples across cases
+mu_mean <- apply( mu, 2, mean )
+mu_PI <- apply(mu, 2, PI)
+
+# simulate observations
+# again no new data, uses original data
+
+D_sim <- sim(m5.3, n = 10000)
+D_PI <- apply(D_sim, 2, PI)
+```
+
+
+繪製觀測值和預測值之間的散點圖：
+
+```{r  introBayes08-fig10, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Posterior predictive plot for the divorce model, m5.3. The horizontal axis is the observed divorce rate in each state. The vertical axis is the model's posterior predicted divorce rate, given each state's median age at marriage and marriage rate. The blue line segments are 89% compatibility intervals. The diagonal line shows where posterior predictions exactly match the sample.", fig.align='center'}
+plot( mu_mean ~ d$D, col = rangi2, ylim = range(mu_PI), 
+      xlab = "observed divorce rate", 
+      ylab = "predicted divorce rate")
+
+abline(a = 0, b = 1, lty = 2)
+for (i  in 1 : nrow(d)) lines( rep(d$D[i], 2), mu_PI[, i], col = rangi2)
+```
 

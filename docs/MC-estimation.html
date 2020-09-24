@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-09-24" />
+<meta name="date" content="2020-09-25" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -801,6 +801,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="48.1" data-path="-many-more-variables.html"><a href="-many-more-variables.html#虛假的相關性"><i class="fa fa-check"></i><b>48.1</b> 虛假的相關性</a></li>
 <li class="chapter" data-level="48.2" data-path="-many-more-variables.html"><a href="-many-more-variables.html#繪製輔助我們理解的有向無環圖"><i class="fa fa-check"></i><b>48.2</b> 繪製輔助我們理解的有向無環圖</a></li>
+<li class="chapter" data-level="48.3" data-path="-many-more-variables.html"><a href="-many-more-variables.html#多重線性回歸模型的表達"><i class="fa fa-check"></i><b>48.3</b> 多重線性回歸模型的表達</a>
+<ul>
+<li class="chapter" data-level="48.3.1" data-path="-many-more-variables.html"><a href="-many-more-variables.html#預測變量殘差圖-predictor-residual-plots"><i class="fa fa-check"></i><b>48.3.1</b> 預測變量殘差圖 predictor residual plots</a></li>
+<li class="chapter" data-level="48.3.2" data-path="-many-more-variables.html"><a href="-many-more-variables.html#事後分佈預測圖-posterior-prediction-plots"><i class="fa fa-check"></i><b>48.3.2</b> 事後分佈預測圖 posterior prediction plots</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="49" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>49</b> 重要概念複習</a>
@@ -1823,23 +1828,23 @@ p(y) &amp; = \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)}\binom{n}{y}\frac{\Gamma(a + 
 \text{E}(Y) = n\frac{a}{a + b}
 \]</span></p>
 <p>那麼我們在進行這項試驗時我們可以預測，20名患者中有療效人數出現的概率，我們將它的預測概率分布圖和先驗概率分布放在一起：</p>
-<div class="sourceCode" id="cb1602"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1602-1"><a href="MC-estimation.html#cb1602-1"></a><span class="co"># # Beta Binomial Predictive distribution function</span></span>
-<span id="cb1602-2"><a href="MC-estimation.html#cb1602-2"></a><span class="co"># BetaBinom &lt;- Vectorize(function(rp){</span></span>
-<span id="cb1602-3"><a href="MC-estimation.html#cb1602-3"></a><span class="co"># log.val &lt;- lchoose(np, rp) + lbeta(rp+a+r,b+n-r+np-rp) - lbeta(a+r,b+n-r)</span></span>
-<span id="cb1602-4"><a href="MC-estimation.html#cb1602-4"></a><span class="co"># return(exp(log.val))</span></span>
-<span id="cb1602-5"><a href="MC-estimation.html#cb1602-5"></a><span class="co"># })</span></span>
-<span id="cb1602-6"><a href="MC-estimation.html#cb1602-6"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
-<span id="cb1602-7"><a href="MC-estimation.html#cb1602-7"></a></span>
-<span id="cb1602-8"><a href="MC-estimation.html#cb1602-8"></a>pi &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, <span class="fl">9.2</span>,<span class="fl">13.8</span>))</span>
-<span id="cb1602-9"><a href="MC-estimation.html#cb1602-9"></a><span class="kw">curve</span>(pi, <span class="dt">xlab=</span><span class="st">&quot;Probabiltiy of response&quot;</span>, <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">main=</span><span class="st">&quot;(a) Prior distribution Beta(9.2, 13.8)&quot;</span>, <span class="dt">frame=</span><span class="ot">FALSE</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
-<span id="cb1602-10"><a href="MC-estimation.html#cb1602-10"></a></span>
-<span id="cb1602-11"><a href="MC-estimation.html#cb1602-11"></a><span class="co"># or we can use the built-in function for beta-binomial distribution in package TailRank:</span></span>
-<span id="cb1602-12"><a href="MC-estimation.html#cb1602-12"></a><span class="kw">library</span>(TailRank)</span>
-<span id="cb1602-13"><a href="MC-estimation.html#cb1602-13"></a>N &lt;-<span class="st"> </span><span class="dv">20</span>; a &lt;-<span class="st"> </span><span class="fl">9.2</span>; b &lt;-<span class="st"> </span><span class="fl">13.8</span>; y &lt;-<span class="st"> </span><span class="dv">0</span><span class="op">:</span>N</span>
-<span id="cb1602-14"><a href="MC-estimation.html#cb1602-14"></a>yy &lt;-<span class="st"> </span><span class="kw">dbb</span>(y, N, a, b)</span>
-<span id="cb1602-15"><a href="MC-estimation.html#cb1602-15"></a><span class="kw">barplot</span>(yy, <span class="dt">xlab =</span> <span class="st">&quot;Number of successes&quot;</span>, <span class="dt">names.arg =</span> <span class="dv">0</span><span class="op">:</span><span class="dv">20</span>, <span class="dt">axes =</span> F,</span>
-<span id="cb1602-16"><a href="MC-estimation.html#cb1602-16"></a>        <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.16</span>), <span class="dt">main =</span> <span class="st">&quot;(b) predictive distribution&quot;</span>)</span>
-<span id="cb1602-17"><a href="MC-estimation.html#cb1602-17"></a><span class="kw">axis</span>(<span class="dv">2</span>,<span class="dt">at=</span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="fl">0.16</span>,<span class="fl">0.02</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb1612"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1612-1"><a href="MC-estimation.html#cb1612-1"></a><span class="co"># # Beta Binomial Predictive distribution function</span></span>
+<span id="cb1612-2"><a href="MC-estimation.html#cb1612-2"></a><span class="co"># BetaBinom &lt;- Vectorize(function(rp){</span></span>
+<span id="cb1612-3"><a href="MC-estimation.html#cb1612-3"></a><span class="co"># log.val &lt;- lchoose(np, rp) + lbeta(rp+a+r,b+n-r+np-rp) - lbeta(a+r,b+n-r)</span></span>
+<span id="cb1612-4"><a href="MC-estimation.html#cb1612-4"></a><span class="co"># return(exp(log.val))</span></span>
+<span id="cb1612-5"><a href="MC-estimation.html#cb1612-5"></a><span class="co"># })</span></span>
+<span id="cb1612-6"><a href="MC-estimation.html#cb1612-6"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb1612-7"><a href="MC-estimation.html#cb1612-7"></a></span>
+<span id="cb1612-8"><a href="MC-estimation.html#cb1612-8"></a>pi &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, <span class="fl">9.2</span>,<span class="fl">13.8</span>))</span>
+<span id="cb1612-9"><a href="MC-estimation.html#cb1612-9"></a><span class="kw">curve</span>(pi, <span class="dt">xlab=</span><span class="st">&quot;Probabiltiy of response&quot;</span>, <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">main=</span><span class="st">&quot;(a) Prior distribution Beta(9.2, 13.8)&quot;</span>, <span class="dt">frame=</span><span class="ot">FALSE</span>, <span class="dt">lwd=</span><span class="dv">2</span>)</span>
+<span id="cb1612-10"><a href="MC-estimation.html#cb1612-10"></a></span>
+<span id="cb1612-11"><a href="MC-estimation.html#cb1612-11"></a><span class="co"># or we can use the built-in function for beta-binomial distribution in package TailRank:</span></span>
+<span id="cb1612-12"><a href="MC-estimation.html#cb1612-12"></a><span class="kw">library</span>(TailRank)</span>
+<span id="cb1612-13"><a href="MC-estimation.html#cb1612-13"></a>N &lt;-<span class="st"> </span><span class="dv">20</span>; a &lt;-<span class="st"> </span><span class="fl">9.2</span>; b &lt;-<span class="st"> </span><span class="fl">13.8</span>; y &lt;-<span class="st"> </span><span class="dv">0</span><span class="op">:</span>N</span>
+<span id="cb1612-14"><a href="MC-estimation.html#cb1612-14"></a>yy &lt;-<span class="st"> </span><span class="kw">dbb</span>(y, N, a, b)</span>
+<span id="cb1612-15"><a href="MC-estimation.html#cb1612-15"></a><span class="kw">barplot</span>(yy, <span class="dt">xlab =</span> <span class="st">&quot;Number of successes&quot;</span>, <span class="dt">names.arg =</span> <span class="dv">0</span><span class="op">:</span><span class="dv">20</span>, <span class="dt">axes =</span> F,</span>
+<span id="cb1612-16"><a href="MC-estimation.html#cb1612-16"></a>        <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.16</span>), <span class="dt">main =</span> <span class="st">&quot;(b) predictive distribution&quot;</span>)</span>
+<span id="cb1612-17"><a href="MC-estimation.html#cb1612-17"></a><span class="kw">axis</span>(<span class="dv">2</span>,<span class="dt">at=</span><span class="kw">seq</span>(<span class="dv">0</span>,<span class="fl">0.16</span>,<span class="fl">0.02</span>))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:Beta-binomial-def"></span>
 <img src="bookdown_files/figure-html/Beta-binomial-def-1.png" alt="Prior and predictive distribution for the drug example." width="90%" />
 <p class="caption">
@@ -2008,37 +2013,37 @@ prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10
   P8 &lt;- step(y - 7.5) # = 1 if Y is 8 or more
 } </code></pre>
 <p>下面的代碼展示了如何在 R 裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：</p>
-<div class="sourceCode" id="cb1609"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1609-1"><a href="MC-estimation.html#cb1609-1"></a><span class="kw">library</span>(BRugs)</span>
-<span id="cb1609-2"><a href="MC-estimation.html#cb1609-2"></a></span>
-<span id="cb1609-3"><a href="MC-estimation.html#cb1609-3"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1609-4"><a href="MC-estimation.html#cb1609-4"></a><span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>))</span>
-<span id="cb1609-5"><a href="MC-estimation.html#cb1609-5"></a><span class="co"># there is no data so just compile the model</span></span>
-<span id="cb1609-6"><a href="MC-estimation.html#cb1609-6"></a><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </span>
-<span id="cb1609-7"><a href="MC-estimation.html#cb1609-7"></a><span class="co"># There is no need to provide initial values as this is </span></span>
-<span id="cb1609-8"><a href="MC-estimation.html#cb1609-8"></a><span class="co"># a Monte Carlo forward sampling from a known distribution</span></span>
-<span id="cb1609-9"><a href="MC-estimation.html#cb1609-9"></a><span class="co"># but the program still requires initial values to begin</span></span>
-<span id="cb1609-10"><a href="MC-estimation.html#cb1609-10"></a><span class="co"># generate a random value.</span></span>
-<span id="cb1609-11"><a href="MC-estimation.html#cb1609-11"></a><span class="kw">modelGenInits</span>() <span class="co">#</span></span>
-<span id="cb1609-12"><a href="MC-estimation.html#cb1609-12"></a><span class="co"># Set monitors on nodes of interest</span></span>
-<span id="cb1609-13"><a href="MC-estimation.html#cb1609-13"></a><span class="kw">samplesSet</span>(<span class="kw">c</span>(<span class="st">&quot;P8&quot;</span>, <span class="st">&quot;y&quot;</span>))</span>
-<span id="cb1609-14"><a href="MC-estimation.html#cb1609-14"></a><span class="co"># Generate 1000 iterations</span></span>
-<span id="cb1609-15"><a href="MC-estimation.html#cb1609-15"></a><span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</span>
-<span id="cb1609-16"><a href="MC-estimation.html#cb1609-16"></a></span>
-<span id="cb1609-17"><a href="MC-estimation.html#cb1609-17"></a><span class="co">#### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb1609-18"><a href="MC-estimation.html#cb1609-18"></a>sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)</span>
-<span id="cb1609-19"><a href="MC-estimation.html#cb1609-19"></a><span class="kw">print</span>(sample.statistics)</span>
-<span id="cb1609-20"><a href="MC-estimation.html#cb1609-20"></a></span>
-<span id="cb1609-21"><a href="MC-estimation.html#cb1609-21"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb1609-22"><a href="MC-estimation.html#cb1609-22"></a>chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P8 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P8&quot;</span>),</span>
-<span id="cb1609-23"><a href="MC-estimation.html#cb1609-23"></a>                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))</span>
-<span id="cb1609-24"><a href="MC-estimation.html#cb1609-24"></a><span class="kw">samplesHistory</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">1</span>), <span class="dt">ask=</span><span class="ot">FALSE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1619"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1619-1"><a href="MC-estimation.html#cb1619-1"></a><span class="kw">library</span>(BRugs)</span>
+<span id="cb1619-2"><a href="MC-estimation.html#cb1619-2"></a></span>
+<span id="cb1619-3"><a href="MC-estimation.html#cb1619-3"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1619-4"><a href="MC-estimation.html#cb1619-4"></a><span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>))</span>
+<span id="cb1619-5"><a href="MC-estimation.html#cb1619-5"></a><span class="co"># there is no data so just compile the model</span></span>
+<span id="cb1619-6"><a href="MC-estimation.html#cb1619-6"></a><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </span>
+<span id="cb1619-7"><a href="MC-estimation.html#cb1619-7"></a><span class="co"># There is no need to provide initial values as this is </span></span>
+<span id="cb1619-8"><a href="MC-estimation.html#cb1619-8"></a><span class="co"># a Monte Carlo forward sampling from a known distribution</span></span>
+<span id="cb1619-9"><a href="MC-estimation.html#cb1619-9"></a><span class="co"># but the program still requires initial values to begin</span></span>
+<span id="cb1619-10"><a href="MC-estimation.html#cb1619-10"></a><span class="co"># generate a random value.</span></span>
+<span id="cb1619-11"><a href="MC-estimation.html#cb1619-11"></a><span class="kw">modelGenInits</span>() <span class="co">#</span></span>
+<span id="cb1619-12"><a href="MC-estimation.html#cb1619-12"></a><span class="co"># Set monitors on nodes of interest</span></span>
+<span id="cb1619-13"><a href="MC-estimation.html#cb1619-13"></a><span class="kw">samplesSet</span>(<span class="kw">c</span>(<span class="st">&quot;P8&quot;</span>, <span class="st">&quot;y&quot;</span>))</span>
+<span id="cb1619-14"><a href="MC-estimation.html#cb1619-14"></a><span class="co"># Generate 1000 iterations</span></span>
+<span id="cb1619-15"><a href="MC-estimation.html#cb1619-15"></a><span class="kw">modelUpdate</span>(<span class="dv">1000</span>)</span>
+<span id="cb1619-16"><a href="MC-estimation.html#cb1619-16"></a></span>
+<span id="cb1619-17"><a href="MC-estimation.html#cb1619-17"></a><span class="co">#### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb1619-18"><a href="MC-estimation.html#cb1619-18"></a>sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)</span>
+<span id="cb1619-19"><a href="MC-estimation.html#cb1619-19"></a><span class="kw">print</span>(sample.statistics)</span>
+<span id="cb1619-20"><a href="MC-estimation.html#cb1619-20"></a></span>
+<span id="cb1619-21"><a href="MC-estimation.html#cb1619-21"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb1619-22"><a href="MC-estimation.html#cb1619-22"></a>chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P8 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P8&quot;</span>),</span>
+<span id="cb1619-23"><a href="MC-estimation.html#cb1619-23"></a>                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))</span>
+<span id="cb1619-24"><a href="MC-estimation.html#cb1619-24"></a><span class="kw">samplesHistory</span>(<span class="st">&quot;*&quot;</span>, <span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">1</span>), <span class="dt">ask=</span><span class="ot">FALSE</span>)</span></code></pre></div>
 <p>下面的代碼展示了如何在R裏連接JAGS進行蒙特卡羅運算和調出其結果的過程：</p>
-<div class="sourceCode" id="cb1610"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1610-1"><a href="MC-estimation.html#cb1610-1"></a><span class="kw">library</span>(runjags)</span>
-<span id="cb1610-2"><a href="MC-estimation.html#cb1610-2"></a><span class="kw">library</span>(rjags)</span>
-<span id="cb1610-3"><a href="MC-estimation.html#cb1610-3"></a><span class="kw">library</span>(R2jags)</span>
-<span id="cb1610-4"><a href="MC-estimation.html#cb1610-4"></a></span>
-<span id="cb1610-5"><a href="MC-estimation.html#cb1610-5"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1610-6"><a href="MC-estimation.html#cb1610-6"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>), <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1620"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1620-1"><a href="MC-estimation.html#cb1620-1"></a><span class="kw">library</span>(runjags)</span>
+<span id="cb1620-2"><a href="MC-estimation.html#cb1620-2"></a><span class="kw">library</span>(rjags)</span>
+<span id="cb1620-3"><a href="MC-estimation.html#cb1620-3"></a><span class="kw">library</span>(R2jags)</span>
+<span id="cb1620-4"><a href="MC-estimation.html#cb1620-4"></a></span>
+<span id="cb1620-5"><a href="MC-estimation.html#cb1620-5"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1620-6"><a href="MC-estimation.html#cb1620-6"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>), <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2048,17 +2053,17 @@ prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10
 ##    Total graph size: 6
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb1612"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1612-1"><a href="MC-estimation.html#cb1612-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
-<span id="cb1612-2"><a href="MC-estimation.html#cb1612-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1612-3"><a href="MC-estimation.html#cb1612-3"></a></span>
-<span id="cb1612-4"><a href="MC-estimation.html#cb1612-4"></a><span class="co"># Step 3 set monitor variables</span></span>
-<span id="cb1612-5"><a href="MC-estimation.html#cb1612-5"></a></span>
-<span id="cb1612-6"><a href="MC-estimation.html#cb1612-6"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1612-7"><a href="MC-estimation.html#cb1612-7"></a>            jagsModel,</span>
-<span id="cb1612-8"><a href="MC-estimation.html#cb1612-8"></a>            <span class="dt">variable.names =</span> <span class="kw">c</span>(<span class="st">&quot;P8&quot;</span>, <span class="st">&quot;y&quot;</span>),</span>
-<span id="cb1612-9"><a href="MC-estimation.html#cb1612-9"></a>            <span class="dt">n.iter =</span> <span class="dv">1000</span>, <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1612-10"><a href="MC-estimation.html#cb1612-10"></a></span>
-<span id="cb1612-11"><a href="MC-estimation.html#cb1612-11"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1622"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1622-1"><a href="MC-estimation.html#cb1622-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
+<span id="cb1622-2"><a href="MC-estimation.html#cb1622-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1622-3"><a href="MC-estimation.html#cb1622-3"></a></span>
+<span id="cb1622-4"><a href="MC-estimation.html#cb1622-4"></a><span class="co"># Step 3 set monitor variables</span></span>
+<span id="cb1622-5"><a href="MC-estimation.html#cb1622-5"></a></span>
+<span id="cb1622-6"><a href="MC-estimation.html#cb1622-6"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1622-7"><a href="MC-estimation.html#cb1622-7"></a>            jagsModel,</span>
+<span id="cb1622-8"><a href="MC-estimation.html#cb1622-8"></a>            <span class="dt">variable.names =</span> <span class="kw">c</span>(<span class="st">&quot;P8&quot;</span>, <span class="st">&quot;y&quot;</span>),</span>
+<span id="cb1622-9"><a href="MC-estimation.html#cb1622-9"></a>            <span class="dt">n.iter =</span> <span class="dv">1000</span>, <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1622-10"><a href="MC-estimation.html#cb1622-10"></a></span>
+<span id="cb1622-11"><a href="MC-estimation.html#cb1622-11"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 1001:2000
 ## Thinning interval = 1 
@@ -2077,11 +2082,11 @@ prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10
 ##    2.5% 25% 50% 75% 97.5%
 ## P8    0   0   0   0     1
 ## y     2   4   5   6     8</code></pre>
-<div class="sourceCode" id="cb1614"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1614-1"><a href="MC-estimation.html#cb1614-1"></a><span class="co"># Show the trace plot</span></span>
-<span id="cb1614-2"><a href="MC-estimation.html#cb1614-2"></a><span class="co"># library(mcmcplots)</span></span>
-<span id="cb1614-3"><a href="MC-estimation.html#cb1614-3"></a><span class="co"># ggSample &lt;- ggs(codaSamples)</span></span>
-<span id="cb1614-4"><a href="MC-estimation.html#cb1614-4"></a><span class="co"># ggs_traceplot(ggSample)</span></span>
-<span id="cb1614-5"><a href="MC-estimation.html#cb1614-5"></a>mcmcplots<span class="op">::</span><span class="kw">traplot</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1624"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1624-1"><a href="MC-estimation.html#cb1624-1"></a><span class="co"># Show the trace plot</span></span>
+<span id="cb1624-2"><a href="MC-estimation.html#cb1624-2"></a><span class="co"># library(mcmcplots)</span></span>
+<span id="cb1624-3"><a href="MC-estimation.html#cb1624-3"></a><span class="co"># ggSample &lt;- ggs(codaSamples)</span></span>
+<span id="cb1624-4"><a href="MC-estimation.html#cb1624-4"></a><span class="co"># ggs_traceplot(ggSample)</span></span>
+<span id="cb1624-5"><a href="MC-estimation.html#cb1624-5"></a>mcmcplots<span class="op">::</span><span class="kw">traplot</span>(codaSamples)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:JAGS00"></span>
 <img src="bookdown_files/figure-html/JAGS00-1.png" alt="History of the iterations by JAGS." width="80%" />
 <p class="caption">
@@ -2094,41 +2099,41 @@ prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10
   P15 &lt;- step(15.5 - y) # = 1 if Y is 15 or fewer
 } </code></pre>
 <p>OpenBUGS Codes:</p>
-<div class="sourceCode" id="cb1616"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1616-1"><a href="MC-estimation.html#cb1616-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1616-2"><a href="MC-estimation.html#cb1616-2"></a><span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel30.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </span>
-<span id="cb1616-3"><a href="MC-estimation.html#cb1616-3"></a><span class="co"># there is no data so just compile the model</span></span>
-<span id="cb1616-4"><a href="MC-estimation.html#cb1616-4"></a><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </span>
-<span id="cb1616-5"><a href="MC-estimation.html#cb1616-5"></a><span class="co"># There is no need to provide initial values as this is </span></span>
-<span id="cb1616-6"><a href="MC-estimation.html#cb1616-6"></a><span class="co"># a Monte Carlo forward sampling from a known distribution</span></span>
-<span id="cb1616-7"><a href="MC-estimation.html#cb1616-7"></a><span class="co"># but the program still requires initial values to begin</span></span>
-<span id="cb1616-8"><a href="MC-estimation.html#cb1616-8"></a><span class="co"># generate a random value.</span></span>
-<span id="cb1616-9"><a href="MC-estimation.html#cb1616-9"></a><span class="kw">modelGenInits</span>() <span class="co">#</span></span>
-<span id="cb1616-10"><a href="MC-estimation.html#cb1616-10"></a><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb1616-11"><a href="MC-estimation.html#cb1616-11"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P15&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
-<span id="cb1616-12"><a href="MC-estimation.html#cb1616-12"></a><span class="kw">samplesSet</span>(parameters)</span>
-<span id="cb1616-13"><a href="MC-estimation.html#cb1616-13"></a><span class="co"># Generate 1000 iterations</span></span>
-<span id="cb1616-14"><a href="MC-estimation.html#cb1616-14"></a><span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</span>
-<span id="cb1616-15"><a href="MC-estimation.html#cb1616-15"></a></span>
-<span id="cb1616-16"><a href="MC-estimation.html#cb1616-16"></a><span class="co">#### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb1616-17"><a href="MC-estimation.html#cb1616-17"></a>sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)</span>
-<span id="cb1616-18"><a href="MC-estimation.html#cb1616-18"></a><span class="kw">print</span>(sample.statistics)</span>
-<span id="cb1616-19"><a href="MC-estimation.html#cb1616-19"></a></span>
-<span id="cb1616-20"><a href="MC-estimation.html#cb1616-20"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb1616-21"><a href="MC-estimation.html#cb1616-21"></a>chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P15 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P15&quot;</span>),</span>
-<span id="cb1616-22"><a href="MC-estimation.html#cb1616-22"></a>                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))</span>
-<span id="cb1616-23"><a href="MC-estimation.html#cb1616-23"></a><span class="co">#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb1616-24"><a href="MC-estimation.html#cb1616-24"></a><span class="co">## samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)</span></span>
-<span id="cb1616-25"><a href="MC-estimation.html#cb1616-25"></a></span>
-<span id="cb1616-26"><a href="MC-estimation.html#cb1616-26"></a><span class="cf">for</span>(p_ <span class="cf">in</span> parameters)</span>
-<span id="cb1616-27"><a href="MC-estimation.html#cb1616-27"></a>  {</span>
-<span id="cb1616-28"><a href="MC-estimation.html#cb1616-28"></a>    <span class="kw">hist</span>(chain[[p_]], <span class="dt">main=</span>p_,</span>
-<span id="cb1616-29"><a href="MC-estimation.html#cb1616-29"></a>         <span class="dt">ylab=</span><span class="ot">NA</span>, <span class="dt">xlab=</span><span class="ot">NA</span>, <span class="co">#prob = TRUE,</span></span>
-<span id="cb1616-30"><a href="MC-estimation.html#cb1616-30"></a>         <span class="dt">nclas=</span><span class="dv">50</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)</span>
-<span id="cb1616-31"><a href="MC-estimation.html#cb1616-31"></a>  }</span></code></pre></div>
+<div class="sourceCode" id="cb1626"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1626-1"><a href="MC-estimation.html#cb1626-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1626-2"><a href="MC-estimation.html#cb1626-2"></a><span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel30.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </span>
+<span id="cb1626-3"><a href="MC-estimation.html#cb1626-3"></a><span class="co"># there is no data so just compile the model</span></span>
+<span id="cb1626-4"><a href="MC-estimation.html#cb1626-4"></a><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </span>
+<span id="cb1626-5"><a href="MC-estimation.html#cb1626-5"></a><span class="co"># There is no need to provide initial values as this is </span></span>
+<span id="cb1626-6"><a href="MC-estimation.html#cb1626-6"></a><span class="co"># a Monte Carlo forward sampling from a known distribution</span></span>
+<span id="cb1626-7"><a href="MC-estimation.html#cb1626-7"></a><span class="co"># but the program still requires initial values to begin</span></span>
+<span id="cb1626-8"><a href="MC-estimation.html#cb1626-8"></a><span class="co"># generate a random value.</span></span>
+<span id="cb1626-9"><a href="MC-estimation.html#cb1626-9"></a><span class="kw">modelGenInits</span>() <span class="co">#</span></span>
+<span id="cb1626-10"><a href="MC-estimation.html#cb1626-10"></a><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb1626-11"><a href="MC-estimation.html#cb1626-11"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;P15&quot;</span>, <span class="st">&quot;y&quot;</span>)</span>
+<span id="cb1626-12"><a href="MC-estimation.html#cb1626-12"></a><span class="kw">samplesSet</span>(parameters)</span>
+<span id="cb1626-13"><a href="MC-estimation.html#cb1626-13"></a><span class="co"># Generate 1000 iterations</span></span>
+<span id="cb1626-14"><a href="MC-estimation.html#cb1626-14"></a><span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</span>
+<span id="cb1626-15"><a href="MC-estimation.html#cb1626-15"></a></span>
+<span id="cb1626-16"><a href="MC-estimation.html#cb1626-16"></a><span class="co">#### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb1626-17"><a href="MC-estimation.html#cb1626-17"></a>sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)</span>
+<span id="cb1626-18"><a href="MC-estimation.html#cb1626-18"></a><span class="kw">print</span>(sample.statistics)</span>
+<span id="cb1626-19"><a href="MC-estimation.html#cb1626-19"></a></span>
+<span id="cb1626-20"><a href="MC-estimation.html#cb1626-20"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb1626-21"><a href="MC-estimation.html#cb1626-21"></a>chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">P15 =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P15&quot;</span>),</span>
+<span id="cb1626-22"><a href="MC-estimation.html#cb1626-22"></a>                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>))</span>
+<span id="cb1626-23"><a href="MC-estimation.html#cb1626-23"></a><span class="co">#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb1626-24"><a href="MC-estimation.html#cb1626-24"></a><span class="co">## samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)</span></span>
+<span id="cb1626-25"><a href="MC-estimation.html#cb1626-25"></a></span>
+<span id="cb1626-26"><a href="MC-estimation.html#cb1626-26"></a><span class="cf">for</span>(p_ <span class="cf">in</span> parameters)</span>
+<span id="cb1626-27"><a href="MC-estimation.html#cb1626-27"></a>  {</span>
+<span id="cb1626-28"><a href="MC-estimation.html#cb1626-28"></a>    <span class="kw">hist</span>(chain[[p_]], <span class="dt">main=</span>p_,</span>
+<span id="cb1626-29"><a href="MC-estimation.html#cb1626-29"></a>         <span class="dt">ylab=</span><span class="ot">NA</span>, <span class="dt">xlab=</span><span class="ot">NA</span>, <span class="co">#prob = TRUE,</span></span>
+<span id="cb1626-30"><a href="MC-estimation.html#cb1626-30"></a>         <span class="dt">nclas=</span><span class="dv">50</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1626-31"><a href="MC-estimation.html#cb1626-31"></a>  }</span></code></pre></div>
 <p>JAGS code:</p>
-<div class="sourceCode" id="cb1617"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1617-1"><a href="MC-estimation.html#cb1617-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1617-2"><a href="MC-estimation.html#cb1617-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel30.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1617-3"><a href="MC-estimation.html#cb1617-3"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1627"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1627-1"><a href="MC-estimation.html#cb1627-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1627-2"><a href="MC-estimation.html#cb1627-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/coinmodel30.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb1627-3"><a href="MC-estimation.html#cb1627-3"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2138,19 +2143,19 @@ prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10
 ##    Total graph size: 6
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb1619"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1619-1"><a href="MC-estimation.html#cb1619-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
-<span id="cb1619-2"><a href="MC-estimation.html#cb1619-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb1619-3"><a href="MC-estimation.html#cb1619-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1619-4"><a href="MC-estimation.html#cb1619-4"></a></span>
-<span id="cb1619-5"><a href="MC-estimation.html#cb1619-5"></a><span class="co"># Step 3 set monitor variables</span></span>
-<span id="cb1619-6"><a href="MC-estimation.html#cb1619-6"></a></span>
-<span id="cb1619-7"><a href="MC-estimation.html#cb1619-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1619-8"><a href="MC-estimation.html#cb1619-8"></a>            jagsModel,</span>
-<span id="cb1619-9"><a href="MC-estimation.html#cb1619-9"></a>            <span class="dt">variable.names =</span> <span class="kw">c</span>(<span class="st">&quot;P15&quot;</span>, <span class="st">&quot;y&quot;</span>),</span>
-<span id="cb1619-10"><a href="MC-estimation.html#cb1619-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
-<span id="cb1619-11"><a href="MC-estimation.html#cb1619-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1619-12"><a href="MC-estimation.html#cb1619-12"></a></span>
-<span id="cb1619-13"><a href="MC-estimation.html#cb1619-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1629"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1629-1"><a href="MC-estimation.html#cb1629-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
+<span id="cb1629-2"><a href="MC-estimation.html#cb1629-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb1629-3"><a href="MC-estimation.html#cb1629-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1629-4"><a href="MC-estimation.html#cb1629-4"></a></span>
+<span id="cb1629-5"><a href="MC-estimation.html#cb1629-5"></a><span class="co"># Step 3 set monitor variables</span></span>
+<span id="cb1629-6"><a href="MC-estimation.html#cb1629-6"></a></span>
+<span id="cb1629-7"><a href="MC-estimation.html#cb1629-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1629-8"><a href="MC-estimation.html#cb1629-8"></a>            jagsModel,</span>
+<span id="cb1629-9"><a href="MC-estimation.html#cb1629-9"></a>            <span class="dt">variable.names =</span> <span class="kw">c</span>(<span class="st">&quot;P15&quot;</span>, <span class="st">&quot;y&quot;</span>),</span>
+<span id="cb1629-10"><a href="MC-estimation.html#cb1629-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
+<span id="cb1629-11"><a href="MC-estimation.html#cb1629-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1629-12"><a href="MC-estimation.html#cb1629-12"></a></span>
+<span id="cb1629-13"><a href="MC-estimation.html#cb1629-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 1001:11000
 ## Thinning interval = 1 
@@ -2169,9 +2174,9 @@ prob70   0.6265   0.4837   0.004626   0.0        1.0      1.0         1       10
 ##     2.5% 25% 50% 75% 97.5%
 ## P15    0   0   0   0     0
 ## y     16  19  21  23    26</code></pre>
-<div class="sourceCode" id="cb1621"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1621-1"><a href="MC-estimation.html#cb1621-1"></a><span class="co">#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb1621-2"><a href="MC-estimation.html#cb1621-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
-<span id="cb1621-3"><a href="MC-estimation.html#cb1621-3"></a><span class="kw">ggs_histogram</span>(ggSample, <span class="dt">bins =</span> <span class="dv">18</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1631"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1631-1"><a href="MC-estimation.html#cb1631-1"></a><span class="co">#### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb1631-2"><a href="MC-estimation.html#cb1631-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
+<span id="cb1631-3"><a href="MC-estimation.html#cb1631-3"></a><span class="kw">ggs_histogram</span>(ggSample, <span class="dt">bins =</span> <span class="dv">18</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:JAGS01"></span>
 <img src="bookdown_files/figure-html/JAGS01-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
 <p class="caption">
@@ -2191,49 +2196,49 @@ model{
 	P.crit   &lt;- step(y-14.5)           # =1 if y &gt;= 15, 0 otherwise
 }</code></pre>
 <p>把這個模型存儲成<code>drug-MC.txt</code>文件之後，可以使用OpenBUGS完成該模型的蒙特卡羅模擬試驗計算：</p>
-<div class="sourceCode" id="cb1623"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1623-1"><a href="MC-estimation.html#cb1623-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1623-2"><a href="MC-estimation.html#cb1623-2"></a><span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/drug-MC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </span>
-<span id="cb1623-3"><a href="MC-estimation.html#cb1623-3"></a><span class="co"># there is no data so just compile the model</span></span>
-<span id="cb1623-4"><a href="MC-estimation.html#cb1623-4"></a><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </span>
-<span id="cb1623-5"><a href="MC-estimation.html#cb1623-5"></a><span class="co"># There is no need to provide initial values as this is </span></span>
-<span id="cb1623-6"><a href="MC-estimation.html#cb1623-6"></a><span class="co"># a Monte Carlo forward sampling from a known distribution</span></span>
-<span id="cb1623-7"><a href="MC-estimation.html#cb1623-7"></a><span class="co"># but the program still requires initial values to begin</span></span>
-<span id="cb1623-8"><a href="MC-estimation.html#cb1623-8"></a><span class="co"># generate a random value.</span></span>
-<span id="cb1623-9"><a href="MC-estimation.html#cb1623-9"></a><span class="kw">modelGenInits</span>() <span class="co">#</span></span>
-<span id="cb1623-10"><a href="MC-estimation.html#cb1623-10"></a><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb1623-11"><a href="MC-estimation.html#cb1623-11"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)</span>
-<span id="cb1623-12"><a href="MC-estimation.html#cb1623-12"></a><span class="kw">samplesSet</span>(parameters)</span>
-<span id="cb1623-13"><a href="MC-estimation.html#cb1623-13"></a><span class="co"># Generate 1000 iterations</span></span>
-<span id="cb1623-14"><a href="MC-estimation.html#cb1623-14"></a><span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</span>
-<span id="cb1623-15"><a href="MC-estimation.html#cb1623-15"></a></span>
-<span id="cb1623-16"><a href="MC-estimation.html#cb1623-16"></a><span class="co">#### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb1623-17"><a href="MC-estimation.html#cb1623-17"></a>sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)</span>
-<span id="cb1623-18"><a href="MC-estimation.html#cb1623-18"></a><span class="kw">print</span>(sample.statistics)</span>
-<span id="cb1623-19"><a href="MC-estimation.html#cb1623-19"></a></span>
-<span id="cb1623-20"><a href="MC-estimation.html#cb1623-20"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb1623-21"><a href="MC-estimation.html#cb1623-21"></a>chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>),</span>
-<span id="cb1623-22"><a href="MC-estimation.html#cb1623-22"></a>                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>),</span>
-<span id="cb1623-23"><a href="MC-estimation.html#cb1623-23"></a>                    <span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>))</span>
-<span id="cb1623-24"><a href="MC-estimation.html#cb1623-24"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb1623-25"><a href="MC-estimation.html#cb1623-25"></a><span class="co">##1. samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)</span></span>
-<span id="cb1623-26"><a href="MC-estimation.html#cb1623-26"></a><span class="co"># or 2. by looping </span></span>
-<span id="cb1623-27"><a href="MC-estimation.html#cb1623-27"></a><span class="co"># for(p_ in parameters)</span></span>
-<span id="cb1623-28"><a href="MC-estimation.html#cb1623-28"></a><span class="co">#   {</span></span>
-<span id="cb1623-29"><a href="MC-estimation.html#cb1623-29"></a><span class="co">#     hist(chain[[p_]], main=p_,</span></span>
-<span id="cb1623-30"><a href="MC-estimation.html#cb1623-30"></a><span class="co">#          ylab=NA, xlab=NA, #prob = TRUE,</span></span>
-<span id="cb1623-31"><a href="MC-estimation.html#cb1623-31"></a><span class="co">#          nclas=50, col=&quot;red&quot;)</span></span>
-<span id="cb1623-32"><a href="MC-estimation.html#cb1623-32"></a><span class="co">#   }</span></span>
-<span id="cb1623-33"><a href="MC-estimation.html#cb1623-33"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
-<span id="cb1623-34"><a href="MC-estimation.html#cb1623-34"></a></span>
-<span id="cb1623-35"><a href="MC-estimation.html#cb1623-35"></a><span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
-<span id="cb1623-36"><a href="MC-estimation.html#cb1623-36"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
-<span id="cb1623-37"><a href="MC-estimation.html#cb1623-37"></a><span class="kw">hist</span>(chain<span class="op">$</span>y, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, </span>
-<span id="cb1623-38"><a href="MC-estimation.html#cb1623-38"></a>     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1633"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1633-1"><a href="MC-estimation.html#cb1633-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1633-2"><a href="MC-estimation.html#cb1633-2"></a><span class="kw">modelCheck</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/drug-MC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)) </span>
+<span id="cb1633-3"><a href="MC-estimation.html#cb1633-3"></a><span class="co"># there is no data so just compile the model</span></span>
+<span id="cb1633-4"><a href="MC-estimation.html#cb1633-4"></a><span class="kw">modelCompile</span>(<span class="dt">numChains =</span> <span class="dv">1</span>) </span>
+<span id="cb1633-5"><a href="MC-estimation.html#cb1633-5"></a><span class="co"># There is no need to provide initial values as this is </span></span>
+<span id="cb1633-6"><a href="MC-estimation.html#cb1633-6"></a><span class="co"># a Monte Carlo forward sampling from a known distribution</span></span>
+<span id="cb1633-7"><a href="MC-estimation.html#cb1633-7"></a><span class="co"># but the program still requires initial values to begin</span></span>
+<span id="cb1633-8"><a href="MC-estimation.html#cb1633-8"></a><span class="co"># generate a random value.</span></span>
+<span id="cb1633-9"><a href="MC-estimation.html#cb1633-9"></a><span class="kw">modelGenInits</span>() <span class="co">#</span></span>
+<span id="cb1633-10"><a href="MC-estimation.html#cb1633-10"></a><span class="co"># Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb1633-11"><a href="MC-estimation.html#cb1633-11"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)</span>
+<span id="cb1633-12"><a href="MC-estimation.html#cb1633-12"></a><span class="kw">samplesSet</span>(parameters)</span>
+<span id="cb1633-13"><a href="MC-estimation.html#cb1633-13"></a><span class="co"># Generate 1000 iterations</span></span>
+<span id="cb1633-14"><a href="MC-estimation.html#cb1633-14"></a><span class="kw">modelUpdate</span>(<span class="dv">10000</span>)</span>
+<span id="cb1633-15"><a href="MC-estimation.html#cb1633-15"></a></span>
+<span id="cb1633-16"><a href="MC-estimation.html#cb1633-16"></a><span class="co">#### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb1633-17"><a href="MC-estimation.html#cb1633-17"></a>sample.statistics &lt;-<span class="st"> </span><span class="kw">samplesStats</span>(<span class="st">&quot;*&quot;</span>)</span>
+<span id="cb1633-18"><a href="MC-estimation.html#cb1633-18"></a><span class="kw">print</span>(sample.statistics)</span>
+<span id="cb1633-19"><a href="MC-estimation.html#cb1633-19"></a></span>
+<span id="cb1633-20"><a href="MC-estimation.html#cb1633-20"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb1633-21"><a href="MC-estimation.html#cb1633-21"></a>chain &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">theta =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;theta&quot;</span>),</span>
+<span id="cb1633-22"><a href="MC-estimation.html#cb1633-22"></a>                    <span class="dt">y =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;y&quot;</span>),</span>
+<span id="cb1633-23"><a href="MC-estimation.html#cb1633-23"></a>                    <span class="dt">P.crit =</span> <span class="kw">samplesSample</span>(<span class="st">&quot;P.crit&quot;</span>))</span>
+<span id="cb1633-24"><a href="MC-estimation.html#cb1633-24"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb1633-25"><a href="MC-estimation.html#cb1633-25"></a><span class="co">##1. samplesDensity(&quot;*&quot;, 1,  mfrow = c(2,2), ask=NULL)</span></span>
+<span id="cb1633-26"><a href="MC-estimation.html#cb1633-26"></a><span class="co"># or 2. by looping </span></span>
+<span id="cb1633-27"><a href="MC-estimation.html#cb1633-27"></a><span class="co"># for(p_ in parameters)</span></span>
+<span id="cb1633-28"><a href="MC-estimation.html#cb1633-28"></a><span class="co">#   {</span></span>
+<span id="cb1633-29"><a href="MC-estimation.html#cb1633-29"></a><span class="co">#     hist(chain[[p_]], main=p_,</span></span>
+<span id="cb1633-30"><a href="MC-estimation.html#cb1633-30"></a><span class="co">#          ylab=NA, xlab=NA, #prob = TRUE,</span></span>
+<span id="cb1633-31"><a href="MC-estimation.html#cb1633-31"></a><span class="co">#          nclas=50, col=&quot;red&quot;)</span></span>
+<span id="cb1633-32"><a href="MC-estimation.html#cb1633-32"></a><span class="co">#   }</span></span>
+<span id="cb1633-33"><a href="MC-estimation.html#cb1633-33"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb1633-34"><a href="MC-estimation.html#cb1633-34"></a></span>
+<span id="cb1633-35"><a href="MC-estimation.html#cb1633-35"></a><span class="kw">plot</span>(<span class="kw">density</span>(chain<span class="op">$</span>theta), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
+<span id="cb1633-36"><a href="MC-estimation.html#cb1633-36"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1633-37"><a href="MC-estimation.html#cb1633-37"></a><span class="kw">hist</span>(chain<span class="op">$</span>y, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, </span>
+<span id="cb1633-38"><a href="MC-estimation.html#cb1633-38"></a>     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <p>也可以使用JAGS完成該模型的蒙特卡羅模擬試驗計算：</p>
-<div class="sourceCode" id="cb1624"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1624-1"><a href="MC-estimation.html#cb1624-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1624-2"><a href="MC-estimation.html#cb1624-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1624-3"><a href="MC-estimation.html#cb1624-3"></a>                                     <span class="st">&quot;/backupfiles/drug-MC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1624-4"><a href="MC-estimation.html#cb1624-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1634"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1634-1"><a href="MC-estimation.html#cb1634-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1634-2"><a href="MC-estimation.html#cb1634-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb1634-3"><a href="MC-estimation.html#cb1634-3"></a>                                     <span class="st">&quot;/backupfiles/drug-MC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb1634-4"><a href="MC-estimation.html#cb1634-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2243,19 +2248,19 @@ model{
 ##    Total graph size: 8
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb1626"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1626-1"><a href="MC-estimation.html#cb1626-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
-<span id="cb1626-2"><a href="MC-estimation.html#cb1626-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb1626-3"><a href="MC-estimation.html#cb1626-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1626-4"><a href="MC-estimation.html#cb1626-4"></a></span>
-<span id="cb1626-5"><a href="MC-estimation.html#cb1626-5"></a><span class="co"># Step 3 set monitor variables</span></span>
-<span id="cb1626-6"><a href="MC-estimation.html#cb1626-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)</span>
-<span id="cb1626-7"><a href="MC-estimation.html#cb1626-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1626-8"><a href="MC-estimation.html#cb1626-8"></a>            jagsModel,</span>
-<span id="cb1626-9"><a href="MC-estimation.html#cb1626-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
-<span id="cb1626-10"><a href="MC-estimation.html#cb1626-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
-<span id="cb1626-11"><a href="MC-estimation.html#cb1626-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1626-12"><a href="MC-estimation.html#cb1626-12"></a></span>
-<span id="cb1626-13"><a href="MC-estimation.html#cb1626-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1636"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1636-1"><a href="MC-estimation.html#cb1636-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
+<span id="cb1636-2"><a href="MC-estimation.html#cb1636-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb1636-3"><a href="MC-estimation.html#cb1636-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1636-4"><a href="MC-estimation.html#cb1636-4"></a></span>
+<span id="cb1636-5"><a href="MC-estimation.html#cb1636-5"></a><span class="co"># Step 3 set monitor variables</span></span>
+<span id="cb1636-6"><a href="MC-estimation.html#cb1636-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)</span>
+<span id="cb1636-7"><a href="MC-estimation.html#cb1636-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1636-8"><a href="MC-estimation.html#cb1636-8"></a>            jagsModel,</span>
+<span id="cb1636-9"><a href="MC-estimation.html#cb1636-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
+<span id="cb1636-10"><a href="MC-estimation.html#cb1636-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
+<span id="cb1636-11"><a href="MC-estimation.html#cb1636-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1636-12"><a href="MC-estimation.html#cb1636-12"></a></span>
+<span id="cb1636-13"><a href="MC-estimation.html#cb1636-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 1001:11000
 ## Thinning interval = 1 
@@ -2276,27 +2281,27 @@ model{
 ## P.crit 0.00000 0.00000 0.00000  0.0000  0.00000
 ## theta  0.21224 0.33034 0.39798  0.4675  0.60284
 ## y      3.00000 6.00000 8.00000 10.0000 14.00000</code></pre>
-<div class="sourceCode" id="cb1628"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1628-1"><a href="MC-estimation.html#cb1628-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb1628-2"><a href="MC-estimation.html#cb1628-2"></a><span class="co"># par(mfrow=c(1,2))</span></span>
-<span id="cb1628-3"><a href="MC-estimation.html#cb1628-3"></a><span class="co"># </span></span>
-<span id="cb1628-4"><a href="MC-estimation.html#cb1628-4"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
-<span id="cb1628-5"><a href="MC-estimation.html#cb1628-5"></a><span class="co"># ggSample %&gt;% </span></span>
-<span id="cb1628-6"><a href="MC-estimation.html#cb1628-6"></a><span class="co">#   filter(Parameter == &quot;theta&quot;) %&gt;% </span></span>
-<span id="cb1628-7"><a href="MC-estimation.html#cb1628-7"></a><span class="co">#   ggs_density()</span></span>
-<span id="cb1628-8"><a href="MC-estimation.html#cb1628-8"></a><span class="co"># </span></span>
-<span id="cb1628-9"><a href="MC-estimation.html#cb1628-9"></a><span class="co"># ggSample %&gt;% </span></span>
-<span id="cb1628-10"><a href="MC-estimation.html#cb1628-10"></a><span class="co">#   filter(Parameter == &quot;y&quot;) %&gt;% </span></span>
-<span id="cb1628-11"><a href="MC-estimation.html#cb1628-11"></a><span class="co">#   ggs_histogram(bin = 38)</span></span>
-<span id="cb1628-12"><a href="MC-estimation.html#cb1628-12"></a></span>
-<span id="cb1628-13"><a href="MC-estimation.html#cb1628-13"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
-<span id="cb1628-14"><a href="MC-estimation.html#cb1628-14"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1628-15"><a href="MC-estimation.html#cb1628-15"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
-<span id="cb1628-16"><a href="MC-estimation.html#cb1628-16"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1628-17"><a href="MC-estimation.html#cb1628-17"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
-<span id="cb1628-18"><a href="MC-estimation.html#cb1628-18"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
-<span id="cb1628-19"><a href="MC-estimation.html#cb1628-19"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
-<span id="cb1628-20"><a href="MC-estimation.html#cb1628-20"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, </span>
-<span id="cb1628-21"><a href="MC-estimation.html#cb1628-21"></a>     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1638"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1638-1"><a href="MC-estimation.html#cb1638-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb1638-2"><a href="MC-estimation.html#cb1638-2"></a><span class="co"># par(mfrow=c(1,2))</span></span>
+<span id="cb1638-3"><a href="MC-estimation.html#cb1638-3"></a><span class="co"># </span></span>
+<span id="cb1638-4"><a href="MC-estimation.html#cb1638-4"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
+<span id="cb1638-5"><a href="MC-estimation.html#cb1638-5"></a><span class="co"># ggSample %&gt;% </span></span>
+<span id="cb1638-6"><a href="MC-estimation.html#cb1638-6"></a><span class="co">#   filter(Parameter == &quot;theta&quot;) %&gt;% </span></span>
+<span id="cb1638-7"><a href="MC-estimation.html#cb1638-7"></a><span class="co">#   ggs_density()</span></span>
+<span id="cb1638-8"><a href="MC-estimation.html#cb1638-8"></a><span class="co"># </span></span>
+<span id="cb1638-9"><a href="MC-estimation.html#cb1638-9"></a><span class="co"># ggSample %&gt;% </span></span>
+<span id="cb1638-10"><a href="MC-estimation.html#cb1638-10"></a><span class="co">#   filter(Parameter == &quot;y&quot;) %&gt;% </span></span>
+<span id="cb1638-11"><a href="MC-estimation.html#cb1638-11"></a><span class="co">#   ggs_histogram(bin = 38)</span></span>
+<span id="cb1638-12"><a href="MC-estimation.html#cb1638-12"></a></span>
+<span id="cb1638-13"><a href="MC-estimation.html#cb1638-13"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb1638-14"><a href="MC-estimation.html#cb1638-14"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1638-15"><a href="MC-estimation.html#cb1638-15"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
+<span id="cb1638-16"><a href="MC-estimation.html#cb1638-16"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1638-17"><a href="MC-estimation.html#cb1638-17"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
+<span id="cb1638-18"><a href="MC-estimation.html#cb1638-18"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
+<span id="cb1638-19"><a href="MC-estimation.html#cb1638-19"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1638-20"><a href="MC-estimation.html#cb1638-20"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, </span>
+<span id="cb1638-21"><a href="MC-estimation.html#cb1638-21"></a>     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:JAGS02"></span>
 <img src="bookdown_files/figure-html/JAGS02-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
 <p class="caption">
@@ -2313,10 +2318,10 @@ model{
 	y         ~ dbin(theta,20)         # sampling distribution
 	P.crit   &lt;- step(y-14.5)           # =1 if y &gt;= 15, 0 otherwise
 }</code></pre>
-<div class="sourceCode" id="cb1630"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1630-1"><a href="MC-estimation.html#cb1630-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1630-2"><a href="MC-estimation.html#cb1630-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1630-3"><a href="MC-estimation.html#cb1630-3"></a>                                     <span class="st">&quot;/backupfiles/drug-MCuniform.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1630-4"><a href="MC-estimation.html#cb1630-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1640"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1640-1"><a href="MC-estimation.html#cb1640-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1640-2"><a href="MC-estimation.html#cb1640-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb1640-3"><a href="MC-estimation.html#cb1640-3"></a>                                     <span class="st">&quot;/backupfiles/drug-MCuniform.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb1640-4"><a href="MC-estimation.html#cb1640-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2326,19 +2331,19 @@ model{
 ##    Total graph size: 8
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb1632"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1632-1"><a href="MC-estimation.html#cb1632-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
-<span id="cb1632-2"><a href="MC-estimation.html#cb1632-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb1632-3"><a href="MC-estimation.html#cb1632-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1632-4"><a href="MC-estimation.html#cb1632-4"></a></span>
-<span id="cb1632-5"><a href="MC-estimation.html#cb1632-5"></a><span class="co"># Step 3 set monitor variables</span></span>
-<span id="cb1632-6"><a href="MC-estimation.html#cb1632-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)</span>
-<span id="cb1632-7"><a href="MC-estimation.html#cb1632-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1632-8"><a href="MC-estimation.html#cb1632-8"></a>            jagsModel,</span>
-<span id="cb1632-9"><a href="MC-estimation.html#cb1632-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
-<span id="cb1632-10"><a href="MC-estimation.html#cb1632-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
-<span id="cb1632-11"><a href="MC-estimation.html#cb1632-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1632-12"><a href="MC-estimation.html#cb1632-12"></a></span>
-<span id="cb1632-13"><a href="MC-estimation.html#cb1632-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1642"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1642-1"><a href="MC-estimation.html#cb1642-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
+<span id="cb1642-2"><a href="MC-estimation.html#cb1642-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb1642-3"><a href="MC-estimation.html#cb1642-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1642-4"><a href="MC-estimation.html#cb1642-4"></a></span>
+<span id="cb1642-5"><a href="MC-estimation.html#cb1642-5"></a><span class="co"># Step 3 set monitor variables</span></span>
+<span id="cb1642-6"><a href="MC-estimation.html#cb1642-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y&quot;</span>, <span class="st">&quot;P.crit&quot;</span>)</span>
+<span id="cb1642-7"><a href="MC-estimation.html#cb1642-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1642-8"><a href="MC-estimation.html#cb1642-8"></a>            jagsModel,</span>
+<span id="cb1642-9"><a href="MC-estimation.html#cb1642-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
+<span id="cb1642-10"><a href="MC-estimation.html#cb1642-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
+<span id="cb1642-11"><a href="MC-estimation.html#cb1642-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1642-12"><a href="MC-estimation.html#cb1642-12"></a></span>
+<span id="cb1642-13"><a href="MC-estimation.html#cb1642-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 1001:11000
 ## Thinning interval = 1 
@@ -2359,18 +2364,18 @@ model{
 ## P.crit 0.000000 0.00000  0.00000  1.00000  1.00000
 ## theta  0.024636 0.25326  0.50915  0.75261  0.97467
 ## y      0.000000 5.00000 10.00000 15.00000 20.00000</code></pre>
-<div class="sourceCode" id="cb1634"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1634-1"><a href="MC-estimation.html#cb1634-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb1634-2"><a href="MC-estimation.html#cb1634-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
-<span id="cb1634-3"><a href="MC-estimation.html#cb1634-3"></a></span>
-<span id="cb1634-4"><a href="MC-estimation.html#cb1634-4"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
-<span id="cb1634-5"><a href="MC-estimation.html#cb1634-5"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1634-6"><a href="MC-estimation.html#cb1634-6"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
-<span id="cb1634-7"><a href="MC-estimation.html#cb1634-7"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1634-8"><a href="MC-estimation.html#cb1634-8"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
-<span id="cb1634-9"><a href="MC-estimation.html#cb1634-9"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
-<span id="cb1634-10"><a href="MC-estimation.html#cb1634-10"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
-<span id="cb1634-11"><a href="MC-estimation.html#cb1634-11"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, </span>
-<span id="cb1634-12"><a href="MC-estimation.html#cb1634-12"></a>     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1644"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1644-1"><a href="MC-estimation.html#cb1644-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb1644-2"><a href="MC-estimation.html#cb1644-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
+<span id="cb1644-3"><a href="MC-estimation.html#cb1644-3"></a></span>
+<span id="cb1644-4"><a href="MC-estimation.html#cb1644-4"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb1644-5"><a href="MC-estimation.html#cb1644-5"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1644-6"><a href="MC-estimation.html#cb1644-6"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
+<span id="cb1644-7"><a href="MC-estimation.html#cb1644-7"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1644-8"><a href="MC-estimation.html#cb1644-8"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
+<span id="cb1644-9"><a href="MC-estimation.html#cb1644-9"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
+<span id="cb1644-10"><a href="MC-estimation.html#cb1644-10"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;theta&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1644-11"><a href="MC-estimation.html#cb1644-11"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(Y)&quot;</span>, </span>
+<span id="cb1644-12"><a href="MC-estimation.html#cb1644-12"></a>     <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:12-JAGS-stats-4"></span>
 <img src="bookdown_files/figure-html/12-JAGS-stats-4-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
 <p class="caption">
@@ -2391,10 +2396,10 @@ model{
 	p.2     &lt;- step(-2.32 - x)         # = 1 if x &lt;= -2.32, 0 otherwise
 }</code></pre>
 <p>分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。</p>
-<div class="sourceCode" id="cb1636"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1636-1"><a href="MC-estimation.html#cb1636-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1636-2"><a href="MC-estimation.html#cb1636-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1636-3"><a href="MC-estimation.html#cb1636-3"></a>                                     <span class="st">&quot;/backupfiles/standardnormalMC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1636-4"><a href="MC-estimation.html#cb1636-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1646"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1646-1"><a href="MC-estimation.html#cb1646-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1646-2"><a href="MC-estimation.html#cb1646-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb1646-3"><a href="MC-estimation.html#cb1646-3"></a>                                     <span class="st">&quot;/backupfiles/standardnormalMC.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb1646-4"><a href="MC-estimation.html#cb1646-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2404,19 +2409,19 @@ model{
 ##    Total graph size: 11
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb1638"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1638-1"><a href="MC-estimation.html#cb1638-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
-<span id="cb1638-2"><a href="MC-estimation.html#cb1638-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, </span>
-<span id="cb1638-3"><a href="MC-estimation.html#cb1638-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1638-4"><a href="MC-estimation.html#cb1638-4"></a></span>
-<span id="cb1638-5"><a href="MC-estimation.html#cb1638-5"></a><span class="co"># Step 3 set monitor variables</span></span>
-<span id="cb1638-6"><a href="MC-estimation.html#cb1638-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p.1&quot;</span>, <span class="st">&quot;p.2&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
-<span id="cb1638-7"><a href="MC-estimation.html#cb1638-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1638-8"><a href="MC-estimation.html#cb1638-8"></a>            jagsModel,</span>
-<span id="cb1638-9"><a href="MC-estimation.html#cb1638-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
-<span id="cb1638-10"><a href="MC-estimation.html#cb1638-10"></a>            <span class="dt">n.iter =</span> <span class="dv">100</span>, </span>
-<span id="cb1638-11"><a href="MC-estimation.html#cb1638-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1638-12"><a href="MC-estimation.html#cb1638-12"></a></span>
-<span id="cb1638-13"><a href="MC-estimation.html#cb1638-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1648"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1648-1"><a href="MC-estimation.html#cb1648-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
+<span id="cb1648-2"><a href="MC-estimation.html#cb1648-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, </span>
+<span id="cb1648-3"><a href="MC-estimation.html#cb1648-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1648-4"><a href="MC-estimation.html#cb1648-4"></a></span>
+<span id="cb1648-5"><a href="MC-estimation.html#cb1648-5"></a><span class="co"># Step 3 set monitor variables</span></span>
+<span id="cb1648-6"><a href="MC-estimation.html#cb1648-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;p.1&quot;</span>, <span class="st">&quot;p.2&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
+<span id="cb1648-7"><a href="MC-estimation.html#cb1648-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1648-8"><a href="MC-estimation.html#cb1648-8"></a>            jagsModel,</span>
+<span id="cb1648-9"><a href="MC-estimation.html#cb1648-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
+<span id="cb1648-10"><a href="MC-estimation.html#cb1648-10"></a>            <span class="dt">n.iter =</span> <span class="dv">100</span>, </span>
+<span id="cb1648-11"><a href="MC-estimation.html#cb1648-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1648-12"><a href="MC-estimation.html#cb1648-12"></a></span>
+<span id="cb1648-13"><a href="MC-estimation.html#cb1648-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 11:110
 ## Thinning interval = 1 
@@ -2437,14 +2442,14 @@ model{
 ## p.1  0.0000  0.00000  0.00000 0.00000 0.0000
 ## p.2  0.0000  0.00000  0.00000 0.00000 0.0000
 ## x   -1.7745 -0.73294 -0.12537 0.91273 1.9414</code></pre>
-<div class="sourceCode" id="cb1640"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1640-1"><a href="MC-estimation.html#cb1640-1"></a><span class="co"># Generate 900 iterations</span></span>
-<span id="cb1640-2"><a href="MC-estimation.html#cb1640-2"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1640-3"><a href="MC-estimation.html#cb1640-3"></a>            jagsModel,</span>
-<span id="cb1640-4"><a href="MC-estimation.html#cb1640-4"></a>            <span class="dt">variable.names =</span> parameters,</span>
-<span id="cb1640-5"><a href="MC-estimation.html#cb1640-5"></a>            <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
-<span id="cb1640-6"><a href="MC-estimation.html#cb1640-6"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1640-7"><a href="MC-estimation.html#cb1640-7"></a></span>
-<span id="cb1640-8"><a href="MC-estimation.html#cb1640-8"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1650"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1650-1"><a href="MC-estimation.html#cb1650-1"></a><span class="co"># Generate 900 iterations</span></span>
+<span id="cb1650-2"><a href="MC-estimation.html#cb1650-2"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1650-3"><a href="MC-estimation.html#cb1650-3"></a>            jagsModel,</span>
+<span id="cb1650-4"><a href="MC-estimation.html#cb1650-4"></a>            <span class="dt">variable.names =</span> parameters,</span>
+<span id="cb1650-5"><a href="MC-estimation.html#cb1650-5"></a>            <span class="dt">n.iter =</span> <span class="dv">1000</span>, </span>
+<span id="cb1650-6"><a href="MC-estimation.html#cb1650-6"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1650-7"><a href="MC-estimation.html#cb1650-7"></a></span>
+<span id="cb1650-8"><a href="MC-estimation.html#cb1650-8"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 111:1110
 ## Thinning interval = 1 
@@ -2465,14 +2470,14 @@ model{
 ## p.1  0.0000  0.00000  0.000000 0.00000 1.0000
 ## p.2  0.0000  0.00000  0.000000 0.00000 0.0000
 ## x   -2.0729 -0.71985 -0.024213 0.63396 1.8795</code></pre>
-<div class="sourceCode" id="cb1642"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1642-1"><a href="MC-estimation.html#cb1642-1"></a><span class="co"># Generate 100000 iterations</span></span>
-<span id="cb1642-2"><a href="MC-estimation.html#cb1642-2"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1642-3"><a href="MC-estimation.html#cb1642-3"></a>            jagsModel,</span>
-<span id="cb1642-4"><a href="MC-estimation.html#cb1642-4"></a>            <span class="dt">variable.names =</span> parameters,</span>
-<span id="cb1642-5"><a href="MC-estimation.html#cb1642-5"></a>            <span class="dt">n.iter =</span> <span class="dv">100000</span>, </span>
-<span id="cb1642-6"><a href="MC-estimation.html#cb1642-6"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1642-7"><a href="MC-estimation.html#cb1642-7"></a></span>
-<span id="cb1642-8"><a href="MC-estimation.html#cb1642-8"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1652"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1652-1"><a href="MC-estimation.html#cb1652-1"></a><span class="co"># Generate 100000 iterations</span></span>
+<span id="cb1652-2"><a href="MC-estimation.html#cb1652-2"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1652-3"><a href="MC-estimation.html#cb1652-3"></a>            jagsModel,</span>
+<span id="cb1652-4"><a href="MC-estimation.html#cb1652-4"></a>            <span class="dt">variable.names =</span> parameters,</span>
+<span id="cb1652-5"><a href="MC-estimation.html#cb1652-5"></a>            <span class="dt">n.iter =</span> <span class="dv">100000</span>, </span>
+<span id="cb1652-6"><a href="MC-estimation.html#cb1652-6"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1652-7"><a href="MC-estimation.html#cb1652-7"></a></span>
+<span id="cb1652-8"><a href="MC-estimation.html#cb1652-8"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 1111:101110
 ## Thinning interval = 1 
@@ -2501,10 +2506,10 @@ model{
 model{
   y ~ dt(0, 1, 4)
 }</code></pre>
-<div class="sourceCode" id="cb1645"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1645-1"><a href="MC-estimation.html#cb1645-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1645-2"><a href="MC-estimation.html#cb1645-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1645-3"><a href="MC-estimation.html#cb1645-3"></a>                                     <span class="st">&quot;/backupfiles/MCt.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1645-4"><a href="MC-estimation.html#cb1645-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1655"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1655-1"><a href="MC-estimation.html#cb1655-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1655-2"><a href="MC-estimation.html#cb1655-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb1655-3"><a href="MC-estimation.html#cb1655-3"></a>                                     <span class="st">&quot;/backupfiles/MCt.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb1655-4"><a href="MC-estimation.html#cb1655-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2514,19 +2519,19 @@ model{
 ##    Total graph size: 4
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb1647"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1647-1"><a href="MC-estimation.html#cb1647-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
-<span id="cb1647-2"><a href="MC-estimation.html#cb1647-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, </span>
-<span id="cb1647-3"><a href="MC-estimation.html#cb1647-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1647-4"><a href="MC-estimation.html#cb1647-4"></a></span>
-<span id="cb1647-5"><a href="MC-estimation.html#cb1647-5"></a><span class="co"># Step 3 set monitor variables</span></span>
-<span id="cb1647-6"><a href="MC-estimation.html#cb1647-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>)</span>
-<span id="cb1647-7"><a href="MC-estimation.html#cb1647-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1647-8"><a href="MC-estimation.html#cb1647-8"></a>            jagsModel,</span>
-<span id="cb1647-9"><a href="MC-estimation.html#cb1647-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
-<span id="cb1647-10"><a href="MC-estimation.html#cb1647-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
-<span id="cb1647-11"><a href="MC-estimation.html#cb1647-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1647-12"><a href="MC-estimation.html#cb1647-12"></a></span>
-<span id="cb1647-13"><a href="MC-estimation.html#cb1647-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1657"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1657-1"><a href="MC-estimation.html#cb1657-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
+<span id="cb1657-2"><a href="MC-estimation.html#cb1657-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, </span>
+<span id="cb1657-3"><a href="MC-estimation.html#cb1657-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1657-4"><a href="MC-estimation.html#cb1657-4"></a></span>
+<span id="cb1657-5"><a href="MC-estimation.html#cb1657-5"></a><span class="co"># Step 3 set monitor variables</span></span>
+<span id="cb1657-6"><a href="MC-estimation.html#cb1657-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>)</span>
+<span id="cb1657-7"><a href="MC-estimation.html#cb1657-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1657-8"><a href="MC-estimation.html#cb1657-8"></a>            jagsModel,</span>
+<span id="cb1657-9"><a href="MC-estimation.html#cb1657-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
+<span id="cb1657-10"><a href="MC-estimation.html#cb1657-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
+<span id="cb1657-11"><a href="MC-estimation.html#cb1657-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1657-12"><a href="MC-estimation.html#cb1657-12"></a></span>
+<span id="cb1657-13"><a href="MC-estimation.html#cb1657-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 11:10010
 ## Thinning interval = 1 
@@ -2543,15 +2548,15 @@ model{
 ## 
 ##       2.5%        25%        50%        75%      97.5% 
 ## -2.8040534 -0.7352612 -0.0016567  0.7393625  2.8365657</code></pre>
-<div class="sourceCode" id="cb1649"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1649-1"><a href="MC-estimation.html#cb1649-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb1649-2"><a href="MC-estimation.html#cb1649-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
-<span id="cb1649-3"><a href="MC-estimation.html#cb1649-3"></a></span>
-<span id="cb1649-4"><a href="MC-estimation.html#cb1649-4"></a></span>
-<span id="cb1649-5"><a href="MC-estimation.html#cb1649-5"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1649-6"><a href="MC-estimation.html#cb1649-6"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
-<span id="cb1649-7"><a href="MC-estimation.html#cb1649-7"></a></span>
-<span id="cb1649-8"><a href="MC-estimation.html#cb1649-8"></a><span class="kw">plot</span>(<span class="kw">density</span>(Y<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, </span>
-<span id="cb1649-9"><a href="MC-estimation.html#cb1649-9"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1659"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1659-1"><a href="MC-estimation.html#cb1659-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb1659-2"><a href="MC-estimation.html#cb1659-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
+<span id="cb1659-3"><a href="MC-estimation.html#cb1659-3"></a></span>
+<span id="cb1659-4"><a href="MC-estimation.html#cb1659-4"></a></span>
+<span id="cb1659-5"><a href="MC-estimation.html#cb1659-5"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1659-6"><a href="MC-estimation.html#cb1659-6"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
+<span id="cb1659-7"><a href="MC-estimation.html#cb1659-7"></a></span>
+<span id="cb1659-8"><a href="MC-estimation.html#cb1659-8"></a><span class="kw">plot</span>(<span class="kw">density</span>(Y<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, </span>
+<span id="cb1659-9"><a href="MC-estimation.html#cb1659-9"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:12-Bayesian-stats-6"></span>
 <img src="bookdown_files/figure-html/12-Bayesian-stats-6-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
 <p class="caption">
@@ -2565,10 +2570,10 @@ model{
   y ~ dnorm(1, 0.25) 
   ycubed &lt;- pow(y, 3) # note how to write power in BUGS
 }</code></pre>
-<div class="sourceCode" id="cb1651"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1651-1"><a href="MC-estimation.html#cb1651-1"></a><span class="co"># Step 1 check model</span></span>
-<span id="cb1651-2"><a href="MC-estimation.html#cb1651-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb1651-3"><a href="MC-estimation.html#cb1651-3"></a>                                     <span class="st">&quot;/backupfiles/MCcube.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb1651-4"><a href="MC-estimation.html#cb1651-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1661"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1661-1"><a href="MC-estimation.html#cb1661-1"></a><span class="co"># Step 1 check model</span></span>
+<span id="cb1661-2"><a href="MC-estimation.html#cb1661-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags.model</span>(<span class="dt">file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb1661-3"><a href="MC-estimation.html#cb1661-3"></a>                                     <span class="st">&quot;/backupfiles/MCcube.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb1661-4"><a href="MC-estimation.html#cb1661-4"></a>                        <span class="dt">n.chains =</span> <span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2578,19 +2583,19 @@ model{
 ##    Total graph size: 5
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb1653"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1653-1"><a href="MC-estimation.html#cb1653-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
-<span id="cb1653-2"><a href="MC-estimation.html#cb1653-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, </span>
-<span id="cb1653-3"><a href="MC-estimation.html#cb1653-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1653-4"><a href="MC-estimation.html#cb1653-4"></a></span>
-<span id="cb1653-5"><a href="MC-estimation.html#cb1653-5"></a><span class="co"># Step 3 set monitor variables</span></span>
-<span id="cb1653-6"><a href="MC-estimation.html#cb1653-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>, <span class="st">&quot;ycubed&quot;</span>)</span>
-<span id="cb1653-7"><a href="MC-estimation.html#cb1653-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
-<span id="cb1653-8"><a href="MC-estimation.html#cb1653-8"></a>            jagsModel,</span>
-<span id="cb1653-9"><a href="MC-estimation.html#cb1653-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
-<span id="cb1653-10"><a href="MC-estimation.html#cb1653-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
-<span id="cb1653-11"><a href="MC-estimation.html#cb1653-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
-<span id="cb1653-12"><a href="MC-estimation.html#cb1653-12"></a></span>
-<span id="cb1653-13"><a href="MC-estimation.html#cb1653-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
+<div class="sourceCode" id="cb1663"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1663-1"><a href="MC-estimation.html#cb1663-1"></a><span class="co"># Step 2 update 1000 iterations</span></span>
+<span id="cb1663-2"><a href="MC-estimation.html#cb1663-2"></a><span class="kw">update</span>(jagsModel, <span class="dt">n.iter =</span> <span class="dv">10</span>, </span>
+<span id="cb1663-3"><a href="MC-estimation.html#cb1663-3"></a>        <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1663-4"><a href="MC-estimation.html#cb1663-4"></a></span>
+<span id="cb1663-5"><a href="MC-estimation.html#cb1663-5"></a><span class="co"># Step 3 set monitor variables</span></span>
+<span id="cb1663-6"><a href="MC-estimation.html#cb1663-6"></a>parameters &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;y&quot;</span>, <span class="st">&quot;ycubed&quot;</span>)</span>
+<span id="cb1663-7"><a href="MC-estimation.html#cb1663-7"></a>codaSamples &lt;-<span class="st"> </span><span class="kw">coda.samples</span>(</span>
+<span id="cb1663-8"><a href="MC-estimation.html#cb1663-8"></a>            jagsModel,</span>
+<span id="cb1663-9"><a href="MC-estimation.html#cb1663-9"></a>            <span class="dt">variable.names =</span> parameters,</span>
+<span id="cb1663-10"><a href="MC-estimation.html#cb1663-10"></a>            <span class="dt">n.iter =</span> <span class="dv">10000</span>, </span>
+<span id="cb1663-11"><a href="MC-estimation.html#cb1663-11"></a>            <span class="dt">progress.bar=</span><span class="st">&quot;none&quot;</span>)</span>
+<span id="cb1663-12"><a href="MC-estimation.html#cb1663-12"></a></span>
+<span id="cb1663-13"><a href="MC-estimation.html#cb1663-13"></a><span class="kw">summary</span>(codaSamples)</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 11:10010
 ## Thinning interval = 1 
@@ -2609,21 +2614,21 @@ model{
 ##            2.5%       25%    50%     75%   97.5%
 ## y       -2.9124 -0.347925 1.0101  2.3833   4.915
 ## ycubed -24.7038 -0.042117 1.0307 13.5377 118.733</code></pre>
-<div class="sourceCode" id="cb1655"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1655-1"><a href="MC-estimation.html#cb1655-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb1655-2"><a href="MC-estimation.html#cb1655-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
-<span id="cb1655-3"><a href="MC-estimation.html#cb1655-3"></a></span>
-<span id="cb1655-4"><a href="MC-estimation.html#cb1655-4"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
-<span id="cb1655-5"><a href="MC-estimation.html#cb1655-5"></a></span>
-<span id="cb1655-6"><a href="MC-estimation.html#cb1655-6"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1655-7"><a href="MC-estimation.html#cb1655-7"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
-<span id="cb1655-8"><a href="MC-estimation.html#cb1655-8"></a>Ycubed &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb1655-9"><a href="MC-estimation.html#cb1655-9"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;ycubed&quot;</span>)</span>
-<span id="cb1655-10"><a href="MC-estimation.html#cb1655-10"></a></span>
-<span id="cb1655-11"><a href="MC-estimation.html#cb1655-11"></a><span class="kw">plot</span>(<span class="kw">density</span>(Y<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, </span>
-<span id="cb1655-12"><a href="MC-estimation.html#cb1655-12"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
-<span id="cb1655-13"><a href="MC-estimation.html#cb1655-13"></a></span>
-<span id="cb1655-14"><a href="MC-estimation.html#cb1655-14"></a><span class="kw">plot</span>(<span class="kw">density</span>(Ycubed<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;ycubed sample 100000&quot;</span>, </span>
-<span id="cb1655-15"><a href="MC-estimation.html#cb1655-15"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(ycubed)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;ycubed&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1665"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1665-1"><a href="MC-estimation.html#cb1665-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb1665-2"><a href="MC-estimation.html#cb1665-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(codaSamples)</span>
+<span id="cb1665-3"><a href="MC-estimation.html#cb1665-3"></a></span>
+<span id="cb1665-4"><a href="MC-estimation.html#cb1665-4"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb1665-5"><a href="MC-estimation.html#cb1665-5"></a></span>
+<span id="cb1665-6"><a href="MC-estimation.html#cb1665-6"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1665-7"><a href="MC-estimation.html#cb1665-7"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y&quot;</span>)</span>
+<span id="cb1665-8"><a href="MC-estimation.html#cb1665-8"></a>Ycubed &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1665-9"><a href="MC-estimation.html#cb1665-9"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;ycubed&quot;</span>)</span>
+<span id="cb1665-10"><a href="MC-estimation.html#cb1665-10"></a></span>
+<span id="cb1665-11"><a href="MC-estimation.html#cb1665-11"></a><span class="kw">plot</span>(<span class="kw">density</span>(Y<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;y sample 10000&quot;</span>, </span>
+<span id="cb1665-12"><a href="MC-estimation.html#cb1665-12"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(y)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;y&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb1665-13"><a href="MC-estimation.html#cb1665-13"></a></span>
+<span id="cb1665-14"><a href="MC-estimation.html#cb1665-14"></a><span class="kw">plot</span>(<span class="kw">density</span>(Ycubed<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;ycubed sample 100000&quot;</span>, </span>
+<span id="cb1665-15"><a href="MC-estimation.html#cb1665-15"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(ycubed)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;ycubed&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:12-Bayesian-stats-7"></span>
 <img src="bookdown_files/figure-html/12-Bayesian-stats-7-1.png" alt="Predictive distribution of the nodes of interest." width="80%" />
 <p class="caption">

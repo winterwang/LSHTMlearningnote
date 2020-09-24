@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-09-24" />
+<meta name="date" content="2020-09-25" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -801,6 +801,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="48.1" data-path="-many-more-variables.html"><a href="-many-more-variables.html#虛假的相關性"><i class="fa fa-check"></i><b>48.1</b> 虛假的相關性</a></li>
 <li class="chapter" data-level="48.2" data-path="-many-more-variables.html"><a href="-many-more-variables.html#繪製輔助我們理解的有向無環圖"><i class="fa fa-check"></i><b>48.2</b> 繪製輔助我們理解的有向無環圖</a></li>
+<li class="chapter" data-level="48.3" data-path="-many-more-variables.html"><a href="-many-more-variables.html#多重線性回歸模型的表達"><i class="fa fa-check"></i><b>48.3</b> 多重線性回歸模型的表達</a>
+<ul>
+<li class="chapter" data-level="48.3.1" data-path="-many-more-variables.html"><a href="-many-more-variables.html#預測變量殘差圖-predictor-residual-plots"><i class="fa fa-check"></i><b>48.3.1</b> 預測變量殘差圖 predictor residual plots</a></li>
+<li class="chapter" data-level="48.3.2" data-path="-many-more-variables.html"><a href="-many-more-variables.html#事後分佈預測圖-posterior-prediction-plots"><i class="fa fa-check"></i><b>48.3.2</b> 事後分佈預測圖 posterior prediction plots</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="49" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>49</b> 重要概念複習</a>
@@ -1923,10 +1928,205 @@ D \perp\!\!\!\perp M |A
 <p>你會看見你的計算機不給出任何結果，這是因為此時沒有條件獨立性的關係。</p>
 <p>多重線型回歸，其實是幫我們描述這樣一個問題：</p>
 <blockquote>
-<p>當已知的變量都已經控制了的時候，新增的一個變量，是否會對結果變量的信息還有任何可能的貢獻？
+<p>當已知的變量都已經控制了的時候，新增的一個變量，是否會對結果變量的信息還有任何額外的貢獻？
 Is there any additional value in knowing a variable, once I already know all of the other predictor variables?</p>
 </blockquote>
+</div>
+<div id="多重線性回歸模型的表達" class="section level2" number="48.3">
+<h2><span class="header-section-number">48.3</span> 多重線性回歸模型的表達</h2>
+<p>入果我們為離婚率數據設定結婚年齡中位數，和結婚率兩個變量作為預測變量的線性回歸模型，可以描述成；</p>
+<p><span class="math display">\[
+\begin{aligned}
+D_i &amp; \sim \text{Normal}(\mu_i, \sigma)   &amp; \text{[Probability of data]} \\
+\mu_i &amp; = \alpha + \beta_M M_i + \beta_A A_i  &amp; \text{[Linear model]} \\
+\alpha &amp; \sim \text{Normal}(0, 0.2)  &amp; \text{[Prior for } \alpha] \\
+\beta_M &amp; \sim \text{Normal}(0, 0.5) &amp; \text{[Prior for } \beta_M] \\
+\beta_A &amp; \sim \text{Normal}(0, 0.5) &amp; \text{[Prior for } \beta_A] \\ 
+\sigma  &amp; \sim \text{Exponential}(1) &amp; \text{[Prior for } \sigma]
+\end{aligned}
+\]</span></p>
+<p>實際運行這個模型：</p>
+<div class="sourceCode" id="cb604"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb604-1"><a href="-many-more-variables.html#cb604-1"></a>m5<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb604-2"><a href="-many-more-variables.html#cb604-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb604-3"><a href="-many-more-variables.html#cb604-3"></a>    D <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu, sigma),</span>
+<span id="cb604-4"><a href="-many-more-variables.html#cb604-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bM <span class="op">*</span><span class="st"> </span>M <span class="op">+</span><span class="st"> </span>bA <span class="op">*</span><span class="st"> </span>A, </span>
+<span id="cb604-5"><a href="-many-more-variables.html#cb604-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.2</span>), </span>
+<span id="cb604-6"><a href="-many-more-variables.html#cb604-6"></a>    bM <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>),</span>
+<span id="cb604-7"><a href="-many-more-variables.html#cb604-7"></a>    bA <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>),</span>
+<span id="cb604-8"><a href="-many-more-variables.html#cb604-8"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb604-9"><a href="-many-more-variables.html#cb604-9"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb604-10"><a href="-many-more-variables.html#cb604-10"></a>)</span>
+<span id="cb604-11"><a href="-many-more-variables.html#cb604-11"></a><span class="kw">precis</span>(m5<span class="fl">.3</span>)</span></code></pre></div>
+<pre><code>##                 mean          sd        5.5%       94.5%
+## a      6.1457914e-06 0.097075027 -0.15513850  0.15515079
+## bM    -6.5398990e-02 0.150771110 -0.30636034  0.17556236
+## bA    -6.1352639e-01 0.150981657 -0.85482423 -0.37222854
+## sigma  7.8510739e-01 0.077840766  0.66070281  0.90951197</code></pre>
+<p>我們來比較一下 <code>bM, bA</code> 在不同模型中的表現：</p>
+<div class="sourceCode" id="cb606"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb606-1"><a href="-many-more-variables.html#cb606-1"></a><span class="kw">plot</span>( <span class="kw">coeftab</span>(m5<span class="fl">.1</span>, m5<span class="fl">.2</span>, m5<span class="fl">.3</span>), <span class="dt">par =</span> <span class="kw">c</span>(<span class="st">&quot;bA&quot;</span>, <span class="st">&quot;bM&quot;</span>), </span>
+<span id="cb606-2"><a href="-many-more-variables.html#cb606-2"></a>      <span class="dt">xlab =</span> <span class="st">&quot;Posterior with 89% credible intervals&quot;</span>)</span>
+<span id="cb606-3"><a href="-many-more-variables.html#cb606-3"></a><span class="kw">text</span>(<span class="op">-</span><span class="fl">0.8</span>, <span class="dv">9</span>, <span class="st">&quot;bA&quot;</span>, <span class="dt">font =</span> <span class="dv">2</span>)</span>
+<span id="cb606-4"><a href="-many-more-variables.html#cb606-4"></a><span class="kw">text</span>(<span class="op">-</span><span class="fl">0.3</span>, <span class="dv">4</span>, <span class="st">&quot;bM&quot;</span>, <span class="dt">font =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig07"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig07-1.png" alt="The posterior distributions for parameters of bA and bM among all models." width="528" />
+<p class="caption">
+圖 48.7: The posterior distributions for parameters of bA and bM among all models.
+</p>
+</div>
+<p>這個圖顯示的是回歸係數 <code>bA, bM</code> 在不同模型中的表現。</p>
+<ul>
+<li>m5.1是只放了一個結婚率 M</li>
+<li>m5.2是只放了一個結婚年齡中位數 A</li>
+<li>m5.3是同時放入結婚率M，和年齡中位數 A</li>
+</ul>
+<p>可以觀察到，年齡中位數的回歸係屬並不因為是否模型中加入了結婚率 M 這個變量有多大的變化。但是反過來，結婚率 M 和離婚率的關係的回歸係屬，只有在沒有加入年齡中位數變量的 m5.2 模型中才顯現出來，也就是說：“當我們已經知道了結婚年齡的中位數，增加結婚率這個變量並不會對我們了解離婚率有幫助。”</p>
+<p>上面廢話了這麼多，其實就是：$ D !!!M |A$。所以我們探討的兩個描述這個數據的 DAG 圖 <a href="-many-more-variables.html#fig:introBayes08-fig05">48.5</a> 和圖 <a href="-many-more-variables.html#fig:introBayes08-fig06">48.6</a> 中，前者不能提供上述信息，它被排除了。保留圖 <a href="-many-more-variables.html#fig:introBayes08-fig06">48.6</a> 作為合理的關係圖。也就是說，事實上在 m5.2 中我們看到的結婚率(M)和離婚率(D) 之間的關係事實上是一個虛假的，帶有欺騙性的關係 (spurious)。</p>
+<div id="預測變量殘差圖-predictor-residual-plots" class="section level3" number="48.3.1">
+<h3><span class="header-section-number">48.3.1</span> 預測變量殘差圖 predictor residual plots</h3>
+<p>預測殘差圖展示的是結果變量 (outcome) 和預測變量殘差 (residual predictor)。有助於理解模型本身。</p>
+<p>在模型 m5.3 中，我們加入了兩個預測變量一個是結婚率 M，一個是結婚時年齡中位數 A。計算預測變量殘差，就是把其中一個預測變量做另一個預測變量的結果變量：</p>
+<p><span class="math display">\[
+\begin{aligned}
+M_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i &amp; = \alpha + \beta A_i\\
+\alpha &amp; \sim \text{Normal}(0, 0.2)\\
+\beta  &amp; \sim \text{Normal}(0, 0.5) \\
+\sigma &amp; \sim \text{Exponential}(1) 
+\end{aligned}
+\]</span></p>
+<div class="sourceCode" id="cb607"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb607-1"><a href="-many-more-variables.html#cb607-1"></a>m5<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb607-2"><a href="-many-more-variables.html#cb607-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb607-3"><a href="-many-more-variables.html#cb607-3"></a>    M <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb607-4"><a href="-many-more-variables.html#cb607-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bAM <span class="op">*</span><span class="st"> </span>A, </span>
+<span id="cb607-5"><a href="-many-more-variables.html#cb607-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.2</span>), </span>
+<span id="cb607-6"><a href="-many-more-variables.html#cb607-6"></a>    bAM <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>),</span>
+<span id="cb607-7"><a href="-many-more-variables.html#cb607-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb607-8"><a href="-many-more-variables.html#cb607-8"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb607-9"><a href="-many-more-variables.html#cb607-9"></a>)</span>
+<span id="cb607-10"><a href="-many-more-variables.html#cb607-10"></a><span class="kw">precis</span>(m5<span class="fl">.4</span>)</span></code></pre></div>
+<pre><code>##                 mean          sd        5.5%       94.5%
+## a      9.0545811e-08 0.086847816 -0.13879949  0.13879967
+## bAM   -6.9473759e-01 0.095726903 -0.84772767 -0.54174751
+## sigma  6.8173667e-01 0.067580003  0.57373077  0.78974257</code></pre>
+<p>之後，我們計算結婚率的殘差的方法就是取觀測到的結婚率和上述模型給出的預測結婚率：</p>
+<div class="sourceCode" id="cb609"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb609-1"><a href="-many-more-variables.html#cb609-1"></a>mu &lt;-<span class="st"> </span><span class="kw">link</span>(m5<span class="fl">.4</span>)</span>
+<span id="cb609-2"><a href="-many-more-variables.html#cb609-2"></a>mu_mean &lt;-<span class="st"> </span><span class="kw">apply</span>( mu, <span class="dv">2</span>, mean )</span>
+<span id="cb609-3"><a href="-many-more-variables.html#cb609-3"></a>mu_resid &lt;-<span class="st"> </span>d<span class="op">$</span>M <span class="op">-</span><span class="st"> </span>mu_mean</span></code></pre></div>
+<p>當一個州的結婚率殘差是正的，表示結婚率觀測值高於上述模型給出的已知該州結婚年齡中位數時的結婚率預測值。</p>
+<div class="sourceCode" id="cb610"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb610-1"><a href="-many-more-variables.html#cb610-1"></a>d<span class="op">$</span>mu_res &lt;-<span class="st"> </span>mu_resid</span>
+<span id="cb610-2"><a href="-many-more-variables.html#cb610-2"></a>m5<span class="fl">.4</span>res &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb610-3"><a href="-many-more-variables.html#cb610-3"></a>  <span class="kw">alist</span>(</span>
+<span id="cb610-4"><a href="-many-more-variables.html#cb610-4"></a>    D <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb610-5"><a href="-many-more-variables.html#cb610-5"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bMres <span class="op">*</span><span class="st"> </span>mu_res, </span>
+<span id="cb610-6"><a href="-many-more-variables.html#cb610-6"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.2</span> ), </span>
+<span id="cb610-7"><a href="-many-more-variables.html#cb610-7"></a>    bMres <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb610-8"><a href="-many-more-variables.html#cb610-8"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb610-9"><a href="-many-more-variables.html#cb610-9"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb610-10"><a href="-many-more-variables.html#cb610-10"></a>)</span>
+<span id="cb610-11"><a href="-many-more-variables.html#cb610-11"></a></span>
+<span id="cb610-12"><a href="-many-more-variables.html#cb610-12"></a><span class="co"># compute percentile interval of mean</span></span>
+<span id="cb610-13"><a href="-many-more-variables.html#cb610-13"></a>M_seq &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from =</span> <span class="fl">-1.8</span>, <span class="dt">to =</span> <span class="fl">1.8</span>, <span class="dt">length.out =</span> <span class="dv">30</span>)</span>
+<span id="cb610-14"><a href="-many-more-variables.html#cb610-14"></a>mu &lt;-<span class="st"> </span><span class="kw">link</span>(m5<span class="fl">.4</span>res, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">mu_res =</span> M_seq))</span>
+<span id="cb610-15"><a href="-many-more-variables.html#cb610-15"></a>mu.mean &lt;-<span class="st"> </span><span class="kw">apply</span>( mu, <span class="dv">2</span>, mean )</span>
+<span id="cb610-16"><a href="-many-more-variables.html#cb610-16"></a>mu.PI &lt;-<span class="st"> </span><span class="kw">apply</span>(mu, <span class="dv">2</span>, PI)</span>
+<span id="cb610-17"><a href="-many-more-variables.html#cb610-17"></a></span>
+<span id="cb610-18"><a href="-many-more-variables.html#cb610-18"></a></span>
+<span id="cb610-19"><a href="-many-more-variables.html#cb610-19"></a><span class="co"># plot</span></span>
+<span id="cb610-20"><a href="-many-more-variables.html#cb610-20"></a></span>
+<span id="cb610-21"><a href="-many-more-variables.html#cb610-21"></a><span class="kw">plot</span>( D <span class="op">~</span><span class="st"> </span>mu_res, <span class="dt">data =</span> d, <span class="dt">col =</span> rangi2, </span>
+<span id="cb610-22"><a href="-many-more-variables.html#cb610-22"></a>       <span class="dt">xlab =</span> <span class="st">&quot;Marriage rate residuals&quot;</span>, </span>
+<span id="cb610-23"><a href="-many-more-variables.html#cb610-23"></a>     <span class="dt">ylab =</span> <span class="st">&quot;Divorce rate (std, per/1000 adults)&quot;</span>)</span>
+<span id="cb610-24"><a href="-many-more-variables.html#cb610-24"></a><span class="kw">lines</span>( M_seq, mu.mean, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb610-25"><a href="-many-more-variables.html#cb610-25"></a><span class="kw">shade</span>( mu.PI, M_seq )</span>
+<span id="cb610-26"><a href="-many-more-variables.html#cb610-26"></a><span class="kw">abline</span>(<span class="dt">v =</span> <span class="dv">0</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig08"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig08-1.png" alt="Plotting marriage rate residuals against the outcome (divorce rate). Residual variation in marriage rate shows little association with divorce rate." width="528" />
+<p class="caption">
+圖 48.8: Plotting marriage rate residuals against the outcome (divorce rate). Residual variation in marriage rate shows little association with divorce rate.
+</p>
+</div>
+<p>我們使用相同的步驟，來繪製結婚時年齡中位數的預測殘差與結果變量之間的關係圖：</p>
+<div class="sourceCode" id="cb611"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb611-1"><a href="-many-more-variables.html#cb611-1"></a><span class="co"># build the model A regress on M </span></span>
+<span id="cb611-2"><a href="-many-more-variables.html#cb611-2"></a>m5<span class="fl">.41</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb611-3"><a href="-many-more-variables.html#cb611-3"></a>  <span class="kw">alist</span>(</span>
+<span id="cb611-4"><a href="-many-more-variables.html#cb611-4"></a>    A <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb611-5"><a href="-many-more-variables.html#cb611-5"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bMA <span class="op">*</span><span class="st"> </span>M, </span>
+<span id="cb611-6"><a href="-many-more-variables.html#cb611-6"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.2</span>), </span>
+<span id="cb611-7"><a href="-many-more-variables.html#cb611-7"></a>    bMA <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>),</span>
+<span id="cb611-8"><a href="-many-more-variables.html#cb611-8"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb611-9"><a href="-many-more-variables.html#cb611-9"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb611-10"><a href="-many-more-variables.html#cb611-10"></a>)</span>
+<span id="cb611-11"><a href="-many-more-variables.html#cb611-11"></a></span>
+<span id="cb611-12"><a href="-many-more-variables.html#cb611-12"></a><span class="co"># calculate the predictor residual for A</span></span>
+<span id="cb611-13"><a href="-many-more-variables.html#cb611-13"></a>mu &lt;-<span class="st"> </span><span class="kw">link</span>(m5<span class="fl">.41</span>)</span>
+<span id="cb611-14"><a href="-many-more-variables.html#cb611-14"></a>mu_mean &lt;-<span class="st"> </span><span class="kw">apply</span>( mu, <span class="dv">2</span>, mean )</span>
+<span id="cb611-15"><a href="-many-more-variables.html#cb611-15"></a>mu_resid &lt;-<span class="st"> </span>d<span class="op">$</span>A <span class="op">-</span><span class="st"> </span>mu_mean</span>
+<span id="cb611-16"><a href="-many-more-variables.html#cb611-16"></a></span>
+<span id="cb611-17"><a href="-many-more-variables.html#cb611-17"></a><span class="co"># build model D regress on A residuals</span></span>
+<span id="cb611-18"><a href="-many-more-variables.html#cb611-18"></a>d<span class="op">$</span>muA_res &lt;-<span class="st"> </span>mu_resid</span>
+<span id="cb611-19"><a href="-many-more-variables.html#cb611-19"></a>m5<span class="fl">.4</span>Ares &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb611-20"><a href="-many-more-variables.html#cb611-20"></a>  <span class="kw">alist</span>(</span>
+<span id="cb611-21"><a href="-many-more-variables.html#cb611-21"></a>    D <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb611-22"><a href="-many-more-variables.html#cb611-22"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bAres <span class="op">*</span><span class="st"> </span>muA_res, </span>
+<span id="cb611-23"><a href="-many-more-variables.html#cb611-23"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.2</span> ), </span>
+<span id="cb611-24"><a href="-many-more-variables.html#cb611-24"></a>    bAres <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb611-25"><a href="-many-more-variables.html#cb611-25"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb611-26"><a href="-many-more-variables.html#cb611-26"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb611-27"><a href="-many-more-variables.html#cb611-27"></a>)</span>
+<span id="cb611-28"><a href="-many-more-variables.html#cb611-28"></a></span>
+<span id="cb611-29"><a href="-many-more-variables.html#cb611-29"></a></span>
+<span id="cb611-30"><a href="-many-more-variables.html#cb611-30"></a><span class="co"># compute percentile interval of mean</span></span>
+<span id="cb611-31"><a href="-many-more-variables.html#cb611-31"></a>M_seq &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from =</span> <span class="fl">-1.8</span>, <span class="dt">to =</span> <span class="fl">2.5</span>, <span class="dt">length.out =</span> <span class="dv">30</span>)</span>
+<span id="cb611-32"><a href="-many-more-variables.html#cb611-32"></a>mu &lt;-<span class="st"> </span><span class="kw">link</span>(m5<span class="fl">.4</span>Ares, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">muA_res =</span> M_seq))</span>
+<span id="cb611-33"><a href="-many-more-variables.html#cb611-33"></a>mu.mean &lt;-<span class="st"> </span><span class="kw">apply</span>( mu, <span class="dv">2</span>, mean )</span>
+<span id="cb611-34"><a href="-many-more-variables.html#cb611-34"></a>mu.PI &lt;-<span class="st"> </span><span class="kw">apply</span>(mu, <span class="dv">2</span>, PI)</span>
+<span id="cb611-35"><a href="-many-more-variables.html#cb611-35"></a></span>
+<span id="cb611-36"><a href="-many-more-variables.html#cb611-36"></a></span>
+<span id="cb611-37"><a href="-many-more-variables.html#cb611-37"></a><span class="co"># plot</span></span>
+<span id="cb611-38"><a href="-many-more-variables.html#cb611-38"></a></span>
+<span id="cb611-39"><a href="-many-more-variables.html#cb611-39"></a><span class="kw">plot</span>( D <span class="op">~</span><span class="st"> </span>muA_res, <span class="dt">data =</span> d, <span class="dt">col =</span> rangi2, </span>
+<span id="cb611-40"><a href="-many-more-variables.html#cb611-40"></a>       <span class="dt">xlab =</span> <span class="st">&quot;Age at marriage residuals&quot;</span>, </span>
+<span id="cb611-41"><a href="-many-more-variables.html#cb611-41"></a>     <span class="dt">ylab =</span> <span class="st">&quot;Divorce rate (std, per/1000 adults)&quot;</span>)</span>
+<span id="cb611-42"><a href="-many-more-variables.html#cb611-42"></a><span class="kw">lines</span>( M_seq, mu.mean, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb611-43"><a href="-many-more-variables.html#cb611-43"></a><span class="kw">shade</span>( mu.PI, M_seq )</span>
+<span id="cb611-44"><a href="-many-more-variables.html#cb611-44"></a><span class="kw">abline</span>(<span class="dt">v =</span> <span class="dv">0</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig09"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig09-1.png" alt="Plotting age at marriage residuals against the outcome (divorce rate). Divorce rate on age at marriage residuals, showing remaining variation, and this variation is associated with divorce rate." width="528" />
+<p class="caption">
+圖 48.9: Plotting age at marriage residuals against the outcome (divorce rate). Divorce rate on age at marriage residuals, showing remaining variation, and this variation is associated with divorce rate.
+</p>
+</div>
+</div>
+<div id="事後分佈預測圖-posterior-prediction-plots" class="section level3" number="48.3.2">
+<h3><span class="header-section-number">48.3.2</span> 事後分佈預測圖 posterior prediction plots</h3>
+<div class="sourceCode" id="cb612"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb612-1"><a href="-many-more-variables.html#cb612-1"></a><span class="co"># call link without specifying new data</span></span>
+<span id="cb612-2"><a href="-many-more-variables.html#cb612-2"></a><span class="co"># so it uses original data </span></span>
+<span id="cb612-3"><a href="-many-more-variables.html#cb612-3"></a>mu &lt;-<span class="st"> </span><span class="kw">link</span>(m5<span class="fl">.3</span>)</span>
+<span id="cb612-4"><a href="-many-more-variables.html#cb612-4"></a></span>
+<span id="cb612-5"><a href="-many-more-variables.html#cb612-5"></a><span class="co"># summarize samples across cases</span></span>
+<span id="cb612-6"><a href="-many-more-variables.html#cb612-6"></a>mu_mean &lt;-<span class="st"> </span><span class="kw">apply</span>( mu, <span class="dv">2</span>, mean )</span>
+<span id="cb612-7"><a href="-many-more-variables.html#cb612-7"></a>mu_PI &lt;-<span class="st"> </span><span class="kw">apply</span>(mu, <span class="dv">2</span>, PI)</span>
+<span id="cb612-8"><a href="-many-more-variables.html#cb612-8"></a></span>
+<span id="cb612-9"><a href="-many-more-variables.html#cb612-9"></a><span class="co"># simulate observations</span></span>
+<span id="cb612-10"><a href="-many-more-variables.html#cb612-10"></a><span class="co"># again no new data, uses original data</span></span>
+<span id="cb612-11"><a href="-many-more-variables.html#cb612-11"></a></span>
+<span id="cb612-12"><a href="-many-more-variables.html#cb612-12"></a>D_sim &lt;-<span class="st"> </span><span class="kw">sim</span>(m5<span class="fl">.3</span>, <span class="dt">n =</span> <span class="dv">10000</span>)</span>
+<span id="cb612-13"><a href="-many-more-variables.html#cb612-13"></a>D_PI &lt;-<span class="st"> </span><span class="kw">apply</span>(D_sim, <span class="dv">2</span>, PI)</span></code></pre></div>
+<p>繪製觀測值和預測值之間的散點圖：</p>
+<div class="sourceCode" id="cb613"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb613-1"><a href="-many-more-variables.html#cb613-1"></a><span class="kw">plot</span>( mu_mean <span class="op">~</span><span class="st"> </span>d<span class="op">$</span>D, <span class="dt">col =</span> rangi2, <span class="dt">ylim =</span> <span class="kw">range</span>(mu_PI), </span>
+<span id="cb613-2"><a href="-many-more-variables.html#cb613-2"></a>      <span class="dt">xlab =</span> <span class="st">&quot;observed divorce rate&quot;</span>, </span>
+<span id="cb613-3"><a href="-many-more-variables.html#cb613-3"></a>      <span class="dt">ylab =</span> <span class="st">&quot;predicted divorce rate&quot;</span>)</span>
+<span id="cb613-4"><a href="-many-more-variables.html#cb613-4"></a></span>
+<span id="cb613-5"><a href="-many-more-variables.html#cb613-5"></a><span class="kw">abline</span>(<span class="dt">a =</span> <span class="dv">0</span>, <span class="dt">b =</span> <span class="dv">1</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb613-6"><a href="-many-more-variables.html#cb613-6"></a><span class="cf">for</span> (i  <span class="cf">in</span> <span class="dv">1</span> <span class="op">:</span><span class="st"> </span><span class="kw">nrow</span>(d)) <span class="kw">lines</span>( <span class="kw">rep</span>(d<span class="op">$</span>D[i], <span class="dv">2</span>), mu_PI[, i], <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig10"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig10-1.png" alt="Posterior predictive plot for the divorce model, m5.3. The horizontal axis is the observed divorce rate in each state. The vertical axis is the model's posterior predicted divorce rate, given each state's median age at marriage and marriage rate. The blue line segments are 89% compatibility intervals. The diagonal line shows where posterior predictions exactly match the sample." width="528" />
+<p class="caption">
+圖 48.10: Posterior predictive plot for the divorce model, m5.3. The horizontal axis is the observed divorce rate in each state. The vertical axis is the model’s posterior predicted divorce rate, given each state’s median age at marriage and marriage rate. The blue line segments are 89% compatibility intervals. The diagonal line shows where posterior predictions exactly match the sample.
+</p>
+</div>
 
+</div>
 </div>
 </div>
 
