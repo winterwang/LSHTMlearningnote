@@ -1,0 +1,214 @@
+
+## 虛假的相關性
+
+一起來看看一個關於結婚，離婚，和美國每個州的華夫餅餐廳的個數的數據：
+
+```{r introBayes08-01, cache=TRUE}
+data("WaffleDivorce")
+d <- WaffleDivorce
+
+head(d)
+```
+
+把數據標準化：
+
+```{r introBayes08-02, cache=TRUE}
+d$D <- standardize( d$Divorce )
+d$M <- standardize( d$Marriage )
+d$A <- standardize( d$MedianAgeMarriage )
+```
+
+先粗略繪製年齡中位數和離婚率標準化之後的散點圖：
+
+```{r introBayes08-fig01, cache=TRUE,  fig.width=6, fig.height=5,  fig.cap="Divorce rate looks inversely associated with median age at marriage.", fig.align='center'}
+plot(d$D, d$A)
+```
+
+
+結婚時年齡的中位數和離婚率之間的關係如果假定是線性的，那麼我們描述它的模型如下：
+
+$$
+\begin{aligned}
+D_i & \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i & = \alpha + \beta_A A_i \\
+\alpha & \sim \text{Normal}(0, 0.2) \\
+\beta_A & \sim \text{Normal}(0, 0.5) \\ 
+\sigma & \sim \text{Exponential}(1)
+\end{aligned}
+$$
+
+其中，
+
+- $D_i$ 是第 $i$ 個州的標準化後的離婚率 (均值為零，標準差為1)
+- $A_i$ 是第 $i$ 個州的標準化後的結婚年齡中位數
+
+
+由於預測變量和結果變量都被標準化了，他們組成的線型回歸函數的截距 $\alpha$ 應該十分接近 0。至於斜率 $\beta_A$，它的涵義是，每增加一個標準差單位的結婚年齡中位數，隨之增加的標準差離婚率。那麼一個單位的結婚年齡標準差是多少呢？
+
+```{r  introBayes08-03, cache=TRUE}
+sd( d$MedianAgeMarriage )
+```
+
+上述先驗概率分佈 $\beta_A \sim \text{Normal}(0, 0.5)$ 其實暗示我們認為這個斜率大於 1 的概率很低，低於 2.275%：
+
+
+```{r  introBayes08-04, cache=TRUE}
+1 - pnorm(1, 0, 0.5)
+```
+
+實際使用二次方程近似法獲取其事後概率分佈的代碼如下：
+
+```{r introBayes08-05, cache=TRUE}
+m5.1 <- quap(
+  alist(
+    D ~ dnorm( mu, sigma ), 
+    mu <- a + bA * A, 
+    a ~ dnorm(0, 0.2), 
+    bA ~ dnorm(0, 0.5), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+precis(m5.1)
+```
+
+看看我們的先驗概率分佈都會給出哪些可能性：
+
+```{r introBayes08-fig02, cache=TRUE,  fig.width=6, fig.height=5,  fig.cap="Plausible regression lines implied by the priors in m5.1. These are weakly informative priors that they allow some implusbly strong relationships but generally bound the lines to possible ranges of the variables.", fig.align='center'}
+set.seed(10)
+prior <- extract.prior( m5.1 )
+
+mu <- link(m5.1, post = prior, data = list(A = c(-2, 2)))
+
+plot(NULL, xlim = c(-2, 2), ylim = c(-2, 2),
+      xlab = "Median age married (std)", 
+     ylab = "Divorce rate (std)")
+for( i in 1:50) lines(c(-2, 2), mu[i, ], col = col.alpha("black", 0.4))
+```
+
+繪製實際事後估計的回歸直線：
+
+```{r introBayes08-fig03, cache=TRUE,  fig.width=6, fig.height=5,  fig.cap="Divorce rate is negatively associated with median age at marriage.", fig.align='center'}
+# compute percentile interval of mean
+A_seq <- seq(from = -3, to = 3.2, length.out = 30)
+mu <- link(m5.1, data = list(A = A_seq))
+mu.mean <- apply( mu, 2, mean )
+mu.PI <- apply(mu, 2, PI)
+
+
+# plot
+
+plot( D ~ A, data = d, col = rangi2, 
+       xlab = "Median age married (std, years)", 
+     ylab = "Divorce rate (std, per/1000 adults)", 
+     xaxt = "n", yaxt = "n")
+at <- c(-2, -1, 0, 1, 2, 3)
+labels <- at*sd(d$MedianAgeMarriage) + mean(d$MedianAgeMarriage)
+labelsy <- at*sd(d$Divorce) + mean(d$Divorce)
+lines( A_seq, mu.mean, lwd = 2)
+shade( mu.PI, A_seq )
+axis( side = 1, at = at, labels = round(labels, 1))
+axis( side =2, at = at,  labels = round(labelsy, 2))
+```
+
+我們可以使用相似的方法計算並繪製結婚率和離婚率之間可能存在的線性關係：
+
+```{r  introBayes08-06, cache=TRUE}
+m5.2 <- quap(
+  alist(
+    D ~ dnorm( mu, sigma ), 
+    mu <- a + bM * M, 
+    a ~ dnorm( 0, 0.2 ), 
+    bM ~ dnorm( 0, 0.5 ), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+precis(m5.2)
+```
+
+
+
+
+```{r introBayes08-fig04, cache=TRUE,  fig.width=6, fig.height=5,  fig.cap="Divorce rate is negatively associated with median age at marriage.", fig.align='center'}
+# compute percentile interval of mean
+M_seq <- seq(from = -3, to = 3.2, length.out = 30)
+mu <- link(m5.2, data = list(M = M_seq))
+mu.mean <- apply( mu, 2, mean )
+mu.PI <- apply(mu, 2, PI)
+
+
+# plot
+
+plot( D ~ M, data = d, col = rangi2, 
+       xlab = "Marriage rate (std, per/1000 adults)", 
+     ylab = "Divorce rate (std, per/1000 adults)", 
+     xaxt = "n", yaxt = "n")
+at <- c(-2, -1, 0, 1, 2, 3)
+labels <- at*sd(d$Marriage) + mean(d$Marriage)
+labelsy <- at*sd(d$Divorce) + mean(d$Divorce)
+lines( A_seq, mu.mean, lwd = 2)
+shade( mu.PI, A_seq )
+axis( side = 1, at = at, labels = round(labels, 1))
+axis( side =2, at = at,  labels = round(labelsy, 2))
+```
+
+似乎結婚率和離婚率存在著正關係。
+
+## 繪製輔助我們理解的有向無環圖
+ 
+```{r introBayes08-fig05, cache=TRUE,  fig.width=3.8, fig.height=3,  fig.cap="A possible DAG for the divorce rate data. (A = median of age at marriage; M = marriage rate; D = divorce rate)", fig.align='center'}
+# library(dagitty)
+dag5.1 <- dagitty( "dag{ A -> D; A -> M; M -> D }" )
+coordinates(dag5.1) <- list( x=c(A=0,D=1,M=2) , y=c(A=0,D=1,M=0) )
+drawdag( dag5.1 )
+```
+
+圖 \@ref(fig:introBayes08-fig05) 顯示了三者之間的關係：
+
+1. A直接影響D
+2. M直接影響D
+3. A直接影響M
+
+也就是說，A有兩個路徑可以影響到D：
+
+- A $\rightarrow$ D
+- A $\rightarrow$ M $\rightarrow$ D
+
+
+```{r introBayes08-fig06, cache=TRUE,  fig.width=3.8, fig.height=3,  fig.cap="Another possible DAG for the divorce rate data, M does not influence D. (A = median of age at marriage; M = marriage rate; D = divorce rate)", fig.align='center'}
+# library(dagitty)
+dag5.1.1 <- dagitty( "dag{ A -> D; A -> M }" )
+coordinates(dag5.1.1) <- list( x=c(A=0,D=1,M=2) , y=c(A=0,D=1,M=0) )
+drawdag( dag5.1.1 )
+```
+
+在第二個 DAG 圖 \@ref(fig:introBayes08-fig06) 中，一個可以被驗證的關係是：
+
+$$
+D \perp\!\!\!\perp M |A
+$$
+可以通過 `dagitty` 的提示告訴我們相同的信息：
+
+```{r　introBayes08-07, cache=TRUE}
+DMA_dag2 <- dagitty('dag{ D <- A -> M }')
+impliedConditionalIndependencies(DMA_dag2)
+```
+
+第一個 DAG 圖的關係如下：
+
+```{r introBayes08-08, cache=TRUE}
+DMA_dag1 <- dagitty('dag{ D <- A -> M -> D}')
+impliedConditionalIndependencies(DMA_dag1)
+```
+
+你會看見你的計算機不給出任何結果，這是因為此時沒有條件獨立性的關係。
+
+
+多重線型回歸，其實是幫我們描述這樣一個問題：
+
+> 當已知的變量都已經控制了的時候，新增的一個變量，是否會對結果變量的信息還有任何可能的貢獻？
+> Is there any additional value in knowing a variable, once I already know all of the other predictor variables?
+
+
+
+
