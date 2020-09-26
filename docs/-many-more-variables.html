@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-09-25" />
+<meta name="date" content="2020-09-26" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -805,6 +805,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="48.3.1" data-path="-many-more-variables.html"><a href="-many-more-variables.html#預測變量殘差圖-predictor-residual-plots"><i class="fa fa-check"></i><b>48.3.1</b> 預測變量殘差圖 predictor residual plots</a></li>
 <li class="chapter" data-level="48.3.2" data-path="-many-more-variables.html"><a href="-many-more-variables.html#事後分佈預測圖-posterior-prediction-plots"><i class="fa fa-check"></i><b>48.3.2</b> 事後分佈預測圖 posterior prediction plots</a></li>
+<li class="chapter" data-level="48.3.3" data-path="-many-more-variables.html"><a href="-many-more-variables.html#反現實圖-counterfactual-plots"><i class="fa fa-check"></i><b>48.3.3</b> 反現實圖 counterfactual plots</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -2123,6 +2124,92 @@ M_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\
 <img src="bookdown_files/figure-html/introBayes08-fig10-1.png" alt="Posterior predictive plot for the divorce model, m5.3. The horizontal axis is the observed divorce rate in each state. The vertical axis is the model's posterior predicted divorce rate, given each state's median age at marriage and marriage rate. The blue line segments are 89% compatibility intervals. The diagonal line shows where posterior predictions exactly match the sample." width="528" />
 <p class="caption">
 圖 48.10: Posterior predictive plot for the divorce model, m5.3. The horizontal axis is the observed divorce rate in each state. The vertical axis is the model’s posterior predicted divorce rate, given each state’s median age at marriage and marriage rate. The blue line segments are 89% compatibility intervals. The diagonal line shows where posterior predictions exactly match the sample.
+</p>
+</div>
+</div>
+<div id="反現實圖-counterfactual-plots" class="section level3" number="48.3.3">
+<h3><span class="header-section-number">48.3.3</span> 反現實圖 counterfactual plots</h3>
+<div class="sourceCode" id="cb614"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb614-1"><a href="-many-more-variables.html#cb614-1"></a>m5<span class="fl">.3</span>_A &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb614-2"><a href="-many-more-variables.html#cb614-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb614-3"><a href="-many-more-variables.html#cb614-3"></a>    <span class="co">## A -&gt; D &lt;- M</span></span>
+<span id="cb614-4"><a href="-many-more-variables.html#cb614-4"></a>    D <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu, sigma), </span>
+<span id="cb614-5"><a href="-many-more-variables.html#cb614-5"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bM <span class="op">*</span><span class="st"> </span>M <span class="op">+</span><span class="st"> </span>bA <span class="op">*</span><span class="st"> </span>A, </span>
+<span id="cb614-6"><a href="-many-more-variables.html#cb614-6"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.2</span>), </span>
+<span id="cb614-7"><a href="-many-more-variables.html#cb614-7"></a>    bM <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), </span>
+<span id="cb614-8"><a href="-many-more-variables.html#cb614-8"></a>    bA <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), </span>
+<span id="cb614-9"><a href="-many-more-variables.html#cb614-9"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb614-10"><a href="-many-more-variables.html#cb614-10"></a>    <span class="co">## A -&gt; M </span></span>
+<span id="cb614-11"><a href="-many-more-variables.html#cb614-11"></a>    M <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu_M, sigma_M),</span>
+<span id="cb614-12"><a href="-many-more-variables.html#cb614-12"></a>    mu_M &lt;-<span class="st"> </span>aM <span class="op">+</span><span class="st"> </span>bAM <span class="op">*</span><span class="st"> </span>A, </span>
+<span id="cb614-13"><a href="-many-more-variables.html#cb614-13"></a>    aM <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.2</span>), </span>
+<span id="cb614-14"><a href="-many-more-variables.html#cb614-14"></a>    bAM <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), </span>
+<span id="cb614-15"><a href="-many-more-variables.html#cb614-15"></a>    sigma_M <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb614-16"><a href="-many-more-variables.html#cb614-16"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb614-17"><a href="-many-more-variables.html#cb614-17"></a>)</span>
+<span id="cb614-18"><a href="-many-more-variables.html#cb614-18"></a></span>
+<span id="cb614-19"><a href="-many-more-variables.html#cb614-19"></a><span class="kw">precis</span>(m5<span class="fl">.3</span>_A)</span></code></pre></div>
+<pre><code>##                   mean          sd        5.5%       94.5%
+## a       -4.4827662e-06 0.097078564 -0.15515478  0.15514581
+## bM      -6.5336893e-02 0.150777954 -0.30630919  0.17563540
+## bA      -6.1347038e-01 0.150988641 -0.85477939 -0.37216137
+## sigma    7.8514481e-01 0.077850051  0.66072539  0.90956423
+## aM       4.6582007e-06 0.086850926 -0.13879990  0.13880921
+## bAM     -6.9473071e-01 0.095731048 -0.84772741 -0.54173400
+## sigma_M  6.8176676e-01 0.067587445  0.57374897  0.78978455</code></pre>
+<p>可以看見 <code>bAM</code> 是負的，-0.69, (-0.85， 0.54)。也就是說 A 和 M 之間是呈現強烈負相關的。我們來嘗試改變 A，看看會發生什麼。先定義一組A的數據：</p>
+<div class="sourceCode" id="cb616"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb616-1"><a href="-many-more-variables.html#cb616-1"></a>A_seq &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from =</span> <span class="dv">-2</span>, <span class="dt">to =</span> <span class="dv">2</span>, <span class="dt">length.out =</span> <span class="dv">30</span>)</span></code></pre></div>
+<p>然後利用 <code>sim()</code> 函數來獲取 simulated 數據：</p>
+<div class="sourceCode" id="cb617"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb617-1"><a href="-many-more-variables.html#cb617-1"></a><span class="co"># prep data</span></span>
+<span id="cb617-2"><a href="-many-more-variables.html#cb617-2"></a>sim_dat &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">A =</span> A_seq)</span>
+<span id="cb617-3"><a href="-many-more-variables.html#cb617-3"></a></span>
+<span id="cb617-4"><a href="-many-more-variables.html#cb617-4"></a><span class="co"># Simulate M and then D, using A_seq</span></span>
+<span id="cb617-5"><a href="-many-more-variables.html#cb617-5"></a></span>
+<span id="cb617-6"><a href="-many-more-variables.html#cb617-6"></a>s &lt;-<span class="st"> </span><span class="kw">sim</span>( m5<span class="fl">.3</span>_A, <span class="dt">data =</span> sim_dat, <span class="dt">vars =</span> <span class="kw">c</span>(<span class="st">&quot;M&quot;</span>, <span class="st">&quot;D&quot;</span>))</span></code></pre></div>
+<p>繪製 simulated 數據的圖：</p>
+<div class="sourceCode" id="cb618"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb618-1"><a href="-many-more-variables.html#cb618-1"></a><span class="kw">plot</span>( sim_dat<span class="op">$</span>A, <span class="kw">colMeans</span>(s<span class="op">$</span>D), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, </span>
+<span id="cb618-2"><a href="-many-more-variables.html#cb618-2"></a>      <span class="dt">xlab =</span> <span class="st">&quot;Manipulated A&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;counterfactual D&quot;</span>)</span>
+<span id="cb618-3"><a href="-many-more-variables.html#cb618-3"></a><span class="kw">shade</span>(<span class="kw">apply</span>(s<span class="op">$</span>D, <span class="dv">2</span>, PI), sim_dat<span class="op">$</span>A)</span>
+<span id="cb618-4"><a href="-many-more-variables.html#cb618-4"></a><span class="kw">mtext</span>(<span class="st">&quot;Total counterfactual effect of A on D&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig11"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig11-1.png" alt="Visualize the predicted effect of manipulating age at marriage A on divorce rate D. (Total causal effect of A on D, A -&gt; D, and A -&gt; M -&gt; D bot effects included." width="528" />
+<p class="caption">
+圖 48.11: Visualize the predicted effect of manipulating age at marriage A on divorce rate D. (Total causal effect of A on D, A -&gt; D, and A -&gt; M -&gt; D bot effects included.
+</p>
+</div>
+<div class="sourceCode" id="cb619"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb619-1"><a href="-many-more-variables.html#cb619-1"></a><span class="kw">plot</span>( sim_dat<span class="op">$</span>A, <span class="kw">colMeans</span>(s<span class="op">$</span>M), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, </span>
+<span id="cb619-2"><a href="-many-more-variables.html#cb619-2"></a>      <span class="dt">xlab =</span> <span class="st">&quot;Manipulated A&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;counterfactual M&quot;</span>)</span>
+<span id="cb619-3"><a href="-many-more-variables.html#cb619-3"></a><span class="kw">shade</span>(<span class="kw">apply</span>(s<span class="op">$</span>M, <span class="dv">2</span>, PI), sim_dat<span class="op">$</span>A)</span>
+<span id="cb619-4"><a href="-many-more-variables.html#cb619-4"></a><span class="kw">mtext</span>(<span class="st">&quot;Counterfactual A -&gt; M&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig12"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig12-1.png" alt="Visualize the predicted effect of manipulating age at marriage A on marriage rate M. (Simulated values of M show the estimated influence A -&gt; M." width="528" />
+<p class="caption">
+圖 48.12: Visualize the predicted effect of manipulating age at marriage A on marriage rate M. (Simulated values of M show the estimated influence A -&gt; M.
+</p>
+</div>
+<p>我們之前已經知道當調整了 A 之後 M 對 D 的貢獻率幾乎可以忽略不計。所以你看到 <a href="-many-more-variables.html#fig:introBayes08-fig11">48.11</a> 和 <a href="-many-more-variables.html#fig:introBayes08-fig12">48.12</a> 相差不明顯。因為 A <span class="math inline">\(\rightarrow\)</span> M <span class="math inline">\(\rightarrow\)</span> D 中的第二個箭頭並無多大貢獻。</p>
+<p>當然這樣的 simulation 也可以允許我們進行一些數據的總結運算。例如，把結婚年齡的中位數從 20 歲提高到 30 歲的話，帶來的因果效果 (causal effect) 可以這樣來計算；</p>
+<div class="sourceCode" id="cb620"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb620-1"><a href="-many-more-variables.html#cb620-1"></a><span class="kw">mean</span>(d<span class="op">$</span>MedianAgeMarriage); <span class="kw">sd</span>(d<span class="op">$</span>MedianAgeMarriage)</span></code></pre></div>
+<pre><code>## [1] 26.054</code></pre>
+<pre><code>## [1] 1.2436303</code></pre>
+<div class="sourceCode" id="cb623"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb623-1"><a href="-many-more-variables.html#cb623-1"></a><span class="co"># new data frame, standardized to mean 26.1 and sd 1.24</span></span>
+<span id="cb623-2"><a href="-many-more-variables.html#cb623-2"></a></span>
+<span id="cb623-3"><a href="-many-more-variables.html#cb623-3"></a>sim2_dat &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">A =</span> (<span class="kw">c</span>(<span class="dv">20</span>, <span class="dv">30</span> )<span class="op">-</span><span class="st"> </span><span class="fl">26.1</span> ) <span class="op">/</span><span class="st"> </span><span class="fl">1.24</span>)</span>
+<span id="cb623-4"><a href="-many-more-variables.html#cb623-4"></a>s2 &lt;-<span class="st"> </span><span class="kw">sim</span>(m5<span class="fl">.3</span>_A, <span class="dt">data  =</span> sim2_dat, <span class="dt">vars =</span> <span class="kw">c</span>(<span class="st">&quot;M&quot;</span>, <span class="st">&quot;D&quot;</span>))</span>
+<span id="cb623-5"><a href="-many-more-variables.html#cb623-5"></a><span class="kw">mean</span>(s2<span class="op">$</span>D[ , <span class="dv">2</span>] <span class="op">-</span><span class="st"> </span>s2<span class="op">$</span>D[, <span class="dv">1</span>])</span></code></pre></div>
+<pre><code>## [1] -4.5453912</code></pre>
+<p>標準化離婚率降低了 4.5 個標準差。這是相當大的變化。</p>
+<div class="sourceCode" id="cb625"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb625-1"><a href="-many-more-variables.html#cb625-1"></a>sim_dat &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">M =</span> <span class="kw">seq</span>(<span class="dt">from =</span> <span class="dv">-2</span> , <span class="dt">to =</span> <span class="dv">2</span>, <span class="dt">length.out =</span> <span class="dv">30</span>), <span class="dt">A =</span> <span class="dv">0</span>)</span>
+<span id="cb625-2"><a href="-many-more-variables.html#cb625-2"></a></span>
+<span id="cb625-3"><a href="-many-more-variables.html#cb625-3"></a>s &lt;-<span class="st"> </span><span class="kw">sim</span>(m5<span class="fl">.3</span>_A, <span class="dt">data =</span> sim_dat, <span class="dt">vars =</span> <span class="st">&quot;D&quot;</span>)</span>
+<span id="cb625-4"><a href="-many-more-variables.html#cb625-4"></a></span>
+<span id="cb625-5"><a href="-many-more-variables.html#cb625-5"></a><span class="kw">plot</span>(sim_dat<span class="op">$</span>M, <span class="kw">colMeans</span>(s), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">2</span>), <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, </span>
+<span id="cb625-6"><a href="-many-more-variables.html#cb625-6"></a>     <span class="dt">xlab =</span> <span class="st">&quot;manipulated M&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;counterfactual D&quot;</span>)</span>
+<span id="cb625-7"><a href="-many-more-variables.html#cb625-7"></a><span class="kw">shade</span>(<span class="kw">apply</span>( s, <span class="dv">2</span>, PI), sim_dat<span class="op">$</span>M)</span>
+<span id="cb625-8"><a href="-many-more-variables.html#cb625-8"></a><span class="kw">mtext</span>( <span class="st">&quot;Total counterfactual effect of M on D&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig13"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig13-1.png" alt="The counterfactual effect of manipulating marriage rate M on divorce rate D. Since M -&gt; D was estimated to be very small, there is no strong trend here. By manipulating M, we break the influence of A on M, and this removes the association between M aand D." width="528" />
+<p class="caption">
+圖 48.13: The counterfactual effect of manipulating marriage rate M on divorce rate D. Since M -&gt; D was estimated to be very small, there is no strong trend here. By manipulating M, we break the influence of A on M, and this removes the association between M aand D.
 </p>
 </div>
 
