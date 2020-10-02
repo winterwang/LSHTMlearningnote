@@ -255,14 +255,14 @@ text(-0.3, 4, "bM", font = 2)
 
 這個圖顯示的是回歸係數 `bA, bM` 在不同模型中的表現。
 
-- m5.1是只放了一個結婚率 M 
+- m5.1是只放了一個結婚率 M
 - m5.2是只放了一個結婚年齡中位數 A
 - m5.3是同時放入結婚率M，和年齡中位數 A
 
 
 可以觀察到，年齡中位數的回歸係屬並不因為是否模型中加入了結婚率 M 這個變量有多大的變化。但是反過來，結婚率 M 和離婚率的關係的回歸係屬，只有在沒有加入年齡中位數變量的 m5.2 模型中才顯現出來，也就是說：“當我們已經知道了結婚年齡的中位數，增加結婚率這個變量並不會對我們了解離婚率有幫助。”
 
-上面廢話了這麼多，其實就是：$ D \perp\!\!\!\perp M |A$。所以我們探討的兩個描述這個數據的 DAG 圖 \@ref(fig:introBayes08-fig05) 和圖 \@ref(fig:introBayes08-fig06) 中，前者不能提供上述信息，它被排除了。保留圖 \@ref(fig:introBayes08-fig06) 作為合理的關係圖。也就是說，事實上在 m5.2 中我們看到的結婚率(M)和離婚率(D) 之間的關係事實上是一個虛假的，帶有欺騙性的關係 (spurious)。
+上面廢話了這麼多，其實就是：$D \perp\!\!\!\perp M |A$。所以我們探討的兩個描述這個數據的 DAG 圖 \@ref(fig:introBayes08-fig05) 和圖 \@ref(fig:introBayes08-fig06) 中，前者不能提供上述信息，它被排除了。保留圖 \@ref(fig:introBayes08-fig06) 作為合理的關係圖。也就是說，事實上在 m5.2 中我們看到的結婚率(M)和離婚率(D) 之間的關係事實上是一個虛假的，帶有欺騙性的關係 (spurious)。
 
 
 ### 預測變量殘差圖 predictor residual plots 
@@ -482,7 +482,7 @@ mtext("Counterfactual A -> M")
 
 當然這樣的 simulation 也可以允許我們進行一些數據的總結運算。例如，把結婚年齡的中位數從 20 歲提高到 30 歲的話，帶來的因果效果 (causal effect) 可以這樣來計算；
 
-```{r}
+```{r introBayes08-16, cache=TRUE}
 mean(d$MedianAgeMarriage); sd(d$MedianAgeMarriage)
 # new data frame, standardized to mean 26.1 and sd 1.24
 
@@ -494,7 +494,24 @@ mean(s2$D[ , 2] - s2$D[, 1])
 標準化離婚率降低了 4.5 個標準差。這是相當大的變化。
 
 
-```{r introBayes08-fig13, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="The counterfactual effect of manipulating marriage rate M on divorce rate D. Since M -> D was estimated to be very small, there is no strong trend here. By manipulating M, we break the influence of A on M, and this removes the association between M aand D.", fig.align='center'}
+
+
+值得注意的是，當我們人為的修改了某個預測變量 $X$，我們實際上打斷了其他所有變量對 $X$ 的影響。這相當於是我們把 DAG 圖修改成為一個無任何變量會影響 $X$ 的版本的 DAG：
+
+
+
+```{r introBayes08-fig14, cache=TRUE, fig.width=2.8, fig.height=2,  fig.cap="Manipulating M means we break the arrow from A to M.", fig.align='center'}
+# library(dagitty)
+dag5.1.1 <- dagitty( "dag{ A -> D; M -> D }" )
+coordinates(dag5.1.1) <- list( x=c(A=0,D=1,M=2) , y=c(A=0,D=1,M=0) )
+drawdag( dag5.1.1 )
+```
+
+正如圖 \@ref(fig:introBayes08-fig14) 顯示的那樣，當我們人為修改控制了離婚率 M，那麼 A 結婚年齡中位數就不再對 M 有任何影響。
+
+
+
+```{r introBayes08-fig13, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="The counterfactual effect of manipulating marriage rate M on divorce rate D. Since M -> D was estimated to be very small, there is no strong trend here. By manipulating M, we break the influence of A on M, and this removes the association between M and D.", fig.align='center'}
 sim_dat <- data.frame( M = seq(from = -2 , to = 2, length.out = 30), A = 0)
 
 s <- sim(m5.3_A, data = sim_dat, vars = "D")
@@ -505,5 +522,139 @@ shade(apply( s, 2, PI), sim_dat$M)
 mtext( "Total counterfactual effect of M on D")
 ```
 
+## 被掩蓋起來的關係
+
+從上述結婚率離婚率的例子中我們學到了，多重線性回歸可以幫助我們找出虛假的關係。另外一個使用多重線性回歸的好處是，我們可以具體的把多個變量同時對一個結果變量的影響給呈現出來。當某兩個變量之間是相關的（correlated），但是其中的每一個和結果變量之間的關係可能是相反方向的時候，問題就很突出。我們來看一個評價奶品質的數據：
 
 
+```{r introBayes08-17, cache=TRUE}
+data(milk)
+d <- milk
+str(d)
+```
+
+
+讓我們重點來看 `kcal.per.g`（每克奶含有的卡路里），`mass`（平均母體體重, kg）和 `neocortex.perc`（大腦新皮質neocortex百分比）這三個變量。通常地認為，腦新皮質含量高的哺乳動物產的奶含有的能量卡路里會較高，主要是為了使之後代的大腦發育更加充分和快速。這裡使用的數據希望能夠進一步了解這樣的問題：“奶的能量含量，這裡是以千卡為單位測量的，和大腦新皮質百分比之間的關係有多大”。讓我們先把這三個變量標準化：
+
+```{r introBayes08-18, cache=TRUE}
+d$K <- standardize( d$kcal.per.g )
+d$N <- standardize( d$neocortex.perc )
+d$M <- standardize( log(d$mass) )
+```
+
+第一個能想到的模型是簡單的以新皮質百分比做預測變量，奶能量做結果變量的簡單線性回歸模型：
+
+$$
+\begin{aligned}
+K_i & \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i & = \alpha + \beta_NN_i
+\end{aligned}
+$$
+
+讓我們來試著使用二次方近似法獲取上述簡單線性回歸模型各個參數的事後樣本分佈：
+
+
+```{r introBayes08-19, cache=TRUE, eval=FALSE}
+m5.5_draft <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ), 
+    mu <- a + bN * N, 
+    a ~ dnorm( 0, 1 ), 
+    bN ~ dnorm( 0, 1 ), 
+    sigma ~ dexp( 1 )
+  ), data = d
+)
+```
+
+你會看到你的計算機給出下面的警告：
+
+```
+Error in quap(alist(K ~ dnorm(mu, sigma), mu <- a + bN * N, a ~ dnorm(0,  : 
+  initial value in 'vmmin' is not finite
+The start values for the parameters were invalid. This could be caused by missing values (NA) in the data or by start values outside the parameter constraints. If there are no NA values in the data, try using explicit start values.
+```
+
+這主要是因為數據中的 N，是有缺失值的：
+
+
+```{r introBayes08-20, cache=TRUE}
+d$neocortex.perc
+```
+
+我們暫且先把這些缺失值無視掉：
+
+```{r introBayes08-21, cache=TRUE}
+dcc <- d[ complete.cases(d$K, d$N, d$M), ]
+dcc
+```
+
+只剩下了 17 行的數據。我們把這個數據喂到之前 `m5.5_draft` 模型中去試試看：
+
+
+```{r introBayes08-22, cache=TRUE}
+m5.5_draft <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ), 
+    mu <- a + bN * N, 
+    a ~ dnorm( 0, 1 ), 
+    bN ~ dnorm( 0, 1 ), 
+    sigma ~ dexp( 1 )
+  ), data = dcc
+)
+```
+
+
+繪製我們在 `m5.5_draft` 中設定的先驗概率分佈中的任意 50 條回歸直線看看我們的先驗概率分佈選擇是否合理：
+
+```{r introBayes08-fig15, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Prior predictive distribution for the first primate milk model. The vague first guess of prior choices. These priors are clearly silly.", fig.align='center'}
+prior <- extract.prior( m5.5_draft )
+xseq <- c(-2, 2)
+mu <- link( m5.5_draft, post = prior, data = list(N = xseq))
+
+plot(NULL, xlim = xseq, ylim = xseq, bty="n",
+     xlab = "neocorrtex percent (std)", 
+     ylab = "kilocal per g (std)", 
+     main = "a ~ dnorm(0, 1) \nbN ~ dnorm(0, 1)")
+
+for( i in 1:50){
+  lines( xseq, mu[i, ], col = col.alpha("black", 0.3))
+}
+```
+
+看圖 \@ref(fig:introBayes08-fig14) 給出的先驗分佈直線是不是有點荒謬。可見無信息的先驗概率分佈不一定是合理的先驗概率分佈。值得推薦的是，我們可以把截距控制在 0 附近，因為顯然當結果變量和預測變量都是標準化的數值之後，他們之間的關係在預測變量是零的事後，結果變量也應該在零附近才合理。另外，斜率的分佈也可以控制在使之盡可能不要出現一些極端情況的斜率：
+
+
+```{r introBayes08-fig16, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Prior predictive distribution for the first primate milk model. Slightly less silly priors that at least stay within the potential space of observations.", fig.align='center'}
+m5.5 <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ), 
+    mu <- a + bN * N, 
+    a ~ dnorm( 0, 0.2 ), 
+    bN ~ dnorm( 0 , 0.5 ), 
+    sigma ~ dexp(1)
+  ), data = dcc
+)
+
+
+prior <- extract.prior( m5.5 )
+xseq <- c(-2, 2)
+mu <- link( m5.5, post = prior, data = list(N = xseq))
+
+plot(NULL, xlim = xseq, ylim = xseq, bty="n",
+     xlab = "neocorrtex percent (std)", 
+     ylab = "kilocal per g (std)", 
+     main = "a ~ dnorm(0, 0.2) \nbN ~ dnorm(0, 0.5)")
+
+for( i in 1:50){
+  lines( xseq, mu[i, ], col = col.alpha("black", 0.3))
+}
+```
+
+
+實際 `m5.5` 給出的事後概率分佈估計是怎樣的呢：
+
+```{r introBayes08-23, cache=TRUE}
+precis(m5.5)
+```
+
+這個表格到底告訴我們什麼信息了呢？敏感的人應該看得出來，每個參數的事後概率分佈都很不精確，標準差相對均值都較大。
