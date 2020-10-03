@@ -657,4 +657,141 @@ for( i in 1:50){
 precis(m5.5)
 ```
 
-這個表格到底告訴我們什麼信息了呢？敏感的人應該看得出來，每個參數的事後概率分佈都很不精確，標準差相對均值都較大。
+這個表格到底告訴我們什麼信息了呢？敏感的人應該看得出來，每個參數的事後概率分佈都很不精確，標準差相對均值都較大。把它的事後回歸直線及其 89% 可信區間範圍繪製成如圖 \@ref(fig:introBayes08-fig17) 所示。可見其平均回歸線的斜率本身的確很小，且可信區間很寬，估計十分不精確，事後給出的腦皮質容量比例和每克能量含量之間的關係可能有正也有負。
+
+```{r introBayes08-fig17, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Milk energy and neocortex. Weak association between standardized neocortex percent and milk energy.", fig.align='center'}
+xseq <- seq( from = min(dcc$N) - 0.15, to = max(dcc$N) + 0.15, length.out = 30)
+mu <- link( m5.5, data = list(N = xseq))
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+
+plot( K ~ N, data = dcc , col = rangi2, 
+      xlab = "neocortex percent (std)", 
+      ylab = "kilocal per g (std)")
+lines( xseq, mu_mean, lwd = 2 )
+shade( mu_PI, xseq )
+```
+
+
+現在我們思考成年母體的平均體重 `mass` 這一預測變量。我們使用它的對數值。據說體重這一類身體指標應該盡量使用對數值來進行一些統計學建模。因為我們通常認為取了對數以後的數值是該變量的數量級 (magnitude)。也就是說，我們認為體重的數量級 (magnitude)，而不是體重的測量值 (measure) 本身和產的奶的能量密度有關。
+
+```{r introBayes08-24, cache=TRUE}
+m5.6 <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ) , 
+    mu <- a + bM * M, 
+    a ~ dnorm(0, 0.2), 
+    bM ~ dnorm( 0, 0.5 ), 
+    sigma ~ dexp(1)
+  ), data = dcc
+)
+precis(m5.6)
+```
+
+體重的對數，和能量密度似乎成負關係。其關係應該比大腦皮質單獨和能量密度之間的關係要強烈一些，且方向是相反的 (圖\@ref(fig:introBayes08-fig18))。
+
+```{r  introBayes08-fig18, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Milk energy and neocortex. Seems stronger but still weak association between standardized log body mass and milk energy.", fig.align='center'}
+xseq <- seq( from = min(dcc$M) - 0.15, to = max(dcc$M) + 0.15, length.out = 30)
+mu <- link( m5.6, data = list(M = xseq))
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+
+plot( K ~ M, data = dcc , col = rangi2, 
+      xlab = "log body mass (std)", 
+      ylab = "kilocal per g (std)")
+lines( xseq, mu_mean, lwd = 2 )
+shade( mu_PI, xseq )
+```
+
+接下來，我們把兩個預測變量同時加入線性回歸模型中取看看會發生什麼。
+
+$$
+\begin{aligned}
+K_i & \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i & = \alpha + \beta_N N_i + \beta_M M_i \\
+\alpha & \sim \text{Normal}(0, 0.2) \\
+\beta_N & \sim \text{Normal}(0, 0.5) \\
+\beta_M & \sim \text{Normal}(0, 0.5) \\
+\sigma & \sim \text{Exponential}(1)
+\end{aligned}
+$$
+
+
+```{r introBayes08-25, cache=TRUE}
+m5.7 <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ) , 
+    mu <- a + bN * N + bM * M, 
+    a ~ dnorm( 0, 0.2 ), 
+    bN ~ dnorm( 0 , 0.5 ), 
+    bM ~ dnorm( 0 , 0.5 ), 
+    sigma ~ dexp(1)
+  ), data = dcc
+)
+precis(m5.7)
+```
+
+我們驚奇地發現，當兩個變量同時放入模型中時，它們各自和奶能量密度這一結果變量之間的關係都變得更加顯著了 (圖\@ref(fig:introBayes08-fig19))。每個參數，也就是新皮質比例，和母體重的對數值的事後均值在 `m5.7`，也就是同時調整了對方的情況下都更加偏離 0。
+
+
+
+
+```{r introBayes08-fig19, cache=TRUE,  fig.width=5.5, fig.height=4,  fig.cap="The posterior distributions for parameters of bM and bN among all models.", fig.align='center'}
+plot( coeftab(m5.5, m5.6, m5.7), par = c("bM", "bN"), 
+      xlab = "Posterior estimates with 89% credible intervals")
+text(-0.8, 9, "bM", font = 2)
+text(-0.3, 4, "bN", font = 2)
+abline(v = 0, lty = 2)
+```
+
+
+為什麼這兩個變量同時放入模型之後，他們和結果變量，奶能量密度之間的關係均被增強了呢？在這裡，我們的上下文中其實告訴我們，這兩個預測變量同時都和結果變量是相關的，且其中一個是負相關，另一個是正相關。而同時，他們二者之間本身存在著正相關 (圖\@ref(fig:introBayes08-fig20))。
+
+
+```{r introBayes08-fig20, cache=TRUE,  fig.width=5.5, fig.height=5.4,  fig.cap="Simple scatter plots between the three variables.", fig.align='center'}
+pairs( ~ K + M + N,  col = rangi2, dcc)
+```
+
+
+
+```{r introBayes08-fig22, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Milk energy and neocortex. A model with both neocortex percent (N) and log body mass (M) shows stronger association.", fig.align='center'}
+
+xseq <- seq( from = min(dcc$N) - 0.15, to = max(dcc$N) + 0.15, 
+             length.out = 30)
+
+mu <- link(m5.7, data = data.frame( N = xseq, M = 0 ))
+
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+
+plot( NULL, xlim  = range(dcc$N), ylim = range(dcc$K) , 
+      xlab = "neocortex percent (std)", 
+      ylab = "kilocal per g (std)", 
+      main = "Counterfactual holding M = 0")
+lines( xseq, mu_mean, lwd = 2)
+shade( mu_PI, xseq )
+```
+
+```{r introBayes08-fig21, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Milk energy and log body mass. A model with both neocortex percent (N) and log body mass (M) shows stronger association.", fig.align='center'}
+
+xseq <- seq( from = min(dcc$M) - 0.15, to = max(dcc$M) + 0.15, 
+             length.out = 30)
+
+mu <- link(m5.7, data = data.frame( M = xseq, N = 0 ))
+
+mu_mean <- apply(mu, 2, mean)
+mu_PI <- apply(mu, 2, PI)
+
+plot( NULL, xlim  = range(dcc$M), ylim = range(dcc$K) , 
+      xlab = "log body mass (std)", 
+      ylab = "kilocal per g (std)", 
+      main = "Counterfactual holding N = 0")
+lines( xseq, mu_mean, lwd = 2)
+shade( mu_PI, xseq )
+
+```
+
+
+
+
+
