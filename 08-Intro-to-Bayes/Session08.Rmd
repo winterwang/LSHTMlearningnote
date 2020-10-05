@@ -792,8 +792,109 @@ shade( mu_PI, xseq )
 ```
 
 
+```{r echo=FALSE, eval=FALSE}
+dag5.7 <- dagitty( "dag{
+                   M -> K <- N
+                   M -> N
+}")
+coordinates(dag5.7) <- list(x = c(M=0, K=1, N=2), 
+                            y = c(M=0, K=1, N=0.5))
+MElist <- equivalentDAGs(dag5.7)
+drawdag(MElist)
+```
+
 
 
 ## 分類型變量 categorical variables 
+
+### 二進制型變量
+
+使用之前在簡單線性回歸章節介紹過的 `Howell1` 數據來做演示：
+
+
+```{r introBayes08-26, cache=TRUE}
+data("Howell1")
+d <- Howell1
+str(d)
+```
+
+該數據中還有一個性別的變量。這裡我們有不同的方式來使用和表達這個二進制型的預測變量。第一種是使用指示變量 (indicator variable)。先無視體重，僅僅使用性別作為身高的預測變量：
+
+
+$$
+\begin{aligned}
+h_i & \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i & = \alpha  + \beta_m m_i \\
+\alpha & \sim \text{Normal}(178, 20) \\
+\beta_m & \sim \text{Normal}(0, 10) \\ 
+\delta & \sim \text{Uniform}(0, 50)
+\end{aligned}
+$$
+
+這裡 $m_i$ 被稱作是啞變量 dummy variable。當它等於 $0$ 時，$\mu_i = \alpha$ ，表示女性的身高。所以 $\beta_m$ 又可以被理解為是男女的身高差的期望值（或平均值）。
+
+
+我們看看這幾個先驗概率分佈本身給出的男女身高的預期值是怎樣的：
+
+
+```{r introBayes08-27, cache=TRUE}
+mu_female <- rnorm(10000, 178, 20)
+mu_male <- rnorm(10000, 178, 20) + rnorm(10000, 0, 10)
+precis( data.frame(mu_female, mu_male) )
+```
+
+可見使用啞變量的方法標記會導致男性的身高先驗概率分佈相對女性的方差略微增加了一些（更大的不確定性）。
+
+但其實我們還有另外一種選擇，不使用啞變量，而是是用索引變量 (index variable)。
+
+```{r introBayes08-28, cache=TRUE}
+d$sex <- ifelse( d$male == 1, 2, 1)
+str(d$sex)
+```
+
+
+$$
+\begin{aligned}
+h_i  &  \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i & = \alpha_{\text{SEX}[i]} \\
+\alpha_j & \sim \text{Normal}(178, 20)  & \text{for } j = 1,2\\
+\sigma & \sim \text{Uniform}(0, 50)
+\end{aligned}
+$$
+
+
+使用上述索引變量的好處是，我們可以放心地給兩個二進制分類變量中的分類賦予相同的先驗概率分佈。
+
+
+
+
+
+```{r  introBayes08-29, cache=TRUE}
+m5.8 <- quap(
+  alist(
+    height ~ dnorm( mu, sigma ), 
+    mu <- a[sex], 
+    a[sex] ~ dnorm( 178, 20 ), 
+    sigma ~ dunif( 0, 50 )
+  ), data = d
+)
+precis( m5.8, depth = 2)
+```
+
+
+我們還可以通過事後概率分佈的樣本來計算男女的身高差估計值和範圍：
+
+```{r introBayes08-30, cache=TRUE}
+post <- extract.samples(m5.8)
+post$diff_fm <- post$a[, 1] - post$a[, 2]
+precis(post, depth = 2)
+```
+
+### 多於兩個分類的分類變量
+
+當分類變量的類型數量遠遠多於兩個時，你會發現啞變量法，也就是指示變量法 (indicator variable) 並不是一個好方法。每增加一個分類，你就要增加一個啞變量。有 $k$ 個分類，你就需要 $k - 1$ 個啞變量。我們建議當存在多個分類的變量時，使用索引變量法會更加有效率。其優點還包括先驗概率分佈的指定變得一致且簡單明瞭。而且這種方法可以直接幫助我們把模型擴展到多層回歸模型 (multilevel models)，也就是混合效應模型 (mixed effect models)。
+
+
+
 
 

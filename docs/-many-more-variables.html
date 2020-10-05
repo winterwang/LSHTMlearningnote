@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-10-03" />
+<meta name="date" content="2020-10-05" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -808,7 +808,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="48.3.3" data-path="-many-more-variables.html"><a href="-many-more-variables.html#反現實圖-counterfactual-plots"><i class="fa fa-check"></i><b>48.3.3</b> 反現實圖 counterfactual plots</a></li>
 </ul></li>
 <li class="chapter" data-level="48.4" data-path="-many-more-variables.html"><a href="-many-more-variables.html#被掩蓋起來的關係"><i class="fa fa-check"></i><b>48.4</b> 被掩蓋起來的關係</a></li>
-<li class="chapter" data-level="48.5" data-path="-many-more-variables.html"><a href="-many-more-variables.html#分類型變量-categorical-variables"><i class="fa fa-check"></i><b>48.5</b> 分類型變量 categorical variables</a></li>
+<li class="chapter" data-level="48.5" data-path="-many-more-variables.html"><a href="-many-more-variables.html#分類型變量-categorical-variables"><i class="fa fa-check"></i><b>48.5</b> 分類型變量 categorical variables</a>
+<ul>
+<li class="chapter" data-level="48.5.1" data-path="-many-more-variables.html"><a href="-many-more-variables.html#二進制型變量"><i class="fa fa-check"></i><b>48.5.1</b> 二進制型變量</a></li>
+<li class="chapter" data-level="48.5.2" data-path="-many-more-variables.html"><a href="-many-more-variables.html#多於兩個分類的分類變量"><i class="fa fa-check"></i><b>48.5.2</b> 多於兩個分類的分類變量</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="49" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>49</b> 重要概念複習</a>
@@ -2515,7 +2519,77 @@ K_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\
 </div>
 <div id="分類型變量-categorical-variables" class="section level2" number="48.5">
 <h2><span class="header-section-number">48.5</span> 分類型變量 categorical variables</h2>
+<div id="二進制型變量" class="section level3" number="48.5.1">
+<h3><span class="header-section-number">48.5.1</span> 二進制型變量</h3>
+<p>使用之前在簡單線性回歸章節介紹過的 <code>Howell1</code> 數據來做演示：</p>
+<div class="sourceCode" id="cb651"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb651-1"><a href="-many-more-variables.html#cb651-1"></a><span class="kw">data</span>(<span class="st">&quot;Howell1&quot;</span>)</span>
+<span id="cb651-2"><a href="-many-more-variables.html#cb651-2"></a>d &lt;-<span class="st"> </span>Howell1</span>
+<span id="cb651-3"><a href="-many-more-variables.html#cb651-3"></a><span class="kw">str</span>(d)</span></code></pre></div>
+<pre><code>## &#39;data.frame&#39;:	544 obs. of  4 variables:
+##  $ height: num  152 140 137 157 145 ...
+##  $ weight: num  47.8 36.5 31.9 53 41.3 ...
+##  $ age   : num  63 63 65 41 51 35 32 27 19 54 ...
+##  $ male  : int  1 0 0 1 0 1 0 1 0 1 ...</code></pre>
+<p>該數據中還有一個性別的變量。這裡我們有不同的方式來使用和表達這個二進制型的預測變量。第一種是使用指示變量 (indicator variable)。先無視體重，僅僅使用性別作為身高的預測變量：</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i &amp; = \alpha  + \beta_m m_i \\
+\alpha &amp; \sim \text{Normal}(178, 20) \\
+\beta_m &amp; \sim \text{Normal}(0, 10) \\ 
+\delta &amp; \sim \text{Uniform}(0, 50)
+\end{aligned}
+\]</span></p>
+<p>這裡 <span class="math inline">\(m_i\)</span> 被稱作是啞變量 dummy variable。當它等於 <span class="math inline">\(0\)</span> 時，<span class="math inline">\(\mu_i = \alpha\)</span> ，表示女性的身高。所以 <span class="math inline">\(\beta_m\)</span> 又可以被理解為是男女的身高差的期望值（或平均值）。</p>
+<p>我們看看這幾個先驗概率分佈本身給出的男女身高的預期值是怎樣的：</p>
+<div class="sourceCode" id="cb653"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb653-1"><a href="-many-more-variables.html#cb653-1"></a>mu_female &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>, <span class="dv">178</span>, <span class="dv">20</span>)</span>
+<span id="cb653-2"><a href="-many-more-variables.html#cb653-2"></a>mu_male &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>, <span class="dv">178</span>, <span class="dv">20</span>) <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>, <span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb653-3"><a href="-many-more-variables.html#cb653-3"></a><span class="kw">precis</span>( <span class="kw">data.frame</span>(mu_female, mu_male) )</span></code></pre></div>
+<pre><code>##                mean        sd      5.5%     94.5% histogram
+## mu_female 177.90358 19.965747 145.84333 210.01769  ▁▁▃▇▇▂▁▁
+## mu_male   178.19590 22.292638 142.64384 213.83733 ▁▁▁▃▇▇▃▁▁</code></pre>
+<p>可見使用啞變量的方法標記會導致男性的身高先驗概率分佈相對女性的方差略微增加了一些（更大的不確定性）。</p>
+<p>但其實我們還有另外一種選擇，不使用啞變量，而是是用索引變量 (index variable)。</p>
+<div class="sourceCode" id="cb655"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb655-1"><a href="-many-more-variables.html#cb655-1"></a>d<span class="op">$</span>sex &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>male <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>)</span>
+<span id="cb655-2"><a href="-many-more-variables.html#cb655-2"></a><span class="kw">str</span>(d<span class="op">$</span>sex)</span></code></pre></div>
+<pre><code>##  num [1:544] 2 1 1 2 1 2 1 2 1 2 ...</code></pre>
+<p><span class="math display">\[
+\begin{aligned}
+h_i  &amp;  \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i &amp; = \alpha_{\text{SEX}[i]} \\
+\alpha_j &amp; \sim \text{Normal}(178, 20)  &amp; \text{for } j = 1,2\\
+\sigma &amp; \sim \text{Uniform}(0, 50)
+\end{aligned}
+\]</span></p>
+<p>使用上述索引變量的好處是，我們可以放心地給兩個二進制分類變量中的分類賦予相同的先驗概率分佈。</p>
+<div class="sourceCode" id="cb657"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb657-1"><a href="-many-more-variables.html#cb657-1"></a>m5<span class="fl">.8</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb657-2"><a href="-many-more-variables.html#cb657-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb657-3"><a href="-many-more-variables.html#cb657-3"></a>    height <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb657-4"><a href="-many-more-variables.html#cb657-4"></a>    mu &lt;-<span class="st"> </span>a[sex], </span>
+<span id="cb657-5"><a href="-many-more-variables.html#cb657-5"></a>    a[sex] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">178</span>, <span class="dv">20</span> ), </span>
+<span id="cb657-6"><a href="-many-more-variables.html#cb657-6"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dunif</span>( <span class="dv">0</span>, <span class="dv">50</span> )</span>
+<span id="cb657-7"><a href="-many-more-variables.html#cb657-7"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb657-8"><a href="-many-more-variables.html#cb657-8"></a>)</span>
+<span id="cb657-9"><a href="-many-more-variables.html#cb657-9"></a><span class="kw">precis</span>( m5<span class="fl">.8</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##            mean         sd       5.5%      94.5%
+## a[1]  134.90938 1.60696020 132.341149 137.477615
+## a[2]  142.57693 1.69750109 139.863999 145.289869
+## sigma  27.31043 0.82807755  25.987002  28.633858</code></pre>
+<p>我們還可以通過事後概率分佈的樣本來計算男女的身高差估計值和範圍：</p>
+<div class="sourceCode" id="cb659"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb659-1"><a href="-many-more-variables.html#cb659-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m5<span class="fl">.8</span>)</span>
+<span id="cb659-2"><a href="-many-more-variables.html#cb659-2"></a>post<span class="op">$</span>diff_fm &lt;-<span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">2</span>]</span>
+<span id="cb659-3"><a href="-many-more-variables.html#cb659-3"></a><span class="kw">precis</span>(post, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##                mean         sd       5.5%       94.5%       histogram
+## sigma    27.2997646 0.82765575  25.970313  28.6042160  ▁▁▁▁▃▇▇▇▃▂▁▁▁▁
+## a[1]    134.8965669 1.62091656 132.307844 137.4731334   ▁▁▁▂▅▇▇▅▂▁▁▁▁
+## a[2]    142.5820213 1.69425568 139.853621 145.3199440 ▁▁▁▁▂▃▇▇▇▃▂▁▁▁▁
+## diff_fm  -7.6854543 2.34629291 -11.430415  -3.9080347     ▁▁▁▁▃▇▇▃▁▁▁</code></pre>
+</div>
+<div id="多於兩個分類的分類變量" class="section level3" number="48.5.2">
+<h3><span class="header-section-number">48.5.2</span> 多於兩個分類的分類變量</h3>
+<p>當分類變量的類型數量遠遠多於兩個時，你會發現啞變量法，也就是指示變量法 (indicator variable) 並不是一個好方法。每增加一個分類，你就要增加一個啞變量。有 <span class="math inline">\(k\)</span> 個分類，你就需要 <span class="math inline">\(k - 1\)</span> 個啞變量。我們建議當存在多個分類的變量時，使用索引變量法會更加有效率。其優點還包括先驗概率分佈的指定變得一致且簡單明瞭。而且這種方法可以直接幫助我們把模型擴展到多層回歸模型 (multilevel models)，也就是混合效應模型 (mixed effect models)。</p>
 
+</div>
 </div>
 </div>
 
