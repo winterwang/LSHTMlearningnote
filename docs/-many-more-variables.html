@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-10-05" />
+<meta name="date" content="2020-10-06" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2588,6 +2588,50 @@ h_i  &amp;  \sim \text{Normal}(\mu_i, \sigma) \\
 <div id="多於兩個分類的分類變量" class="section level3" number="48.5.2">
 <h3><span class="header-section-number">48.5.2</span> 多於兩個分類的分類變量</h3>
 <p>當分類變量的類型數量遠遠多於兩個時，你會發現啞變量法，也就是指示變量法 (indicator variable) 並不是一個好方法。每增加一個分類，你就要增加一個啞變量。有 <span class="math inline">\(k\)</span> 個分類，你就需要 <span class="math inline">\(k - 1\)</span> 個啞變量。我們建議當存在多個分類的變量時，使用索引變量法會更加有效率。其優點還包括先驗概率分佈的指定變得一致且簡單明瞭。而且這種方法可以直接幫助我們把模型擴展到多層回歸模型 (multilevel models)，也就是混合效應模型 (mixed effect models)。</p>
+<p>下面使用相同的哺乳動物產奶能量密度的數據來進行多個分類別量模型的示範：</p>
+<div class="sourceCode" id="cb661"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb661-1"><a href="-many-more-variables.html#cb661-1"></a><span class="kw">data</span>(milk)</span>
+<span id="cb661-2"><a href="-many-more-variables.html#cb661-2"></a>d &lt;-<span class="st"> </span>milk</span>
+<span id="cb661-3"><a href="-many-more-variables.html#cb661-3"></a><span class="kw">levels</span>(d<span class="op">$</span>clade)</span></code></pre></div>
+<pre><code>## [1] &quot;Ape&quot;              &quot;New World Monkey&quot; &quot;Old World Monkey&quot; &quot;Strepsirrhine&quot;</code></pre>
+<p><code>clade</code> 是一個有四個分類的多分類型變量。分類學上來說這個分類的範圍更加寬泛。生成一個這個變量的索引變量：</p>
+<div class="sourceCode" id="cb663"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb663-1"><a href="-many-more-variables.html#cb663-1"></a>d<span class="op">$</span>clade_id &lt;-<span class="st"> </span><span class="kw">as.integer</span>(d<span class="op">$</span>clade)</span></code></pre></div>
+<p>用數學模型描述：</p>
+<p><span class="math display">\[
+\begin{aligned}
+K_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i &amp; = \alpha_{\text{CLADE}[i]} \\ 
+\alpha_j &amp; \sim \text{Normal}(0, 0.5) &amp; \text{ for } j = 1,2,3,4\\
+\sigma &amp; \sim \text{Exponential}(1)
+\end{aligned}
+\]</span></p>
+<p>這裡特地把 <span class="math inline">\(\alpha\)</span> 的先驗概率分佈的方差設置的稍微寬一些些，以允許不同類別的哺乳動物的均值分佈可以有不同的方差：</p>
+<div class="sourceCode" id="cb664"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb664-1"><a href="-many-more-variables.html#cb664-1"></a>d<span class="op">$</span>K &lt;-<span class="st"> </span><span class="kw">standardize</span>( d<span class="op">$</span>kcal.per.g )</span>
+<span id="cb664-2"><a href="-many-more-variables.html#cb664-2"></a>m5<span class="fl">.9</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb664-3"><a href="-many-more-variables.html#cb664-3"></a>  <span class="kw">alist</span>(</span>
+<span id="cb664-4"><a href="-many-more-variables.html#cb664-4"></a>    K <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu, sigma), </span>
+<span id="cb664-5"><a href="-many-more-variables.html#cb664-5"></a>    mu &lt;-<span class="st"> </span>a[clade_id], </span>
+<span id="cb664-6"><a href="-many-more-variables.html#cb664-6"></a>    a[clade_id] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), </span>
+<span id="cb664-7"><a href="-many-more-variables.html#cb664-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb664-8"><a href="-many-more-variables.html#cb664-8"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb664-9"><a href="-many-more-variables.html#cb664-9"></a>)</span>
+<span id="cb664-10"><a href="-many-more-variables.html#cb664-10"></a></span>
+<span id="cb664-11"><a href="-many-more-variables.html#cb664-11"></a><span class="kw">precis</span>(m5<span class="fl">.9</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##              mean          sd         5.5%       94.5%
+## a[1]  -0.48434884 0.217639509 -0.832178807 -0.13651887
+## a[2]   0.36630060 0.217056342  0.019402641  0.71319855
+## a[3]   0.67530602 0.257529168  0.263724668  1.08688737
+## a[4]  -0.58580987 0.274507108 -1.024525248 -0.14709449
+## sigma  0.71963849 0.096531092  0.565363158  0.87391382</code></pre>
+<p>看這四個不同靈長類物種的奶能量密度的均值事後分佈：</p>
+<div class="sourceCode" id="cb666"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb666-1"><a href="-many-more-variables.html#cb666-1"></a>labels &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;a[&quot;</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>, <span class="st">&quot;]:&quot;</span>, <span class="kw">levels</span>(d<span class="op">$</span>clade), <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb666-2"><a href="-many-more-variables.html#cb666-2"></a><span class="kw">plot</span>(<span class="kw">precis</span>(m5<span class="fl">.9</span>, <span class="dt">depth =</span> <span class="dv">2</span>, <span class="dt">pars =</span> <span class="st">&quot;a&quot;</span>), <span class="dt">labels =</span> labels, </span>
+<span id="cb666-3"><a href="-many-more-variables.html#cb666-3"></a>     <span class="dt">xlab =</span> <span class="st">&quot;expected kcal (std)&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes08-fig23"></span>
+<img src="bookdown_files/figure-html/introBayes08-fig23-1.png" alt="Posterior distributions of the milk energy density from four different species of primate." width="528" />
+<p class="caption">
+圖 48.23: Posterior distributions of the milk energy density from four different species of primate.
+</p>
+</div>
 
 </div>
 </div>

@@ -895,6 +895,60 @@ precis(post, depth = 2)
 當分類變量的類型數量遠遠多於兩個時，你會發現啞變量法，也就是指示變量法 (indicator variable) 並不是一個好方法。每增加一個分類，你就要增加一個啞變量。有 $k$ 個分類，你就需要 $k - 1$ 個啞變量。我們建議當存在多個分類的變量時，使用索引變量法會更加有效率。其優點還包括先驗概率分佈的指定變得一致且簡單明瞭。而且這種方法可以直接幫助我們把模型擴展到多層回歸模型 (multilevel models)，也就是混合效應模型 (mixed effect models)。
 
 
+下面使用相同的哺乳動物產奶能量密度的數據來進行多個分類別量模型的示範：
+
+
+```{r introBayes08-31, cache=TRUE}
+data(milk)
+d <- milk
+levels(d$clade)
+```
+
+
+`clade` 是一個有四個分類的多分類型變量。分類學上來說這個分類的範圍更加寬泛。生成一個這個變量的索引變量：
+
+
+```{r introBayes08-32, cache=TRUE}
+d$clade_id <- as.integer(d$clade)
+```
+
+用數學模型描述：
+
+
+$$
+\begin{aligned}
+K_i & \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i & = \alpha_{\text{CLADE}[i]} \\ 
+\alpha_j & \sim \text{Normal}(0, 0.5) & \text{ for } j = 1,2,3,4\\
+\sigma & \sim \text{Exponential}(1)
+\end{aligned}
+$$
+
+這裡特地把 $\alpha$ 的先驗概率分佈的方差設置的稍微寬一些些，以允許不同類別的哺乳動物的均值分佈可以有不同的方差：
+
+
+```{r  introBayes08-33, cache=TRUE}
+d$K <- standardize( d$kcal.per.g )
+m5.9 <- quap(
+  alist(
+    K ~ dnorm(mu, sigma), 
+    mu <- a[clade_id], 
+    a[clade_id] ~ dnorm(0, 0.5), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+precis(m5.9, depth = 2)
+```
+
+看這四個不同靈長類物種的奶能量密度的均值事後分佈：
+
+
+```{r introBayes08-fig23, cache=TRUE,  fig.width=8, fig.height=4.8,  fig.cap="Posterior distributions of the milk energy density from four different species of primate.", fig.align='center'}
+labels <- paste("a[", 1:4, "]:", levels(d$clade), sep = "")
+plot(precis(m5.9, depth = 2, pars = "a"), labels = labels, 
+     xlab = "expected kcal (std)")
+```
 
 
 
