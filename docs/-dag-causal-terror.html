@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-10-08" />
+<meta name="date" content="2020-10-10" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1737,11 +1737,44 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1><span class="header-section-number">第 49 章</span> 有向無環圖 DAG &amp; 可怕的因果 Causal Terror</h1>
 <blockquote>
 <dl>
-<dt>the most newsworthy scientific studies are the least trustworthy. Maybe popular topics attract more and worse researchers, like flies drawn to the smell of honey?</dt>
+<dt>The most newsworthy scientific studies are the least trustworthy. Maybe popular topics attract more and worse researchers, like flies drawn to the smell of honey?</dt>
 <dd>Richard McElreath
 </dd>
 </dl>
 </blockquote>
+<div class="sourceCode" id="cb667"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb667-1"><a href="-dag-causal-terror.html#cb667-1"></a><span class="kw">set.seed</span>(<span class="dv">1914</span>)</span>
+<span id="cb667-2"><a href="-dag-causal-terror.html#cb667-2"></a>N &lt;-<span class="st"> </span><span class="dv">200</span> <span class="co"># num grant proposals</span></span>
+<span id="cb667-3"><a href="-dag-causal-terror.html#cb667-3"></a>p &lt;-<span class="st"> </span><span class="fl">0.1</span> <span class="co"># proportion to select</span></span>
+<span id="cb667-4"><a href="-dag-causal-terror.html#cb667-4"></a></span>
+<span id="cb667-5"><a href="-dag-causal-terror.html#cb667-5"></a><span class="co"># uncorrelated newsworthiness and trustworthiness</span></span>
+<span id="cb667-6"><a href="-dag-causal-terror.html#cb667-6"></a>nw &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N)</span>
+<span id="cb667-7"><a href="-dag-causal-terror.html#cb667-7"></a>tw &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N)</span>
+<span id="cb667-8"><a href="-dag-causal-terror.html#cb667-8"></a></span>
+<span id="cb667-9"><a href="-dag-causal-terror.html#cb667-9"></a><span class="co"># select top 10 of combined scores</span></span>
+<span id="cb667-10"><a href="-dag-causal-terror.html#cb667-10"></a>s &lt;-<span class="st"> </span>nw <span class="op">+</span><span class="st"> </span>tw <span class="co"># total score</span></span>
+<span id="cb667-11"><a href="-dag-causal-terror.html#cb667-11"></a>q &lt;-<span class="st"> </span><span class="kw">quantile</span>( s, <span class="dv">1</span><span class="op">-</span>p ) <span class="co"># top 10% threshold</span></span>
+<span id="cb667-12"><a href="-dag-causal-terror.html#cb667-12"></a></span>
+<span id="cb667-13"><a href="-dag-causal-terror.html#cb667-13"></a>selected &lt;-<span class="st"> </span><span class="kw">ifelse</span>( s <span class="op">&gt;=</span><span class="st"> </span>q, <span class="ot">TRUE</span>, <span class="ot">FALSE</span>) </span>
+<span id="cb667-14"><a href="-dag-causal-terror.html#cb667-14"></a><span class="kw">cor</span>(tw[selected], nw[selected])</span></code></pre></div>
+<pre><code>## [1] -0.76800831</code></pre>
+<div class="sourceCode" id="cb669"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb669-1"><a href="-dag-causal-terror.html#cb669-1"></a>proposal &lt;-<span class="st"> </span><span class="kw">data.frame</span>(nw, tw, selected)</span>
+<span id="cb669-2"><a href="-dag-causal-terror.html#cb669-2"></a><span class="kw">with</span>(proposal, <span class="kw">plot</span>(nw[<span class="op">!</span>selected], tw[<span class="op">!</span>selected], <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;black&quot;</span>),</span>
+<span id="cb669-3"><a href="-dag-causal-terror.html#cb669-3"></a>                    <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">3</span>,<span class="fl">3.5</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">3.5</span>,<span class="dv">3</span>), </span>
+<span id="cb669-4"><a href="-dag-causal-terror.html#cb669-4"></a>                    <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>))</span>
+<span id="cb669-5"><a href="-dag-causal-terror.html#cb669-5"></a><span class="kw">points</span>(proposal<span class="op">$</span>nw[proposal<span class="op">$</span>selected], </span>
+<span id="cb669-6"><a href="-dag-causal-terror.html#cb669-6"></a>       proposal<span class="op">$</span>tw[proposal<span class="op">$</span>selected], </span>
+<span id="cb669-7"><a href="-dag-causal-terror.html#cb669-7"></a>       <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>), </span>
+<span id="cb669-8"><a href="-dag-causal-terror.html#cb669-8"></a>       <span class="dt">pch =</span> <span class="dv">16</span>)</span>
+<span id="cb669-9"><a href="-dag-causal-terror.html#cb669-9"></a><span class="kw">abline</span>(<span class="kw">lm</span>(proposal<span class="op">$</span>nw[proposal<span class="op">$</span>selected] <span class="op">~</span><span class="st"> </span>proposal<span class="op">$</span>tw[proposal<span class="op">$</span>selected]), </span>
+<span id="cb669-10"><a href="-dag-causal-terror.html#cb669-10"></a>       <span class="dt">lty =</span> <span class="dv">2</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>))</span>
+<span id="cb669-11"><a href="-dag-causal-terror.html#cb669-11"></a><span class="kw">text</span>(<span class="dv">1</span>, <span class="fl">-2.8</span>, <span class="st">&quot;rejected&quot;</span>)</span>
+<span id="cb669-12"><a href="-dag-causal-terror.html#cb669-12"></a><span class="kw">text</span>(<span class="dv">2</span>, <span class="fl">2.5</span>, <span class="st">&quot;selected&quot;</span>, <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes09-fig01"></span>
+<img src="bookdown_files/figure-html/introBayes09-fig01-1.png" alt="Why the most newsworthy studies might be least trustworthy. 200 research proposals are ranked by combined trustworthiness and news worthiness. The top 10% are selected for funding. While there is no correlation before selection, the two criteria are strongly negatively correlated after selection. The correlation here is -0.77." width="576" />
+<p class="caption">
+圖 49.1: Why the most newsworthy studies might be least trustworthy. 200 research proposals are ranked by combined trustworthiness and news worthiness. The top 10% are selected for funding. While there is no correlation before selection, the two criteria are strongly negatively correlated after selection. The correlation here is -0.77.
+</p>
+</div>
 
 </div>
 
