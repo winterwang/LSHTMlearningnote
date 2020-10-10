@@ -35,3 +35,154 @@ text(1, -2.8, "rejected")
 text(2, 2.5, "selected", col = c("blue"))
 ```
 
+## 多重共線性問題 multicollinearity
+
+多重共線性，通常當模型的預測變量之間有較強的相互關係的時候會出現。它造成的結果是你的模型給出的事後概率分佈會表現的似乎和任何一個預測變量之間都沒什麼關係，即便事實上其中的一個甚至幾個都可能和結果變量存在著相互依賴的關係。這樣的模型對於研究目的是使用模型來做預測的情形下沒有什麼本質的影響。
+
+想像一下我們想使用一個人的腿長度來預測他/她的身高。你覺得模型中同時放入左右兩條腿的長度作為預測變量的話，事情會變成怎樣的呢？
+
+下面的代碼是通過計算機模擬生成100個人的身高和腿長度。
+
+
+```{r introBayes09-01, cache=TRUE}
+N <- 100                        # number of individuals 
+set.seed(909)
+height <- rnorm(N, 10, 2)       # sim total height for each
+leg_prop <- runif(N, 0.4, 0.5)  # leg as proportion of height 
+leg_left <- leg_prop * height + # sim left leg as proportion + error
+  rnorm( N, 0, 0.02 ) 
+leg_right <- leg_prop * height + # sim right leg as proportion + error
+  rnorm( N, 0, 0.02 )
+                                  # combine into data frame
+d <- data.frame(height, leg_left, leg_right)
+head(d)
+```
+
+如果我們同時使用兩腿的長度作為預測身高的變量建立簡單線性回歸模型的話，我們會期待獲得怎樣的結果？從生成數據的過程我們已知平均地，腿長度佔身高的比例是45%。所以我們其實會期待腿長度的回歸係數應該在 $10/4.5 \approx 2.2$ 左右。但事實是怎樣呢？
+
+
+```{r introBayes09-02, cache=TRUE}
+m6.1 <- quap(
+  alist(
+    height ~ dnorm( mu, sigma ), 
+    mu <- a + bl * leg_left + br * leg_right, 
+    a ~ dnorm( 10, 100 ),
+    bl ~ dnorm(2, 10), 
+    br ~ dnorm(2, 10), 
+    sigma ~ dexp( 1 )
+  ), data = d
+)
+precis(m6.1)
+```
+
+左右腿的數據同時放到一個模型裡給出的結果似乎是令人困惑的。
+
+
+```{r introBayes09-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="If both legs have almost identical lengths, and height is so strongly associated with leg length, then why is this posterior distribution so weird?", fig.align='center'}
+plot(precis(m6.1))
+```
+
+我們看模型 `m6.1` 給出的 `bl, br` 的事後聯合分佈 (joint posterior distribution)：
+
+```{r introBayes09-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior distribution of the association of each leg with hegiht, from model m6.1. Since both variables contain almost identical information, the posterior is a narrow ridge of negatively correlated values.", fig.align='center'}
+post <- extract.samples(m6.1)
+plot(bl ~ br, post, col = col.alpha(rangi2, 0.1),
+     pch = 16)
+```
+
+如圖 \@ref(fig:introBayes09-fig03) 顯示的那樣，當 `bl` 很大時，`br` 就很小，反之亦然。
+
+
+```{r introBayes09-fig04, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The posterior distribution of the sum of the two parameters is cnetered on the proper association of eight leg with height.", fig.align='center'}
+sumblbr <- post$bl + post$br
+dens(sumblbr, col = rangi2, lwd = 2, xlab = "sum of bl and br")
+```
+
+
+於是我們知道我們應該從模型中去掉其中一個腿的信息，從而獲得正確的模型和計算結果：
+
+
+```{r  introBayes09-03, cache=TRUE}
+m6.2 <- quap(
+  alist(
+    height ~ dnorm( mu, sigma ), 
+    mu <- a + bl * leg_left, 
+    a ~ dnorm( 10, 100 ), 
+    bl ~ dnorm(2, 10), 
+    sigma ~ dexp( 1 )
+  ), data = d
+)
+
+precis(m6.2)
+```
+
+
+### 哺乳動物奶質量數據中的共線性
+
+重新打開哺乳動物奶質量數據。我們看其中的含脂肪百分比和含乳糖百分比這兩個變量。把他們標準化：
+
+```{r introBayes09-04, cache=TRUE}
+data(milk)
+d <- milk
+d$K <- standardize( d$kcal.per.g )
+d$F <- standardize( d$perc.fat )
+d$L <- standardize( d$perc.lactose )
+```
+
+下面的模型使用標準化的脂肪百分比和乳糖百分比兩個變量作為預測變量來預測奶的能量密度：
+
+
+```{r introBayes09-05, cache=TRUE}
+# kcal.per.g regressed on perc.fat
+m6.3 <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ),
+    mu <- a + bF * F, 
+    a ~ dnorm( 0, 0.2 ), 
+    bF ~ dnorm( 0, 0.5 ), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+# kcal.per.g regressed on perc.lactose
+m6.4 <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ), 
+    mu <- a + bL * L, 
+    a ~ dnorm( 0, 0.2 ), 
+    bL ~ dnorm( 0, 0.5 ), 
+    sigma ~ dexp(1)
+  ), data =  d
+)
+
+
+precis( m6.3 )
+precis( m6.4 )
+```
+
+當單獨使用其中之一作為能量密度的預測變量時，我們發現他們各自的回歸係數似乎互相成鏡像數據，一個是正的，另一個是負的。而且二者的回歸係屬的事後概率分佈都很精確，我們認為這兩個單獨變量都是可以用來預測奶能量密度的極佳預測變量。因為脂肪百分比越高，能量密度越高，反之，乳糖含量比例越高，那麼能量密度則越低。我們來看把他們兩個同時加入模型中會發生什麼現象：
+
+```{r introBayes09-06, cache=TRUE}
+m6.5 <- quap(
+  alist(
+    K ~ dnorm( mu, sigma ), 
+    mu <- a + bF * F + bL * L, 
+    a ~ dnorm( 0, 0.2 ), 
+    bF ~ dnorm( 0, 0.5 ), 
+    bL ~ dnorm( 0, 0.5 ), 
+    sigma ~ dexp( 1 )
+  ), data = d
+)
+precis( m6.5 )
+```
+
+你看現在 `m6.5` 模型中同時加入了脂肪百分比，和乳糖百分比的兩個變量。都比單獨使用時給出的回歸係屬更接近 0。而且各自的事後概率分佈的標準差都比單獨使用時大了許多（幾乎兩倍）。這並非是來自計算機模擬的數據，而是真正現實中存在的奶製品測量之後的數據。脂肪百分比和乳糖百分比二者之間存在的很強的互相預測的關係。我們從他們的三點圖可以看出其中的奧妙：
+
+
+```{r introBayes09-fig05, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="A pairs plot of the total energy, percent fat, and percent lactose variables from the primate milk data. Percent fat and percent lactose are strongly negatively correlated with one another, providing mostly the same information. ", fig.align='center'}
+pairs( ~ kcal.per.g + perc.fat + perc.lactose, data = d, 
+       col = rangi2)
+```
+
+
+
