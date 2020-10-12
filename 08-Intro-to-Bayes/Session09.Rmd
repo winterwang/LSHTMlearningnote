@@ -185,4 +185,139 @@ pairs( ~ kcal.per.g + perc.fat + perc.lactose, data = d,
 ```
 
 
+## 治療後偏倚 post-treatment bias
+
+```{r introBayes09-07, cache=TRUE}
+set.seed(71)
+ # number of plants 
+N <- 100
+
+# simulate initial heights 
+h0 <- rnorm(N, 10, 2)
+
+# assign treatments and simulate fungus and growth
+treatment <- rep(0:1, each = N/2)
+fungus <- rbinom( N, size = 1, prob = 0.5 - treatment * 0.4)
+h1 <- h0 + rnorm( N, 5 - 3*fungus )
+
+# compose a clean data frame
+d <- data.frame( h0 = h0, h1 = h1, treatment = treatment, fungus = fungus)
+head(d)
+precis(d)
+```
+
+### 設定模型
+
+$$
+\begin{aligned}
+h_{1,i} & \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i & = h_{0,i} \times p
+\end{aligned}
+$$
+
+其中，
+
+- $h_{0,i}$ 是在時間 $t = 0$ 時的植物高度；
+- $h_{1,i}$ 是在時間 $t = 1$ 時植物的高度；
+- $p$ 是比例係數，也就是 $h_{1,i}$ 和 $h_{0,i}$ 之間的比值，$p = \frac{h_{1,i}}{h_{0,i}}$。如果 $p = 1$ 說明在時間 $t = 1$ 時植物並沒有比在時間 $t = 0$ 時有長高。
+
+這裡我們對 $p$ 使用的先驗概率分佈，應該會集中在 1 的附近，因為無信息表示我們認為植物的高度不會隨時間發生變化。但是這個比例 $p$ 不能為負數。因為它是一個值和另一個值的比值。我們之前使用過相似特質的先驗概率分佈，也就是對數正（常）態分佈（Log-Normal distribution）：
+
+$$
+\beta \sim \text{Log-Normal}(0, 0.25)
+$$
+
+看看這個先驗概率分佈的密度曲線是什麼樣子：
+
+
+```{r  introBayes09-fig06, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Distribution density funciton of Log-Normal(0,0.25)", fig.align='center'}
+sim_p <- rlnorm(10000, 0, 0.25)
+precis(sim_p)
+dens( sim_p, xlim = c(0,3), adj = 0.1)
+```
+
+
+也就是說，我們給出的這個先驗概率分佈認為，植物在不同時間點之間的生長比例範圍在 0.67 和 1.49 之間，也就是要麼縮水33%，或者最多長高50%。
+
+
+建立該模型：
+
+```{r introBayes09-08, cache=TRUE}
+m6.6 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p ,
+    p ~ dlnorm( 0, 0.25 ),
+    sigma ~ dexp(1)
+  ), data  = d
+)
+precis(m6.6)
+```
+
+$p$ 的事後概率分佈均值是 1.43，也就是預估平均每單位時間植物會長高大約 40%。接下來如果加入另外兩個變量，治療組，和是否出現菌落。我們會把這兩個變量對植物施加的影響使用線性回歸模型的方式加到 $p$ 上去：
+
+
+$$
+\begin{aligned}
+h_{1, i} & \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i  & = h_{0,i} \times p \\ 
+p     & = \alpha + \beta_T T_i + \beta_F F_i \\
+\alpha  & \sim \text{Log-Normal}(0, 0.25) \\
+\beta_T & \sim \text{Normal}(0, 0.5) \\ 
+\beta_F & \sim \text{Normal}(0, 0.5) \\ 
+\sigma  & \sim \text{Exponential}(1)
+\end{aligned}
+$$
+
+上述模型的R代碼如下：
+
+```{r introBayes09-09, cache=TRUE}
+m6.7 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p , 
+    p <- a + bt * treatment + bf * fungus, 
+    a ~ dlnorm( 0, 0.2 ),
+    bt  ~ dnorm(0, 0.5), 
+    bf  ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d
+)
+precis(m6.7)
+```
+
+這裡似乎在說，治療本身對植物生長速度並無效果，但是有菌落卻對生長比例造成了負影響。可是我們明明知道菌落是否存在，是取決於治療本身的，也就是菌落是治療對土壤造成的結果之一。上述模型似乎在告訴我們，當我們知道了治療造成的結果之一 -- 是否有菌落，那麼治療本身對植物生長比例的影響就消失了。正確的模型是，我們應該把菌落這個變量從模型中拿掉，從而尋找治療對植物生長率的效果：
+
+
+```{r  introBayes09-10, cache=TRUE}
+m6.8 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p, 
+    p <- a + bt * treatment, 
+    a ~ dlnorm(0, 0.25),
+    bt ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d
+)
+precis(m6.8)
+```
+
+上述的分析過程和結果告訴我們，如果我們把由於治療本身造成的結果之一也錯誤地放進預測變量中的話，治療本身的效果會消失。
+
+這些變量之間的關係還可以用下面的DAG圖來輔助理解：
+
+
+```{r  introBayes09-fig07, cache=TRUE, fig.width=8, fig.height=1,  fig.cap="The DAG of the fungus and treatment effect on the grow of plant.", fig.align='center'}
+plant_dag <- dagitty("dag{
+      H_0 -> H_1 
+      F -> H_1 
+      T -> F
+}")
+coordinates( plant_dag ) <- list(x = c(H_0 = 0 , T = 2, F = 1.5, H_1 = 1), 
+                                 y = c(H_0 = 0 , T = 0, F = 0, H_1 = 0))
+drawdag(plant_dag)
+```
+
+如果我們錯誤地把 $F$ 也放入預測變量中去的話，就把實際治療變量的效果這條通路給堵住了。這在因果推斷中被叫做，由於控制了 F 變量，我們錯誤地在模型中引入了 D - separation。這裡的 D，指的是 directional（方向）。D-separation 在因果推斷中指的是，某個變量在DAG圖中和其他所有變量都獨立。在本例中， 由於控制了 $F$ 而導致從治療變量 $T$ 通往結果變量 $H_1$ 之間的的通路被阻斷了 ($T \rightarrow F \rightarrow H_1$)，使得 $H_1$ 和 $T$ 之間變得失去了依賴關係（相互獨立）。
 

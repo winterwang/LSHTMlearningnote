@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-10-10" />
+<meta name="date" content="2020-10-13" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -819,6 +819,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="49.1" data-path="-dag-causal-terror.html"><a href="-dag-causal-terror.html#多重共線性問題-multicollinearity"><i class="fa fa-check"></i><b>49.1</b> 多重共線性問題 multicollinearity</a>
 <ul>
 <li class="chapter" data-level="49.1.1" data-path="-dag-causal-terror.html"><a href="-dag-causal-terror.html#哺乳動物奶質量數據中的共線性"><i class="fa fa-check"></i><b>49.1.1</b> 哺乳動物奶質量數據中的共線性</a></li>
+</ul></li>
+<li class="chapter" data-level="49.2" data-path="-dag-causal-terror.html"><a href="-dag-causal-terror.html#治療後偏倚-post-treatment-bias"><i class="fa fa-check"></i><b>49.2</b> 治療後偏倚 post-treatment bias</a>
+<ul>
+<li class="chapter" data-level="49.2.1" data-path="-dag-causal-terror.html"><a href="-dag-causal-terror.html#設定模型"><i class="fa fa-check"></i><b>49.2.1</b> 設定模型</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -1935,6 +1939,145 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 圖 49.5: A pairs plot of the total energy, percent fat, and percent lactose variables from the primate milk data. Percent fat and percent lactose are strongly negatively correlated with one another, providing mostly the same information.
 </p>
 </div>
+</div>
+</div>
+<div id="治療後偏倚-post-treatment-bias" class="section level2" number="49.2">
+<h2><span class="header-section-number">49.2</span> 治療後偏倚 post-treatment bias</h2>
+<div class="sourceCode" id="cb687"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb687-1"><a href="-dag-causal-terror.html#cb687-1"></a><span class="kw">set.seed</span>(<span class="dv">71</span>)</span>
+<span id="cb687-2"><a href="-dag-causal-terror.html#cb687-2"></a> <span class="co"># number of plants </span></span>
+<span id="cb687-3"><a href="-dag-causal-terror.html#cb687-3"></a>N &lt;-<span class="st"> </span><span class="dv">100</span></span>
+<span id="cb687-4"><a href="-dag-causal-terror.html#cb687-4"></a></span>
+<span id="cb687-5"><a href="-dag-causal-terror.html#cb687-5"></a><span class="co"># simulate initial heights </span></span>
+<span id="cb687-6"><a href="-dag-causal-terror.html#cb687-6"></a>h0 &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">10</span>, <span class="dv">2</span>)</span>
+<span id="cb687-7"><a href="-dag-causal-terror.html#cb687-7"></a></span>
+<span id="cb687-8"><a href="-dag-causal-terror.html#cb687-8"></a><span class="co"># assign treatments and simulate fungus and growth</span></span>
+<span id="cb687-9"><a href="-dag-causal-terror.html#cb687-9"></a>treatment &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">1</span>, <span class="dt">each =</span> N<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb687-10"><a href="-dag-causal-terror.html#cb687-10"></a>fungus &lt;-<span class="st"> </span><span class="kw">rbinom</span>( N, <span class="dt">size =</span> <span class="dv">1</span>, <span class="dt">prob =</span> <span class="fl">0.5</span> <span class="op">-</span><span class="st"> </span>treatment <span class="op">*</span><span class="st"> </span><span class="fl">0.4</span>)</span>
+<span id="cb687-11"><a href="-dag-causal-terror.html#cb687-11"></a>h1 &lt;-<span class="st"> </span>h0 <span class="op">+</span><span class="st"> </span><span class="kw">rnorm</span>( N, <span class="dv">5</span> <span class="op">-</span><span class="st"> </span><span class="dv">3</span><span class="op">*</span>fungus )</span>
+<span id="cb687-12"><a href="-dag-causal-terror.html#cb687-12"></a></span>
+<span id="cb687-13"><a href="-dag-causal-terror.html#cb687-13"></a><span class="co"># compose a clean data frame</span></span>
+<span id="cb687-14"><a href="-dag-causal-terror.html#cb687-14"></a>d &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">h0 =</span> h0, <span class="dt">h1 =</span> h1, <span class="dt">treatment =</span> treatment, <span class="dt">fungus =</span> fungus)</span>
+<span id="cb687-15"><a href="-dag-causal-terror.html#cb687-15"></a><span class="kw">head</span>(d)</span></code></pre></div>
+<pre><code>##           h0        h1 treatment fungus
+## 1  9.1363156 14.345788         0      0
+## 2  9.1056256 15.623924         0      0
+## 3  9.0428548 14.386665         0      0
+## 4 10.8342908 15.837422         0      0
+## 5  9.1641987 11.469124         0      1
+## 6  7.6256722 11.107757         0      0</code></pre>
+<div class="sourceCode" id="cb689"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb689-1"><a href="-dag-causal-terror.html#cb689-1"></a><span class="kw">precis</span>(d)</span></code></pre></div>
+<pre><code>##                mean         sd       5.5%     94.5%    histogram
+## h0         9.959780 2.10116231  6.5703278 13.078737 ▁▂▂▂▇▃▂▃▁▁▁▁
+## h1        14.399204 2.68808705 10.6180024 17.933694     ▁▁▃▇▇▇▁▁
+## treatment  0.500000 0.50251891  0.0000000  1.000000   ▇▁▁▁▁▁▁▁▁▇
+## fungus     0.230000 0.42295258  0.0000000  1.000000   ▇▁▁▁▁▁▁▁▁▂</code></pre>
+<div id="設定模型" class="section level3" number="49.2.1">
+<h3><span class="header-section-number">49.2.1</span> 設定模型</h3>
+<p><span class="math display">\[
+\begin{aligned}
+h_{1,i} &amp; \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i &amp; = h_{0,i} \times p
+\end{aligned}
+\]</span></p>
+<p>其中，</p>
+<ul>
+<li><span class="math inline">\(h_{0,i}\)</span> 是在時間 <span class="math inline">\(t = 0\)</span> 時的植物高度；</li>
+<li><span class="math inline">\(h_{1,i}\)</span> 是在時間 <span class="math inline">\(t = 1\)</span> 時植物的高度；</li>
+<li><span class="math inline">\(p\)</span> 是比例係數，也就是 <span class="math inline">\(h_{1,i}\)</span> 和 <span class="math inline">\(h_{0,i}\)</span> 之間的比值，<span class="math inline">\(p = \frac{h_{1,i}}{h_{0,i}}\)</span>。如果 <span class="math inline">\(p = 1\)</span> 說明在時間 <span class="math inline">\(t = 1\)</span> 時植物並沒有比在時間 <span class="math inline">\(t = 0\)</span> 時有長高。</li>
+</ul>
+<p>這裡我們對 <span class="math inline">\(p\)</span> 使用的先驗概率分佈，應該會集中在 1 的附近，因為無信息表示我們認為植物的高度不會隨時間發生變化。但是這個比例 <span class="math inline">\(p\)</span> 不能為負數。因為它是一個值和另一個值的比值。我們之前使用過相似特質的先驗概率分佈，也就是對數正（常）態分佈（Log-Normal distribution）：</p>
+<p><span class="math display">\[
+\beta \sim \text{Log-Normal}(0, 0.25)
+\]</span></p>
+<p>看看這個先驗概率分佈的密度曲線是什麼樣子：</p>
+<div class="sourceCode" id="cb691"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb691-1"><a href="-dag-causal-terror.html#cb691-1"></a>sim_p &lt;-<span class="st"> </span><span class="kw">rlnorm</span>(<span class="dv">10000</span>, <span class="dv">0</span>, <span class="fl">0.25</span>)</span>
+<span id="cb691-2"><a href="-dag-causal-terror.html#cb691-2"></a><span class="kw">precis</span>(sim_p)</span></code></pre></div>
+<pre><code>##          mean         sd       5.5%     94.5%    histogram
+## sim_p 1.03699 0.26298937 0.67068301 1.4963969 ▁▁▃▇▇▃▁▁▁▁▁▁</code></pre>
+<div class="sourceCode" id="cb693"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb693-1"><a href="-dag-causal-terror.html#cb693-1"></a><span class="kw">dens</span>( sim_p, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">3</span>), <span class="dt">adj =</span> <span class="fl">0.1</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes09-fig06"></span>
+<img src="bookdown_files/figure-html/introBayes09-fig06-1.png" alt="Distribution density funciton of Log-Normal(0,0.25)" width="576" />
+<p class="caption">
+圖 49.6: Distribution density funciton of Log-Normal(0,0.25)
+</p>
+</div>
+<p>也就是說，我們給出的這個先驗概率分佈認為，植物在不同時間點之間的生長比例範圍在 0.67 和 1.49 之間，也就是要麼縮水33%，或者最多長高50%。</p>
+<p>建立該模型：</p>
+<div class="sourceCode" id="cb694"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb694-1"><a href="-dag-causal-terror.html#cb694-1"></a>m6<span class="fl">.6</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb694-2"><a href="-dag-causal-terror.html#cb694-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb694-3"><a href="-dag-causal-terror.html#cb694-3"></a>    h1 <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu, sigma), </span>
+<span id="cb694-4"><a href="-dag-causal-terror.html#cb694-4"></a>    mu &lt;-<span class="st"> </span>h0 <span class="op">*</span><span class="st"> </span>p ,</span>
+<span id="cb694-5"><a href="-dag-causal-terror.html#cb694-5"></a>    p <span class="op">~</span><span class="st"> </span><span class="kw">dlnorm</span>( <span class="dv">0</span>, <span class="fl">0.25</span> ),</span>
+<span id="cb694-6"><a href="-dag-causal-terror.html#cb694-6"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb694-7"><a href="-dag-causal-terror.html#cb694-7"></a>  ), <span class="dt">data  =</span> d</span>
+<span id="cb694-8"><a href="-dag-causal-terror.html#cb694-8"></a>)</span>
+<span id="cb694-9"><a href="-dag-causal-terror.html#cb694-9"></a><span class="kw">precis</span>(m6<span class="fl">.6</span>)</span></code></pre></div>
+<pre><code>##            mean          sd      5.5%     94.5%
+## p     1.4266259 0.017609916 1.3984818 1.4547699
+## sigma 1.7932857 0.125172622 1.5932357 1.9933357</code></pre>
+<p><span class="math inline">\(p\)</span> 的事後概率分佈均值是 1.43，也就是預估平均每單位時間植物會長高大約 40%。接下來如果加入另外兩個變量，治療組，和是否出現菌落。我們會把這兩個變量對植物施加的影響使用線性回歸模型的方式加到 <span class="math inline">\(p\)</span> 上去：</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_{1, i} &amp; \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i  &amp; = h_{0,i} \times p \\ 
+p     &amp; = \alpha + \beta_T T_i + \beta_F F_i \\
+\alpha  &amp; \sim \text{Log-Normal}(0, 0.25) \\
+\beta_T &amp; \sim \text{Normal}(0, 0.5) \\ 
+\beta_F &amp; \sim \text{Normal}(0, 0.5) \\ 
+\sigma  &amp; \sim \text{Exponential}(1)
+\end{aligned}
+\]</span></p>
+<p>上述模型的R代碼如下：</p>
+<div class="sourceCode" id="cb696"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb696-1"><a href="-dag-causal-terror.html#cb696-1"></a>m6<span class="fl">.7</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb696-2"><a href="-dag-causal-terror.html#cb696-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb696-3"><a href="-dag-causal-terror.html#cb696-3"></a>    h1 <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu, sigma), </span>
+<span id="cb696-4"><a href="-dag-causal-terror.html#cb696-4"></a>    mu &lt;-<span class="st"> </span>h0 <span class="op">*</span><span class="st"> </span>p , </span>
+<span id="cb696-5"><a href="-dag-causal-terror.html#cb696-5"></a>    p &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bt <span class="op">*</span><span class="st"> </span>treatment <span class="op">+</span><span class="st"> </span>bf <span class="op">*</span><span class="st"> </span>fungus, </span>
+<span id="cb696-6"><a href="-dag-causal-terror.html#cb696-6"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dlnorm</span>( <span class="dv">0</span>, <span class="fl">0.2</span> ),</span>
+<span id="cb696-7"><a href="-dag-causal-terror.html#cb696-7"></a>    bt  <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>), </span>
+<span id="cb696-8"><a href="-dag-causal-terror.html#cb696-8"></a>    bf  <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>),</span>
+<span id="cb696-9"><a href="-dag-causal-terror.html#cb696-9"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb696-10"><a href="-dag-causal-terror.html#cb696-10"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb696-11"><a href="-dag-causal-terror.html#cb696-11"></a>)</span>
+<span id="cb696-12"><a href="-dag-causal-terror.html#cb696-12"></a><span class="kw">precis</span>(m6<span class="fl">.7</span>)</span></code></pre></div>
+<pre><code>##                mean          sd         5.5%        94.5%
+## a      1.4813914677 0.024510693  1.442218647  1.520564289
+## bt     0.0024122219 0.029869649 -0.045325247  0.050149691
+## bf    -0.2667189147 0.036547721 -0.325129231 -0.208308598
+## sigma  1.4087974415 0.098620704  1.251182509  1.566412374</code></pre>
+<p>這裡似乎在說，治療本身對植物生長速度並無效果，但是有菌落卻對生長比例造成了負影響。可是我們明明知道菌落是否存在，是取決於治療本身的，也就是菌落是治療對土壤造成的結果之一。上述模型似乎在告訴我們，當我們知道了治療造成的結果之一 – 是否有菌落，那麼治療本身對植物生長比例的影響就消失了。正確的模型是，我們應該把菌落這個變量從模型中拿掉，從而尋找治療對植物生長率的效果：</p>
+<div class="sourceCode" id="cb698"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb698-1"><a href="-dag-causal-terror.html#cb698-1"></a>m6<span class="fl">.8</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb698-2"><a href="-dag-causal-terror.html#cb698-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb698-3"><a href="-dag-causal-terror.html#cb698-3"></a>    h1 <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu, sigma), </span>
+<span id="cb698-4"><a href="-dag-causal-terror.html#cb698-4"></a>    mu &lt;-<span class="st"> </span>h0 <span class="op">*</span><span class="st"> </span>p, </span>
+<span id="cb698-5"><a href="-dag-causal-terror.html#cb698-5"></a>    p &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bt <span class="op">*</span><span class="st"> </span>treatment, </span>
+<span id="cb698-6"><a href="-dag-causal-terror.html#cb698-6"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dlnorm</span>(<span class="dv">0</span>, <span class="fl">0.25</span>),</span>
+<span id="cb698-7"><a href="-dag-causal-terror.html#cb698-7"></a>    bt <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.5</span>),</span>
+<span id="cb698-8"><a href="-dag-causal-terror.html#cb698-8"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb698-9"><a href="-dag-causal-terror.html#cb698-9"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb698-10"><a href="-dag-causal-terror.html#cb698-10"></a>)</span>
+<span id="cb698-11"><a href="-dag-causal-terror.html#cb698-11"></a><span class="kw">precis</span>(m6<span class="fl">.8</span>)</span></code></pre></div>
+<pre><code>##              mean          sd        5.5%     94.5%
+## a     1.381693513 0.025197600 1.341422882 1.4219641
+## bt    0.083654229 0.034313231 0.028815059 0.1384934
+## sigma 1.746295968 0.121908002 1.551463435 1.9411285</code></pre>
+<p>上述的分析過程和結果告訴我們，如果我們把由於治療本身造成的結果之一也錯誤地放進預測變量中的話，治療本身的效果會消失。</p>
+<p>這些變量之間的關係還可以用下面的DAG圖來輔助理解：</p>
+<div class="sourceCode" id="cb700"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb700-1"><a href="-dag-causal-terror.html#cb700-1"></a>plant_dag &lt;-<span class="st"> </span><span class="kw">dagitty</span>(<span class="st">&quot;dag{</span></span>
+<span id="cb700-2"><a href="-dag-causal-terror.html#cb700-2"></a><span class="st">      H_0 -&gt; H_1 </span></span>
+<span id="cb700-3"><a href="-dag-causal-terror.html#cb700-3"></a><span class="st">      F -&gt; H_1 </span></span>
+<span id="cb700-4"><a href="-dag-causal-terror.html#cb700-4"></a><span class="st">      T -&gt; F</span></span>
+<span id="cb700-5"><a href="-dag-causal-terror.html#cb700-5"></a><span class="st">}&quot;</span>)</span>
+<span id="cb700-6"><a href="-dag-causal-terror.html#cb700-6"></a><span class="kw">coordinates</span>( plant_dag ) &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">x =</span> <span class="kw">c</span>(<span class="dt">H_0 =</span> <span class="dv">0</span> , <span class="dt">T =</span> <span class="dv">2</span>, <span class="dt">F =</span> <span class="fl">1.5</span>, <span class="dt">H_1 =</span> <span class="dv">1</span>), </span>
+<span id="cb700-7"><a href="-dag-causal-terror.html#cb700-7"></a>                                 <span class="dt">y =</span> <span class="kw">c</span>(<span class="dt">H_0 =</span> <span class="dv">0</span> , <span class="dt">T =</span> <span class="dv">0</span>, <span class="dt">F =</span> <span class="dv">0</span>, <span class="dt">H_1 =</span> <span class="dv">0</span>))</span>
+<span id="cb700-8"><a href="-dag-causal-terror.html#cb700-8"></a><span class="kw">drawdag</span>(plant_dag)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes09-fig07"></span>
+<img src="bookdown_files/figure-html/introBayes09-fig07-1.png" alt="The DAG of the fungus and treatment effect on the grow of plant." width="768" />
+<p class="caption">
+圖 49.7: The DAG of the fungus and treatment effect on the grow of plant.
+</p>
+</div>
+<p>如果我們錯誤地把 <span class="math inline">\(F\)</span> 也放入預測變量中去的話，就把實際治療變量的效果這條通路給堵住了。這在因果推斷中被叫做，由於控制了 F 變量，我們錯誤地在模型中引入了 D - separation。這裡的 D，指的是 directional（方向）。D-separation 在因果推斷中指的是，某個變量在DAG圖中和其他所有變量都獨立。在本例中， 由於控制了 <span class="math inline">\(F\)</span> 而導致從治療變量 <span class="math inline">\(T\)</span> 通往結果變量 <span class="math inline">\(H_1\)</span> 之間的的通路被阻斷了 (<span class="math inline">\(T \rightarrow F \rightarrow H_1\)</span>)，使得 <span class="math inline">\(H_1\)</span> 和 <span class="math inline">\(T\)</span> 之間變得失去了依賴關係（相互獨立）。</p>
 
 </div>
 </div>
