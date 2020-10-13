@@ -407,3 +407,110 @@ drawdag(grant_dag)
 
 
 對撞因子偏倚的現象很有趣，當上述模型中加入對撞因子 S，就會在統計學上給出影響該對撞因子的變量之間的錯誤的關聯性，這裡就是本不該有關聯的 N 和 T 之間會出現統計學上的關聯性。因為，從邏輯上來說，當你知道了某個項目被選中了，也就是圖 \@ref(fig:introBayes09-fig01) 中藍色的部分，那麼本來不相關的兩個變量之間就存在了互相可以預測的掛係，即，如果此時你又對該科研項目的可信度或者是新穎度之一有所了解的話，你就可以大致猜測它的新穎度或者是可信度。也就是說，在這些被選中接受科研經費贊助的藍色項目中，如果你知道某項目的新穎程度很高很高，那麼你大概可以認為它給出的科研成果的可信度會比較低。同樣的，如果你知道某個科研項目並不是特別新穎的內容，但是它既然被選中了，這就說明該項目本身將會給出的科研成果會是十分令人信服的。
+
+### 虛假的傷心對撞因子 collider of false sorrow
+
+思考年齡和信服感之間的關係。年齡是否會和幸福感有關係呢？如果有關係，他們之間的關係能算作是因果關係嗎？這裡我們大膽假定每個人出生時幸福感就已被定格，不會隨著年齡而變化。我們已知幸福感會影響一個人是否結婚的概率，大概天天比較樂觀開心表現的有幸福感的人，結婚的概率也相對高一些。另一個可能影響結婚與否的變量一般認為是年齡。很顯然，存活的時間越長，越有機會結婚。這三者之間的關係類似地也可以表達成為 DAG 因果關係圖：
+
+
+```{r introBayes09-fig10, cache=TRUE, fig.width=8, fig.height=1,  fig.cap="The DAG of the happiniess problem: two unrelated variables (H and A) influence marriage.", fig.align='center'}
+
+marriage_dag <- dagitty("dag{
+      H -> M
+      A -> M
+}")
+coordinates( marriage_dag ) <- list(x = c(H = 0.5, M = 1, A = 1.5), 
+                                 y = c(H = 0, M = 0, A = 0))
+drawdag(marriage_dag)
+```
+
+根據我們理解的理論，年齡和幸福感各自都會影響結婚與否。結婚這個變量就是一個對撞因子 (collider)。即使我們知道年齡和幸福感之間不應該存在直接的關係，但是假如我們有一個模型，結果變量是幸福感，預測變量是年齡（或者反過來）的話，在預測變量裡增加結婚這個變量會導致本來沒有關係的二者變得有“統計學關係”。這就顯然會誤導我們認為年齡增加和幸福感的增加或者減少是有關聯的（而事實上應該是無關的）。
+
+我們用一個較為極端的例子來做一次計算機模擬：
+
+1. 每年有20名實驗對象出生，且他們擁有符合均一分佈特徵的幸福感。
+2. 每年，實驗對象年齡自然會增加一歲。然而幸福感並不會因年齡的增加而增加或減少。
+3. 當實驗對象18歲時，有些人會結婚。結婚本身的比值 (odds) 則於該實驗對象的幸福感成一定的比例關係 (proportional)。
+4. 當一名實驗對象結婚了以後，她/他保持結婚的狀態，不會離婚。
+5. 年齡到65歲之後，該實驗對象離開本次研究。
+
+
+```{r introBayes09-12, cache=TRUE}
+d <- sim_happiness( seed = 1977, N_years = 1000)
+precis(d)
+```
+
+這個實驗性的計算機模擬數據本身包含了0-65歲的1300名實驗對象的幸福感和結婚與否的數據。
+
+```{r introBayes09-fig11, cache=TRUE, fig.width=8, fig.height=4,  fig.cap="Simulated data, assuming that happiness is uniformly distributed and never changes. Each point is a person. Married individuals are shown with filled blue points. At each age after 18, the happiest individuals are more likely to be married. At later ages, more individuals tend to be married. Marriage status is a collider of age and happiness: A -> M <- H. If we condition on marriage in a regression, it will mislead us to believe that happiness declines with age.", fig.align='center'}
+d %>% 
+  mutate(married = factor(married,
+                          labels = c("unmarried", "married"))) %>% 
+  
+  ggplot(aes(x = age, y = happiness)) +
+  geom_point(aes(color = married), size = 1.75) +
+  scale_color_manual(NULL, values = c("grey85", "forestgreen")) +
+  scale_x_continuous(expand = c(.015, .015)) +
+  theme(panel.grid = element_blank())
+```
+
+這時，我們希望用這個數據來回答：“年齡是否和幸福感有關係？”這樣的問題。假設你不知道我們在生成這組數據時遵循的上述 1 - 5 條原則。所以你在建立模型的時候很可能自然而然的認為婚姻本身是年齡和幸福感之間關係的混雜因子。也就是你大概會認為結婚的人莫名其妙地就應該比相對更加（不）幸福。這樣的模型應該是這樣子的；
+
+
+$$
+\mu_i = \alpha_{\text{MID}[i]} + \beta_A A_i
+$$
+
+其中，
+
+- $\text{MID}[i]$ 是實驗對象 $i$ 是否已經結婚的索引變量 (index variable)，當它等於1時表示單身，等於2時表示已婚。
+- 這其實是我們人為地給已婚者和單身者的幸福感和年齡之間關係的直線設定了各自的截距。
+
+這時，由於18歲以後才可以結婚，我們把該數據的人口年齡限定在18歲及以上者。另外我們再把年齡的尺度縮放一下使得 18-65 歲之間的比例是1：
+
+```{r introBayes09-13, cache=TRUE}
+d2 <- d[ d$age > 17, ] # adults only
+d2$A <- (d2$age - 18) / (65 - 18 )
+```
+
+經過上述的數據處理，我們使得年齡變量 A 的範圍控制在 0-1 之間，其中 0 代表 18 歲，1 代表 65 歲。幸福感則是一個範圍在 -2, 2 之間的數值。這樣的話，假定年齡和幸福感之間呈現的是即強烈的正關係，那麼這最極端的斜率也就是 $(2 - (-2)) / 1 = 4$。所以，一個較為合理的斜率的先驗概率分佈，可以是95%的斜率取值分佈在小於極端斜率之內的範圍。其次是為截距 $\alpha$ 設定合理的先驗概率分佈。因為 $\alpha$ 本身是年齡等於零，也就是18歲時的幸福感，我們需要這個數據能夠覆蓋所有可能的幸福感取值，-2，2 之間。那麼，標準正（常）態分佈是一個不錯的選擇。
+
+```{r introBayes09-14, cache=TRUE}
+d2$mid <- d2$married + 1 # construct the marriage status index variable
+m6.9 <- quap(
+  alist(
+    happiness ~ dnorm(mu, sigma), 
+    mu <- a[mid] + bA * A, 
+    a[mid] ~ dnorm(0, 1), 
+    bA ~ dnorm(0, 2), 
+    sigma ~ dexp(1)
+  ), data = d2
+)
+precis(m6.9, depth = 2)
+```
+
+看，這個模型似乎很確定，年齡和幸福感是呈現負關係的。對比一下沒有假如婚姻狀態的變量的模型給出的估計結果：
+
+
+```{r introBayes09-15, cache=TRUE}
+m6.10 <- quap(
+  alist(
+    happiness ~ dnorm(mu, sigma), 
+    mu <- a + bA * A, 
+    a ~ dnorm( 0, 1 ), 
+    bA ~ dnorm(0, 2),
+    sigma ~ dexp(1)
+  ), data = d2
+)
+precis(m6.10)
+```
+
+`m6.10` 才是正確的模型。它正確的給出了年齡和幸福感之間並無關係的結果。模型 `m6.9` 錯誤地把對撞因子 -- 婚姻狀況作為預測變量之一加入了模型中，而婚姻狀況在這個數據背景下，同時是年齡和幸福感的結果（common consequence of age and happiness）。結果就會像 `m6.9` 那樣，出現年齡和幸福感之間虛假的負關係 (false negative association between the two causes)。`m6.9` 告訴我們看起來似乎年齡的增長和幸福感呈現負關係，這在模型中給出的關係應該嚴格來說只能算是一種統計學的關係，不能算是真實的因果關係。正如圖 \@ref(fig: introBayes09-fig11) 所顯示的。當已知實驗對象是已婚或者未婚，實驗對象的年齡似乎能告訴我們他/她的幸福度。看綠色點的部分，這些人都是已婚者，年齡越大，越多人結婚，那麼這個已婚人群的幸福度數值就會平均被拉低。相似的，看空白點的部分，這些人都是未婚者，年齡越大，其中幸福感較強的人都結婚而加入了已婚人群陣營，那麼剩下的人就會感覺幸福度越來越低。所以，當把人群分成未婚和已婚兩個部分的話，這兩個人群中的幸福度都隨著年齡增加而呈現下降趨勢。但是，我們知道，這並不是真實的因果關係。
+
+
+碰撞因子偏倚本身會出現在當模型中的預測變量加入了某個同時是結果和某一個預測變量的結果的變量（common consequence）。
+
+
+### 對撞因子偏倚另一實例（未測量變量造成的碰撞偏倚）
+
+
