@@ -321,3 +321,89 @@ drawdag(plant_dag)
 
 如果我們錯誤地把 $F$ 也放入預測變量中去的話，就把實際治療變量的效果這條通路給堵住了。這在因果推斷中被叫做，由於控制了 F 變量，我們錯誤地在模型中引入了 D - separation。這裡的 D，指的是 directional（方向）。D-separation 在因果推斷中指的是，某個變量在DAG圖中和其他所有變量都獨立。在本例中， 由於控制了 $F$ 而導致從治療變量 $T$ 通往結果變量 $H_1$ 之間的的通路被阻斷了 ($T \rightarrow F \rightarrow H_1$)，使得 $H_1$ 和 $T$ 之間變得失去了依賴關係（相互獨立）。
 
+
+事實上，錯誤地在預測變量中放入治療結果造成的結果不只是可能使我麼誤認為治療無效，也可能使我們誤認為原本無效的治療是有效的。看如下圖 \@ref(fig:introBayes09-fig08) 所提示的因果關係。它的涵義是，該治療土壤的方法確實導致了某些奇怪的菌落的生長，但是，我們種的那個植物並不會被菌落的生長所影響。但是假設有一個未知未測量的變量 "M"，它會同時影響植物和菌落的生長（例如空氣濕度）。這時如果我們建立一個簡單線型回歸模型來尋找治療 $T$ 和植物生長 $H_1$ 之間的關係的話，不小心加入了菌落這一變量會導致本來沒有關係的二者突然出現了治療效果一樣的聯繫。我們來試著模擬一下這個現象。
+
+
+```{r  introBayes09-fig08, cache=TRUE, fig.width=8, fig.height=2,  fig.cap="The other DAG of the fungus and treatment effect on the grow of plant.", fig.align='center'}
+# define our coordinates
+dag_coords <-
+  tibble(name = c("H0", "H1", "M", "F", "T"),
+         x    = c(1, 2, 2.5, 3, 4),
+         y    = c(2, 2, 1, 2, 2))
+
+# save our DAG
+dag <-
+  dagify(F ~ M + T,
+         H1 ~ H0 + M,
+         coords = dag_coords)
+
+# plot 
+dag %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_dag_point(aes(color = name == "M"),
+                 alpha = 1/2, size = 6.5, show.legend = F) +
+  geom_point(x = 2.5, y = 1, 
+             size = 6.5, shape = 1, stroke = 1, color = "orange") +
+  geom_dag_text(color = "black") +
+  geom_dag_edges() + 
+  scale_color_manual(values = c("steelblue", "orange")) +
+  theme_dag()
+```
+
+```{r introBayes09-11, cache=TRUE}
+set.seed(71)
+N <- 1000
+h0 <- rnorm(N, 10, 2)
+treatment <- rep(0:1, each = N/2)
+M <- rbern(N)
+fungus <- rbinom( N, size = 1, prob = 0.5 - treatment * 0.5 + 0.4 * M)
+h1 <- h0 + rnorm( N, 5 + 3 * M)
+d2 <- data.frame( h0 = h0, h1 = h1, treatment = treatment, fungus = fungus)
+precis(d2)
+# incorrectly included fugus 
+m6.7 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p , 
+    p <- a + bt * treatment + bf * fungus, 
+    a ~ dlnorm( 0, 0.2 ),
+    bt  ~ dnorm(0, 0.5), 
+    bf  ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d2
+)
+precis(m6.7)
+
+# the correct model to see the treatment effect 
+m6.8 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p, 
+    p <- a + bt * treatment, 
+    a ~ dlnorm(0, 0.25),
+    bt ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d2
+)
+precis(m6.8)
+```
+
+此時你發現加入 `fungus` 變量依然對正確的對斷造成了干擾。使得本來不應該出現的治療效果似乎突然成了有效的促進植物生長的治療。
+
+## 對撞因子偏倚 collider bias
+
+使用本章節開頭的申請研究經費的例子，我們認為研究的可靠性 (Trustworthiness, T)，和新穎程度 (Newsworthiness, N) 之間是無關聯性的（圖 \@ref(fig:introBayes09-fig01)）。但是，他們二者都會對是否該科研項目被選中 (Selected, S) 造成影響。這樣的關係可以使用下面的 DAG 來表達：
+
+```{r  introBayes09-fig09, cache=TRUE, fig.width=8, fig.height=1,  fig.cap="The DAG of the grant selection problem: two unrelated variables (T and N) influence S, a collider example.", fig.align='center'}
+grant_dag <- dagitty("dag{
+      T -> S
+      N -> S
+}")
+coordinates( grant_dag ) <- list(x = c(T = 0.5, S = 1, N = 1.5), 
+                                 y = c(T = 0, S = 0, N = 0))
+drawdag(grant_dag)
+```
+
+
+對撞因子偏倚的現象很有趣，當上述模型中加入對撞因子 S，就會在統計學上給出影響該對撞因子的變量之間的錯誤的關聯性，這裡就是本不該有關聯的 N 和 T 之間會出現統計學上的關聯性。因為，從邏輯上來說，當你知道了某個項目被選中了，也就是圖 \@ref(fig:introBayes09-fig01) 中藍色的部分，那麼本來不相關的兩個變量之間就存在了互相可以預測的掛係，即，如果此時你又對該科研項目的可信度或者是新穎度之一有所了解的話，你就可以大致猜測它的新穎度或者是可信度。也就是說，在這些被選中接受科研經費贊助的藍色項目中，如果你知道某項目的新穎程度很高很高，那麼你大概可以認為它給出的科研成果的可信度會比較低。同樣的，如果你知道某個科研項目並不是特別新穎的內容，但是它既然被選中了，這就說明該項目本身將會給出的科研成果會是十分令人信服的。
