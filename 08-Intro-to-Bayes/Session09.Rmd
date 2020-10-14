@@ -534,5 +534,112 @@ coordinates(dag6.3.2_u) <- list( x=c(G=0,P=1,C=1,U=1.3) , y=c(G=0,P=0,C=1,U=0.5)
 drawdag( dag6.3.2_u )
 ```
 
-如果因果關係 \@ref(fig:introBayes09-fig13) 成立的話，那麼 P 就是 G 和 U 之間的對撞因子。如果此時我們建立 $G \rightarrow C$ 模型時把 $P$ 加入預測變量中，那麼對撞因子偏倚就變得不可避免，即便我們並沒有測量這個 U 變量。
+如果因果關係 \@ref(fig:introBayes09-fig13) 成立的話，那麼 P 就是 G 和 U 之間的對撞因子。如果此時我們建立 $G \rightarrow C$ 模型時把 $P$ 加入預測變量中，即便我們並沒有測量這個 U 變量，對撞因子偏倚也變得不可避免。
+
+我們實際使用計算機模擬來理解這一過程。數據模擬符合下列條件
+
+1. P 是 G, U 共同影響的結果 (common consequence)。
+2. C 則是 G, U, P 三者共同預測的結果。
+3. G 和 U 不受任一變量的影響（完全獨立）。
+
+```{r introBayes09-16, cache=TRUE}
+N <- 200  # number of grandparent-parent-child traids
+b_GP <- 1 # direct effect of G on P
+b_GC <- 0 # direct effect of G on C
+b_PC <- 1 # direct effect of P on C
+b_U <- 2  # direct effect of U on P and C
+```
+
+上面的模擬參數其實類似於回歸模型中的回歸係數。注意到我們假設祖父母對孫輩學習成績的影響是 0。接下來我們用這些回歸係數來採集一些符合上述設定的隨機樣本數據：
+
+
+```{r introBayes09-17, cache=TRUE}
+set.seed(1)
+U <- 2 * rbern( N, 0.5 ) - 1
+G <- rnorm( N )
+P <- rnorm( N, b_GP * G + b_U * U)
+C <- rnorm( N, b_PC * P + b_GC * G + b_U * U )
+d <- data.frame(C = C, P = P, G = G, U = U)
+```
+
+那麼，該怎樣設定一個模型來分析祖父母對孫輩學習成績的影響呢？我們認為祖父母的教育程度會通過父母親這條通路，影響到子女的學習成績，所以模型中應該要控制 P。那麼下面的代碼建立的是一個簡單的線性回歸模型，結果變量是 C，預測變量是 P 和 G，注意這裡我們假裝沒有測量到，也不知道 U 變量的存在：
+
+
+```{r introBayes09-18, cache=TRUE}
+m6.11 <- quap(
+  alist(
+    C ~ dnorm( mu, sigma ), 
+    mu <- a + b_PC * P + b_GC * G,
+    a ~ dnorm(0, 1),
+    c(b_PC, b_GC) ~ dnorm(0, 1), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+precis(m6.11)
+```
+
+看模型 `m6.11` 給出的父母子女的學習成績的影響是多麼的顯著。甚至比我們設定的關係還要大兩倍。這並不奇怪，因為這裡給出的一部分 $P \rightarrow C$ 的關係應該歸功於 $U$，但是該模型本身不知道 $U$ 的存在。但是更令人感到驚訝的是，本來設定的祖父母不影響子女學習成績的關係在這個模型中變得顯著呈現負相關，這是有悖常識的。再怎麼說祖父母的受教育程度越高也不能給子女的學習成績帶來負面的影響才是。這個數學模型本身並沒有錯，但是它不能被賦予一個因果關係的解釋。這裏的對撞因子偏倚是如何形成的呢？
+
+
+```{r introBayes09-fig14, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Unobserved confounds and collider bias. In this example, grandparents influence grandkids only indirectly, through parents. However, unobserved neighborhood effects on parents and their children create the illusion that grand parents harm their grandkids education. Parental education is a collider: once we condition on it, grandparental education becomes negatively associated with grand child education.", fig.align='center'}
+d$G_st <- standardize(d$G)
+d$C_st <- standardize(d$C)
+d$P_st <- standardize(d$P)
+P_45 <- quantile(d$P_st, prob = .45)
+P_60 <- quantile(d$P_st, prob = .60)
+
+with(d, plot(G_st[(P_st < P_45 | P_st > P_60) & U == -1], 
+             C_st[(P_st < P_45 | P_st > P_60) & U == -1], 
+             col = c("black"), 
+             xlim = c(-3,3), ylim = c(-2.5, 2.3),
+             bty="n", 
+             main = "Parents in 45th to 60th centiles",
+             xlab = "grandparent education (G)", 
+             ylab = "grandchild education (C)"))
+with(d, points(G_st[(P_st >= P_45 & P_st <= P_60) & U == -1], 
+               C_st[(P_st >= P_45 & P_st <= P_60) & U == -1], 
+               col = c("black"), 
+               pch = 16))
+with(d, points(G_st[(P_st < P_45 | P_st > P_60) & U == 1], 
+               C_st[(P_st < P_45 | P_st > P_60) & U == 1], 
+               col = rangi2))
+with(d, points(G_st[(P_st >= P_45 & P_st <= P_60) & U == 1], 
+               C_st[(P_st >= P_45 & P_st <= P_60) & U == 1], 
+               col = rangi2, 
+               pch = 16))
+with(d, abline(lm(C_st[(P_st >= P_45 & P_st <= P_60)] ~ 
+                    G_st[(P_st >= P_45 & P_st <= P_60)]), 
+       lty = 2, lwd = 1, col = c("blue")))
+text(-1.5, 2.1, "Good neighborhoods", col = rangi2)
+text(0.5, -2.1, "Bad neighborhoods")
+```
+
+
+繪製祖父母教育水平和子女學習成績之間的散點圖如圖 \@ref(fig:introBayes09-fig14) 所示，橫軸是祖父母的受教育水平，縱軸是子女的學習成績。其中根據未知的變量 U ，也就是子女和父母生活的社區環境的優越與否分成了藍色和黑色兩個部分的散點雲。可以看見不論是在優越街區 (U = 1) 還是在較差的街區 (U = 2)，祖父母的教育水平應該都和子女的學習成績成正相關才對。但是這一關係在我們模擬的數據中是100%通過父母親的受教育水平來體現的，因為我們一開始強制 `b_GC <- 0 # direct effect of G on C`，也就是 G 直接對 C 的影響的理論值是零。當模型中的預測變量加入了對撞因子，父母親的受教育水平 P 這一變量之後，我們相當於是在強制比較父母受相似教育水平的孩子之間的學習成績。如圖 \@ref(fig:introBayes09-fig14) 中藍色和黑色實心點的部分兒童。當僅使用這些點來做回歸直線時，給出的回歸係數就是負的。這就是模型 `m6.11` 給出的 `b_GC = -0.84` 這樣的負數的回歸係屬估計的原因。之所以會出現這樣有趣的對撞因子偏倚，我們可以這樣認為：當我們已知父母親的受教育水平 P 之後，如果再了解了祖父母的受教育水平 G，等於是間接知道了子女和父母生活的街區 (U) 的一部分信息。這裡反覆需要強調的是，街區這一變量是未知未測的變量。所以，假如我們選出兩個小孩，他們的父母親有相似的受教育程度，其中一個的祖父母受教育程度低，在圖\@ref(fig:introBayes09-fig14)的藍色區域，另一個小孩的祖父母受教育程度較高，在圖\@ref(fig:introBayes09-fig14)的黑色區域。那麼之所以這兩個小孩的父母親受教育水平相似，只能是被不同的生活街區所影響（但是這個變量其實是未觀測變量）。所以這時候孩子之間的成績差異其實並非是由祖父母造成的，而是間接地被未知的變量 - 生活街區的優越與否給影響了的。所以我們會看見這樣神奇的現象，也就是父母親相似的教育水平時，如果祖父母受教育水平高，則他們大多生活在不怎麼樣的街區，從而間接導致了小孩學習成績不佳。看起來似乎是祖父母的受教育水平反而對子女學習成績造成了負影響一樣。
+
+這裡，未測量的街區這一變量使得父母親受教育程度這一變量變成了對撞因子，解決對撞因子偏倚的方法其實是，認識到有未測量變量的存在，然後去獲取該變量，加入到你的模型中去：
+
+
+```{r introBayes09-19, cache=TRUE}
+m6.12 <- quap(
+  alist(
+    C ~ dnorm( mu, sigma ), 
+    mu <- a + b_PC * P + b_GC * G + b_U * U,
+    a ~ dnorm(0, 1),
+    c(b_PC, b_GC, b_U) ~ dnorm(0, 1), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+
+precis(m6.12)
+```
+
+這樣子模型 `m6.12` 就能準確地給出我們模擬他們的關係的回歸係數。
+
+## 直面混雜效應
+
+
+
+
 

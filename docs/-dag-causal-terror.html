@@ -829,6 +829,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="49.3.1" data-path="-dag-causal-terror.html"><a href="-dag-causal-terror.html#虛假的傷心對撞因子-collider-of-false-sorrow"><i class="fa fa-check"></i><b>49.3.1</b> 虛假的傷心對撞因子 collider of false sorrow</a></li>
 <li class="chapter" data-level="49.3.2" data-path="-dag-causal-terror.html"><a href="-dag-causal-terror.html#對撞因子偏倚另一實例未測量變量造成的碰撞偏倚"><i class="fa fa-check"></i><b>49.3.2</b> 對撞因子偏倚另一實例（未測量變量造成的碰撞偏倚）</a></li>
 </ul></li>
+<li class="chapter" data-level="49.4" data-path="-dag-causal-terror.html"><a href="-dag-causal-terror.html#直面混雜效應"><i class="fa fa-check"></i><b>49.4</b> 直面混雜效應</a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="50" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>50</b> 重要概念複習</a>
@@ -2292,14 +2293,110 @@ p     &amp; = \alpha + \beta_T T_i + \beta_F F_i \\
 <div class="sourceCode" id="cb719"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb719-1"><a href="-dag-causal-terror.html#cb719-1"></a>dag6.<span class="fl">3.2</span>_u &lt;-<span class="st"> </span><span class="kw">dagitty</span>( <span class="st">&quot;dag{ G -&gt; P; P -&gt; C; G -&gt; C ; U -&gt; P ; U -&gt; C U [unobserved]}&quot;</span> )</span>
 <span id="cb719-2"><a href="-dag-causal-terror.html#cb719-2"></a><span class="kw">coordinates</span>(dag6.<span class="fl">3.2</span>_u) &lt;-<span class="st"> </span><span class="kw">list</span>( <span class="dt">x=</span><span class="kw">c</span>(<span class="dt">G=</span><span class="dv">0</span>,<span class="dt">P=</span><span class="dv">1</span>,<span class="dt">C=</span><span class="dv">1</span>,<span class="dt">U=</span><span class="fl">1.3</span>) , <span class="dt">y=</span><span class="kw">c</span>(<span class="dt">G=</span><span class="dv">0</span>,<span class="dt">P=</span><span class="dv">0</span>,<span class="dt">C=</span><span class="dv">1</span>,<span class="dt">U=</span><span class="fl">0.5</span>) )</span>
 <span id="cb719-3"><a href="-dag-causal-terror.html#cb719-3"></a><span class="kw">drawdag</span>( dag6.<span class="fl">3.2</span>_u )</span></code></pre></div>
-<div class="figure"><span id="fig:introBayes09-fig13"></span>
-<img src="bookdown_files/figure-html/introBayes09-fig13-1.png" alt="Educational achievements between parents (P), grandparents (G), and children (C), with an unobserved neighborhood variable." width="316.8" />
+<div class="figure" style="text-align: center"><span id="fig:introBayes09-fig13"></span>
+<img src="bookdown_files/figure-html/introBayes09-fig13-1.png" alt="Educational achievements between parents (P), grandparents (G), and children (C), with an unobserved neighborhood variable (U)." width="316.8" />
 <p class="caption">
-圖 49.13: Educational achievements between parents (P), grandparents (G), and children (C), with an unobserved neighborhood variable.
+圖 49.13: Educational achievements between parents (P), grandparents (G), and children (C), with an unobserved neighborhood variable (U).
 </p>
 </div>
-
+<p>如果因果關係 <a href="-dag-causal-terror.html#fig:introBayes09-fig13">49.13</a> 成立的話，那麼 P 就是 G 和 U 之間的對撞因子。如果此時我們建立 <span class="math inline">\(G \rightarrow C\)</span> 模型時把 <span class="math inline">\(P\)</span> 加入預測變量中，即便我們並沒有測量這個 U 變量，對撞因子偏倚也變得不可避免。</p>
+<p>我們實際使用計算機模擬來理解這一過程。數據模擬符合下列條件</p>
+<ol style="list-style-type: decimal">
+<li>P 是 G, U 共同影響的結果 (common consequence)。</li>
+<li>C 則是 G, U, P 三者共同預測的結果。</li>
+<li>G 和 U 不受任一變量的影響（完全獨立）。</li>
+</ol>
+<div class="sourceCode" id="cb720"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb720-1"><a href="-dag-causal-terror.html#cb720-1"></a>N &lt;-<span class="st"> </span><span class="dv">200</span>  <span class="co"># number of grandparent-parent-child traids</span></span>
+<span id="cb720-2"><a href="-dag-causal-terror.html#cb720-2"></a>b_GP &lt;-<span class="st"> </span><span class="dv">1</span> <span class="co"># direct effect of G on P</span></span>
+<span id="cb720-3"><a href="-dag-causal-terror.html#cb720-3"></a>b_GC &lt;-<span class="st"> </span><span class="dv">0</span> <span class="co"># direct effect of G on C</span></span>
+<span id="cb720-4"><a href="-dag-causal-terror.html#cb720-4"></a>b_PC &lt;-<span class="st"> </span><span class="dv">1</span> <span class="co"># direct effect of P on C</span></span>
+<span id="cb720-5"><a href="-dag-causal-terror.html#cb720-5"></a>b_U &lt;-<span class="st"> </span><span class="dv">2</span>  <span class="co"># direct effect of U on P and C</span></span></code></pre></div>
+<p>上面的模擬參數其實類似於回歸模型中的回歸係數。注意到我們假設祖父母對孫輩學習成績的影響是 0。接下來我們用這些回歸係數來採集一些符合上述設定的隨機樣本數據：</p>
+<div class="sourceCode" id="cb721"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb721-1"><a href="-dag-causal-terror.html#cb721-1"></a><span class="kw">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb721-2"><a href="-dag-causal-terror.html#cb721-2"></a>U &lt;-<span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span><span class="kw">rbern</span>( N, <span class="fl">0.5</span> ) <span class="op">-</span><span class="st"> </span><span class="dv">1</span></span>
+<span id="cb721-3"><a href="-dag-causal-terror.html#cb721-3"></a>G &lt;-<span class="st"> </span><span class="kw">rnorm</span>( N )</span>
+<span id="cb721-4"><a href="-dag-causal-terror.html#cb721-4"></a>P &lt;-<span class="st"> </span><span class="kw">rnorm</span>( N, b_GP <span class="op">*</span><span class="st"> </span>G <span class="op">+</span><span class="st"> </span>b_U <span class="op">*</span><span class="st"> </span>U)</span>
+<span id="cb721-5"><a href="-dag-causal-terror.html#cb721-5"></a>C &lt;-<span class="st"> </span><span class="kw">rnorm</span>( N, b_PC <span class="op">*</span><span class="st"> </span>P <span class="op">+</span><span class="st"> </span>b_GC <span class="op">*</span><span class="st"> </span>G <span class="op">+</span><span class="st"> </span>b_U <span class="op">*</span><span class="st"> </span>U )</span>
+<span id="cb721-6"><a href="-dag-causal-terror.html#cb721-6"></a>d &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">C =</span> C, <span class="dt">P =</span> P, <span class="dt">G =</span> G, <span class="dt">U =</span> U)</span></code></pre></div>
+<p>那麼，該怎樣設定一個模型來分析祖父母對孫輩學習成績的影響呢？我們認為祖父母的教育程度會通過父母親這條通路，影響到子女的學習成績，所以模型中應該要控制 P。那麼下面的代碼建立的是一個簡單的線性回歸模型，結果變量是 C，預測變量是 P 和 G，注意這裡我們假裝沒有測量到，也不知道 U 變量的存在：</p>
+<div class="sourceCode" id="cb722"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb722-1"><a href="-dag-causal-terror.html#cb722-1"></a>m6<span class="fl">.11</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb722-2"><a href="-dag-causal-terror.html#cb722-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb722-3"><a href="-dag-causal-terror.html#cb722-3"></a>    C <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb722-4"><a href="-dag-causal-terror.html#cb722-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b_PC <span class="op">*</span><span class="st"> </span>P <span class="op">+</span><span class="st"> </span>b_GC <span class="op">*</span><span class="st"> </span>G,</span>
+<span id="cb722-5"><a href="-dag-causal-terror.html#cb722-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb722-6"><a href="-dag-causal-terror.html#cb722-6"></a>    <span class="kw">c</span>(b_PC, b_GC) <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>), </span>
+<span id="cb722-7"><a href="-dag-causal-terror.html#cb722-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb722-8"><a href="-dag-causal-terror.html#cb722-8"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb722-9"><a href="-dag-causal-terror.html#cb722-9"></a>)</span>
+<span id="cb722-10"><a href="-dag-causal-terror.html#cb722-10"></a></span>
+<span id="cb722-11"><a href="-dag-causal-terror.html#cb722-11"></a><span class="kw">precis</span>(m6<span class="fl">.11</span>)</span></code></pre></div>
+<pre><code>##              mean          sd        5.5%        94.5%
+## a     -0.11747518 0.099195743 -0.27600914  0.041058772
+## b_PC   1.78689146 0.044553553  1.71568628  1.858096644
+## b_GC  -0.83895371 0.106140454 -1.00858666 -0.669320767
+## sigma  1.40948908 0.070111393  1.29743753  1.521540626</code></pre>
+<p>看模型 <code>m6.11</code> 給出的父母子女的學習成績的影響是多麼的顯著。甚至比我們設定的關係還要大兩倍。這並不奇怪，因為這裡給出的一部分 <span class="math inline">\(P \rightarrow C\)</span> 的關係應該歸功於 <span class="math inline">\(U\)</span>，但是該模型本身不知道 <span class="math inline">\(U\)</span> 的存在。但是更令人感到驚訝的是，本來設定的祖父母不影響子女學習成績的關係在這個模型中變得顯著呈現負相關，這是有悖常識的。再怎麼說祖父母的受教育程度越高也不能給子女的學習成績帶來負面的影響才是。這個數學模型本身並沒有錯，但是它不能被賦予一個因果關係的解釋。這裏的對撞因子偏倚是如何形成的呢？</p>
+<div class="sourceCode" id="cb724"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb724-1"><a href="-dag-causal-terror.html#cb724-1"></a>d<span class="op">$</span>G_st &lt;-<span class="st"> </span><span class="kw">standardize</span>(d<span class="op">$</span>G)</span>
+<span id="cb724-2"><a href="-dag-causal-terror.html#cb724-2"></a>d<span class="op">$</span>C_st &lt;-<span class="st"> </span><span class="kw">standardize</span>(d<span class="op">$</span>C)</span>
+<span id="cb724-3"><a href="-dag-causal-terror.html#cb724-3"></a>d<span class="op">$</span>P_st &lt;-<span class="st"> </span><span class="kw">standardize</span>(d<span class="op">$</span>P)</span>
+<span id="cb724-4"><a href="-dag-causal-terror.html#cb724-4"></a>P_<span class="dv">45</span> &lt;-<span class="st"> </span><span class="kw">quantile</span>(d<span class="op">$</span>P_st, <span class="dt">prob =</span> <span class="fl">.45</span>)</span>
+<span id="cb724-5"><a href="-dag-causal-terror.html#cb724-5"></a>P_<span class="dv">60</span> &lt;-<span class="st"> </span><span class="kw">quantile</span>(d<span class="op">$</span>P_st, <span class="dt">prob =</span> <span class="fl">.60</span>)</span>
+<span id="cb724-6"><a href="-dag-causal-terror.html#cb724-6"></a></span>
+<span id="cb724-7"><a href="-dag-causal-terror.html#cb724-7"></a><span class="kw">with</span>(d, <span class="kw">plot</span>(G_st[(P_st <span class="op">&lt;</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">|</span><span class="st"> </span>P_st <span class="op">&gt;</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">-1</span>], </span>
+<span id="cb724-8"><a href="-dag-causal-terror.html#cb724-8"></a>             C_st[(P_st <span class="op">&lt;</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">|</span><span class="st"> </span>P_st <span class="op">&gt;</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">-1</span>], </span>
+<span id="cb724-9"><a href="-dag-causal-terror.html#cb724-9"></a>             <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;black&quot;</span>), </span>
+<span id="cb724-10"><a href="-dag-causal-terror.html#cb724-10"></a>             <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">3</span>,<span class="dv">3</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">2.5</span>, <span class="fl">2.3</span>),</span>
+<span id="cb724-11"><a href="-dag-causal-terror.html#cb724-11"></a>             <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>, </span>
+<span id="cb724-12"><a href="-dag-causal-terror.html#cb724-12"></a>             <span class="dt">main =</span> <span class="st">&quot;Parents in 45th to 60th centiles&quot;</span>,</span>
+<span id="cb724-13"><a href="-dag-causal-terror.html#cb724-13"></a>             <span class="dt">xlab =</span> <span class="st">&quot;grandparent education (G)&quot;</span>, </span>
+<span id="cb724-14"><a href="-dag-causal-terror.html#cb724-14"></a>             <span class="dt">ylab =</span> <span class="st">&quot;grandchild education (C)&quot;</span>))</span>
+<span id="cb724-15"><a href="-dag-causal-terror.html#cb724-15"></a><span class="kw">with</span>(d, <span class="kw">points</span>(G_st[(P_st <span class="op">&gt;=</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">&amp;</span><span class="st"> </span>P_st <span class="op">&lt;=</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">-1</span>], </span>
+<span id="cb724-16"><a href="-dag-causal-terror.html#cb724-16"></a>               C_st[(P_st <span class="op">&gt;=</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">&amp;</span><span class="st"> </span>P_st <span class="op">&lt;=</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">-1</span>], </span>
+<span id="cb724-17"><a href="-dag-causal-terror.html#cb724-17"></a>               <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;black&quot;</span>), </span>
+<span id="cb724-18"><a href="-dag-causal-terror.html#cb724-18"></a>               <span class="dt">pch =</span> <span class="dv">16</span>))</span>
+<span id="cb724-19"><a href="-dag-causal-terror.html#cb724-19"></a><span class="kw">with</span>(d, <span class="kw">points</span>(G_st[(P_st <span class="op">&lt;</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">|</span><span class="st"> </span>P_st <span class="op">&gt;</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">1</span>], </span>
+<span id="cb724-20"><a href="-dag-causal-terror.html#cb724-20"></a>               C_st[(P_st <span class="op">&lt;</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">|</span><span class="st"> </span>P_st <span class="op">&gt;</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">1</span>], </span>
+<span id="cb724-21"><a href="-dag-causal-terror.html#cb724-21"></a>               <span class="dt">col =</span> rangi2))</span>
+<span id="cb724-22"><a href="-dag-causal-terror.html#cb724-22"></a><span class="kw">with</span>(d, <span class="kw">points</span>(G_st[(P_st <span class="op">&gt;=</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">&amp;</span><span class="st"> </span>P_st <span class="op">&lt;=</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">1</span>], </span>
+<span id="cb724-23"><a href="-dag-causal-terror.html#cb724-23"></a>               C_st[(P_st <span class="op">&gt;=</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">&amp;</span><span class="st"> </span>P_st <span class="op">&lt;=</span><span class="st"> </span>P_<span class="dv">60</span>) <span class="op">&amp;</span><span class="st"> </span>U <span class="op">==</span><span class="st"> </span><span class="dv">1</span>], </span>
+<span id="cb724-24"><a href="-dag-causal-terror.html#cb724-24"></a>               <span class="dt">col =</span> rangi2, </span>
+<span id="cb724-25"><a href="-dag-causal-terror.html#cb724-25"></a>               <span class="dt">pch =</span> <span class="dv">16</span>))</span>
+<span id="cb724-26"><a href="-dag-causal-terror.html#cb724-26"></a><span class="kw">with</span>(d, <span class="kw">abline</span>(<span class="kw">lm</span>(C_st[(P_st <span class="op">&gt;=</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">&amp;</span><span class="st"> </span>P_st <span class="op">&lt;=</span><span class="st"> </span>P_<span class="dv">60</span>)] <span class="op">~</span><span class="st"> </span></span>
+<span id="cb724-27"><a href="-dag-causal-terror.html#cb724-27"></a><span class="st">                    </span>G_st[(P_st <span class="op">&gt;=</span><span class="st"> </span>P_<span class="dv">45</span> <span class="op">&amp;</span><span class="st"> </span>P_st <span class="op">&lt;=</span><span class="st"> </span>P_<span class="dv">60</span>)]), </span>
+<span id="cb724-28"><a href="-dag-causal-terror.html#cb724-28"></a>       <span class="dt">lty =</span> <span class="dv">2</span>, <span class="dt">lwd =</span> <span class="dv">1</span>, <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>)))</span>
+<span id="cb724-29"><a href="-dag-causal-terror.html#cb724-29"></a><span class="kw">text</span>(<span class="op">-</span><span class="fl">1.5</span>, <span class="fl">2.1</span>, <span class="st">&quot;Good neighborhoods&quot;</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb724-30"><a href="-dag-causal-terror.html#cb724-30"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="fl">-2.1</span>, <span class="st">&quot;Bad neighborhoods&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes09-fig14"></span>
+<img src="bookdown_files/figure-html/introBayes09-fig14-1.png" alt="Unobserved confounds and collider bias. In this example, grandparents influence grandkids only indirectly, through parents. However, unobserved neighborhood effects on parents and their children create the illusion that grand parents harm their grandkids education. Parental education is a collider: once we condition on it, grandparental education becomes negatively associated with grand child education." width="576" />
+<p class="caption">
+圖 49.14: Unobserved confounds and collider bias. In this example, grandparents influence grandkids only indirectly, through parents. However, unobserved neighborhood effects on parents and their children create the illusion that grand parents harm their grandkids education. Parental education is a collider: once we condition on it, grandparental education becomes negatively associated with grand child education.
+</p>
 </div>
+<p>繪製祖父母教育水平和子女學習成績之間的散點圖如圖 <a href="-dag-causal-terror.html#fig:introBayes09-fig14">49.14</a> 所示，橫軸是祖父母的受教育水平，縱軸是子女的學習成績。其中根據未知的變量 U ，也就是子女和父母生活的社區環境的優越與否分成了藍色和黑色兩個部分的散點雲。可以看見不論是在優越街區 (U = 1) 還是在較差的街區 (U = 2)，祖父母的教育水平應該都和子女的學習成績成正相關才對。但是這一關係在我們模擬的數據中是100%通過父母親的受教育水平來體現的，因為我們一開始強制 <code>b_GC &lt;- 0 # direct effect of G on C</code>，也就是 G 直接對 C 的影響的理論值是零。當模型中的預測變量加入了對撞因子，父母親的受教育水平 P 這一變量之後，我們相當於是在強制比較父母受相似教育水平的孩子之間的學習成績。如圖 <a href="-dag-causal-terror.html#fig:introBayes09-fig14">49.14</a> 中藍色和黑色實心點的部分兒童。當僅使用這些點來做回歸直線時，給出的回歸係數就是負的。這就是模型 <code>m6.11</code> 給出的 <code>b_GC = -0.84</code> 這樣的負數的回歸係屬估計的原因。之所以會出現這樣有趣的對撞因子偏倚，我們可以這樣認為：當我們已知父母親的受教育水平 P 之後，如果再了解了祖父母的受教育水平 G，等於是間接知道了子女和父母生活的街區 (U) 的一部分信息。這裡反覆需要強調的是，街區這一變量是未知未測的變量。所以，假如我們選出兩個小孩，他們的父母親有相似的受教育程度，其中一個的祖父母受教育程度低，在圖<a href="-dag-causal-terror.html#fig:introBayes09-fig14">49.14</a>的藍色區域，另一個小孩的祖父母受教育程度較高，在圖<a href="-dag-causal-terror.html#fig:introBayes09-fig14">49.14</a>的黑色區域。那麼之所以這兩個小孩的父母親受教育水平相似，只能是被不同的生活街區所影響（但是這個變量其實是未觀測變量）。所以這時候孩子之間的成績差異其實並非是由祖父母造成的，而是間接地被未知的變量 - 生活街區的優越與否給影響了的。所以我們會看見這樣神奇的現象，也就是父母親相似的教育水平時，如果祖父母受教育水平高，則他們大多生活在不怎麼樣的街區，從而間接導致了小孩學習成績不佳。看起來似乎是祖父母的受教育水平反而對子女學習成績造成了負影響一樣。</p>
+<p>這裡，未測量的街區這一變量使得父母親受教育程度這一變量變成了對撞因子，解決對撞因子偏倚的方法其實是，認識到有未測量變量的存在，然後去獲取該變量，加入到你的模型中去：</p>
+<div class="sourceCode" id="cb725"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb725-1"><a href="-dag-causal-terror.html#cb725-1"></a>m6<span class="fl">.12</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb725-2"><a href="-dag-causal-terror.html#cb725-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb725-3"><a href="-dag-causal-terror.html#cb725-3"></a>    C <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb725-4"><a href="-dag-causal-terror.html#cb725-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b_PC <span class="op">*</span><span class="st"> </span>P <span class="op">+</span><span class="st"> </span>b_GC <span class="op">*</span><span class="st"> </span>G <span class="op">+</span><span class="st"> </span>b_U <span class="op">*</span><span class="st"> </span>U,</span>
+<span id="cb725-5"><a href="-dag-causal-terror.html#cb725-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb725-6"><a href="-dag-causal-terror.html#cb725-6"></a>    <span class="kw">c</span>(b_PC, b_GC, b_U) <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>), </span>
+<span id="cb725-7"><a href="-dag-causal-terror.html#cb725-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb725-8"><a href="-dag-causal-terror.html#cb725-8"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb725-9"><a href="-dag-causal-terror.html#cb725-9"></a>)</span>
+<span id="cb725-10"><a href="-dag-causal-terror.html#cb725-10"></a></span>
+<span id="cb725-11"><a href="-dag-causal-terror.html#cb725-11"></a><span class="kw">precis</span>(m6<span class="fl">.12</span>)</span></code></pre></div>
+<pre><code>##               mean          sd        5.5%         94.5%
+## a     -0.121975097 0.071925877 -0.23692654 -0.0070236546
+## b_PC   1.011611028 0.065972577  0.90617411  1.1170479480
+## b_GC  -0.040813729 0.097287159 -0.19629740  0.1146699415
+## b_U    1.996489923 0.147704623  1.76042941  2.2325504390
+## sigma  1.019599112 0.050801756  0.93840809  1.1007901302</code></pre>
+<p>這樣子模型 <code>m6.12</code> 就能準確地給出我們模擬他們的關係的回歸係數。</p>
+</div>
+</div>
+<div id="直面混雜效應" class="section level2" number="49.4">
+<h2><span class="header-section-number">49.4</span> 直面混雜效應</h2>
+
 </div>
 </div>
 
