@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-10-13" />
+<meta name="date" content="2020-10-14" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2240,7 +2240,7 @@ p     &amp; = \alpha + \beta_T T_i + \beta_F F_i \\
 <p>這時，由於18歲以後才可以結婚，我們把該數據的人口年齡限定在18歲及以上者。另外我們再把年齡的尺度縮放一下使得 18-65 歲之間的比例是1：</p>
 <div class="sourceCode" id="cb713"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb713-1"><a href="-dag-causal-terror.html#cb713-1"></a>d2 &lt;-<span class="st"> </span>d[ d<span class="op">$</span>age <span class="op">&gt;</span><span class="st"> </span><span class="dv">17</span>, ] <span class="co"># adults only</span></span>
 <span id="cb713-2"><a href="-dag-causal-terror.html#cb713-2"></a>d2<span class="op">$</span>A &lt;-<span class="st"> </span>(d2<span class="op">$</span>age <span class="op">-</span><span class="st"> </span><span class="dv">18</span>) <span class="op">/</span><span class="st"> </span>(<span class="dv">65</span> <span class="op">-</span><span class="st"> </span><span class="dv">18</span> )</span></code></pre></div>
-<p>經過上述的數據處理，我們使得年齡變量 A 的範圍控制在 0-1 之間，其中 0 代表 18 歲，1 代表 65 歲。幸福感則是一個範圍在 -2, 2 之間的數值。這樣的話，假定年齡和幸福感之間呈現的是即強烈的正關係，那麼這最極端的斜率也就是 <span class="math inline">\((2 - (-2)) / 1 = 4\)</span>。所以，一個較為合理的斜率的先驗概率分佈，可以是95%的斜率取值分佈在小於極端斜率之內的範圍。其次是為截距 <span class="math inline">\(\alpha\)</span> 設定合理的先驗概率分佈。因為 <span class="math inline">\(\alpha\)</span> 本身是年齡等於零，也就是18歲時的幸福感，我們需要這個數據能夠覆蓋所有可能的幸福感取值，-2，2 之間。那麼，標準正（常）態分佈是一個不錯的選擇。</p>
+<p>經過上述的數據處理，我們使得年齡變量 A 的範圍控制在 0-1 之間，其中 0 代表 18 歲，1 代表 65 歲。幸福感則是一個範圍在 -2, 2 之間的數值。這樣的話，假定年齡和幸福感之間呈現的是極其強烈的正關係，那麼這最極端的斜率也就是 <span class="math inline">\((2 - (-2)) / 1 = 4\)</span>。所以，一個較為合理的斜率的先驗概率分佈，可以是95%的斜率取值分佈在小於極端斜率之內的範圍。其次是為截距 <span class="math inline">\(\alpha\)</span> 設定合理的先驗概率分佈。因為 <span class="math inline">\(\alpha\)</span> 本身是年齡等於零，也就是18歲時的幸福感，我們需要這個數據能夠覆蓋所有可能的幸福感取值，-2，2 之間。那麼，標準正（常）態分佈是一個不錯的選擇。</p>
 <div class="sourceCode" id="cb714"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb714-1"><a href="-dag-causal-terror.html#cb714-1"></a>d2<span class="op">$</span>mid &lt;-<span class="st"> </span>d2<span class="op">$</span>married <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="co"># construct the marriage status index variable</span></span>
 <span id="cb714-2"><a href="-dag-causal-terror.html#cb714-2"></a>m6<span class="fl">.9</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
 <span id="cb714-3"><a href="-dag-causal-terror.html#cb714-3"></a>  <span class="kw">alist</span>(</span>
@@ -2272,11 +2272,32 @@ p     &amp; = \alpha + \beta_T T_i + \beta_F F_i \\
 ## a      1.6492480e-07 0.076750151 -0.12266140 0.12266173
 ## bA    -2.7286203e-07 0.132259761 -0.21137692 0.21137637
 ## sigma  1.2131876e+00 0.027660803  1.16898030 1.25739491</code></pre>
-<p><code>m6.10</code> 才是正確的模型。它正確的給出了年齡和幸福感之間並無關係的結果。模型 <code>m6.9</code> 錯誤地把對撞因子 – 婚姻狀況作為預測變量之一加入了模型中，而婚姻狀況在這個數據背景下，同時是年齡和幸福感的結果（common consequence of age and happiness）。結果就會像 <code>m6.9</code> 那樣，出現年齡和幸福感之間虛假的負關係 (false negative association between the two causes)。<code>m6.9</code> 告訴我們看起來似乎年齡的增長和幸福感呈現負關係，這在模型中給出的關係應該嚴格來說只能算是一種統計學的關係，不能算是真實的因果關係。正如圖 @ref(fig: introBayes09-fig11) 所顯示的。當已知實驗對象是已婚或者未婚，實驗對象的年齡似乎能告訴我們他/她的幸福度。看綠色點的部分，這些人都是已婚者，年齡越大，越多人結婚，那麼這個已婚人群的幸福度數值就會平均被拉低。相似的，看空白點的部分，這些人都是未婚者，年齡越大，其中幸福感較強的人都結婚而加入了已婚人群陣營，那麼剩下的人就會感覺幸福度越來越低。所以，當把人群分成未婚和已婚兩個部分的話，這兩個人群中的幸福度都隨著年齡增加而呈現下降趨勢。但是，我們知道，這並不是真實的因果關係。</p>
+<p><code>m6.10</code> 才是正確的模型。它正確的給出了年齡和幸福感之間並無關係的結果。模型 <code>m6.9</code> 錯誤地把對撞因子 – 婚姻狀況作為預測變量之一加入了模型中，而婚姻狀況在這個數據背景下，同時是年齡和幸福感的結果（common consequence of age and happiness）。結果就會像 <code>m6.9</code> 那樣，出現年齡和幸福感之間虛假的負關係 (false negative association between the two causes)。<code>m6.9</code> 告訴我們看起來似乎年齡的增長和幸福感呈現負關係，這種僅僅在模型中給出的變量之間的關係應該嚴格來說只能算是一種“統計學的關係 (statistical association)”，不能算是真實的因果關係 (causal association)。正如圖 <a href="-dag-causal-terror.html#fig:introBayes09-fig11">49.11</a> 所顯示的。當已知實驗對象是已婚或者未婚，實驗對象的年齡似乎能告訴我們他/她的幸福度。看綠色點的部分，這些人都是已婚者，年齡越大，越多人結婚，那麼這個已婚人群的幸福度數值就會平均被拉低。相似的，看空白點的部分，這些人都是未婚者，年齡越大，其中幸福感較強的人都結婚而加入了已婚人群陣營，那麼剩下的人就會感覺幸福度越來越低。所以，當把人群分成未婚和已婚兩個部分的話，這兩個人群中的幸福度都隨著年齡增加而呈現下降趨勢。但是，我們知道，這並不是真實的因果關係。</p>
 <p>碰撞因子偏倚本身會出現在當模型中的預測變量加入了某個同時是結果和某一個預測變量的結果的變量（common consequence）。</p>
 </div>
 <div id="對撞因子偏倚另一實例未測量變量造成的碰撞偏倚" class="section level3" number="49.3.2">
 <h3><span class="header-section-number">49.3.2</span> 對撞因子偏倚另一實例（未測量變量造成的碰撞偏倚）</h3>
+<p>當我們知道並了解了這樣的對撞因子偏倚現象之後，DAG圖非常有助於幫助我們避免陷入這樣的困境。但是，最可怕的其實是未知（未測量）變量可能造成的對撞偏倚。</p>
+<p>假設我們想通過數據了解父母親的受教育程度 (P)，祖父母的受教育程度 (G)，和子女的學習成績 (C)，之間的關係，特別是 P, G 對 C 可能的貢獻或者影響。我們很容易就能理解圖 <a href="-dag-causal-terror.html#fig:introBayes09-fig12">49.12</a> 中所表示的這三個變量之間應該存在的相互因果關係。祖父母的受教育程度很顯然也會對子女的學習成績造成影響 (<span class="math inline">\(G \rightarrow C\)</span>)。</p>
+<div class="sourceCode" id="cb718"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb718-1"><a href="-dag-causal-terror.html#cb718-1"></a>dag6.<span class="fl">3.2</span> &lt;-<span class="st"> </span><span class="kw">dagitty</span>( <span class="st">&quot;dag{ G -&gt; P; P -&gt; C; G -&gt; C }&quot;</span> )</span>
+<span id="cb718-2"><a href="-dag-causal-terror.html#cb718-2"></a><span class="kw">coordinates</span>(dag6.<span class="fl">3.2</span>) &lt;-<span class="st"> </span><span class="kw">list</span>( <span class="dt">x=</span><span class="kw">c</span>(<span class="dt">G=</span><span class="dv">0</span>,<span class="dt">P=</span><span class="dv">1</span>,<span class="dt">C=</span><span class="dv">1</span>) , <span class="dt">y=</span><span class="kw">c</span>(<span class="dt">G=</span><span class="dv">0</span>,<span class="dt">P=</span><span class="dv">0</span>,<span class="dt">C=</span><span class="dv">1</span>) )</span>
+<span id="cb718-3"><a href="-dag-causal-terror.html#cb718-3"></a><span class="kw">drawdag</span>( dag6.<span class="fl">3.2</span> )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes09-fig12"></span>
+<img src="bookdown_files/figure-html/introBayes09-fig12-1.png" alt="Educational achievements between parents (P), grandparents (G), and children (C)." width="288" />
+<p class="caption">
+圖 49.12: Educational achievements between parents (P), grandparents (G), and children (C).
+</p>
+</div>
+<p>如果此時我們發現，可能有一個未被測量的變量可能同時影響父母 (P)，和子女 (C)，但是對祖父母的教育程度並無直接影響，例如父母和子女生活的社區的環境 (U)，通常祖父母不一定和子女和孫輩生活在一個社區。那麼這個未觀察的社區變量就很可能會造成一個碰撞偏倚：</p>
+<div class="sourceCode" id="cb719"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb719-1"><a href="-dag-causal-terror.html#cb719-1"></a>dag6.<span class="fl">3.2</span>_u &lt;-<span class="st"> </span><span class="kw">dagitty</span>( <span class="st">&quot;dag{ G -&gt; P; P -&gt; C; G -&gt; C ; U -&gt; P ; U -&gt; C U [unobserved]}&quot;</span> )</span>
+<span id="cb719-2"><a href="-dag-causal-terror.html#cb719-2"></a><span class="kw">coordinates</span>(dag6.<span class="fl">3.2</span>_u) &lt;-<span class="st"> </span><span class="kw">list</span>( <span class="dt">x=</span><span class="kw">c</span>(<span class="dt">G=</span><span class="dv">0</span>,<span class="dt">P=</span><span class="dv">1</span>,<span class="dt">C=</span><span class="dv">1</span>,<span class="dt">U=</span><span class="fl">1.3</span>) , <span class="dt">y=</span><span class="kw">c</span>(<span class="dt">G=</span><span class="dv">0</span>,<span class="dt">P=</span><span class="dv">0</span>,<span class="dt">C=</span><span class="dv">1</span>,<span class="dt">U=</span><span class="fl">0.5</span>) )</span>
+<span id="cb719-3"><a href="-dag-causal-terror.html#cb719-3"></a><span class="kw">drawdag</span>( dag6.<span class="fl">3.2</span>_u )</span></code></pre></div>
+<div class="figure"><span id="fig:introBayes09-fig13"></span>
+<img src="bookdown_files/figure-html/introBayes09-fig13-1.png" alt="Educational achievements between parents (P), grandparents (G), and children (C), with an unobserved neighborhood variable." width="316.8" />
+<p class="caption">
+圖 49.13: Educational achievements between parents (P), grandparents (G), and children (C), with an unobserved neighborhood variable.
+</p>
+</div>
 
 </div>
 </div>
