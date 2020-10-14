@@ -639,6 +639,102 @@ precis(m6.12)
 
 ## 直面混雜效應
 
+### 兩條通路
+
+```{r introBayes09-fig15, cache=TRUE, fig.width=3.3, fig.height=3,  fig.cap="Two roads DAG. Exposure of interest X, outcome of interest Y, an unbserved variable U, and three observed covariates (A, B, and C)", fig.align='center'}
+dag_6.1 <- dagitty("dag{
+                   U [unobserved]
+                   X -> Y
+                   X <- U <- A -> C -> Y
+                   U -> B <- C
+}")
+coordinates(dag_6.1) <- list( x=c(X = 0, Y = 1, U = 0, 
+                                  A = 0.5, B = 0.5, C = 1), 
+                              y=c(X = 0, Y = 0, U = -1, 
+                                  A = -1.3, B = -0.7, C = -1) )
+drawdag(dag_6.1)
+```
+
+
+我們主要關心的是 $X \rightarrow Y$ 之間的通路，也就是暴露和結果之間的直接因果關係。那在圖 \@ref(fig:introBayes09-fig15) 這一DAG因果關係中的各種變量之間，你應該怎樣選擇加入模型中作為協變量（調整變量）呢？我們尋找一下從起點（暴露變量）到終點（結果變量）之間的所有可行通路：
+
+1. $X \leftarrow U \leftarrow A \rightarrow C \rightarrow Y$
+2. $X \leftarrow U \rightarrow B \leftarrow C \rightarrow Y$
+3. $X \rightarrow Y$
+
+其中 1. 2. 都含有後門通路 (backdoor paths)，這兩條通路都可能導致我們的推斷受混雜的影響。我們需要通過數學模型把可能存在的後門通路關閉。如果說某個後門通路已經被關閉了，我們則需要小心不要不經意把不該加入模型中的變量給加入然後導致其被偷偷打開。
+
+我們看通路 1.，這條通路通過 $A$，且沒有任何對撞因子，所以這條通路需要通過調整其變量關閉之，但是 $U$ 是未知未測量變量，無法控制，那我們只好退而求其次，調整 $A$ 或者 $C$：
+
+
+```{r introBayes09-20, cache=TRUE}
+adjustmentSets( dag_6.1, exposure = "X", outcome = "Y")
+```
+
+如果能調整 $U$ 當然最好，但是它是未測量的變量。$A$ 或者 $C$ 二選一的話，選擇 $C$ 會是更加理想的選擇， 因為它應該同時還能提高對 $X\rightarrow Y$ 因果關係測量的精確度（increase precision）。
+
+再思考通路 2.，這條通路經過 $B$，且這個 $B$ 很顯然是一個對撞因子。也就是說這裡的通路已經被這個對撞因子關閉掉了。所以你看計算機也並未建議調整這條通路上的變量。如果有誰不小心把這裡的 $B$ 控制進去的話，反而會打開這條通路，造成對撞因子偏倚。於是我們應該記住這樣一個經驗教訓，在你的模型中假如增加了一個變量導致 $X\rightarrow Y$的關係發生了較為顯著的變化，甚至反轉關係，並不一定意味著這個增加的變量提升了你模型的準確度或者是改善了模型的預測能力，而要時時刻刻當心對撞因子偏倚存在的可能性。
+
+### 華夫餅的後門
+
+回到華夫餅店鋪數量這個數據 (Chapter \@ref(waffle)) 上來。我們來為這個數據繪製一個 DAG 因果關係圖。我們關心的暴露變量是每個州的瓦夫餅餐廳數量，和結果變量 -- 離婚率之間的總體因果關係：
+
+```{r introBayes09-fig16, cache=TRUE, fig.width=3.3, fig.height=3,  fig.cap="The waffle backdoor DAG.", fig.align='center'}
+dag_6.2 <- dagitty("dag{
+                   A -> D
+                   A -> M -> D
+                   A <- S -> M
+                   S -> W -> D
+}")
+coordinates(dag_6.2) <- list( x=c(A = 0, D = 1, M = 0.5, 
+                                  S = 0, W = 1), 
+                              y=c(A = 0, D = 0, M = -0.5, 
+                                  S = -1, W = -1))
+drawdag(dag_6.2)
+```
+
+圖 \@ref(fig:introBayes09-fig16) 中，
+
+- S 是所在州是否屬於南方州；
+- A 是所在州的結婚年齡中位數；
+- M 是所在州的結婚率；
+- W 是所在州的瓦夫餅餐廳數量；
+- D 是所在州的離婚率。
+
+上述DAG的涵義在於：
+
+- 南方州的話，結婚年齡中位數較低 $S \rightarrow A$；
+- 南方州的話，結婚率較高 $S \rightarrow M$；
+- 上述 $S \rightarrow M$ 的關係同時還經過 $A$，也就是 $S \rightarrow A \rightarrow M$；
+- 南方州的華夫餅餐廳數量較多 $S \rightarrow W$；
+- 年齡中位數 $A$，結婚率 $M$，還有華夫餅餐廳數量 $W$ 都直接影響離婚率，$A\rightarrow D; M\rightarrow D; W \rightarrow D$。
+
+如果把暴露變量 $W$ 作為通路起點，離婚率 $D$ 作為通路通路終點的話，有三條有後門的通路：
+
+1. $W \leftarrow S \rightarrow A \rightarrow D$
+2. $W \leftarrow S \rightarrow M \rightarrow D$
+3. $W \leftarrow S \rightarrow A \rightarrow M \rightarrow D$
+
+你會發現他們的共同點是都經過 $S$。所以很簡單地，只要控制了 $S$，那麼全部三條後門通路就都會被關閉。
+
+```{r  introBayes09-21, cache=TRUE}
+adjustmentSets( dag_6.2, exposure = "W", outcome = "D")
+
+```
+
+
+計算機也告訴我們一致的答案，但是除了單獨控制 $S$，我們還可以選擇同時控制 $A, M$，來關閉這些後門通路。上述DAG因果關係圖中，所蘊含的條件獨立性關係為：
+
+
+```{r introBayes09-22, cache=TRUE}
+impliedConditionalIndependencies( dag_6.2 )
+```
+
+分別表示，
+
+1. 當控制了是否是南方州($S$)之後，華夫餅餐廳$W$ 和結婚年齡中位數 $A$ 之間相互獨立。
+2. 當同時控制了$A$，$M$，$W$之後，$S$ 和離婚率之間相互獨立。
+3. 當控制了 $S$ 之後，$W$ 和 結婚率 $M$ 之間相互獨立。
 
 
 
