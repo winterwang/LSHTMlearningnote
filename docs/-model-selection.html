@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 107 章 Causal mediation analysis | 醫學統計學</title>
-  <meta name="description" content="第 107 章 Causal mediation analysis | 醫學統計學" />
+  <title>第 50 章 模型選擇 model selection | 醫學統計學</title>
+  <meta name="description" content="第 50 章 模型選擇 model selection | 醫學統計學" />
   <meta name="generator" content="bookdown 0.21 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 107 章 Causal mediation analysis | 醫學統計學" />
+  <meta property="og:title" content="第 50 章 模型選擇 model selection | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 107 章 Causal mediation analysis | 醫學統計學" />
+  <meta name="twitter:title" content="第 50 章 模型選擇 model selection | 醫學統計學" />
   
   
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="inverse-probability-weighted-estimation-and-doubly-robust-methods.html"/>
-<link rel="next" href="-crude-and-stratified-rate-ratios.html"/>
+<link rel="prev" href="-dag-causal-terror.html"/>
+<link rel="next" href="revision.html"/>
 <script src="libs/header-attrs/header-attrs.js"></script>
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
@@ -1760,9 +1760,59 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="causal-mediation-analysis" class="section level1" number="107">
-<h1><span class="header-section-number">第 107 章</span> Causal mediation analysis</h1>
+<div id="模型選擇-model-selection" class="section level1" number="50">
+<h1><span class="header-section-number">第 50 章</span> 模型選擇 model selection</h1>
+<div id="預測變量越多越好嗎" class="section level2" number="50.1">
+<h2><span class="header-section-number">50.1</span> 預測變量越多越好嗎</h2>
+<div id="變量越多總是會提高模型的擬合程度" class="section level3" number="50.1.1">
+<h3><span class="header-section-number">50.1.1</span> 變量越多總是會提高模型的擬合程度</h3>
+<p>過度擬合的實例 overfitting：下面的數據是一組關於類人猿平均腦容量和平均體重的數據。</p>
+<div class="sourceCode" id="cb735"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb735-1"><a href="-model-selection.html#cb735-1"></a>sppnames &lt;-<span class="st"> </span><span class="kw">c</span>( <span class="st">&quot;afarensis&quot;</span>, <span class="st">&quot;africanus&quot;</span>, <span class="st">&quot;habilis&quot;</span>, <span class="st">&quot;boisei&quot;</span>, </span>
+<span id="cb735-2"><a href="-model-selection.html#cb735-2"></a>               <span class="st">&quot;rudolfensis&quot;</span>, <span class="st">&quot;ergaster&quot;</span>, <span class="st">&quot;sapiens&quot;</span>)</span>
+<span id="cb735-3"><a href="-model-selection.html#cb735-3"></a>brainvolcc &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">438</span>, <span class="dv">452</span>, <span class="dv">612</span>, <span class="dv">521</span>, <span class="dv">752</span>, <span class="dv">871</span>, <span class="dv">1350</span>)</span>
+<span id="cb735-4"><a href="-model-selection.html#cb735-4"></a>masskg &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">37.0</span>, <span class="fl">35.5</span>, <span class="fl">34.5</span>, <span class="fl">41.5</span>, <span class="fl">55.5</span>, <span class="fl">61.0</span>, <span class="fl">53.5</span>)</span>
+<span id="cb735-5"><a href="-model-selection.html#cb735-5"></a>d &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">species =</span> sppnames, <span class="dt">brain =</span> brainvolcc, <span class="dt">mass =</span> masskg)</span>
+<span id="cb735-6"><a href="-model-selection.html#cb735-6"></a>d</span></code></pre></div>
+<pre><code>##       species brain mass
+## 1   afarensis   438 37.0
+## 2   africanus   452 35.5
+## 3     habilis   612 34.5
+## 4      boisei   521 41.5
+## 5 rudolfensis   752 55.5
+## 6    ergaster   871 61.0
+## 7     sapiens  1350 53.5</code></pre>
+<p>不同種類的猿人中，體重和腦容量呈現高度相關性並不稀奇。我們更加關心的是，當考慮了體重大小之後，是否某些種類的猿人的腦容量比我們預期的要大很多？常見的解決方案是用一個把體重作為預測變量，腦容量作為結果變量的簡單線性回歸模型來描述該數據。我們現看看該數據的散點圖：</p>
+<div class="sourceCode" id="cb737"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb737-1"><a href="-model-selection.html#cb737-1"></a><span class="co"># with(d, plot(mass, brain, </span></span>
+<span id="cb737-2"><a href="-model-selection.html#cb737-2"></a><span class="co">#              xlab = &quot;body mass (kg)&quot;, </span></span>
+<span id="cb737-3"><a href="-model-selection.html#cb737-3"></a><span class="co">#              ylab = &quot;brain volumn (cc)&quot;))</span></span>
+<span id="cb737-4"><a href="-model-selection.html#cb737-4"></a><span class="co"># library(ggrepel)</span></span>
+<span id="cb737-5"><a href="-model-selection.html#cb737-5"></a><span class="kw">ggthemr</span>(<span class="st">&#39;greyscale&#39;</span>)</span>
+<span id="cb737-6"><a href="-model-selection.html#cb737-6"></a>d <span class="op">%&gt;%</span></span>
+<span id="cb737-7"><a href="-model-selection.html#cb737-7"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span>  mass, <span class="dt">y =</span> brain, </span>
+<span id="cb737-8"><a href="-model-selection.html#cb737-8"></a>             <span class="dt">label =</span> species),</span>
+<span id="cb737-9"><a href="-model-selection.html#cb737-9"></a>           <span class="dt">ggtheme =</span> <span class="kw">theme_bw</span>()) <span class="op">+</span></span>
+<span id="cb737-10"><a href="-model-selection.html#cb737-10"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">color =</span> rangi2) <span class="op">+</span></span>
+<span id="cb737-11"><a href="-model-selection.html#cb737-11"></a><span class="st">  </span><span class="kw">geom_text_repel</span>(<span class="dt">size =</span> <span class="dv">5</span>) <span class="op">+</span></span>
+<span id="cb737-12"><a href="-model-selection.html#cb737-12"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;body mass (kg)&quot;</span>,</span>
+<span id="cb737-13"><a href="-model-selection.html#cb737-13"></a>       <span class="dt">y =</span> <span class="st">&quot;brain volume (cc)&quot;</span>) <span class="op">+</span></span>
+<span id="cb737-14"><a href="-model-selection.html#cb737-14"></a><span class="st">  </span><span class="kw">xlim</span>(<span class="dv">30</span>, <span class="dv">65</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb737-15"><a href="-model-selection.html#cb737-15"></a><span class="st">  </span><span class="kw">theme</span>(</span>
+<span id="cb737-16"><a href="-model-selection.html#cb737-16"></a>    <span class="dt">axis.text =</span> <span class="kw">element_text</span>(<span class="dt">face =</span> <span class="st">&quot;bold&quot;</span>, </span>
+<span id="cb737-17"><a href="-model-selection.html#cb737-17"></a>                               <span class="dt">color =</span> <span class="st">&quot;black&quot;</span>,</span>
+<span id="cb737-18"><a href="-model-selection.html#cb737-18"></a>                               <span class="dt">size =</span> <span class="dv">13</span>),</span>
+<span id="cb737-19"><a href="-model-selection.html#cb737-19"></a>    <span class="dt">axis.title =</span><span class="kw">element_text</span>(<span class="dt">face =</span> <span class="st">&quot;bold&quot;</span>, </span>
+<span id="cb737-20"><a href="-model-selection.html#cb737-20"></a>                               <span class="dt">color =</span> <span class="st">&quot;black&quot;</span>,</span>
+<span id="cb737-21"><a href="-model-selection.html#cb737-21"></a>                               <span class="dt">size =</span> <span class="dv">15</span>)</span>
+<span id="cb737-22"><a href="-model-selection.html#cb737-22"></a>  )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes10-fig01"></span>
+<img src="bookdown_files/figure-html/introBayes10-fig01-1.png" alt="Average brain volume in cubic centimeters against body mass in kilograms, for six hominin species. What model best describes the relationship between brain size and body size?" width="576" />
+<p class="caption">
+圖 50.1: Average brain volume in cubic centimeters against body mass in kilograms, for six hominin species. What model best describes the relationship between brain size and body size?
+</p>
+</div>
 
+</div>
+</div>
 </div>
 
 
@@ -1772,8 +1822,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           </div>
         </div>
       </div>
-<a href="inverse-probability-weighted-estimation-and-doubly-robust-methods.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="-crude-and-stratified-rate-ratios.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="-dag-causal-terror.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="revision.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1804,7 +1854,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/16-ASM-Causal-infer.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/08-Intro-to-Bayes.Rmd",
 "text": "編輯"
 },
 "history": {
