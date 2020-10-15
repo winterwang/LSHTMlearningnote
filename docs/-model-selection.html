@@ -1810,7 +1810,345 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 圖 50.1: Average brain volume in cubic centimeters against body mass in kilograms, for six hominin species. What model best describes the relationship between brain size and body size?
 </p>
 </div>
+<p>接下來我們來建立一系列越來越複雜的模型。最簡單的模型就是線性回歸模型。在建立模型之前，先把體重變量標準化，然後把腦容量變量的單位縮放一下成爲一個範圍是 0-1 的變量：</p>
+<div class="sourceCode" id="cb738"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb738-1"><a href="-model-selection.html#cb738-1"></a>d<span class="op">$</span>mass_std &lt;-<span class="st"> </span>(d<span class="op">$</span>mass <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>mass)) <span class="op">/</span><span class="st"> </span><span class="kw">sd</span>(d<span class="op">$</span>mass)</span>
+<span id="cb738-2"><a href="-model-selection.html#cb738-2"></a>d<span class="op">$</span>brain_std &lt;-<span class="st"> </span>d<span class="op">$</span>brain <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>brain)</span>
+<span id="cb738-3"><a href="-model-selection.html#cb738-3"></a>d</span></code></pre></div>
+<pre><code>##       species brain mass    mass_std  brain_std
+## 1   afarensis   438 37.0 -0.77946669 0.32444444
+## 2   africanus   452 35.5 -0.91701964 0.33481481
+## 3     habilis   612 34.5 -1.00872160 0.45333333
+## 4      boisei   521 41.5 -0.36680786 0.38592593
+## 5 rudolfensis   752 55.5  0.91701964 0.55703704
+## 6    ergaster   871 61.0  1.42138044 0.64518519
+## 7     sapiens  1350 53.5  0.73361571 1.00000000</code></pre>
+<p>我們想要建立的第一個模型是這樣的：</p>
+<p><span class="math display">\[
+\begin{aligned}
+b_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i &amp; = \alpha + \beta m_i \\
+\alpha &amp; \sim \text{Normal}(0.5, 1) \\
+\beta &amp; \sim \text{Normal}(0, 10) \\
+\sigma &amp; \sim \text{Log-Normal}(0, 1)
+\end{aligned}
+\]</span></p>
+<div class="sourceCode" id="cb740"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb740-1"><a href="-model-selection.html#cb740-1"></a>m7<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb740-2"><a href="-model-selection.html#cb740-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb740-3"><a href="-model-selection.html#cb740-3"></a>    brain_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, <span class="kw">exp</span>(log_sigma) ), </span>
+<span id="cb740-4"><a href="-model-selection.html#cb740-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b <span class="op">*</span><span class="st"> </span>mass_std, </span>
+<span id="cb740-5"><a href="-model-selection.html#cb740-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="fl">0.5</span>, <span class="dv">1</span> ), </span>
+<span id="cb740-6"><a href="-model-selection.html#cb740-6"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> ), </span>
+<span id="cb740-7"><a href="-model-selection.html#cb740-7"></a>    log_sigma <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="dv">1</span> )</span>
+<span id="cb740-8"><a href="-model-selection.html#cb740-8"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb740-9"><a href="-model-selection.html#cb740-9"></a>)</span>
+<span id="cb740-10"><a href="-model-selection.html#cb740-10"></a><span class="kw">precis</span>(m7<span class="fl">.1</span>)</span></code></pre></div>
+<pre><code>##                  mean          sd         5.5%       94.5%
+## a          0.52854298 0.068425652  0.419185571  0.63790039
+## b          0.16710917 0.074079702  0.048715501  0.28550284
+## log_sigma -1.70670654 0.293780113 -2.176223904 -1.23718918</code></pre>
+<div class="sourceCode" id="cb742"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb742-1"><a href="-model-selection.html#cb742-1"></a><span class="co"># compared with traditional OLS estimation</span></span>
+<span id="cb742-2"><a href="-model-selection.html#cb742-2"></a>m7<span class="fl">.1</span>_OLS &lt;-<span class="st"> </span><span class="kw">lm</span>(brain_std <span class="op">~</span><span class="st"> </span>mass_std, <span class="dt">data =</span> d)</span>
+<span id="cb742-3"><a href="-model-selection.html#cb742-3"></a><span class="kw">summary</span>(m7<span class="fl">.1</span>_OLS)</span></code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = brain_std ~ mass_std, data = d)
+## 
+## Residuals:
+##         1         2         3         4         5         6         7 
+## -0.073970 -0.040612  0.093232 -0.081451 -0.124891 -0.121031  0.348722 
+## 
+## Coefficients:
+##             Estimate Std. Error t value  Pr(&gt;|t|)    
+## (Intercept) 0.528677   0.070569  7.4916 0.0006697 ***
+## mass_std    0.167118   0.076223  2.1925 0.0798469 .  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.18671 on 5 degrees of freedom
+## Multiple R-squared:  0.49016,    Adjusted R-squared:  0.38819 
+## F-statistic:  4.807 on 1 and 5 DF,  p-value: 0.079847</code></pre>
+<p>下面的代碼計算該模型 <code>m7.1</code> 的 <span class="math inline">\(R^2\)</span>。</p>
+<div class="sourceCode" id="cb744"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb744-1"><a href="-model-selection.html#cb744-1"></a><span class="kw">set.seed</span>(<span class="dv">12</span>)</span>
+<span id="cb744-2"><a href="-model-selection.html#cb744-2"></a>s &lt;-<span class="st"> </span><span class="kw">sim</span>( m7<span class="fl">.1</span> )</span>
+<span id="cb744-3"><a href="-model-selection.html#cb744-3"></a>r &lt;-<span class="st"> </span><span class="kw">apply</span>(s, <span class="dv">2</span>, mean) <span class="op">-</span><span class="st"> </span>d<span class="op">$</span>brain_std</span>
+<span id="cb744-4"><a href="-model-selection.html#cb744-4"></a>resid_var &lt;-<span class="st"> </span><span class="kw">var2</span>(r)</span>
+<span id="cb744-5"><a href="-model-selection.html#cb744-5"></a>outcome_var &lt;-<span class="st"> </span><span class="kw">var2</span>(d<span class="op">$</span>brain_std)</span>
+<span id="cb744-6"><a href="-model-selection.html#cb744-6"></a><span class="dv">1</span> <span class="op">-</span><span class="st"> </span>resid_var <span class="op">/</span><span class="st"> </span>outcome_var</span></code></pre></div>
+<pre><code>## [1] 0.47745889</code></pre>
+<p>把上面的計算過程製作成一個函數，以便重複調用：</p>
+<div class="sourceCode" id="cb746"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb746-1"><a href="-model-selection.html#cb746-1"></a>R2_is_bad &lt;-<span class="st"> </span><span class="cf">function</span>( quap_fit ){</span>
+<span id="cb746-2"><a href="-model-selection.html#cb746-2"></a>  <span class="kw">set.seed</span>(<span class="dv">12</span>)</span>
+<span id="cb746-3"><a href="-model-selection.html#cb746-3"></a>  s &lt;-<span class="st"> </span><span class="kw">sim</span>( quap_fit, <span class="dt">refresh =</span> <span class="dv">0</span>)</span>
+<span id="cb746-4"><a href="-model-selection.html#cb746-4"></a>  r &lt;-<span class="st"> </span><span class="kw">apply</span>(s, <span class="dv">2</span>, mean) <span class="op">-</span><span class="st"> </span>d<span class="op">$</span>brain_std</span>
+<span id="cb746-5"><a href="-model-selection.html#cb746-5"></a>  <span class="dv">1</span> <span class="op">-</span><span class="st"> </span><span class="kw">var2</span>(r)<span class="op">/</span><span class="kw">var2</span>(d<span class="op">$</span>brain_std)</span>
+<span id="cb746-6"><a href="-model-selection.html#cb746-6"></a>}</span>
+<span id="cb746-7"><a href="-model-selection.html#cb746-7"></a></span>
+<span id="cb746-8"><a href="-model-selection.html#cb746-8"></a><span class="kw">R2_is_bad</span>(m7<span class="fl">.1</span>)</span></code></pre></div>
+<pre><code>## [1] 0.47745889</code></pre>
+<p>接下來，我們把這個模型擴展開，讓它更加複雜一些，增加一個二次項，試圖提升模型擬合度。</p>
+<p><span class="math display">\[
+\begin{aligned}
+b_i &amp; \sim \text{Normal}(\mu_i, \sigma)\\ 
+\mu_i &amp; = \alpha + \beta_1 m_i + \beta_2 m_i^2 \\
+\beta_j &amp; \sim \text{Normal}(0, 10)  &amp; \text{for } j = 1, 2\\
+\sigma &amp; \sim \text{Log-Normal}(0,1)
+\end{aligned}
+\]</span></p>
+<div class="sourceCode" id="cb748"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb748-1"><a href="-model-selection.html#cb748-1"></a>m7<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb748-2"><a href="-model-selection.html#cb748-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb748-3"><a href="-model-selection.html#cb748-3"></a>    brain_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, <span class="kw">exp</span>(log_sigma) ), </span>
+<span id="cb748-4"><a href="-model-selection.html#cb748-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[<span class="dv">1</span>] <span class="op">*</span><span class="st"> </span>mass_std <span class="op">+</span><span class="st"> </span>b[<span class="dv">2</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">2</span>, </span>
+<span id="cb748-5"><a href="-model-selection.html#cb748-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="fl">0.5</span>, <span class="dv">1</span>) , </span>
+<span id="cb748-6"><a href="-model-selection.html#cb748-6"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">10</span>), </span>
+<span id="cb748-7"><a href="-model-selection.html#cb748-7"></a>    log_sigma <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb748-8"><a href="-model-selection.html#cb748-8"></a>  ), <span class="dt">data =</span> d, <span class="dt">start =</span> <span class="kw">list</span>(<span class="dt">b =</span> <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">2</span>))</span>
+<span id="cb748-9"><a href="-model-selection.html#cb748-9"></a>)</span>
+<span id="cb748-10"><a href="-model-selection.html#cb748-10"></a><span class="kw">precis</span>(m7<span class="fl">.2</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##                   mean          sd         5.5%       94.5%
+## b[1]       0.195147908 0.081147769  0.065458101  0.32483772
+## b[2]      -0.097978296 0.137571508 -0.317844137  0.12188754
+## a          0.612177669 0.134474740  0.397261061  0.82709428
+## log_sigma -1.749768093 0.294872400 -2.221031139 -1.27850505</code></pre>
+<p>接下來，我們頭腦發熱狂加多次項到模型中去看會發生什麼：</p>
+<div class="sourceCode" id="cb750"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb750-1"><a href="-model-selection.html#cb750-1"></a>m7<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb750-2"><a href="-model-selection.html#cb750-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb750-3"><a href="-model-selection.html#cb750-3"></a>    brain_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, <span class="kw">exp</span>(log_sigma) ), </span>
+<span id="cb750-4"><a href="-model-selection.html#cb750-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[<span class="dv">1</span>] <span class="op">*</span><span class="st"> </span>mass_std <span class="op">+</span><span class="st"> </span>b[<span class="dv">2</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span></span>
+<span id="cb750-5"><a href="-model-selection.html#cb750-5"></a><span class="st">      </span>b[<span class="dv">3</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">3</span>, </span>
+<span id="cb750-6"><a href="-model-selection.html#cb750-6"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="fl">0.5</span>, <span class="dv">1</span>) , </span>
+<span id="cb750-7"><a href="-model-selection.html#cb750-7"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">10</span>), </span>
+<span id="cb750-8"><a href="-model-selection.html#cb750-8"></a>    log_sigma <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb750-9"><a href="-model-selection.html#cb750-9"></a>  ), <span class="dt">data =</span> d, <span class="dt">start =</span> <span class="kw">list</span>(<span class="dt">b =</span> <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">3</span>))</span>
+<span id="cb750-10"><a href="-model-selection.html#cb750-10"></a>)</span>
+<span id="cb750-11"><a href="-model-selection.html#cb750-11"></a>m7<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb750-12"><a href="-model-selection.html#cb750-12"></a>  <span class="kw">alist</span>(</span>
+<span id="cb750-13"><a href="-model-selection.html#cb750-13"></a>    brain_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, <span class="kw">exp</span>(log_sigma) ), </span>
+<span id="cb750-14"><a href="-model-selection.html#cb750-14"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[<span class="dv">1</span>] <span class="op">*</span><span class="st"> </span>mass_std <span class="op">+</span><span class="st"> </span>b[<span class="dv">2</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span></span>
+<span id="cb750-15"><a href="-model-selection.html#cb750-15"></a><span class="st">      </span>b[<span class="dv">3</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">3</span> <span class="op">+</span><span class="st"> </span>b[<span class="dv">4</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">4</span>, </span>
+<span id="cb750-16"><a href="-model-selection.html#cb750-16"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="fl">0.5</span>, <span class="dv">1</span>) , </span>
+<span id="cb750-17"><a href="-model-selection.html#cb750-17"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">10</span>), </span>
+<span id="cb750-18"><a href="-model-selection.html#cb750-18"></a>    log_sigma <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb750-19"><a href="-model-selection.html#cb750-19"></a>  ), <span class="dt">data =</span> d, <span class="dt">start =</span> <span class="kw">list</span>(<span class="dt">b =</span> <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>))</span>
+<span id="cb750-20"><a href="-model-selection.html#cb750-20"></a>)</span>
+<span id="cb750-21"><a href="-model-selection.html#cb750-21"></a>m7<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb750-22"><a href="-model-selection.html#cb750-22"></a>  <span class="kw">alist</span>(</span>
+<span id="cb750-23"><a href="-model-selection.html#cb750-23"></a>    brain_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, <span class="kw">exp</span>(log_sigma) ), </span>
+<span id="cb750-24"><a href="-model-selection.html#cb750-24"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[<span class="dv">1</span>] <span class="op">*</span><span class="st"> </span>mass_std <span class="op">+</span><span class="st"> </span>b[<span class="dv">2</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span></span>
+<span id="cb750-25"><a href="-model-selection.html#cb750-25"></a><span class="st">      </span>b[<span class="dv">3</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">3</span> <span class="op">+</span><span class="st"> </span>b[<span class="dv">4</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span></span>
+<span id="cb750-26"><a href="-model-selection.html#cb750-26"></a><span class="st">      </span>b[<span class="dv">5</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">5</span>, </span>
+<span id="cb750-27"><a href="-model-selection.html#cb750-27"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="fl">0.5</span>, <span class="dv">1</span>) , </span>
+<span id="cb750-28"><a href="-model-selection.html#cb750-28"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">10</span>), </span>
+<span id="cb750-29"><a href="-model-selection.html#cb750-29"></a>    log_sigma <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb750-30"><a href="-model-selection.html#cb750-30"></a>  ), <span class="dt">data =</span> d, <span class="dt">start =</span> <span class="kw">list</span>(<span class="dt">b =</span> <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">5</span>))</span>
+<span id="cb750-31"><a href="-model-selection.html#cb750-31"></a>)</span>
+<span id="cb750-32"><a href="-model-selection.html#cb750-32"></a>m7<span class="fl">.6</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb750-33"><a href="-model-selection.html#cb750-33"></a>  <span class="kw">alist</span>(</span>
+<span id="cb750-34"><a href="-model-selection.html#cb750-34"></a>    brain_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, <span class="kw">exp</span>(log_sigma) ), </span>
+<span id="cb750-35"><a href="-model-selection.html#cb750-35"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[<span class="dv">1</span>] <span class="op">*</span><span class="st"> </span>mass_std <span class="op">+</span><span class="st"> </span>b[<span class="dv">2</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span></span>
+<span id="cb750-36"><a href="-model-selection.html#cb750-36"></a><span class="st">      </span>b[<span class="dv">3</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">3</span> <span class="op">+</span><span class="st"> </span>b[<span class="dv">4</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span></span>
+<span id="cb750-37"><a href="-model-selection.html#cb750-37"></a><span class="st">      </span>b[<span class="dv">5</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">5</span> <span class="op">+</span><span class="st"> </span>b[<span class="dv">6</span>] <span class="op">*</span><span class="st"> </span>mass_std<span class="op">^</span><span class="dv">6</span>, </span>
+<span id="cb750-38"><a href="-model-selection.html#cb750-38"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="fl">0.5</span>, <span class="dv">1</span>) , </span>
+<span id="cb750-39"><a href="-model-selection.html#cb750-39"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">10</span>), </span>
+<span id="cb750-40"><a href="-model-selection.html#cb750-40"></a>    log_sigma <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb750-41"><a href="-model-selection.html#cb750-41"></a>  ), <span class="dt">data =</span> d, <span class="dt">start =</span> <span class="kw">list</span>(<span class="dt">b =</span> <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">6</span>))</span>
+<span id="cb750-42"><a href="-model-selection.html#cb750-42"></a>)</span></code></pre></div>
+<p>然後我們繪製上述每個模型給出的回歸線及其89%可信區間：</p>
+<div class="sourceCode" id="cb751"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb751-1"><a href="-model-selection.html#cb751-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m7<span class="fl">.1</span> )</span>
+<span id="cb751-2"><a href="-model-selection.html#cb751-2"></a>mass_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">min</span>(d<span class="op">$</span>mass_std), <span class="dt">to =</span> <span class="kw">max</span>(d<span class="op">$</span>mass_std), </span>
+<span id="cb751-3"><a href="-model-selection.html#cb751-3"></a>                 <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb751-4"><a href="-model-selection.html#cb751-4"></a>l &lt;-<span class="st"> </span><span class="kw">link</span>( m7<span class="fl">.1</span>, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">mass_std =</span> mass_seq))</span>
+<span id="cb751-5"><a href="-model-selection.html#cb751-5"></a>mu &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, mean)</span>
+<span id="cb751-6"><a href="-model-selection.html#cb751-6"></a>ci &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, PI)</span>
+<span id="cb751-7"><a href="-model-selection.html#cb751-7"></a></span>
+<span id="cb751-8"><a href="-model-selection.html#cb751-8"></a><span class="kw">plot</span>( brain_std <span class="op">~</span><span class="st"> </span>mass_std, <span class="dt">data =</span> d, </span>
+<span id="cb751-9"><a href="-model-selection.html#cb751-9"></a>      <span class="dt">main =</span> <span class="st">&quot;m7.1: R^2 = 0.48&quot;</span>, </span>
+<span id="cb751-10"><a href="-model-selection.html#cb751-10"></a>      <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>, </span>
+<span id="cb751-11"><a href="-model-selection.html#cb751-11"></a>      <span class="dt">col =</span> rangi2, </span>
+<span id="cb751-12"><a href="-model-selection.html#cb751-12"></a>      <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb751-13"><a href="-model-selection.html#cb751-13"></a>      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb751-14"><a href="-model-selection.html#cb751-14"></a>      <span class="dt">pch =</span> <span class="dv">16</span>,</span>
+<span id="cb751-15"><a href="-model-selection.html#cb751-15"></a>      <span class="dt">xlab =</span> <span class="st">&quot;body mass (kg)&quot;</span>, </span>
+<span id="cb751-16"><a href="-model-selection.html#cb751-16"></a>      <span class="dt">ylab =</span> <span class="st">&quot;brain volumn (cc)&quot;</span>)</span>
+<span id="cb751-17"><a href="-model-selection.html#cb751-17"></a>at &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">-1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb751-18"><a href="-model-selection.html#cb751-18"></a>labels &lt;-<span class="st"> </span>at<span class="op">*</span><span class="kw">sd</span>(d<span class="op">$</span>mass) <span class="op">+</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>mass)</span>
+<span id="cb751-19"><a href="-model-selection.html#cb751-19"></a>at_y &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb751-20"><a href="-model-selection.html#cb751-20"></a>labels_y &lt;-<span class="st"> </span>at_y <span class="op">*</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>brain)</span>
+<span id="cb751-21"><a href="-model-selection.html#cb751-21"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">at =</span> at_y, <span class="dt">labels =</span> <span class="kw">round</span>(labels_y, <span class="dv">1</span>))</span>
+<span id="cb751-22"><a href="-model-selection.html#cb751-22"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">at =</span> at, <span class="dt">labels =</span> <span class="kw">round</span>(labels, <span class="dv">1</span>))</span>
+<span id="cb751-23"><a href="-model-selection.html#cb751-23"></a><span class="kw">lines</span>( mass_seq, mu)</span>
+<span id="cb751-24"><a href="-model-selection.html#cb751-24"></a><span class="kw">shade</span>(ci, mass_seq)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes10-fig02"></span>
+<img src="bookdown_files/figure-html/introBayes10-fig02-1.png" alt="Linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed." width="576" />
+<p class="caption">
+圖 50.2: Linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.
+</p>
+</div>
+<div id="m7.2" class="section level4" number="50.1.1.1">
+<h4><span class="header-section-number">50.1.1.1</span> m7.2</h4>
+<div class="sourceCode" id="cb752"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb752-1"><a href="-model-selection.html#cb752-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m7<span class="fl">.2</span> )</span>
+<span id="cb752-2"><a href="-model-selection.html#cb752-2"></a>mass_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">min</span>(d<span class="op">$</span>mass_std), <span class="dt">to =</span> <span class="kw">max</span>(d<span class="op">$</span>mass_std), </span>
+<span id="cb752-3"><a href="-model-selection.html#cb752-3"></a>                 <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb752-4"><a href="-model-selection.html#cb752-4"></a>l &lt;-<span class="st"> </span><span class="kw">link</span>( m7<span class="fl">.2</span>, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">mass_std =</span> mass_seq))</span>
+<span id="cb752-5"><a href="-model-selection.html#cb752-5"></a>mu &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, mean)</span>
+<span id="cb752-6"><a href="-model-selection.html#cb752-6"></a>ci &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, PI)</span>
+<span id="cb752-7"><a href="-model-selection.html#cb752-7"></a></span>
+<span id="cb752-8"><a href="-model-selection.html#cb752-8"></a><span class="kw">plot</span>( brain_std <span class="op">~</span><span class="st"> </span>mass_std, <span class="dt">data =</span> d, </span>
+<span id="cb752-9"><a href="-model-selection.html#cb752-9"></a>      <span class="dt">main =</span> <span class="st">&quot;m7.2: R^2 = 0.53&quot;</span>, </span>
+<span id="cb752-10"><a href="-model-selection.html#cb752-10"></a>      <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>, </span>
+<span id="cb752-11"><a href="-model-selection.html#cb752-11"></a>      <span class="dt">col =</span> rangi2, </span>
+<span id="cb752-12"><a href="-model-selection.html#cb752-12"></a>      <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb752-13"><a href="-model-selection.html#cb752-13"></a>      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb752-14"><a href="-model-selection.html#cb752-14"></a>      <span class="dt">pch =</span> <span class="dv">16</span>,</span>
+<span id="cb752-15"><a href="-model-selection.html#cb752-15"></a>      <span class="dt">xlab =</span> <span class="st">&quot;body mass (kg)&quot;</span>, </span>
+<span id="cb752-16"><a href="-model-selection.html#cb752-16"></a>      <span class="dt">ylab =</span> <span class="st">&quot;brain volumn (cc)&quot;</span>)</span>
+<span id="cb752-17"><a href="-model-selection.html#cb752-17"></a>at &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">-1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb752-18"><a href="-model-selection.html#cb752-18"></a>labels &lt;-<span class="st"> </span>at<span class="op">*</span><span class="kw">sd</span>(d<span class="op">$</span>mass) <span class="op">+</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>mass)</span>
+<span id="cb752-19"><a href="-model-selection.html#cb752-19"></a>at_y &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb752-20"><a href="-model-selection.html#cb752-20"></a>labels_y &lt;-<span class="st"> </span>at_y <span class="op">*</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>brain)</span>
+<span id="cb752-21"><a href="-model-selection.html#cb752-21"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">at =</span> at_y, <span class="dt">labels =</span> <span class="kw">round</span>(labels_y, <span class="dv">1</span>))</span>
+<span id="cb752-22"><a href="-model-selection.html#cb752-22"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">at =</span> at, <span class="dt">labels =</span> <span class="kw">round</span>(labels, <span class="dv">1</span>))</span>
+<span id="cb752-23"><a href="-model-selection.html#cb752-23"></a><span class="kw">lines</span>( mass_seq, mu)</span>
+<span id="cb752-24"><a href="-model-selection.html#cb752-24"></a><span class="kw">shade</span>(ci, mass_seq)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes10-fig03"></span>
+<img src="bookdown_files/figure-html/introBayes10-fig03-1.png" alt="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed." width="576" />
+<p class="caption">
+圖 50.3: Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.
+</p>
+</div>
+</div>
+<div id="m7.3" class="section level4" number="50.1.1.2">
+<h4><span class="header-section-number">50.1.1.2</span> m7.3</h4>
+<div class="sourceCode" id="cb753"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb753-1"><a href="-model-selection.html#cb753-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m7<span class="fl">.3</span> )</span>
+<span id="cb753-2"><a href="-model-selection.html#cb753-2"></a>mass_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">min</span>(d<span class="op">$</span>mass_std), <span class="dt">to =</span> <span class="kw">max</span>(d<span class="op">$</span>mass_std), </span>
+<span id="cb753-3"><a href="-model-selection.html#cb753-3"></a>                 <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb753-4"><a href="-model-selection.html#cb753-4"></a>l &lt;-<span class="st"> </span><span class="kw">link</span>( m7<span class="fl">.3</span>, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">mass_std =</span> mass_seq))</span>
+<span id="cb753-5"><a href="-model-selection.html#cb753-5"></a>mu &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, mean)</span>
+<span id="cb753-6"><a href="-model-selection.html#cb753-6"></a>ci &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, PI)</span>
+<span id="cb753-7"><a href="-model-selection.html#cb753-7"></a></span>
+<span id="cb753-8"><a href="-model-selection.html#cb753-8"></a><span class="kw">plot</span>( brain_std <span class="op">~</span><span class="st"> </span>mass_std, <span class="dt">data =</span> d, </span>
+<span id="cb753-9"><a href="-model-selection.html#cb753-9"></a>      <span class="dt">main =</span> <span class="st">&quot;m7.3: R^2 = 0.68&quot;</span>, </span>
+<span id="cb753-10"><a href="-model-selection.html#cb753-10"></a>      <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>, </span>
+<span id="cb753-11"><a href="-model-selection.html#cb753-11"></a>      <span class="dt">col =</span> rangi2, </span>
+<span id="cb753-12"><a href="-model-selection.html#cb753-12"></a>      <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb753-13"><a href="-model-selection.html#cb753-13"></a>      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb753-14"><a href="-model-selection.html#cb753-14"></a>      <span class="dt">pch =</span> <span class="dv">16</span>,</span>
+<span id="cb753-15"><a href="-model-selection.html#cb753-15"></a>      <span class="dt">xlab =</span> <span class="st">&quot;body mass (kg)&quot;</span>, </span>
+<span id="cb753-16"><a href="-model-selection.html#cb753-16"></a>      <span class="dt">ylab =</span> <span class="st">&quot;brain volumn (cc)&quot;</span>)</span>
+<span id="cb753-17"><a href="-model-selection.html#cb753-17"></a>at &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">-1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb753-18"><a href="-model-selection.html#cb753-18"></a>labels &lt;-<span class="st"> </span>at<span class="op">*</span><span class="kw">sd</span>(d<span class="op">$</span>mass) <span class="op">+</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>mass)</span>
+<span id="cb753-19"><a href="-model-selection.html#cb753-19"></a>at_y &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb753-20"><a href="-model-selection.html#cb753-20"></a>labels_y &lt;-<span class="st"> </span>at_y <span class="op">*</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>brain)</span>
+<span id="cb753-21"><a href="-model-selection.html#cb753-21"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">at =</span> at_y, <span class="dt">labels =</span> <span class="kw">round</span>(labels_y, <span class="dv">1</span>))</span>
+<span id="cb753-22"><a href="-model-selection.html#cb753-22"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">at =</span> at, <span class="dt">labels =</span> <span class="kw">round</span>(labels, <span class="dv">1</span>))</span>
+<span id="cb753-23"><a href="-model-selection.html#cb753-23"></a><span class="kw">lines</span>( mass_seq, mu)</span>
+<span id="cb753-24"><a href="-model-selection.html#cb753-24"></a><span class="kw">shade</span>(ci, mass_seq)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes10-fig04"></span>
+<img src="bookdown_files/figure-html/introBayes10-fig04-1.png" alt="Third-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed." width="576" />
+<p class="caption">
+圖 50.4: Third-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.
+</p>
+</div>
+</div>
+<div id="m7.4" class="section level4" number="50.1.1.3">
+<h4><span class="header-section-number">50.1.1.3</span> m7.4</h4>
+<div class="sourceCode" id="cb754"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb754-1"><a href="-model-selection.html#cb754-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m7<span class="fl">.4</span> )</span>
+<span id="cb754-2"><a href="-model-selection.html#cb754-2"></a>mass_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">min</span>(d<span class="op">$</span>mass_std), <span class="dt">to =</span> <span class="kw">max</span>(d<span class="op">$</span>mass_std), </span>
+<span id="cb754-3"><a href="-model-selection.html#cb754-3"></a>                 <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb754-4"><a href="-model-selection.html#cb754-4"></a>l &lt;-<span class="st"> </span><span class="kw">link</span>( m7<span class="fl">.4</span>, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">mass_std =</span> mass_seq))</span>
+<span id="cb754-5"><a href="-model-selection.html#cb754-5"></a>mu &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, mean)</span>
+<span id="cb754-6"><a href="-model-selection.html#cb754-6"></a>ci &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, PI)</span>
+<span id="cb754-7"><a href="-model-selection.html#cb754-7"></a></span>
+<span id="cb754-8"><a href="-model-selection.html#cb754-8"></a><span class="kw">plot</span>( brain_std <span class="op">~</span><span class="st"> </span>mass_std, <span class="dt">data =</span> d, </span>
+<span id="cb754-9"><a href="-model-selection.html#cb754-9"></a>      <span class="dt">main =</span> <span class="st">&quot;m7.4: R^2 = 0.82&quot;</span>, </span>
+<span id="cb754-10"><a href="-model-selection.html#cb754-10"></a>      <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>, </span>
+<span id="cb754-11"><a href="-model-selection.html#cb754-11"></a>      <span class="dt">col =</span> rangi2, </span>
+<span id="cb754-12"><a href="-model-selection.html#cb754-12"></a>      <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb754-13"><a href="-model-selection.html#cb754-13"></a>      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb754-14"><a href="-model-selection.html#cb754-14"></a>      <span class="dt">pch =</span> <span class="dv">16</span>,</span>
+<span id="cb754-15"><a href="-model-selection.html#cb754-15"></a>      <span class="dt">xlab =</span> <span class="st">&quot;body mass (kg)&quot;</span>, </span>
+<span id="cb754-16"><a href="-model-selection.html#cb754-16"></a>      <span class="dt">ylab =</span> <span class="st">&quot;brain volumn (cc)&quot;</span>)</span>
+<span id="cb754-17"><a href="-model-selection.html#cb754-17"></a>at &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">-1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb754-18"><a href="-model-selection.html#cb754-18"></a>labels &lt;-<span class="st"> </span>at<span class="op">*</span><span class="kw">sd</span>(d<span class="op">$</span>mass) <span class="op">+</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>mass)</span>
+<span id="cb754-19"><a href="-model-selection.html#cb754-19"></a>at_y &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb754-20"><a href="-model-selection.html#cb754-20"></a>labels_y &lt;-<span class="st"> </span>at_y <span class="op">*</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>brain)</span>
+<span id="cb754-21"><a href="-model-selection.html#cb754-21"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">at =</span> at_y, <span class="dt">labels =</span> <span class="kw">round</span>(labels_y, <span class="dv">1</span>))</span>
+<span id="cb754-22"><a href="-model-selection.html#cb754-22"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">at =</span> at, <span class="dt">labels =</span> <span class="kw">round</span>(labels, <span class="dv">1</span>))</span>
+<span id="cb754-23"><a href="-model-selection.html#cb754-23"></a><span class="kw">lines</span>( mass_seq, mu)</span>
+<span id="cb754-24"><a href="-model-selection.html#cb754-24"></a><span class="kw">shade</span>(ci, mass_seq)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes10-fig05"></span>
+<img src="bookdown_files/figure-html/introBayes10-fig05-1.png" alt="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed." width="576" />
+<p class="caption">
+圖 50.5: Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.
+</p>
+</div>
+</div>
+<div id="m7.5" class="section level4" number="50.1.1.4">
+<h4><span class="header-section-number">50.1.1.4</span> m7.5</h4>
+<div class="sourceCode" id="cb755"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb755-1"><a href="-model-selection.html#cb755-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m7<span class="fl">.5</span> )</span>
+<span id="cb755-2"><a href="-model-selection.html#cb755-2"></a>mass_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">min</span>(d<span class="op">$</span>mass_std), <span class="dt">to =</span> <span class="kw">max</span>(d<span class="op">$</span>mass_std), </span>
+<span id="cb755-3"><a href="-model-selection.html#cb755-3"></a>                 <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb755-4"><a href="-model-selection.html#cb755-4"></a>l &lt;-<span class="st"> </span><span class="kw">link</span>( m7<span class="fl">.5</span>, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">mass_std =</span> mass_seq))</span>
+<span id="cb755-5"><a href="-model-selection.html#cb755-5"></a>mu &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, mean)</span>
+<span id="cb755-6"><a href="-model-selection.html#cb755-6"></a>ci &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, PI)</span>
+<span id="cb755-7"><a href="-model-selection.html#cb755-7"></a></span>
+<span id="cb755-8"><a href="-model-selection.html#cb755-8"></a><span class="kw">plot</span>( brain_std <span class="op">~</span><span class="st"> </span>mass_std, <span class="dt">data =</span> d, </span>
+<span id="cb755-9"><a href="-model-selection.html#cb755-9"></a>      <span class="dt">main =</span> <span class="st">&quot;m7.5: R^2 = 0.99&quot;</span>, </span>
+<span id="cb755-10"><a href="-model-selection.html#cb755-10"></a>      <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>, </span>
+<span id="cb755-11"><a href="-model-selection.html#cb755-11"></a>      <span class="dt">col =</span> rangi2, </span>
+<span id="cb755-12"><a href="-model-selection.html#cb755-12"></a>      <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb755-13"><a href="-model-selection.html#cb755-13"></a>      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb755-14"><a href="-model-selection.html#cb755-14"></a>      <span class="dt">pch =</span> <span class="dv">16</span>,</span>
+<span id="cb755-15"><a href="-model-selection.html#cb755-15"></a>      <span class="dt">xlab =</span> <span class="st">&quot;body mass (kg)&quot;</span>, </span>
+<span id="cb755-16"><a href="-model-selection.html#cb755-16"></a>      <span class="dt">ylab =</span> <span class="st">&quot;brain volumn (cc)&quot;</span>)</span>
+<span id="cb755-17"><a href="-model-selection.html#cb755-17"></a>at &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">-1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb755-18"><a href="-model-selection.html#cb755-18"></a>labels &lt;-<span class="st"> </span>at<span class="op">*</span><span class="kw">sd</span>(d<span class="op">$</span>mass) <span class="op">+</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>mass)</span>
+<span id="cb755-19"><a href="-model-selection.html#cb755-19"></a>at_y &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb755-20"><a href="-model-selection.html#cb755-20"></a>labels_y &lt;-<span class="st"> </span>at_y <span class="op">*</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>brain)</span>
+<span id="cb755-21"><a href="-model-selection.html#cb755-21"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">at =</span> at_y, <span class="dt">labels =</span> <span class="kw">round</span>(labels_y, <span class="dv">1</span>))</span>
+<span id="cb755-22"><a href="-model-selection.html#cb755-22"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">at =</span> at, <span class="dt">labels =</span> <span class="kw">round</span>(labels, <span class="dv">1</span>))</span>
+<span id="cb755-23"><a href="-model-selection.html#cb755-23"></a><span class="kw">lines</span>( mass_seq, mu)</span>
+<span id="cb755-24"><a href="-model-selection.html#cb755-24"></a><span class="kw">shade</span>(ci, mass_seq)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes10-fig06"></span>
+<img src="bookdown_files/figure-html/introBayes10-fig06-1.png" alt="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed." width="576" />
+<p class="caption">
+圖 50.6: Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.
+</p>
+</div>
+</div>
+<div id="m7.6" class="section level4" number="50.1.1.5">
+<h4><span class="header-section-number">50.1.1.5</span> m7.6</h4>
+<div class="sourceCode" id="cb756"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb756-1"><a href="-model-selection.html#cb756-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m7<span class="fl">.6</span> )</span>
+<span id="cb756-2"><a href="-model-selection.html#cb756-2"></a>mass_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">min</span>(d<span class="op">$</span>mass_std), <span class="dt">to =</span> <span class="kw">max</span>(d<span class="op">$</span>mass_std), </span>
+<span id="cb756-3"><a href="-model-selection.html#cb756-3"></a>                 <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb756-4"><a href="-model-selection.html#cb756-4"></a>l &lt;-<span class="st"> </span><span class="kw">link</span>( m7<span class="fl">.6</span>, <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">mass_std =</span> mass_seq))</span>
+<span id="cb756-5"><a href="-model-selection.html#cb756-5"></a>mu &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, mean)</span>
+<span id="cb756-6"><a href="-model-selection.html#cb756-6"></a>ci &lt;-<span class="st"> </span><span class="kw">apply</span>(l, <span class="dv">2</span>, PI)</span>
+<span id="cb756-7"><a href="-model-selection.html#cb756-7"></a></span>
+<span id="cb756-8"><a href="-model-selection.html#cb756-8"></a><span class="kw">plot</span>( brain_std <span class="op">~</span><span class="st"> </span>mass_std, <span class="dt">data =</span> d, </span>
+<span id="cb756-9"><a href="-model-selection.html#cb756-9"></a>      <span class="dt">main =</span> <span class="st">&quot;m7.6: R^2 = 1&quot;</span>, </span>
+<span id="cb756-10"><a href="-model-selection.html#cb756-10"></a>      <span class="dt">bty=</span><span class="st">&quot;n&quot;</span>, </span>
+<span id="cb756-11"><a href="-model-selection.html#cb756-11"></a>      <span class="dt">col =</span> rangi2, </span>
+<span id="cb756-12"><a href="-model-selection.html#cb756-12"></a>      <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb756-13"><a href="-model-selection.html#cb756-13"></a>      <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb756-14"><a href="-model-selection.html#cb756-14"></a>      <span class="dt">pch =</span> <span class="dv">16</span>,</span>
+<span id="cb756-15"><a href="-model-selection.html#cb756-15"></a>      <span class="dt">xlab =</span> <span class="st">&quot;body mass (kg)&quot;</span>, </span>
+<span id="cb756-16"><a href="-model-selection.html#cb756-16"></a>      <span class="dt">ylab =</span> <span class="st">&quot;brain volumn (cc)&quot;</span>)</span>
+<span id="cb756-17"><a href="-model-selection.html#cb756-17"></a>at &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">-1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb756-18"><a href="-model-selection.html#cb756-18"></a>labels &lt;-<span class="st"> </span>at<span class="op">*</span><span class="kw">sd</span>(d<span class="op">$</span>mass) <span class="op">+</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>mass)</span>
+<span id="cb756-19"><a href="-model-selection.html#cb756-19"></a>at_y &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb756-20"><a href="-model-selection.html#cb756-20"></a>labels_y &lt;-<span class="st"> </span>at_y <span class="op">*</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>brain)</span>
+<span id="cb756-21"><a href="-model-selection.html#cb756-21"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">2</span>, <span class="dt">at =</span> at_y, <span class="dt">labels =</span> <span class="kw">round</span>(labels_y, <span class="dv">1</span>))</span>
+<span id="cb756-22"><a href="-model-selection.html#cb756-22"></a><span class="kw">axis</span>( <span class="dt">side =</span> <span class="dv">1</span>, <span class="dt">at =</span> at, <span class="dt">labels =</span> <span class="kw">round</span>(labels, <span class="dv">1</span>))</span>
+<span id="cb756-23"><a href="-model-selection.html#cb756-23"></a><span class="kw">lines</span>( mass_seq, mu)</span>
+<span id="cb756-24"><a href="-model-selection.html#cb756-24"></a><span class="kw">shade</span>(ci, mass_seq)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes10-fig07"></span>
+<img src="bookdown_files/figure-html/introBayes10-fig07-1.png" alt="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed." width="576" />
+<p class="caption">
+圖 50.7: Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.
+</p>
+</div>
 
+</div>
 </div>
 </div>
 </div>

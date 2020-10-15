@@ -43,5 +43,320 @@ d %>%
 
 ```
 
+接下來我們來建立一系列越來越複雜的模型。最簡單的模型就是線性回歸模型。在建立模型之前，先把體重變量標準化，然後把腦容量變量的單位縮放一下成爲一個範圍是 0-1 的變量：
+
+```{r introBayes10-02, cache=TRUE}
+d$mass_std <- (d$mass - mean(d$mass)) / sd(d$mass)
+d$brain_std <- d$brain / max(d$brain)
+d
+```
+
+我們想要建立的第一個模型是這樣的：
+
+
+$$
+\begin{aligned}
+b_i & \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i & = \alpha + \beta m_i \\
+\alpha & \sim \text{Normal}(0.5, 1) \\
+\beta & \sim \text{Normal}(0, 10) \\
+\sigma & \sim \text{Log-Normal}(0, 1)
+\end{aligned}
+$$
+
+```{r introBayes10-03, cache=TRUE}
+m7.1 <- quap(
+  alist(
+    brain_std ~ dnorm( mu, exp(log_sigma) ), 
+    mu <- a + b * mass_std, 
+    a ~ dnorm( 0.5, 1 ), 
+    b ~ dnorm( 0, 10 ), 
+    log_sigma ~ dnorm( 0, 1 )
+  ), data = d
+)
+precis(m7.1)
+# compared with traditional OLS estimation
+m7.1_OLS <- lm(brain_std ~ mass_std, data = d)
+summary(m7.1_OLS)
+```
+下面的代碼計算該模型 `m7.1` 的 $R^2$。
+
+
+```{r introBayes10-04, cache=TRUE}
+set.seed(12)
+s <- sim( m7.1 )
+r <- apply(s, 2, mean) - d$brain_std
+resid_var <- var2(r)
+outcome_var <- var2(d$brain_std)
+1 - resid_var / outcome_var
+```
+
+把上面的計算過程製作成一個函數，以便重複調用：
+
+```{r introBayes10-05, cache=TRUE}
+R2_is_bad <- function( quap_fit ){
+  set.seed(12)
+  s <- sim( quap_fit, refresh = 0)
+  r <- apply(s, 2, mean) - d$brain_std
+  1 - var2(r)/var2(d$brain_std)
+}
+
+R2_is_bad(m7.1)
+```
+
+接下來，我們把這個模型擴展開，讓它更加複雜一些，增加一個二次項，試圖提升模型擬合度。
+
+$$
+\begin{aligned}
+b_i & \sim \text{Normal}(\mu_i, \sigma)\\ 
+\mu_i & = \alpha + \beta_1 m_i + \beta_2 m_i^2 \\
+\beta_j & \sim \text{Normal}(0, 10)  & \text{for } j = 1, 2\\
+\sigma & \sim \text{Log-Normal}(0,1)
+\end{aligned}
+$$
+
+```{r introBayes10-06, cache=TRUE}
+m7.2 <- quap(
+  alist(
+    brain_std ~ dnorm( mu, exp(log_sigma) ), 
+    mu <- a + b[1] * mass_std + b[2] * mass_std^2, 
+    a ~ dnorm(0.5, 1) , 
+    b ~ dnorm(0, 10), 
+    log_sigma ~ dnorm(0, 1)
+  ), data = d, start = list(b = rep(0, 2))
+)
+precis(m7.2, depth = 2)
+```
+
+接下來，我們頭腦發熱狂加多次項到模型中去看會發生什麼：
+
+
+```{r introBayes10-07, cache=TRUE}
+m7.3 <- quap(
+  alist(
+    brain_std ~ dnorm( mu, exp(log_sigma) ), 
+    mu <- a + b[1] * mass_std + b[2] * mass_std^2 + 
+      b[3] * mass_std^3, 
+    a ~ dnorm(0.5, 1) , 
+    b ~ dnorm(0, 10), 
+    log_sigma ~ dnorm(0, 1)
+  ), data = d, start = list(b = rep(0, 3))
+)
+m7.4 <- quap(
+  alist(
+    brain_std ~ dnorm( mu, exp(log_sigma) ), 
+    mu <- a + b[1] * mass_std + b[2] * mass_std^2 + 
+      b[3] * mass_std^3 + b[4] * mass_std^4, 
+    a ~ dnorm(0.5, 1) , 
+    b ~ dnorm(0, 10), 
+    log_sigma ~ dnorm(0, 1)
+  ), data = d, start = list(b = rep(0, 4))
+)
+m7.5 <- quap(
+  alist(
+    brain_std ~ dnorm( mu, exp(log_sigma) ), 
+    mu <- a + b[1] * mass_std + b[2] * mass_std^2 + 
+      b[3] * mass_std^3 + b[4] * mass_std^4 + 
+      b[5] * mass_std^5, 
+    a ~ dnorm(0.5, 1) , 
+    b ~ dnorm(0, 10), 
+    log_sigma ~ dnorm(0, 1)
+  ), data = d, start = list(b = rep(0, 5))
+)
+m7.6 <- quap(
+  alist(
+    brain_std ~ dnorm( mu, exp(log_sigma) ), 
+    mu <- a + b[1] * mass_std + b[2] * mass_std^2 + 
+      b[3] * mass_std^3 + b[4] * mass_std^4 + 
+      b[5] * mass_std^5 + b[6] * mass_std^6, 
+    a ~ dnorm(0.5, 1) , 
+    b ~ dnorm(0, 10), 
+    log_sigma ~ dnorm(0, 1)
+  ), data = d, start = list(b = rep(0, 6))
+)
+```
+
+然後我們繪製上述每個模型給出的回歸線及其89%可信區間：
+
+```{r introBayes10-fig02, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
+post <- extract.samples( m7.1 )
+mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
+                 length.out = 100)
+l <- link( m7.1, data = list(mass_std = mass_seq))
+mu <- apply(l, 2, mean)
+ci <- apply(l, 2, PI)
+
+plot( brain_std ~ mass_std, data = d, 
+      main = "m7.1: R^2 = 0.48", 
+      bty="n", 
+      col = rangi2, 
+      xaxt = "n", 
+      yaxt = "n",
+      pch = 16,
+      xlab = "body mass (kg)", 
+      ylab = "brain volumn (cc)")
+at <- c(-2, -1, 0, 1, 2)
+labels <- at*sd(d$mass) + mean(d$mass)
+at_y <- seq(0.2, 1, by = 0.1)
+labels_y <- at_y * max(d$brain)
+axis( side = 2, at = at_y, labels = round(labels_y, 1))
+axis( side = 1, at = at, labels = round(labels, 1))
+lines( mass_seq, mu)
+shade(ci, mass_seq)
+
+```
+
+#### m7.2
+
+```{r introBayes10-fig03, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
+post <- extract.samples( m7.2 )
+mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
+                 length.out = 100)
+l <- link( m7.2, data = list(mass_std = mass_seq))
+mu <- apply(l, 2, mean)
+ci <- apply(l, 2, PI)
+
+plot( brain_std ~ mass_std, data = d, 
+      main = "m7.2: R^2 = 0.53", 
+      bty="n", 
+      col = rangi2, 
+      xaxt = "n", 
+      yaxt = "n",
+      pch = 16,
+      xlab = "body mass (kg)", 
+      ylab = "brain volumn (cc)")
+at <- c(-2, -1, 0, 1, 2)
+labels <- at*sd(d$mass) + mean(d$mass)
+at_y <- seq(0.2, 1, by = 0.1)
+labels_y <- at_y * max(d$brain)
+axis( side = 2, at = at_y, labels = round(labels_y, 1))
+axis( side = 1, at = at, labels = round(labels, 1))
+lines( mass_seq, mu)
+shade(ci, mass_seq)
+```
+
+
+#### m7.3
+
+```{r introBayes10-fig04, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Third-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
+post <- extract.samples( m7.3 )
+mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
+                 length.out = 100)
+l <- link( m7.3, data = list(mass_std = mass_seq))
+mu <- apply(l, 2, mean)
+ci <- apply(l, 2, PI)
+
+plot( brain_std ~ mass_std, data = d, 
+      main = "m7.3: R^2 = 0.68", 
+      bty="n", 
+      col = rangi2, 
+      xaxt = "n", 
+      yaxt = "n",
+      pch = 16,
+      xlab = "body mass (kg)", 
+      ylab = "brain volumn (cc)")
+at <- c(-2, -1, 0, 1, 2)
+labels <- at*sd(d$mass) + mean(d$mass)
+at_y <- seq(0.2, 1, by = 0.1)
+labels_y <- at_y * max(d$brain)
+axis( side = 2, at = at_y, labels = round(labels_y, 1))
+axis( side = 1, at = at, labels = round(labels, 1))
+lines( mass_seq, mu)
+shade(ci, mass_seq)
+```
+
+
+#### m7.4
+
+```{r introBayes10-fig05, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
+post <- extract.samples( m7.4 )
+mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
+                 length.out = 100)
+l <- link( m7.4, data = list(mass_std = mass_seq))
+mu <- apply(l, 2, mean)
+ci <- apply(l, 2, PI)
+
+plot( brain_std ~ mass_std, data = d, 
+      main = "m7.4: R^2 = 0.82", 
+      bty="n", 
+      col = rangi2, 
+      xaxt = "n", 
+      yaxt = "n",
+      pch = 16,
+      xlab = "body mass (kg)", 
+      ylab = "brain volumn (cc)")
+at <- c(-2, -1, 0, 1, 2)
+labels <- at*sd(d$mass) + mean(d$mass)
+at_y <- seq(0.2, 1, by = 0.1)
+labels_y <- at_y * max(d$brain)
+axis( side = 2, at = at_y, labels = round(labels_y, 1))
+axis( side = 1, at = at, labels = round(labels, 1))
+lines( mass_seq, mu)
+shade(ci, mass_seq)
+```
+
+
+
+#### m7.5
+
+```{r introBayes10-fig06, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
+post <- extract.samples( m7.5 )
+mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
+                 length.out = 100)
+l <- link( m7.5, data = list(mass_std = mass_seq))
+mu <- apply(l, 2, mean)
+ci <- apply(l, 2, PI)
+
+plot( brain_std ~ mass_std, data = d, 
+      main = "m7.5: R^2 = 0.99", 
+      bty="n", 
+      col = rangi2, 
+      xaxt = "n", 
+      yaxt = "n",
+      pch = 16,
+      xlab = "body mass (kg)", 
+      ylab = "brain volumn (cc)")
+at <- c(-2, -1, 0, 1, 2)
+labels <- at*sd(d$mass) + mean(d$mass)
+at_y <- seq(0.2, 1, by = 0.1)
+labels_y <- at_y * max(d$brain)
+axis( side = 2, at = at_y, labels = round(labels_y, 1))
+axis( side = 1, at = at, labels = round(labels, 1))
+lines( mass_seq, mu)
+shade(ci, mass_seq)
+```
+
+
+
+#### m7.6
+
+```{r introBayes10-fig07, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
+post <- extract.samples( m7.6 )
+mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
+                 length.out = 100)
+l <- link( m7.6, data = list(mass_std = mass_seq))
+mu <- apply(l, 2, mean)
+ci <- apply(l, 2, PI)
+
+plot( brain_std ~ mass_std, data = d, 
+      main = "m7.6: R^2 = 1", 
+      bty="n", 
+      col = rangi2, 
+      xaxt = "n", 
+      yaxt = "n",
+      pch = 16,
+      ylim = c(-0.3, 1.5),
+      xlab = "body mass (kg)", 
+      ylab = "brain volumn (cc)")
+at <- c(-2, -1, 0, 1, 2)
+labels <- at*sd(d$mass) + mean(d$mass)
+at_y <- seq(-0.3, 1.4, by = 0.1)
+labels_y <- at_y * max(d$brain)
+axis( side = 2, at = at_y, labels = round(labels_y, 1))
+axis( side = 1, at = at, labels = round(labels, 1))
+lines( mass_seq, mu)
+shade(ci, mass_seq)
+```
+不難發現，當我們不斷地給模型增加多次項時，模型的擬合度，用 $R^2$ 表示的話，是越來越接近完美的。但是最完美的模型 `m7.6` 給出了瘋狂的曲線，它完美的預測了每一個觀察數據。但是你不能相信這個模型對嗎，因為它竟然告訴我們當體重在 58 KG 時，腦容量是小於零的。這是極端的過擬合現象，overfitting。
 
 
