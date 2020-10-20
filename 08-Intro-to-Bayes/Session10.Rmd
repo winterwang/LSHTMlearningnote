@@ -359,9 +359,62 @@ shade(ci, mass_seq)
 ```
 不難發現，當我們不斷地給模型增加多次項時，模型的擬合度，用 $R^2$ 表示的話，是越來越接近完美的。但是最完美的模型 `m7.6` 給出了瘋狂的曲線，它完美的預測了每一個觀察數據。但是你不能相信這個模型對嗎，因為它竟然告訴我們當體重在 58 KG 時，腦容量是小於零的。這是極端的過擬合現象，overfitting。
 
-## 也不是預測變量越少越好
+### 也不是預測變量越少越好
 
 過度擬合的模型，它的問題在於可以完美的告訴我們已有數據內的關係 (within sample accuracy)，但是預測新數據的能力很差。與之相對應的，是擬合不足 (underfitting)。擬合不足的模型帶來的最大問題是，連已有的數據都無法準確地描述，更不要說用來預測了。
 
+
+## 信息熵 information entropy
+
+> The uncertainty contained in a probability distribution is the average log-probability of an event. 
+
+翻譯過來就是，一個概率分佈所蘊含的不確定性，其實是該事件發生概率的對數均值取負數，這個概念被叫做**信息熵**。
+
+
+$$
+H(p) = - E \log (p_i) = - \sum_{i = 1}^n p_i \log(p_i)
+$$
+
+假如一個地方天氣只有晴天和下雨兩種，且各自發生的概率分別是 $p_1 = 0.3, p_2 = 0.7$，那麼我們認爲該地方天氣這一事件的信息熵是：
+
+$$
+H(p) = - (p_1\log(p_1) + p_2\log(p_2)) \approx 0.61
+$$
+
+```{r introBayes10-08, cache=TRUE}
+p <- c(0.3, 0.7)
+-sum(p*log(p))
+```
+
+假如我們搬家到阿布扎比。那麼我們知道這裏鮮少下雨，雨天和晴天的概率可能就是 $p_1 = 0.01, p_2 = 0.99$。那麼在阿布扎比的天氣，其信息熵（或者簡單說叫做天氣變化的不確定性）就是約等於0.06：
+
+
+```{r introBayes10-09, cache=TRUE}
+p <- c(0.01, 0.99)
+-sum(p*log(p))
+```
+
+也就是說這裏天氣的不確定，相比一個降雨概率是30%的地方來說是相對很低的。當然，假如我們增加天氣的不同種類，例如下雪天的概率。通常信息熵會增加，也就是天氣的不確定性會增加。例如我們假設晴天，下雨，降雪的概率分別是 $p_1 = 0.7, p_2 = 0.15, p_3 = 0.15$，那麼其天氣的信息熵就約等於0.82：
+
+
+```{r introBayes10-10, cache=TRUE}
+p <- c(0.7, 0.15, 0.15)
+-sum(p*log(p))
+```
+
+
+
+### 從信息熵到精確度 From entropy to accuracy
+
+> **Divergence**: The additional uncertainty induced by using probabilities from one distribution to describe another distribution. 
+
+離散度，又被叫做 Kullback-Leibler 離散度。如果某個事件的真實概率分佈 (True distribution of events) 是 $p_1 = 0.3, p_2 = 0.7$。如果我們使用的模型計算獲得的事後概率分佈是 $q_1 = 0.25, q_2 = 0.75$，那麼由於模型造成的額外的不確定性 (additional uncertainty) 該如何測量呢？答案是要根據上面定義的信息熵來做比較：
+
+
+$$
+D_{\text{KL}} = \sum_i p_i(\log(p_i) - \log(q_i)) = \sum_i p_i \log\left( \frac{p_i}{q_i} \right)
+$$
+
+也就是說，一個模型的離散程度是模型給出的概率分佈和我們希望測量的目標概率分佈之間的對數概率差的平均值 [the divergence is the average difference in log probability between the target (p) and model (q)]。這個離散度的定義其實是兩個概率分佈之間的對數概率（兩個信息熵）之差而已。
 
 
