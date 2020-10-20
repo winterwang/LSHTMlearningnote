@@ -1,0 +1,101 @@
+
+## 設計一個交互作用模型
+
+> We could cheat by splitting the data into two data frames. But it's not a good idea to split the data in this way. Here are four reasons. 
+
+> First, there are usually some parameters, such as $\sigma$, that the model says do not depend in any way upon continent (the variable you want to split the data on). By splitting the data table, you are hurting the accuracy of the estimates of pooling all of the eivdence into one estimate. In effect, you have accidentally assumed that variance differs between African and non-African nations. Now, there is nothing wrong with that sort of assumption. But you want to avoid accidental assumptions. 
+
+> Second ... 
+
+> Third, we may want to use information criteria or another method to compare models. In order to compare a model that treats all continents the same way to a model that allows different slopes in different continents, we need models that use all of the same data. This means that we cannot split the data for two separate models. We have to let a single model internally split the data. 
+
+> Fourth, once you begin using multilevel models, you'll see that there are advantages to borrowing information across categories like "Africa" and "not Africa." This is especially true when sample sizes vary across categories, such that overfitting risk is higher within some categories. In other words, what we learn about ruggedness outside of Africa should have some effect on our estimate within Africa, and vise versa. Mulitlevel models borrow information in this way, in order to improve estimates in all categories. When we split the data, this borrowing is impossible. 
+
+### 設計非洲大陸地形的模型 
+
+我們先設計一個不包含是否是非洲大陸這一變量的模型。
+
+```{r introBayes11-01, cache=TRUE}
+data("rugged")
+d <- rugged
+
+# make log version of outcome
+d$log_gdp <- log( d$rgdppc_2000 )
+
+# extract countries with GDP data
+dd <- d[ complete.cases( d$rgdppc_2000 ), ]
+
+# rescale variables
+dd$log_gdp_std <- dd$log_gdp / mean( dd$log_gdp )
+dd$rugged_std <- dd$rugged / max( dd$rugged )
+
+head(dd)
+```
+
+使用簡單線性回歸來分析土地的崎嶇程度和該地區的生產總值之間可能存在的關係：
+
+$$
+\begin{aligned}
+\log (y_i) & \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i &  =  \alpha + \beta(r_i - \bar{r})
+\end{aligned}
+$$
+
+其中，
+
+- $y_i$ 是第 $i$ 地區的GDP；
+- $r_i$ 是第 $i$ 地區的崎嶇程度；
+- $\bar{r}$ 是全體地區崎嶇程度的平均值，大約是 0.215。
+
+我們現在對與這兩者之間的關係並不瞭解，只能猜測，並賦予先驗概率分佈進行估算：
+
+$$
+\begin{aligned}
+\alpha & \sim \text{Normal}(1,1) \\
+\beta & \sim \text{Normal}(0, 1) \\
+\sigma & \sim \exp(1)
+\end{aligned}
+$$
+
+把這些翻譯成R語言模型：
+
+
+```{r introBayes11-02, cache=TRUE}
+m8.1 <- quap(
+  alist(
+    log_gdp_std ~ dnorm( mu, sigma ), 
+    mu <- a + b * (rugged_std - 0.215), 
+    a ~ dnorm( 1, 1 ), 
+    b ~ dnorm( 0, 1 ), 
+    sigma ~ dexp(1)
+  ), data = dd
+)
+```
+
+
+讓我們先來審視一下我們選擇的先驗概率大致是什麼樣的：
+
+
+```{r introBayes11-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="", fig.align='center'}
+set.seed(7)
+prior <- extract.prior( m8.1 )
+
+# set up the plot dimensions
+
+plot(NULL, xlim = c(0, 1), ylim = c(0.5, 1.4), 
+     xlab = "ruggedness", ylab = "log GDP", 
+     bty = "n", 
+     main = "a ~ dnorm(1,1)\nb ~ dnorm(0,1)")
+abline(h = min(dd$log_gdp_std), lty = 2)
+abline(h = max(dd$log_gdp_std), lty = 2)
+with(dd, abline(a = 1.28, b = -0.6, 
+       lty = 1, lwd = 1.5, col = c("blue")))
+
+# draw 50 lines from the prior
+rugged_seq <- seq(from = -0.1, to = 1.1, length.out = 30)
+mu <- link( m8.1, post = prior, data = data.frame(rugged_std = rugged_seq))
+for( i in 1:50 ) lines( rugged_seq, mu[i,], col = col.alpha("black", 0.3))
+```
+
+
+

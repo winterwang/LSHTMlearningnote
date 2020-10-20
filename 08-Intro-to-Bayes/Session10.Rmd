@@ -418,3 +418,70 @@ $$
 也就是說，一個模型的離散程度是模型給出的概率分佈和我們希望測量的目標概率分佈之間的對數概率差的平均值 [the divergence is the average difference in log probability between the target (p) and model (q)]。這個離散度的定義其實是兩個概率分佈之間的對數概率（兩個信息熵）之差而已。
 
 
+## 模型之間的比較
+
+讓我們回到講解治療後偏倚部分（Chapter \@ref(posttreatbias)）時分析治療組，菌落，和植物生長之間關係的三個模型 `m6.6, m6.7, m6.8`。其中，`m6.6` 是只有截距的模型，`m6.7` 是預測變量同時包含菌落存在與否及治療組兩個變量的模型，`m6.8` 是只有治療組作爲唯一預測變量的模型。這時我們可以使用 `WAIC()` 命令來獲取用於比較這幾個模型的模型信息：
+
+
+```{r introBayes10-11, cache=TRUE}
+set.seed(71)
+ # number of plants 
+N <- 100
+
+# simulate initial heights 
+h0 <- rnorm(N, 10, 2)
+
+# assign treatments and simulate fungus and growth
+treatment <- rep(0:1, each = N/2)
+fungus <- rbinom( N, size = 1, prob = 0.5 - treatment * 0.4)
+h1 <- h0 + rnorm( N, 5 - 3*fungus )
+
+# compose a clean data frame
+d <- data.frame( h0 = h0, h1 = h1, treatment = treatment, fungus = fungus)
+
+# fit models m6.6-6.8 again
+m6.6 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p ,
+    p ~ dlnorm( 0, 0.25 ),
+    sigma ~ dexp(1)
+  ), data  = d
+)
+m6.7 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p , 
+    p <- a + bt * treatment + bf * fungus, 
+    a ~ dlnorm( 0, 0.2 ),
+    bt  ~ dnorm(0, 0.5), 
+    bf  ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d
+)
+m6.8 <- quap(
+  alist(
+    h1 ~ dnorm(mu, sigma), 
+    mu <- h0 * p, 
+    p <- a + bt * treatment, 
+    a ~ dlnorm(0, 0.25),
+    bt ~ dnorm(0, 0.5),
+    sigma ~ dexp(1)
+  ), data = d
+)
+set.seed(11)
+WAIC( m6.7 )
+```
+
+如果能把這三個模型的信息放在一起比較就更好了：
+
+
+```{r  introBayes10-12, cache=TRUE}
+set.seed(77)
+compare( m6.6, m6.7, m6.8 , func = WAIC)
+# compare( m6.6, m6.7, m6.8 , func = PSIS)
+```
+
+
+
+

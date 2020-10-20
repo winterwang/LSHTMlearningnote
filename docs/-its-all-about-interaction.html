@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>我是誰 | 醫學統計學</title>
-  <meta name="description" content="我是誰 | 醫學統計學" />
+  <title>第 51 章 交互作用 it’s all about interaction | 醫學統計學</title>
+  <meta name="description" content="第 51 章 交互作用 it’s all about interaction | 醫學統計學" />
   <meta name="generator" content="bookdown 0.21 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="我是誰 | 醫學統計學" />
+  <meta property="og:title" content="第 51 章 交互作用 it’s all about interaction | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="我是誰 | 醫學統計學" />
+  <meta name="twitter:title" content="第 51 章 交互作用 it’s all about interaction | 醫學統計學" />
   
   
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="index.html"/>
-<link rel="next" href="prob-intro.html"/>
+<link rel="prev" href="-model-selection.html"/>
+<link rel="next" href="revision.html"/>
 <script src="libs/header-attrs/header-attrs.js"></script>
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
@@ -1773,11 +1773,152 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="author" class="section level1 unnumbered" number="">
-<h1>我是誰</h1>
-<p>歡迎參觀我的<a href="https://wangcc.me">個人主頁</a>。</p>
-<p>喜歡這本（未完成的）筆記嗎？如果想早點看到沒有寫完的筆記部分，歡迎充值/打賞: <a href="https://paypal.me/wangccme">Paypal</a></p>
+<div id="交互作用-its-all-about-interaction" class="section level1" number="51">
+<h1><span class="header-section-number">第 51 章</span> 交互作用 it’s all about interaction</h1>
+<div id="設計一個交互作用模型" class="section level2" number="51.1">
+<h2><span class="header-section-number">51.1</span> 設計一個交互作用模型</h2>
+<blockquote>
+<p>We could cheat by splitting the data into two data frames. But it’s not a good idea to split the data in this way. Here are four reasons.</p>
+</blockquote>
+<blockquote>
+<p>First, there are usually some parameters, such as <span class="math inline">\(\sigma\)</span>, that the model says do not depend in any way upon continent (the variable you want to split the data on). By splitting the data table, you are hurting the accuracy of the estimates of pooling all of the eivdence into one estimate. In effect, you have accidentally assumed that variance differs between African and non-African nations. Now, there is nothing wrong with that sort of assumption. But you want to avoid accidental assumptions.</p>
+</blockquote>
+<blockquote>
+<p>Second …</p>
+</blockquote>
+<blockquote>
+<p>Third, we may want to use information criteria or another method to compare models. In order to compare a model that treats all continents the same way to a model that allows different slopes in different continents, we need models that use all of the same data. This means that we cannot split the data for two separate models. We have to let a single model internally split the data.</p>
+</blockquote>
+<blockquote>
+<p>Fourth, once you begin using multilevel models, you’ll see that there are advantages to borrowing information across categories like “Africa” and “not Africa.” This is especially true when sample sizes vary across categories, such that overfitting risk is higher within some categories. In other words, what we learn about ruggedness outside of Africa should have some effect on our estimate within Africa, and vise versa. Mulitlevel models borrow information in this way, in order to improve estimates in all categories. When we split the data, this borrowing is impossible.</p>
+</blockquote>
+<div id="設計非洲大陸地形的模型" class="section level3" number="51.1.1">
+<h3><span class="header-section-number">51.1.1</span> 設計非洲大陸地形的模型</h3>
+<p>我們先設計一個不包含是否是非洲大陸這一變量的模型。</p>
+<div class="sourceCode" id="cb768"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb768-1"><a href="-its-all-about-interaction.html#cb768-1"></a><span class="kw">data</span>(<span class="st">&quot;rugged&quot;</span>)</span>
+<span id="cb768-2"><a href="-its-all-about-interaction.html#cb768-2"></a>d &lt;-<span class="st"> </span>rugged</span>
+<span id="cb768-3"><a href="-its-all-about-interaction.html#cb768-3"></a></span>
+<span id="cb768-4"><a href="-its-all-about-interaction.html#cb768-4"></a><span class="co"># make log version of outcome</span></span>
+<span id="cb768-5"><a href="-its-all-about-interaction.html#cb768-5"></a>d<span class="op">$</span>log_gdp &lt;-<span class="st"> </span><span class="kw">log</span>( d<span class="op">$</span>rgdppc_<span class="dv">2000</span> )</span>
+<span id="cb768-6"><a href="-its-all-about-interaction.html#cb768-6"></a></span>
+<span id="cb768-7"><a href="-its-all-about-interaction.html#cb768-7"></a><span class="co"># extract countries with GDP data</span></span>
+<span id="cb768-8"><a href="-its-all-about-interaction.html#cb768-8"></a>dd &lt;-<span class="st"> </span>d[ <span class="kw">complete.cases</span>( d<span class="op">$</span>rgdppc_<span class="dv">2000</span> ), ]</span>
+<span id="cb768-9"><a href="-its-all-about-interaction.html#cb768-9"></a></span>
+<span id="cb768-10"><a href="-its-all-about-interaction.html#cb768-10"></a><span class="co"># rescale variables</span></span>
+<span id="cb768-11"><a href="-its-all-about-interaction.html#cb768-11"></a>dd<span class="op">$</span>log_gdp_std &lt;-<span class="st"> </span>dd<span class="op">$</span>log_gdp <span class="op">/</span><span class="st"> </span><span class="kw">mean</span>( dd<span class="op">$</span>log_gdp )</span>
+<span id="cb768-12"><a href="-its-all-about-interaction.html#cb768-12"></a>dd<span class="op">$</span>rugged_std &lt;-<span class="st"> </span>dd<span class="op">$</span>rugged <span class="op">/</span><span class="st"> </span><span class="kw">max</span>( dd<span class="op">$</span>rugged )</span>
+<span id="cb768-13"><a href="-its-all-about-interaction.html#cb768-13"></a></span>
+<span id="cb768-14"><a href="-its-all-about-interaction.html#cb768-14"></a><span class="kw">head</span>(dd)</span></code></pre></div>
+<pre><code>##    isocode isonum              country rugged rugged_popw rugged_slope rugged_lsd rugged_pc
+## 3      AGO     24               Angola  0.858       0.714        2.274      0.228     4.906
+## 5      ALB      8              Albania  3.427       1.597       10.451      1.006    62.133
+## 8      ARE    784 United Arab Emirates  0.769       0.316        2.112      0.191     6.142
+## 9      ARG     32            Argentina  0.775       0.220        2.268      0.226     9.407
+## 10     ARM     51              Armenia  2.688       0.934        8.178      0.799    50.556
+## 12     ATG     28  Antigua and Barbuda  0.006       0.003        0.012      0.003     0.000
+##    land_area     lat     lon    soil desert tropical dist_coast near_coast gemstones rgdppc_2000
+## 3     124670 -12.299  17.551  26.676  0.425   44.346      0.428    13.1587     47756    1794.729
+## 5       2740  41.143  20.070  68.088  0.000    0.000      0.048    94.6919         0    3703.113
+## 8       8360  23.913  54.331   0.000 77.280    0.000      0.065    75.7464         0   20604.460
+## 9     273669 -35.396 -65.170  35.678  0.000    0.000      0.352    13.0167         0   12173.680
+## 10      2820  40.294  44.938  30.148  0.000    0.000      0.348     0.0000         0    2421.985
+## 12        44  17.271 -61.800 100.000  0.000  100.000      0.001   100.0000         0   10022.030
+##    rgdppc_1950_m rgdppc_1975_m rgdppc_2000_m rgdppc_1950_2000_m q_rule_law cont_africa cont_asia
+## 3       1051.822      1073.036       765.215           1106.763     -1.567           1         0
+## 5       1001.339      2289.472      2741.420           1931.784     -0.820           0         0
+## 8      15797.558     25465.002     17567.883          20119.992      0.913           0         1
+## 9       4986.725      8122.497      8543.558           6926.810      0.033           0         0
+## 10            NA            NA      4565.035                 NA     -0.453           0         1
+## 12            NA            NA            NA                 NA      0.990           0         0
+##    cont_europe cont_oceania cont_north_america cont_south_america legor_gbr legor_fra legor_soc
+## 3            0            0                  0                  0         0         1         0
+## 5            1            0                  0                  0         0         0         1
+## 8            0            0                  0                  0         1         0         0
+## 9            0            0                  0                  1         0         1         0
+## 10           0            0                  0                  0         0         0         1
+## 12           0            0                  1                  0         1         0         0
+##    legor_deu legor_sca colony_esp colony_gbr colony_fra colony_prt colony_oeu africa_region_n
+## 3          0         0          0          0          0          1          0               0
+## 5          0         0          0          0          0          0          0               0
+## 8          0         0          0          1          0          0          0               0
+## 9          0         0          1          0          0          0          0               0
+## 10         0         0          0          0          0          0          0               0
+## 12         0         0          0          1          0          0          0               0
+##    africa_region_s africa_region_w africa_region_e africa_region_c slave_exports
+## 3                0               0               0               1       3610000
+## 5                0               0               0               0             0
+## 8                0               0               0               0             0
+## 9                0               0               0               0             0
+## 10               0               0               0               0             0
+## 12               0               0               0               0             0
+##    dist_slavemkt_atlantic dist_slavemkt_indian dist_slavemkt_saharan dist_slavemkt_redsea pop_1400
+## 3                   5.669                6.981                 4.926                3.872  1223208
+## 5                      NA                   NA                    NA                   NA   200000
+## 8                      NA                   NA                    NA                   NA    19200
+## 9                      NA                   NA                    NA                   NA   276632
+## 10                     NA                   NA                    NA                   NA   105743
+## 12                     NA                   NA                    NA                   NA      747
+##    european_descent   log_gdp log_gdp_std    rugged_std
+## 3             2.000 7.4926093  0.87971187 0.13834247017
+## 5           100.000 8.2169291  0.96475470 0.55256368913
+## 8             0.000 9.9332628  1.16627050 0.12399226056
+## 9            89.889 9.4070315  1.10448536 0.12495969042
+## 10            0.500 7.7923427  0.91490375 0.43340857788
+## 12               NA 9.2125409  1.08165010 0.00096742986</code></pre>
+<p>使用簡單線性回歸來分析土地的崎嶇程度和該地區的生產總值之間可能存在的關係：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\log (y_i) &amp; \sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i &amp;  =  \alpha + \beta(r_i - \bar{r})
+\end{aligned}
+\]</span></p>
+<p>其中，</p>
+<ul>
+<li><span class="math inline">\(y_i\)</span> 是第 <span class="math inline">\(i\)</span> 地區的GDP；</li>
+<li><span class="math inline">\(r_i\)</span> 是第 <span class="math inline">\(i\)</span> 地區的崎嶇程度；</li>
+<li><span class="math inline">\(\bar{r}\)</span> 是全體地區崎嶇程度的平均值，大約是 0.215。</li>
+</ul>
+<p>我們現在對與這兩者之間的關係並不瞭解，只能猜測，並賦予先驗概率分佈進行估算：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\alpha &amp; \sim \text{Normal}(1,1) \\
+\beta &amp; \sim \text{Normal}(0, 1) \\
+\sigma &amp; \sim \exp(1)
+\end{aligned}
+\]</span></p>
+<p>把這些翻譯成R語言模型：</p>
+<div class="sourceCode" id="cb770"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb770-1"><a href="-its-all-about-interaction.html#cb770-1"></a>m8<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb770-2"><a href="-its-all-about-interaction.html#cb770-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb770-3"><a href="-its-all-about-interaction.html#cb770-3"></a>    log_gdp_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb770-4"><a href="-its-all-about-interaction.html#cb770-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b <span class="op">*</span><span class="st"> </span>(rugged_std <span class="op">-</span><span class="st"> </span><span class="fl">0.215</span>), </span>
+<span id="cb770-5"><a href="-its-all-about-interaction.html#cb770-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">1</span>, <span class="dv">1</span> ), </span>
+<span id="cb770-6"><a href="-its-all-about-interaction.html#cb770-6"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="dv">1</span> ), </span>
+<span id="cb770-7"><a href="-its-all-about-interaction.html#cb770-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb770-8"><a href="-its-all-about-interaction.html#cb770-8"></a>  ), <span class="dt">data =</span> dd</span>
+<span id="cb770-9"><a href="-its-all-about-interaction.html#cb770-9"></a>)</span></code></pre></div>
+<p>讓我們先來審視一下我們選擇的先驗概率大致是什麼樣的：</p>
+<div class="sourceCode" id="cb771"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb771-1"><a href="-its-all-about-interaction.html#cb771-1"></a><span class="kw">set.seed</span>(<span class="dv">7</span>)</span>
+<span id="cb771-2"><a href="-its-all-about-interaction.html#cb771-2"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m8<span class="fl">.1</span> )</span>
+<span id="cb771-3"><a href="-its-all-about-interaction.html#cb771-3"></a></span>
+<span id="cb771-4"><a href="-its-all-about-interaction.html#cb771-4"></a><span class="co"># set up the plot dimensions</span></span>
+<span id="cb771-5"><a href="-its-all-about-interaction.html#cb771-5"></a></span>
+<span id="cb771-6"><a href="-its-all-about-interaction.html#cb771-6"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="fl">0.5</span>, <span class="fl">1.4</span>), </span>
+<span id="cb771-7"><a href="-its-all-about-interaction.html#cb771-7"></a>     <span class="dt">xlab =</span> <span class="st">&quot;ruggedness&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;log GDP&quot;</span>, </span>
+<span id="cb771-8"><a href="-its-all-about-interaction.html#cb771-8"></a>     <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb771-9"><a href="-its-all-about-interaction.html#cb771-9"></a>     <span class="dt">main =</span> <span class="st">&quot;a ~ dnorm(1,1)</span><span class="ch">\n</span><span class="st">b ~ dnorm(0,1)&quot;</span>)</span>
+<span id="cb771-10"><a href="-its-all-about-interaction.html#cb771-10"></a><span class="kw">abline</span>(<span class="dt">h =</span> <span class="kw">min</span>(dd<span class="op">$</span>log_gdp_std), <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb771-11"><a href="-its-all-about-interaction.html#cb771-11"></a><span class="kw">abline</span>(<span class="dt">h =</span> <span class="kw">max</span>(dd<span class="op">$</span>log_gdp_std), <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb771-12"><a href="-its-all-about-interaction.html#cb771-12"></a><span class="kw">with</span>(dd, <span class="kw">abline</span>(<span class="dt">a =</span> <span class="fl">1.28</span>, <span class="dt">b =</span> <span class="fl">-0.6</span>, </span>
+<span id="cb771-13"><a href="-its-all-about-interaction.html#cb771-13"></a>       <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> <span class="fl">1.5</span>, <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>)))</span>
+<span id="cb771-14"><a href="-its-all-about-interaction.html#cb771-14"></a></span>
+<span id="cb771-15"><a href="-its-all-about-interaction.html#cb771-15"></a><span class="co"># draw 50 lines from the prior</span></span>
+<span id="cb771-16"><a href="-its-all-about-interaction.html#cb771-16"></a>rugged_seq &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from =</span> <span class="fl">-0.1</span>, <span class="dt">to =</span> <span class="fl">1.1</span>, <span class="dt">length.out =</span> <span class="dv">30</span>)</span>
+<span id="cb771-17"><a href="-its-all-about-interaction.html#cb771-17"></a>mu &lt;-<span class="st"> </span><span class="kw">link</span>( m8<span class="fl">.1</span>, <span class="dt">post =</span> prior, <span class="dt">data =</span> <span class="kw">data.frame</span>(<span class="dt">rugged_std =</span> rugged_seq))</span>
+<span id="cb771-18"><a href="-its-all-about-interaction.html#cb771-18"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">50</span> ) <span class="kw">lines</span>( rugged_seq, mu[i,], <span class="dt">col =</span> <span class="kw">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.3</span>))</span></code></pre></div>
+<p><img src="bookdown_files/figure-html/introBayes11-fig01-1.png" width="576" style="display: block; margin: auto;" /></p>
 
+</div>
+</div>
 </div>
 
 
@@ -1787,8 +1928,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           </div>
         </div>
       </div>
-<a href="index.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="prob-intro.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="-model-selection.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="revision.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1819,7 +1960,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/00-author.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/08-Intro-to-Bayes.Rmd",
 "text": "編輯"
 },
 "history": {
