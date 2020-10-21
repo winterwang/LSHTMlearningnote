@@ -857,6 +857,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="51.1.3" data-path="-its-all-about-interaction.html"><a href="-its-all-about-interaction.html#增加交互作用項是有幫助的"><i class="fa fa-check"></i><b>51.1.3</b> 增加交互作用項是有幫助的</a></li>
 <li class="chapter" data-level="51.1.4" data-path="-its-all-about-interaction.html"><a href="-its-all-about-interaction.html#繪製交叉作用"><i class="fa fa-check"></i><b>51.1.4</b> 繪製交叉作用</a></li>
 </ul></li>
+<li class="chapter" data-level="51.2" data-path="-its-all-about-interaction.html"><a href="-its-all-about-interaction.html#連續型變量之間的交互作用"><i class="fa fa-check"></i><b>51.2</b> 連續型變量之間的交互作用</a>
+<ul>
+<li class="chapter" data-level="51.2.1" data-path="-its-all-about-interaction.html"><a href="-its-all-about-interaction.html#winter-flower-冬天的花"><i class="fa fa-check"></i><b>51.2.1</b> Winter flower 冬天的花</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="52" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>52</b> 重要概念複習</a>
@@ -2066,6 +2070,121 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 圖 51.5: Posterior predictitions for the terrain ruggedness model, including the interaction between Africa and ruggedness. Shaded regions are 97% posterior intervals of the mean. (Countries outside of Africa)
 </p>
 </div>
+</div>
+</div>
+<div id="連續型變量之間的交互作用" class="section level2" number="51.2">
+<h2><span class="header-section-number">51.2</span> 連續型變量之間的交互作用</h2>
+<div id="winter-flower-冬天的花" class="section level3" number="51.2.1">
+<h3><span class="header-section-number">51.2.1</span> Winter flower 冬天的花</h3>
+<p>數據是來自測量鬱金香在不同的種植環境條件下的開花尺寸。</p>
+<div class="sourceCode" id="cb790"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb790-1"><a href="-its-all-about-interaction.html#cb790-1"></a><span class="kw">data</span>(<span class="st">&quot;tulips&quot;</span>)</span>
+<span id="cb790-2"><a href="-its-all-about-interaction.html#cb790-2"></a>d &lt;-<span class="st"> </span>tulips</span>
+<span id="cb790-3"><a href="-its-all-about-interaction.html#cb790-3"></a><span class="kw">str</span>(d)</span></code></pre></div>
+<pre><code>## &#39;data.frame&#39;:    27 obs. of  4 variables:
+##  $ bed   : Factor w/ 3 levels &quot;a&quot;,&quot;b&quot;,&quot;c&quot;: 1 1 1 1 1 1 1 1 1 2 ...
+##  $ water : int  1 1 1 2 2 2 3 3 3 1 ...
+##  $ shade : int  1 2 3 1 2 3 1 2 3 1 ...
+##  $ blooms: num  0 0 111 183.5 59.2 ...</code></pre>
+<p>其中，結果變量是 <code>blooms</code> ，預測變量使用 <code>water, shade</code> 。我們很容易理解因爲水和陽光是影響植物開花的重要條件。但我們還是對這兩個變量之間是不是有交互作用感興趣。因爲沒有水光有陽光，或者只有陽光沒有水，對植物的生長都沒有好處。</p>
+<p>我們使用兩個模型，</p>
+<ol style="list-style-type: decimal">
+<li>包含水和陽光的兩個變量，沒有交互作用項</li>
+<li>包含水和陽光的兩個變量，同時包括交互作用項</li>
+</ol>
+<p>沒有交互作用的模型：</p>
+<p><span class="math display">\[
+\begin{aligned}
+B_i &amp; \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i &amp; = \alpha + \beta_w(W_i - \bar{W}) + \beta_S(S_i - \bar{S})
+\end{aligned}
+\]</span></p>
+<p>爲了是估計過程更加順利，我們把 <span class="math inline">\(W,S\)</span> 中心化（範圍控制在-1~1之間），把 <span class="math inline">\(B\)</span> 轉換成一個相對其最大值的比例的變量，也就是範圍控制在 0~1 之間：</p>
+<div class="sourceCode" id="cb792"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb792-1"><a href="-its-all-about-interaction.html#cb792-1"></a>d<span class="op">$</span>blooms_std &lt;-<span class="st"> </span>d<span class="op">$</span>blooms <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(d<span class="op">$</span>blooms)</span>
+<span id="cb792-2"><a href="-its-all-about-interaction.html#cb792-2"></a>d<span class="op">$</span>water_cent &lt;-<span class="st"> </span>d<span class="op">$</span>water <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>water)</span>
+<span id="cb792-3"><a href="-its-all-about-interaction.html#cb792-3"></a>d<span class="op">$</span>shade_cent &lt;-<span class="st"> </span>d<span class="op">$</span>shade <span class="op">-</span><span class="st"> </span><span class="kw">mean</span>(d<span class="op">$</span>shade)</span>
+<span id="cb792-4"><a href="-its-all-about-interaction.html#cb792-4"></a></span>
+<span id="cb792-5"><a href="-its-all-about-interaction.html#cb792-5"></a><span class="kw">precis</span>(d, <span class="dt">prob =</span> <span class="dv">1</span>)</span></code></pre></div>
+<pre><code>##                    mean          sd 0%   100%  histogram
+## bed                 NaN          NA NA     NA           
+## water        2.00000000  0.83205029  1   3.00 ▇▁▁▁▇▁▁▁▁▇
+## shade        2.00000000  0.83205029  1   3.00 ▇▁▁▁▇▁▁▁▁▇
+## blooms     128.99370370 92.68392285  0 361.66   ▅▇▇▂▃▁▁▁
+## blooms_std   0.35667119  0.25627364  0   1.00 ▅▃▇▇▁▃▃▁▁▁
+## water_cent   0.00000000  0.83205029 -1   1.00 ▇▁▁▁▇▁▁▁▁▇
+## shade_cent   0.00000000  0.83205029 -1   1.00 ▇▁▁▁▇▁▁▁▁▇</code></pre>
+<p>之所以在這裏給 <code>blooms</code> 修改尺度的最主要理由是，它的原始尺寸會導致模型擬合較爲困難，其二，修改了尺寸之後有助於我們選擇合理的先驗概率分佈。這裏先對三個參數的先驗概率分佈做一個最初步的猜想：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\alpha &amp; \sim \text{Normal}(0.5, 1) \\ 
+\beta_W &amp; \sim \text{Normal}(0,1) \\ 
+\beta_S &amp; \sim \text{Normal}(0,1)
+\end{aligned}
+\]</span></p>
+<p>這裏使用均值 0.5 給截距 <span class="math inline">\(\alpha\)</span> 是因爲我們初步認爲當水和陽光處於其本身的均值時，我們期待開花的大小應該是在觀測值中最大的尺寸的一半左右。兩個斜率的先驗概率的均值是0，表示我們不認爲有哪些有用的信息提示這兩個斜率究竟是正還是負。</p>
+<p>但是，截距 <span class="math inline">\(\alpha\)</span> 的實際可能取值範圍是在 (0,1) 之間，但是如果我們使用 <span class="math inline">\(\alpha \sim \text{Normal}(0.5, 1)\)</span> 的話，表示有許多潛在的截距是在我們認爲合理範圍之外的：</p>
+<div class="sourceCode" id="cb794"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb794-1"><a href="-its-all-about-interaction.html#cb794-1"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>( <span class="dv">10000</span>, <span class="fl">0.5</span>, <span class="dv">1</span> ) </span>
+<span id="cb794-2"><a href="-its-all-about-interaction.html#cb794-2"></a><span class="kw">sum</span>( a <span class="op">&lt;</span><span class="st"> </span><span class="dv">0</span> <span class="op">|</span><span class="st"> </span>a <span class="op">&gt;</span><span class="st"> </span><span class="dv">1</span> ) <span class="op">/</span><span class="st"> </span><span class="kw">length</span>(a)</span></code></pre></div>
+<pre><code>## [1] 0.6215</code></pre>
+<p>把標準差修改成爲 0.25 應該就能把不合理的截距取值限制在 5% 可能性以下：</p>
+<div class="sourceCode" id="cb796"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb796-1"><a href="-its-all-about-interaction.html#cb796-1"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>( <span class="dv">10000</span>, <span class="fl">0.5</span>, <span class="fl">0.25</span> ) </span>
+<span id="cb796-2"><a href="-its-all-about-interaction.html#cb796-2"></a><span class="kw">sum</span>( a <span class="op">&lt;</span><span class="st"> </span><span class="dv">0</span> <span class="op">|</span><span class="st"> </span>a <span class="op">&gt;</span><span class="st"> </span><span class="dv">1</span> ) <span class="op">/</span><span class="st"> </span><span class="kw">length</span>(a)</span></code></pre></div>
+<pre><code>## [1] 0.0434</code></pre>
+<p>相似地，我們也需要控制兩個斜率的先驗概率分佈的標準差，使得結果變量的取值在合理範圍內：</p>
+<div class="sourceCode" id="cb798"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb798-1"><a href="-its-all-about-interaction.html#cb798-1"></a>m8<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb798-2"><a href="-its-all-about-interaction.html#cb798-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb798-3"><a href="-its-all-about-interaction.html#cb798-3"></a>    blooms_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma), </span>
+<span id="cb798-4"><a href="-its-all-about-interaction.html#cb798-4"></a>    mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bw <span class="op">*</span><span class="st"> </span>water_cent <span class="op">+</span><span class="st"> </span>bs <span class="op">*</span><span class="st"> </span>shade_cent, </span>
+<span id="cb798-5"><a href="-its-all-about-interaction.html#cb798-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="fl">0.5</span>, <span class="fl">0.25</span> ), </span>
+<span id="cb798-6"><a href="-its-all-about-interaction.html#cb798-6"></a>    bw <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.25</span> ), </span>
+<span id="cb798-7"><a href="-its-all-about-interaction.html#cb798-7"></a>    bs <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.25</span> ), </span>
+<span id="cb798-8"><a href="-its-all-about-interaction.html#cb798-8"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb798-9"><a href="-its-all-about-interaction.html#cb798-9"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb798-10"><a href="-its-all-about-interaction.html#cb798-10"></a>)</span>
+<span id="cb798-11"><a href="-its-all-about-interaction.html#cb798-11"></a><span class="kw">precis</span>(m8<span class="fl">.4</span>)</span></code></pre></div>
+<pre><code>##              mean          sd        5.5%        94.5%
+## a      0.35877196 0.030216479  0.31048019  0.407063730
+## bw     0.20503597 0.036886559  0.14608412  0.263987813
+## bs    -0.11253065 0.036872715 -0.17146037 -0.053600929
+## sigma  0.15814129 0.021439337  0.12387709  0.192405495</code></pre>
+<p>接下來，我們思考如何定義兩個連續型變量之間的交互作用。如何才能使一個模型滿足我們的假設，也就是，開花的大小尺寸同時收到陽光和水的影響？比如說，當水很少，增加陽光對於開花並沒有太多的好處這樣的觀察結果。這裏其實是在說，<code>water</code> 變量的回歸係數，<span class="math inline">\(\beta_W\)</span> 是取決於陽光的。或者相似地，可以反過來思考，就是 <code>shade</code> 變量的回歸係數，<span class="math inline">\(\beta_S\)</span> 是取決於水的。此時，我們似乎沒辦法沿用索引變量的方法。但是使用線性回歸模型的思考方式，我們可以解決這個難題，也就是給水的斜率和陽光之間也定義一個線性回歸函數：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\mu_i &amp; = \alpha + \gamma_{W,i} W_i + \beta_S S_i \\ 
+\gamma_{W,i} &amp; = \beta_W + \beta_{WS}S_i
+\end{aligned}
+\]</span></p>
+<p>其中，</p>
+<ul>
+<li><span class="math inline">\(\gamma_{W,i}\)</span> 就是在第一個方程裏水本身的斜率。</li>
+<li><span class="math inline">\(\beta_W\)</span> 是當陽光是平均值時，陽光對水的斜率的影響。</li>
+<li><span class="math inline">\(\beta_{WS}\)</span> 就是隨着陽光改變而改變的水的斜率。</li>
+</ul>
+<p>你可能更加常見的表達方式是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\mu_i &amp; = \alpha + \underbrace{(\beta_W + \beta_{WS}S_i)}_{\gamma_{W,i}}W_i + \beta_S S_i \\
+      &amp; = \alpha + \beta_W W_i + \beta_S S_i + \beta_{WS}S_iW_i
+\end{aligned}
+\]</span></p>
+<p>那麼我們還需要別忘記給這個新增加的參數的回歸係數 <span class="math inline">\(\beta_{WS}\)</span> 設計它的先驗概率分佈。</p>
+<div class="sourceCode" id="cb800"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb800-1"><a href="-its-all-about-interaction.html#cb800-1"></a>m8<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb800-2"><a href="-its-all-about-interaction.html#cb800-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb800-3"><a href="-its-all-about-interaction.html#cb800-3"></a>  blooms_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ),</span>
+<span id="cb800-4"><a href="-its-all-about-interaction.html#cb800-4"></a>  mu &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>bw <span class="op">*</span><span class="st"> </span>water_cent <span class="op">+</span><span class="st"> </span>bs <span class="op">*</span><span class="st"> </span>shade_cent <span class="op">+</span><span class="st"> </span>bws <span class="op">*</span><span class="st"> </span>water_cent <span class="op">*</span><span class="st"> </span>shade_cent, </span>
+<span id="cb800-5"><a href="-its-all-about-interaction.html#cb800-5"></a>  a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="fl">0.5</span>, <span class="fl">0.25</span> ), </span>
+<span id="cb800-6"><a href="-its-all-about-interaction.html#cb800-6"></a>  bw <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.25</span> ), </span>
+<span id="cb800-7"><a href="-its-all-about-interaction.html#cb800-7"></a>  bs <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.25</span> ), </span>
+<span id="cb800-8"><a href="-its-all-about-interaction.html#cb800-8"></a>  bws <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.25</span> ), </span>
+<span id="cb800-9"><a href="-its-all-about-interaction.html#cb800-9"></a>  sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb800-10"><a href="-its-all-about-interaction.html#cb800-10"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb800-11"><a href="-its-all-about-interaction.html#cb800-11"></a>)</span>
+<span id="cb800-12"><a href="-its-all-about-interaction.html#cb800-12"></a><span class="kw">precis</span>(m8<span class="fl">.5</span>)</span></code></pre></div>
+<pre><code>##              mean          sd         5.5%        94.5%
+## a      0.35798434 0.023918650  0.319757716  0.396210961
+## bw     0.20673108 0.029234311  0.160009004  0.253453156
+## bs    -0.11346419 0.029227282 -0.160175032 -0.066753348
+## bws   -0.14315705 0.035679412 -0.200179645 -0.086134462
+## sigma  0.12484398 0.016940114  0.097770408  0.151917556</code></pre>
 
 </div>
 </div>

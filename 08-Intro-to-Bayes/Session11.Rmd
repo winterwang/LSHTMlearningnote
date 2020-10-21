@@ -305,5 +305,129 @@ shade(mu_ci, rugged_seq)
 ```
 
 
-## 
+## 連續型變量之間的交互作用
+
+### Winter flower 冬天的花
+
+數據是來自測量鬱金香在不同的種植環境條件下的開花尺寸。
+
+```{r introBayes11-10, cache=TRUE}
+data("tulips")
+d <- tulips
+str(d)
+```
+
+其中，結果變量是 `blooms` ，預測變量使用 `water, shade` 。我們很容易理解因爲水和陽光是影響植物開花的重要條件。但我們還是對這兩個變量之間是不是有交互作用感興趣。因爲沒有水光有陽光，或者只有陽光沒有水，對植物的生長都沒有好處。
+
+我們使用兩個模型，
+
+1. 包含水和陽光的兩個變量，沒有交互作用項
+2. 包含水和陽光的兩個變量，同時包括交互作用項
+
+沒有交互作用的模型：
+
+$$
+\begin{aligned}
+B_i & \sim \text{Normal}(\mu_i, \sigma) \\ 
+\mu_i & = \alpha + \beta_w(W_i - \bar{W}) + \beta_S(S_i - \bar{S})
+\end{aligned}
+$$
+
+爲了是估計過程更加順利，我們把 $W,S$ 中心化（範圍控制在-1~1之間），把 $B$ 轉換成一個相對其最大值的比例的變量，也就是範圍控制在 0~1 之間：
+
+
+```{r introBayes11-11, cache=TRUE}
+d$blooms_std <- d$blooms / max(d$blooms)
+d$water_cent <- d$water - mean(d$water)
+d$shade_cent <- d$shade - mean(d$shade)
+
+precis(d, prob = 1)
+```
+
+之所以在這裏給 `blooms` 修改尺度的最主要理由是，它的原始尺寸會導致模型擬合較爲困難，其二，修改了尺寸之後有助於我們選擇合理的先驗概率分佈。這裏先對三個參數的先驗概率分佈做一個最初步的猜想：
+
+
+$$
+\begin{aligned}
+\alpha & \sim \text{Normal}(0.5, 1) \\ 
+\beta_W & \sim \text{Normal}(0,1) \\ 
+\beta_S & \sim \text{Normal}(0,1)
+\end{aligned}
+$$
+
+這裏使用均值 0.5 給截距 $\alpha$ 是因爲我們初步認爲當水和陽光處於其本身的均值時，我們期待開花的大小應該是在觀測值中最大的尺寸的一半左右。兩個斜率的先驗概率的均值是0，表示我們不認爲有哪些有用的信息提示這兩個斜率究竟是正還是負。
+
+但是，截距 $\alpha$ 的實際可能取值範圍是在 (0,1) 之間，但是如果我們使用 $\alpha \sim \text{Normal}(0.5, 1)$ 的話，表示有許多潛在的截距是在我們認爲合理範圍之外的：
+
+
+```{r introBayes11-12, cache=TRUE}
+a <- rnorm( 10000, 0.5, 1 ) 
+sum( a < 0 | a > 1 ) / length(a)
+```
+
+把標準差修改成爲 0.25 應該就能把不合理的截距取值限制在 5% 可能性以下：
+
+```{r introBayes11-13, cache=TRUE}
+a <- rnorm( 10000, 0.5, 0.25 ) 
+sum( a < 0 | a > 1 ) / length(a)
+```
+
+相似地，我們也需要控制兩個斜率的先驗概率分佈的標準差，使得結果變量的取值在合理範圍內：
+
+```{r introBayes11-14, cache=TRUE}
+m8.4 <- quap(
+  alist(
+    blooms_std ~ dnorm( mu, sigma), 
+    mu <- a + bw * water_cent + bs * shade_cent, 
+    a ~ dnorm( 0.5, 0.25 ), 
+    bw ~ dnorm( 0, 0.25 ), 
+    bs ~ dnorm( 0, 0.25 ), 
+    sigma ~ dexp(1)
+  ), data = d
+)
+precis(m8.4)
+```
+
+
+接下來，我們思考如何定義兩個連續型變量之間的交互作用。如何才能使一個模型滿足我們的假設，也就是，開花的大小尺寸同時收到陽光和水的影響？比如說，當水很少，增加陽光對於開花並沒有太多的好處這樣的觀察結果。這裏其實是在說，`water` 變量的回歸係數，$\beta_W$ 是取決於陽光的。或者相似地，可以反過來思考，就是 `shade` 變量的回歸係數，$\beta_S$ 是取決於水的。此時，我們似乎沒辦法沿用索引變量的方法。但是使用線性回歸模型的思考方式，我們可以解決這個難題，也就是給水的斜率和陽光之間也定義一個線性回歸函數：
+
+$$
+\begin{aligned}
+\mu_i & = \alpha + \gamma_{W,i} W_i + \beta_S S_i \\ 
+\gamma_{W,i} & = \beta_W + \beta_{WS}S_i
+\end{aligned}
+$$
+
+其中，
+
+- $\gamma_{W,i}$ 就是在第一個方程裏水本身的斜率。
+- $\beta_W$ 是當陽光是平均值時，陽光對水的斜率的影響。
+- $\beta_{WS}$ 就是隨着陽光改變而改變的水的斜率。
+
+你可能更加常見的表達方式是：
+
+$$
+\begin{aligned}
+\mu_i & = \alpha + \underbrace{(\beta_W + \beta_{WS}S_i)}_{\gamma_{W,i}}W_i + \beta_S S_i \\
+      & = \alpha + \beta_W W_i + \beta_S S_i + \beta_{WS}S_iW_i
+\end{aligned}
+$$
+
+那麼我們還需要別忘記給這個新增加的參數的回歸係數 $\beta_{WS}$ 設計它的先驗概率分佈。
+
+```{r introBayes11-15, cache=TRUE}
+m8.5 <- quap(
+  alist(
+  blooms_std ~ dnorm( mu, sigma ),
+  mu <- a + bw * water_cent + bs * shade_cent + bws * water_cent * shade_cent, 
+  a ~ dnorm( 0.5, 0.25 ), 
+  bw ~ dnorm( 0, 0.25 ), 
+  bs ~ dnorm( 0, 0.25 ), 
+  bws ~ dnorm( 0, 0.25 ), 
+  sigma ~ dexp(1)
+  ), data = d
+)
+precis(m8.5)
+```
+
 
