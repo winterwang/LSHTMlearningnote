@@ -1,0 +1,59 @@
+> Understanding of chance could help us acquire wisdom. 
+> ~ Richard McElreath
+
+
+## 國王訪問個各島嶼問題
+
+某個羣島國王的領土，恰好是圍成一圈的十個島嶼。每個島嶼的編號分別是 $1, 2, \dots, 10$。國王決定每個島嶼住幾周，且從長遠來說，每個島嶼居住的時間長度（週數），要和它的人口成正比。我們已知從 $1$ 號島嶼到 $10$ 號島嶼恰好是人口從少到多依次的順序。那麼該用怎樣的策略才能確保國王在每個島嶼呆的時間長短，和該島的人口成正比呢？
+
+我們來聽聽看 Metropolis 的策略：
+
+1. 無論該國王目前正在哪個島上，他每週都需要通過丟硬幣的方式決定是要再留一週，或者是離開該島移到左右兩邊的其中一個臨島去。
+2. 如果硬幣是正面朝上，那麼國王會選擇順時針方向去往下一個臨島。如果是硬幣背面朝上，那麼國王會選擇逆時針方向去往下一個臨島。我們把這個通過投擲硬幣給出的提議稱作移島提案 (proposal island)。
+3. 給出了移島提案之後，國王要根據所在島嶼的人口，選定符合準備要去的那個島嶼人口比例的貝殼個數。例如移島提案的島嶼人口排十個島嶼中第9，那麼國王從貝殼盒子裏取出9個貝殼。然後國王要從另一個裝滿了石子的盒子中取出和目前居住島嶼上人口比例相符的石頭。假如目前國王正在10號島嶼，那麼他需要取出10個石子。
+4. 如果，第3步中取出的貝殼個數，比石子個數多，那麼國王就二話不說，根據移島提案去往下一個島（也就是會去往比目前島嶼人口多的那個島）。如果，貝殼個數比石子個數少的話，國王需要把等同於已有貝殼個數的石子拋棄。例如說是有4個貝殼（移島提案），和6個石子（目前的島嶼），那麼國王需要拋棄4個石子，保留2個石子和4個貝殼。然後國王把這2個石子和4個貝殼放在一個黑色的袋子裏，閉着眼睛從中抽取一個物體。如果抽到貝殼，那麼國王根據移島提案去4號島嶼，如果抽到的是石子，那麼國王選擇繼續留在目前的島嶼（6號）一週時間。也就是說，此時國王根據移島提案離開目前島嶼的概率是貝殼的數量除以未丟棄石子之前的數量，也就是提案島嶼的人口除以目前島嶼的人口。
+
+這個 Metropolis 的策略看起來很荒誕，因爲似乎沒有半點邏輯，但是這個策略竟然是真實有效的。我們來進行一段計算機模擬以展示這個國王搬家的過程：
+
+```{r introBayes12-01, cache=TRUE}
+num_weeks <- 10000 # almost 2000 years time 
+positions <- rep(0, num_weeks)
+current <- 10
+set.seed(1234)
+for( i in 1:num_weeks ){
+  ## record current position
+  positions[i] <- current
+  ## flip coin to generate proposal
+  proposal <- current + sample( c(-1, 1), size = 1 )
+  ## now make sure he loops around the archipelago
+  if (proposal < 1) proposal <- 10
+  if (proposal > 10) proposal <- 1
+  ## move or not? 
+  prob_move <- proposal / current
+  current <- ifelse( runif(1) < prob_move, proposal, current )
+}
+```
+
+把該國王前100週的行程繪製如下：
+
+```{r introBayes12-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Results of the king following the Metropolis algorithm. This figure shows the king's current position (vertical axis) across weeks (horizontal axis). In any particular week, it's nearly impossible to say where the king will be.", fig.align='center'}
+plot( 1:100, positions[1:100], 
+      bty = "n", 
+      xlab = "week",
+      ylab = "island", 
+      col = rangi2)
+```
+
+
+圖 \@ref(fig:introBayes12-fig01) 告訴我們國王的行程幾乎看起來沒有任何規律性。但是事實上，如果你把全部100000個星期的行程總結一下，會神奇地發現國王在每個島嶼所呆的時間恰好都與其人口規模成相應的比例：
+
+```{r introBayes12-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Results of the king following the Metropolis algorithm. This figure shows the long-run behavior of the algorithm, as the time spent on each island turns out to be proportional to its population size.", fig.align='center'}
+plot(table(positions), 
+     bty = "n", 
+     xlab = "island", 
+     ylab = "number of weeks stayed", 
+      col = rangi2)
+```
+
+
+

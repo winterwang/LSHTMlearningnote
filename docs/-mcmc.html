@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 14 章 二次方程近似法求對數似然比 approximate log-likelihood ratios | 醫學統計學</title>
-  <meta name="description" content="第 14 章 二次方程近似法求對數似然比 approximate log-likelihood ratios | 醫學統計學" />
+  <title>第 52 章 馬可夫鏈蒙地卡羅 MCMC | 醫學統計學</title>
+  <meta name="description" content="第 52 章 馬可夫鏈蒙地卡羅 MCMC | 醫學統計學" />
   <meta name="generator" content="bookdown 0.21 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 14 章 二次方程近似法求對數似然比 approximate log-likelihood ratios | 醫學統計學" />
+  <meta property="og:title" content="第 52 章 馬可夫鏈蒙地卡羅 MCMC | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 14 章 二次方程近似法求對數似然比 approximate log-likelihood ratios | 醫學統計學" />
+  <meta name="twitter:title" content="第 52 章 馬可夫鏈蒙地卡羅 MCMC | 醫學統計學" />
   
   
   <meta name="twitter:image" content="img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="llr.html"/>
-<link rel="next" href="hypothesis-test.html"/>
+<link rel="prev" href="-its-all-about-interaction.html"/>
+<link rel="next" href="revision.html"/>
 <script src="libs/header-attrs/header-attrs.js"></script>
 <script src="libs/jquery/jquery.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
@@ -1787,339 +1787,79 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="quadratic-llr" class="section level1" number="14">
-<h1><span class="header-section-number">第 14 章</span> 二次方程近似法求對數似然比 approximate log-likelihood ratios</h1>
-<p>爲什麼要用二次方程近似對數似然比方程？</p>
+<div id="馬可夫鏈蒙地卡羅-mcmc" class="section level1" number="52">
+<h1><span class="header-section-number">第 52 章</span> 馬可夫鏈蒙地卡羅 MCMC</h1>
+<blockquote>
+<dl>
+<dt>Understanding of chance could help us acquire wisdom.</dt>
+<dd>Richard McElreath
+</dd>
+</dl>
+</blockquote>
+<div id="國王訪問個各島嶼問題" class="section level2" number="52.1">
+<h2><span class="header-section-number">52.1</span> 國王訪問個各島嶼問題</h2>
+<p>某個羣島國王的領土，恰好是圍成一圈的十個島嶼。每個島嶼的編號分別是 <span class="math inline">\(1, 2, \dots, 10\)</span>。國王決定每個島嶼住幾周，且從長遠來說，每個島嶼居住的時間長度（週數），要和它的人口成正比。我們已知從 <span class="math inline">\(1\)</span> 號島嶼到 <span class="math inline">\(10\)</span> 號島嶼恰好是人口從少到多依次的順序。那麼該用怎樣的策略才能確保國王在每個島嶼呆的時間長短，和該島的人口成正比呢？</p>
+<p>我們來聽聽看 Metropolis 的策略：</p>
 <ol style="list-style-type: decimal">
-<li>上節也看到，我們會碰上難以用代數學計算獲得對數似然比信賴區間的情況 (Section <a href="llr.html#binomial-ex">13.4.1</a>: binomial example)。</li>
-<li>我們同時知道，對數似然比方程會隨着樣本量增加而越來越漸進於二次方程，且左右對稱。</li>
-<li>所以，我們考慮當樣本量足夠大時，用二次方程來近似對數似然比方程從而獲得參數估計的信賴區間。</li>
+<li>無論該國王目前正在哪個島上，他每週都需要通過丟硬幣的方式決定是要再留一週，或者是離開該島移到左右兩邊的其中一個臨島去。</li>
+<li>如果硬幣是正面朝上，那麼國王會選擇順時針方向去往下一個臨島。如果是硬幣背面朝上，那麼國王會選擇逆時針方向去往下一個臨島。我們把這個通過投擲硬幣給出的提議稱作移島提案 (proposal island)。</li>
+<li>給出了移島提案之後，國王要根據所在島嶼的人口，選定符合準備要去的那個島嶼人口比例的貝殼個數。例如移島提案的島嶼人口排十個島嶼中第9，那麼國王從貝殼盒子裏取出9個貝殼。然後國王要從另一個裝滿了石子的盒子中取出和目前居住島嶼上人口比例相符的石頭。假如目前國王正在10號島嶼，那麼他需要取出10個石子。</li>
+<li>如果，第3步中取出的貝殼個數，比石子個數多，那麼國王就二話不說，根據移島提案去往下一個島（也就是會去往比目前島嶼人口多的那個島）。如果，貝殼個數比石子個數少的話，國王需要把等同於已有貝殼個數的石子拋棄。例如說是有4個貝殼（移島提案），和6個石子（目前的島嶼），那麼國王需要拋棄4個石子，保留2個石子和4個貝殼。然後國王把這2個石子和4個貝殼放在一個黑色的袋子裏，閉着眼睛從中抽取一個物體。如果抽到貝殼，那麼國王根據移島提案去4號島嶼，如果抽到的是石子，那麼國王選擇繼續留在目前的島嶼（6號）一週時間。也就是說，此時國王根據移島提案離開目前島嶼的概率是貝殼的數量除以未丟棄石子之前的數量，也就是提案島嶼的人口除以目前島嶼的人口。</li>
 </ol>
-<div id="quadratic-llr2" class="section level2" number="14.1">
-<h2><span class="header-section-number">14.1</span> 正態近似法求對數似然 Normal approximation to the log-likelihood</h2>
-<p>根據前一節 (Section <a href="llr.html#normal-ex">13.4.2</a>)，如果樣本均數的分佈符合正態分佈：<span class="math inline">\(\bar{X}\sim N(\mu, \sigma^2/n)\)</span>。那麼樣本均數的對數似然比爲：</p>
-<p><span class="math display">\[
-llr(\mu|\bar{X})=\ell(\mu|\bar{X})=-\frac{1}{2}(\frac{\bar{x}-\mu}{\sigma/\sqrt{n}})^2
-\]</span></p>
-<p>其中， <span class="math inline">\(\bar{x}\)</span> 是正態分佈總體均數 <span class="math inline">\(\mu\)</span> 的極大似然估計 (maximum likelihood estimator, MLE)。如果已知總體的方差參數，那麼 <span class="math inline">\(\sigma/\sqrt{n}\)</span> 是 <span class="math inline">\(\bar{x}\)</span> 的標準誤 (standard error)。</p>
-<p>因此，假設 <span class="math inline">\(\theta\)</span> 是我們想尋找的總體參數。有些人提議可以使用下面的關於 <span class="math inline">\(\theta\)</span> 的二次方程來做近似：</p>
-<p><span class="math display">\[
-f(\theta|data)=-\frac{1}{2}(\frac{\theta-M}{S})^2
-\]</span></p>
-<p>上述方程具有一個正態二次對數似然 (比) 的形式，而且該方程的極大似然估計(MLE)， <span class="math inline">\(M\)</span> 的標準誤爲 <span class="math inline">\(S\)</span>。如果我們正確地選用 <span class="math inline">\(M\)</span> 和 <span class="math inline">\(S\)</span>，那我們就可以用這樣的方程來近似求真實觀察數據的似然 <span class="math inline">\(\ell(\theta|data)\)</span>。</p>
-<p>通過近似正態對數似然比，<span class="math inline">\(M\)</span> 應當選用使方程取最大值時，參數 <span class="math inline">\(\theta\)</span> 的極大似然估計 <span class="math inline">\(M=\hat{\Theta}\)</span>。</p>
-<p>但是在選用標準誤 <span class="math inline">\(S\)</span> 上必須滿足下列條件：</p>
-<ol style="list-style-type: decimal">
-<li><span class="math inline">\(S\)</span> 是極大似然估計 <span class="math inline">\(\hat{\Theta}\)</span> 的標準誤。</li>
-<li>被選擇的 <span class="math inline">\(S\)</span> 必須儘可能的使該二次方程形成一個十分接近真實的對數似然比方程。特別是在最大值的部分必須與之無限接近或者一致。所以二者在 MLE 的位置應當有相同的曲率(二階導數) 。</li>
-</ol>
-<p>由於，一個方程的曲率是該方程的二階導數(斜線斜率變化的速度) 。所以對數似然比方程在 MLE 取最大值時的曲率(二階導數) 爲：</p>
-<p><span class="math display">\[
-\left.\frac{d^2}{d\theta^2}\ell(\theta)\right\vert_{\theta=\hat{\theta}}=\ell^{\prime\prime}(\hat{\theta})=-\frac{1}{S^2}\\
-\Rightarrow S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}}
-\]</span></p>
-<p>在正態分佈的例子下，<span class="math inline">\(M=\bar{x}, S=\sigma/\sqrt{n}\)</span>。對數似然比方程最大值時的曲率(二階導數) 恰好就爲標準誤的平方的負倒數：</p>
-<p><span class="math inline">\(\ell^{\prime\prime}(\theta)=-\frac{1}{SE^2}\)</span> <span class="math inline">\(\Rightarrow\)</span> 被叫做 <strong>Fisher information</strong>。</p>
-<p>稍微總結一下：</p>
-<ol style="list-style-type: decimal">
-<li>任意的對數似然比方程 <span class="math inline">\(llr(\theta)\)</span> 都可以考慮用一個二次方程來近似：
-<span class="math display">\[f(\theta|data)=-\frac{1}{2}(\frac{\theta-M}{S})^2\]</span></li>
-<li>其中<br>
-<span class="math display">\[
- \begin{aligned}
- &amp;M=\hat\theta\\
- &amp;S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}}\\
- &amp;\text{when} \\
-  &amp; n\rightarrow\infty \Rightarrow
-  \begin{cases}
-  S^2\rightarrow \text{Var}(\hat\theta) \\
-  S\rightarrow \text{SE}(\hat\theta)
-  \end{cases}
- \end{aligned}
- \]</span></li>
-</ol>
-<div id="近似法估算對數似然比的信賴區間" class="section level3" number="14.1.1">
-<h3><span class="header-section-number">14.1.1</span> 近似法估算對數似然比的信賴區間</h3>
-<p>一旦我們決定了使用正態近似法來模擬對數似然比方程，對數似然比的信賴區間算法就回到了前一節中我們算過的方法，也就是：</p>
-<p><span class="math display">\[
--2f(\theta)&lt;\mathcal{X}_{1,(1-\alpha)}^2
-\]</span></p>
-<p>故信賴區間爲： <span class="math inline">\(m\pm\sqrt{\mathcal{X}_{1,(1-\alpha)}^2}S\)</span>。求<span class="math inline">\(95\%\)</span> 水平的信賴區間時，<span class="math inline">\(\mathcal{X}_{1,0.95}^2=3.84\)</span>，所以就又看到了熟悉的 <span class="math inline">\(M\pm1.96S\)</span>。</p>
-</div>
-<div id="以泊松分佈爲例" class="section level3" number="14.1.2">
-<h3><span class="header-section-number">14.1.2</span> 以泊松分佈爲例</h3>
-<p>一個被追蹤的樣本，經過了 <span class="math inline">\(p\)</span> 人年的觀察，記錄到了 <span class="math inline">\(d\)</span> 個我們要研究的事件：</p>
-<p><span class="math display">\[
-D\sim \text{Poisson}(\mu), \text{ where } \mu=\lambda p
-\]</span></p>
-<p>Step 1. 找極大似然估計 (MLE)，之前介紹似然方程時推導過的泊松分佈的似然方程 (Section <a href="likelihood-definition.html#likelihood-poi">12.6</a>)：</p>
-<p><span class="math display">\[
-\begin{aligned}
-P(D=d|\lambda) &amp;= \frac{e^{-\mu}\cdot\mu^d}{d!} \\
- &amp;=\frac{e^{-\lambda p}\cdot\lambda^d p^d}{d!} \\
-\text{omitting}&amp;\;\text{terms not in }\mu \\
-&amp;\Rightarrow \ell(\lambda) = d\log\lambda - \lambda p \\
-&amp;\Rightarrow \ell^\prime(\lambda) = \frac{d}{\lambda} -p \\
-&amp;\Rightarrow \hat\lambda=\frac{d}{p} = \textbf{M}
-\end{aligned}
-\]</span></p>
-<p>Step 2. 求似然方程的二階導數，確認 MLE 是使方程獲得最大值的點，然後確定 <span class="math inline">\(S^2\)</span>：</p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp; \ell^\prime(\lambda) = \frac{d}{\lambda} -p \\
-&amp; \Rightarrow \ell^{\prime\prime}(\lambda) = -\frac{d}{\lambda^2}&lt;0 \Rightarrow \textbf{MLE is maximum} \\
-&amp; S^2 = \left.-\frac{1}{\ell^{\prime\prime}(\lambda)}\right\vert_{\lambda=\hat{\lambda}=d/p} = -\frac{1}{-d/\hat\lambda^2} = -\frac{1}{-d/(d/p)^2} \\
-&amp;\Rightarrow S^2 = \frac{d}{p^2} \\
-\end{aligned}
-\]</span></p>
-<p>Step 3. 把前兩部求得的 <span class="math inline">\(MLE\)</span> 和 <span class="math inline">\(S^2\)</span> 代入近似的二次方程：</p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp; \hat\lambda=\frac{d}{p}=M,\; S^2 = \frac{d}{p^2}  \\
-&amp; \text{using approximate quadratic}\;llr \\
-&amp; q(\lambda) = -\frac{1}{2}(\frac{\lambda-M}{S})^2\\
-&amp;\Rightarrow q(\lambda) = -\frac{1}{2}(\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}})^2\\
-&amp; let \; q(\lambda)=-1.92\\
-&amp;\Rightarrow -\frac{1}{2}(\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}})^2=-1.92\\
-&amp;(\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}})^2=3.84\\
-&amp;\frac{\lambda-\frac{d}{p}}{\frac{\sqrt{d}}{p}} = \pm1.96\\
-&amp;\Rightarrow 95\%\text{CI for }\;\lambda = \frac{d}{p}\pm1.96\frac{\sqrt{d}}{p}
-\end{aligned}
-\]</span></p>
-<p>結論就是： 發病(死亡) 率 <span class="math inline">\(\lambda\)</span> 的 <span class="math inline">\(95\%\)</span> 信賴區間爲： <span class="math inline">\(M\pm1.96S\)</span>。所以我們不需要每次都代入對數似然比方程，只要算出 <span class="math inline">\(MLE = M\)</span> 和 <span class="math inline">\(S\)</span> 之後代入這個公式就可以用二次方程近似法算出信賴區間。</p>
-</div>
-<div id="quadratic-binomial-approx" class="section level3" number="14.1.3">
-<h3><span class="header-section-number">14.1.3</span> 以二項分佈爲例</h3>
-<p><span class="math display">\[K\sim Bin(n,\pi)\]</span></p>
-<p>Step 1. 找極大似然估計 (MLE)：</p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp; Prob(K=k) = \pi^k(1-\pi)\binom{n}{k}\\
-&amp;\Rightarrow L(\pi|k) = \pi^k(1-\pi)\binom{n}{k}\\
-&amp;\text{omitting terms not in }\pi \\
-&amp;\Rightarrow \ell(\pi) = k\:\log\pi+(n-k)\log(1-\pi) \\
-&amp;\ell^\prime(\pi) = \frac{k}{\pi}-\frac{n-k}{1-\pi} \\
-&amp; \text{let}\;\ell^\prime(\hat\pi) =0 \\
-&amp;\Rightarrow \frac{k}{\hat\pi}-\frac{n-k}{1-\hat\pi}=0\\
-&amp;\Rightarrow \frac{\hat\pi}{1-\hat\pi}=\frac{k}{n-k}\\
-&amp;\Rightarrow \frac{\hat\pi}{1-\hat\pi}=\frac{k/n}{1-k/n}\\
-&amp;\Rightarrow \hat\pi=\frac{k}{n} = p = \textbf{M}
-\end{aligned}
-\]</span></p>
-<p>Step 2. 將對數似然方程的二次微分 (二階導數)，確認在 MLE 爲極大值，並確認 <span class="math inline">\(S^2\)</span>：</p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp;\ell^\prime(\pi) = \frac{k}{\pi}-\frac{n-k}{1-\pi} \\
-&amp;\ell^{\prime\prime}(\pi)=\frac{-k}{\pi^2}-\frac{n-k}{(1-\pi)^2} &lt;0 \\
-&amp;\therefore \text{at}\;\textbf{MLE}\;\ell(\pi)\;\text{ has maximum} \\
-S^2&amp;=\left.-\frac{1}{\ell^{\prime\prime}(\pi)}\right\vert_{\pi=\hat\pi=k/n=p}\\
-&amp;=\frac{1}{\frac{k}{\hat\pi^2}+\frac{n-k}{(1-\hat\pi)^2}}\\
-&amp;=\frac{\hat\pi^2(1-\hat\pi)^2}{k(1-\hat\pi)^2+(n-k)\hat\pi^2}\\
-&amp;=\frac{P^2(1-P)^2}{np(1-p)^2+(n-np)p^2}\\
-&amp;=\frac{p(1-p)}{n(1-p)+np}\\
-&amp;=\frac{p(1-p)}{n}\\
-&amp;\Rightarrow S=\sqrt{\frac{p(1-p)}{n}}
-\end{aligned}
-\]</span></p>
-<p>Step 3. 將求得的 MLE 和 <span class="math inline">\(S^2\)</span> 代入近似信賴區間：</p>
-<p><span class="math display">\[
-95\% \text{CI} \;\text{for} \; \pi:\\
-M\pm1.96S=p\pm1.96\sqrt{\frac{p(1-p)}{n}}\\
-\]</span></p>
-</div>
-</div>
-<div id="para-trans" class="section level2" number="14.2">
-<h2><span class="header-section-number">14.2</span> 參數转换 parameter transformations</h2>
-<p>如果將參數 <span class="math inline">\(\theta\)</span> 通過某種數學方程轉化成 <span class="math inline">\(g(\theta)\)</span>，那麼我們可以認爲，轉化後的方程的 MLE 爲 <span class="math inline">\(g(\hat\theta)\)</span>，其中 <span class="math inline">\(\hat\theta\)</span> 是參數 <span class="math inline">\(\theta\)</span> 的 MLE。</p>
-<p>類似地，如果 <span class="math inline">\(\theta_1 \sim \theta_2\)</span> 是參數 <span class="math inline">\(\theta\)</span> 的似然比信賴區間，那麼 <span class="math inline">\(g(\theta_1)\sim g(\theta_2)\)</span> 就是 <span class="math inline">\(g(\theta)\)</span> 的似然比信賴區間。</p>
-<p>以下爲轉換參數以後獲取信賴區間的步驟：</p>
-<ol style="list-style-type: decimal">
-<li>將參數通過某些數學方程(通常是取對數) 轉化，使新的對數似然比方程更加接近二次方程的對稱圖形。<br> Transform parameter so that <span class="math inline">\(llr\)</span> is closer to a quadratic shape.</li>
-<li>用本節學到的二次方程近似法，求得轉化後的參數的似然比信賴區間。 <br> Use our quadratic approximation on the transformed parameter to calculate our likelihood ratio confidence intervals.</li>
-<li>將第2步計算獲得的似然比信賴區間再通過轉化參數時的逆函數轉換回去，以獲得原參數的似然比信賴區間。<br> Transform the confidence intervals back, or to any scale we wish – they remain valid.</li>
-</ol>
-<div id="Possion-log-transform" class="section level3" number="14.2.1">
-<h3><span class="header-section-number">14.2.1</span> 以泊松分佈爲例</h3>
-<p>當我們用泊松分佈模擬事件在某段時間內發生率 <span class="math inline">\(\lambda\)</span> 時，注意到這個事件發生率必須滿足 <span class="math inline">\(\lambda&gt;0\)</span>。當事件發生次數較低時，會讓似然方程的圖形被擠壓在低值附近。如果嘗試用對數轉換 <span class="math inline">\(\lambda \rightarrow \log(\lambda)\)</span> 此時 <span class="math inline">\(\log(\lambda)\)</span> 就不再被限制與 <span class="math inline">\(&gt;0\)</span>。下面我們嘗試尋找對數轉換過後的 <span class="math inline">\(M\)</span> 和 <span class="math inline">\(S\)</span>。</p>
-<p>令 <span class="math inline">\(\beta=\log(\lambda), \Rightarrow e^\beta=\lambda\)</span> 從本文上半部分中我們已知 <span class="math inline">\(\hat\lambda=\frac{d}{p}\)</span>。</p>
-<ul>
-<li>對數轉換以後的 <span class="math inline">\(M\)</span> 是什麼? <br>根據定義，<span class="math inline">\(MLE(\beta)=MLE[\log(\lambda)]=\log(\hat\lambda)\)</span>
-<span class="math inline">\(\Rightarrow M=\hat\beta=\log(\frac{d}{p})\)</span></li>
-<li>對數轉換以後的 <span class="math inline">\(S\)</span> 是什麼? <br> 泊松分佈的對數似然方程是：<span class="math inline">\(\ell(\lambda|d)=d \log(\lambda) - \lambda p\)</span> 用 <span class="math inline">\(\beta\)</span> 替換掉 <span class="math inline">\(\lambda\)</span></li>
-</ul>
-<p><span class="math display">\[
-\begin{aligned}
-    &amp;  \ell(\beta|d)=d \beta - pe^\beta\\
-    &amp; \Rightarrow \ell^\prime(\beta)=d-pe^\beta \Rightarrow \ell^{\prime\prime}(\beta)=-pe^\beta \\
-    &amp; S^2 = \left.-\frac{1}{\ell^{\prime\prime}(\beta)}\right\vert_{\beta=\hat{\beta}} = \left.\frac{1}{pe^\beta}\right\vert_{\beta=\hat{\beta}} = \frac{1}{pe^{\log(d/p)}}\\
-    &amp;\Rightarrow S^2=\frac{1}{d} \therefore S=\frac{1}{\sqrt{d}}    
-\end{aligned}
-\]</span></p>
-<ul>
-<li><p>轉換後的近似二次方程：<br>
-<span class="math display">\[
-  \begin{aligned}
-  &amp; q(\beta) = -\frac{1}{2}(\frac{\beta-M}{S})^2 = -\frac{1}{2}(\frac{\beta-\log(\frac{d}{p})}{\frac{1}{\sqrt{d}}})^2
-  \end{aligned}
-  \]</span></p></li>
-<li><p><span class="math inline">\(\beta\)</span> 的 <span class="math inline">\(95\%\)</span> 信賴區間 <span class="math inline">\(=\log(\frac{d}{p})\pm1.96\frac{1}{\sqrt{d}}\)</span></p></li>
-<li><p><span class="math inline">\(\lambda\)</span> 的 <span class="math inline">\(95\%\)</span> 信賴區間 <span class="math inline">\(=exp(\log(\frac{d}{p})\pm1.96\frac{1}{\sqrt{d}})\)</span></p></li>
-</ul>
-</div>
-<div id="以二項分佈爲例" class="section level3" number="14.2.2">
-<h3><span class="header-section-number">14.2.2</span> 以二項分佈爲例</h3>
-<p>在研究對象 <span class="math inline">\(n\)</span> 人中觀察到 <span class="math inline">\(k\)</span> 個人患有某種<del>中二</del>疾病。</p>
-<p>令 <span class="math inline">\(\beta=\log(\pi) \Rightarrow \pi=e^\beta\)</span> 從上文的推倒也已知 <span class="math inline">\(\hat\pi=\frac{k}{n}=p\)</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-&amp;\Rightarrow \ell(\beta)=k\log\pi+(n-k)\log(1-\pi)=k\beta+(n-k)\log(1-e^\beta) \\
-&amp;\Rightarrow \ell^{\prime}(\beta)=k-\frac{(n-k)(e^\beta)}{1-e^\beta} \\
-&amp;\Rightarrow \ell^{\prime\prime}(\beta)=-(n-k)\frac{e^\beta(1-e^\beta)+e^{2\beta}}{(1-e^\beta)^2} \\
-&amp; \ell^{\prime\prime}(\beta)= -(n-k)\frac{e^\beta}{(1-e^\beta)^2}\\
-&amp;\Rightarrow S^2 = \left.-\frac{1}{\ell^{\prime\prime}(\beta)}\right\vert_{\beta=\hat{\beta}} = \frac{(1-e^{\hat\beta})^2}{(n-k)e^{\hat\beta}} \\
-&amp;\because \hat\beta=\log(\hat\pi) \\
-&amp;\therefore e^{\hat\beta} = \frac{k}{n}\\
-&amp;\Rightarrow S^2=\frac{(1-\frac{k}{n})^2}{(n-k)\frac{k}{n}}=\frac{n-k}{nk}=\frac{1}{k}-\frac{1}{n}\\
-&amp; \Rightarrow S=\sqrt{\frac{1}{k}-\frac{1}{n}}\\
-\end{aligned}
-\]</span></p>
-</div>
-</div>
-<div id="inference-practical-06" class="section level2" number="14.3">
-<h2><span class="header-section-number">14.3</span> Inference Practical 06</h2>
-<div id="q1-1" class="section level3" number="14.3.1">
-<h3><span class="header-section-number">14.3.1</span> Q1</h3>
-<ol style="list-style-type: lower-alpha">
-<li>在<span class="math inline">\(n=100\)</span>人中觀察到有<span class="math inline">\(k=40\)</span>人患病，假設每個人只有患病，不患病兩個狀態，用二項分佈來模擬這個數據，<span class="math inline">\(\pi\)</span> 爲患病的概率。下面是 <span class="math inline">\(\pi \in [0.2,0.6]\)</span> 區間的對數似然比方程曲線。</li>
-</ol>
-<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="quadratic-llr.html#cb30-1"></a>pi &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.2</span>, <span class="fl">0.6</span>, <span class="dt">by=</span><span class="fl">0.01</span>)</span>
-<span id="cb30-2"><a href="quadratic-llr.html#cb30-2"></a>L &lt;-<span class="st"> </span>(pi<span class="op">^</span><span class="dv">40</span>)<span class="op">*</span>((<span class="dv">1</span><span class="op">-</span>pi)<span class="op">^</span><span class="dv">60</span>)</span>
-<span id="cb30-3"><a href="quadratic-llr.html#cb30-3"></a>Lmax &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">max</span>(L), <span class="dv">41</span>)</span>
-<span id="cb30-4"><a href="quadratic-llr.html#cb30-4"></a>LR &lt;-<span class="st"> </span>L<span class="op">/</span>Lmax</span>
-<span id="cb30-5"><a href="quadratic-llr.html#cb30-5"></a>logLR &lt;-<span class="st"> </span><span class="kw">log</span>(LR)</span>
-<span id="cb30-6"><a href="quadratic-llr.html#cb30-6"></a></span>
-<span id="cb30-7"><a href="quadratic-llr.html#cb30-7"></a><span class="kw">plot</span>(pi, logLR, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">11</span>, <span class="dv">0</span>),<span class="dt">yaxt=</span><span class="st">&quot;n&quot;</span>,</span>
-<span id="cb30-8"><a href="quadratic-llr.html#cb30-8"></a>     <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>, <span class="dt">ylab =</span> <span class="st">&quot;logLR(\U03C0)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)</span>
-<span id="cb30-9"><a href="quadratic-llr.html#cb30-9"></a><span class="kw">grid</span>(<span class="ot">NA</span>, <span class="dv">5</span>, <span class="dt">lwd =</span> <span class="dv">2</span>) <span class="co"># add some horizontal grid on the background</span></span>
-<span id="cb30-10"><a href="quadratic-llr.html#cb30-10"></a><span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at=</span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">12</span>,<span class="dv">0</span>,<span class="dv">2</span>), <span class="dt">las=</span><span class="dv">2</span>)</span></code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:bin-llr-40-100"></span>
-<img src="bookdown_files/figure-html/bin-llr-40-100-1.png" alt="Binomial log-likelihood ratio between 0.2-0.6" width="90%" />
+<p>這個 Metropolis 的策略看起來很荒誕，因爲似乎沒有半點邏輯，但是這個策略竟然是真實有效的。我們來進行一段計算機模擬以展示這個國王搬家的過程：</p>
+<div class="sourceCode" id="cb804"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb804-1"><a href="-mcmc.html#cb804-1"></a>num_weeks &lt;-<span class="st"> </span><span class="dv">10000</span> <span class="co"># almost 2000 years time </span></span>
+<span id="cb804-2"><a href="-mcmc.html#cb804-2"></a>positions &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">0</span>, num_weeks)</span>
+<span id="cb804-3"><a href="-mcmc.html#cb804-3"></a>current &lt;-<span class="st"> </span><span class="dv">10</span></span>
+<span id="cb804-4"><a href="-mcmc.html#cb804-4"></a><span class="kw">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb804-5"><a href="-mcmc.html#cb804-5"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>num_weeks ){</span>
+<span id="cb804-6"><a href="-mcmc.html#cb804-6"></a>  <span class="co">## record current position</span></span>
+<span id="cb804-7"><a href="-mcmc.html#cb804-7"></a>  positions[i] &lt;-<span class="st"> </span>current</span>
+<span id="cb804-8"><a href="-mcmc.html#cb804-8"></a>  <span class="co">## flip coin to generate proposal</span></span>
+<span id="cb804-9"><a href="-mcmc.html#cb804-9"></a>  proposal &lt;-<span class="st"> </span>current <span class="op">+</span><span class="st"> </span><span class="kw">sample</span>( <span class="kw">c</span>(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>), <span class="dt">size =</span> <span class="dv">1</span> )</span>
+<span id="cb804-10"><a href="-mcmc.html#cb804-10"></a>  <span class="co">## now make sure he loops around the archipelago</span></span>
+<span id="cb804-11"><a href="-mcmc.html#cb804-11"></a>  <span class="cf">if</span> (proposal <span class="op">&lt;</span><span class="st"> </span><span class="dv">1</span>) proposal &lt;-<span class="st"> </span><span class="dv">10</span></span>
+<span id="cb804-12"><a href="-mcmc.html#cb804-12"></a>  <span class="cf">if</span> (proposal <span class="op">&gt;</span><span class="st"> </span><span class="dv">10</span>) proposal &lt;-<span class="st"> </span><span class="dv">1</span></span>
+<span id="cb804-13"><a href="-mcmc.html#cb804-13"></a>  <span class="co">## move or not? </span></span>
+<span id="cb804-14"><a href="-mcmc.html#cb804-14"></a>  prob_move &lt;-<span class="st"> </span>proposal <span class="op">/</span><span class="st"> </span>current</span>
+<span id="cb804-15"><a href="-mcmc.html#cb804-15"></a>  current &lt;-<span class="st"> </span><span class="kw">ifelse</span>( <span class="kw">runif</span>(<span class="dv">1</span>) <span class="op">&lt;</span><span class="st"> </span>prob_move, proposal, current )</span>
+<span id="cb804-16"><a href="-mcmc.html#cb804-16"></a>}</span></code></pre></div>
+<p>把該國王前100週的行程繪製如下：</p>
+<div class="sourceCode" id="cb805"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb805-1"><a href="-mcmc.html#cb805-1"></a><span class="kw">plot</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">100</span>, positions[<span class="dv">1</span><span class="op">:</span><span class="dv">100</span>], </span>
+<span id="cb805-2"><a href="-mcmc.html#cb805-2"></a>      <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb805-3"><a href="-mcmc.html#cb805-3"></a>      <span class="dt">xlab =</span> <span class="st">&quot;week&quot;</span>,</span>
+<span id="cb805-4"><a href="-mcmc.html#cb805-4"></a>      <span class="dt">ylab =</span> <span class="st">&quot;island&quot;</span>, </span>
+<span id="cb805-5"><a href="-mcmc.html#cb805-5"></a>      <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes12-fig01"></span>
+<img src="bookdown_files/figure-html/introBayes12-fig01-1.png" alt="Results of the king following the Metropolis algorithm. This figure shows the king's current position (vertical axis) across weeks (horizontal axis). In any particular week, it's nearly impossible to say where the king will be." width="576" />
 <p class="caption">
-圖 14.1: Binomial log-likelihood ratio between 0.2-0.6
+圖 52.1: Results of the king following the Metropolis algorithm. This figure shows the king’s current position (vertical axis) across weeks (horizontal axis). In any particular week, it’s nearly impossible to say where the king will be.
 </p>
 </div>
-<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="quadratic-llr.html#cb31-1"></a><span class="co">#title(main = &quot;Figure 1. Binomial log-likelihood ratio&quot;)</span></span></code></pre></div>
-<ol start="2" style="list-style-type: lower-alpha">
-<li>用一個二次方程來模擬上面的對數似然比曲線：<span class="math inline">\(f(\pi)=-\frac{(\pi-M)^2}{2S^2}\)</span>，其中 <span class="math inline">\(M=\hat\pi=\frac{k}{n}=0.4\)</span>，<span class="math inline">\(S^2=\frac{p(1-p)}{n}=0.0024\)</span></li>
-</ol>
-<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="quadratic-llr.html#cb32-1"></a><span class="kw">par</span>(<span class="dt">mai =</span> <span class="kw">c</span>(<span class="fl">1.2</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="fl">0.7</span>))</span>
-<span id="cb32-2"><a href="quadratic-llr.html#cb32-2"></a>quad &lt;-<span class="st"> </span><span class="op">-</span>(pi<span class="fl">-0.4</span>)<span class="op">^</span><span class="dv">2</span><span class="op">/</span>(<span class="dv">2</span><span class="op">*</span><span class="fl">0.0024</span>)</span>
-<span id="cb32-3"><a href="quadratic-llr.html#cb32-3"></a><span class="kw">plot</span>(pi, quad, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">4</span>, <span class="dv">0</span>),<span class="dt">yaxt=</span><span class="st">&quot;n&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>,</span>
-<span id="cb32-4"><a href="quadratic-llr.html#cb32-4"></a>     <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>, <span class="dt">ylab =</span> <span class="st">&quot;&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)</span>
-<span id="cb32-5"><a href="quadratic-llr.html#cb32-5"></a><span class="kw">lines</span>(pi, logLR, <span class="dt">col=</span><span class="st">&quot;black&quot;</span>)</span>
-<span id="cb32-6"><a href="quadratic-llr.html#cb32-6"></a><span class="kw">grid</span>(<span class="ot">NA</span>, <span class="dv">4</span>, <span class="dt">lwd =</span> <span class="dv">1</span>) <span class="co"># add some horizontal grid on the background</span></span>
-<span id="cb32-7"><a href="quadratic-llr.html#cb32-7"></a><span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at=</span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">1</span>), <span class="dt">las=</span><span class="dv">2</span>)</span>
-<span id="cb32-8"><a href="quadratic-llr.html#cb32-8"></a><span class="co">#title(main = &quot;Figure 2. Quadratic approximation\n of binomial log-likelihood ratio \n 40 out of 100 subjects&quot;)</span></span>
-<span id="cb32-9"><a href="quadratic-llr.html#cb32-9"></a><span class="kw">abline</span>(<span class="dt">h=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">lty=</span><span class="dv">1</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)</span>
-<span id="cb32-10"><a href="quadratic-llr.html#cb32-10"></a><span class="kw">axis</span>(<span class="dv">4</span>, <span class="dt">at=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">las=</span><span class="dv">2</span>)</span>
-<span id="cb32-11"><a href="quadratic-llr.html#cb32-11"></a><span class="kw">legend</span>(<span class="dt">x=</span><span class="fl">0.27</span>, <span class="dt">y=</span> <span class="fl">-5.5</span> ,<span class="dt">xpd =</span> <span class="ot">TRUE</span>,  <span class="dt">legend=</span><span class="kw">c</span>(<span class="st">&quot;logLR&quot;</span>,<span class="st">&quot;Quadratic&quot;</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
-<span id="cb32-12"><a href="quadratic-llr.html#cb32-12"></a>       <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;black&quot;</span>,<span class="st">&quot;red&quot;</span>), <span class="dt">lty=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>), <span class="dt">horiz =</span> <span class="ot">TRUE</span>) <span class="co">#the legend is below the graph</span></span></code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin"></span>
-<img src="bookdown_files/figure-html/qua-apprx-bin-1.png" alt="Quadratic approximation
- of binomial log-likelihood ratio 40 out of 100 subjects" width="90%" />
+<p>圖 <a href="-mcmc.html#fig:introBayes12-fig01">52.1</a> 告訴我們國王的行程幾乎看起來沒有任何規律性。但是事實上，如果你把全部100000個星期的行程總結一下，會神奇地發現國王在每個島嶼所呆的時間恰好都與其人口規模成相應的比例：</p>
+<div class="sourceCode" id="cb806"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb806-1"><a href="-mcmc.html#cb806-1"></a><span class="kw">plot</span>(<span class="kw">table</span>(positions), </span>
+<span id="cb806-2"><a href="-mcmc.html#cb806-2"></a>     <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb806-3"><a href="-mcmc.html#cb806-3"></a>     <span class="dt">xlab =</span> <span class="st">&quot;island&quot;</span>, </span>
+<span id="cb806-4"><a href="-mcmc.html#cb806-4"></a>     <span class="dt">ylab =</span> <span class="st">&quot;number of weeks stayed&quot;</span>, </span>
+<span id="cb806-5"><a href="-mcmc.html#cb806-5"></a>      <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes12-fig02"></span>
+<img src="bookdown_files/figure-html/introBayes12-fig02-1.png" alt="Results of the king following the Metropolis algorithm. This figure shows the long-run behavior of the algorithm, as the time spent on each island turns out to be proportional to its population size." width="576" />
 <p class="caption">
-圖 14.2: Quadratic approximation
-of binomial log-likelihood ratio 40 out of 100 subjects
+圖 52.2: Results of the king following the Metropolis algorithm. This figure shows the long-run behavior of the algorithm, as the time spent on each island turns out to be proportional to its population size.
 </p>
 </div>
-</div>
-<div id="q2-1" class="section level3" number="14.3.2">
-<h3><span class="header-section-number">14.3.2</span> Q2</h3>
-<p>依舊使用二項分佈數據來模擬，觀察不同的事件數量和樣本量對近似計算的影響。</p>
-<ol style="list-style-type: decimal">
-<li>類比上面的問題，用同樣的 <span class="math inline">\(\hat\pi=0.4\)</span>，但是 <span class="math inline">\(n=10, k=4\)</span> 時的圖形：</li>
-</ol>
-<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="quadratic-llr.html#cb33-1"></a><span class="kw">par</span>(<span class="dt">mai =</span> <span class="kw">c</span>(<span class="fl">1.2</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="fl">0.7</span>))</span>
-<span id="cb33-2"><a href="quadratic-llr.html#cb33-2"></a>pi &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="fl">0.0</span>, <span class="fl">0.85</span>, <span class="dt">by=</span><span class="fl">0.01</span>)</span>
-<span id="cb33-3"><a href="quadratic-llr.html#cb33-3"></a>L &lt;-<span class="st"> </span>(pi<span class="op">^</span><span class="dv">4</span>)<span class="op">*</span>((<span class="dv">1</span><span class="op">-</span>pi)<span class="op">^</span><span class="dv">6</span>)</span>
-<span id="cb33-4"><a href="quadratic-llr.html#cb33-4"></a>logLR &lt;-<span class="st"> </span><span class="kw">log</span>(L<span class="op">/</span><span class="kw">max</span>(L))</span>
-<span id="cb33-5"><a href="quadratic-llr.html#cb33-5"></a></span>
-<span id="cb33-6"><a href="quadratic-llr.html#cb33-6"></a>quad &lt;-<span class="st"> </span><span class="op">-</span>(pi<span class="fl">-0.4</span>)<span class="op">^</span><span class="dv">2</span><span class="op">/</span>(<span class="dv">2</span><span class="op">*</span><span class="fl">0.4</span><span class="op">*</span><span class="fl">0.6</span><span class="op">/</span><span class="dv">10</span>)</span>
-<span id="cb33-7"><a href="quadratic-llr.html#cb33-7"></a><span class="kw">plot</span>(pi, quad, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">5</span>, <span class="dv">0</span>),<span class="dt">yaxt=</span><span class="st">&quot;n&quot;</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>,</span>
-<span id="cb33-8"><a href="quadratic-llr.html#cb33-8"></a>     <span class="dt">frame.plot =</span> <span class="ot">FALSE</span>, <span class="dt">ylab =</span> <span class="st">&quot;&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;\U03C0&quot;</span>)</span>
-<span id="cb33-9"><a href="quadratic-llr.html#cb33-9"></a><span class="kw">lines</span>(pi, logLR, <span class="dt">col=</span><span class="st">&quot;black&quot;</span>)</span>
-<span id="cb33-10"><a href="quadratic-llr.html#cb33-10"></a><span class="kw">grid</span>(<span class="ot">NA</span>, <span class="dv">4</span>, <span class="dt">lwd =</span> <span class="dv">1</span>)</span>
-<span id="cb33-11"><a href="quadratic-llr.html#cb33-11"></a><span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at=</span><span class="kw">seq</span>(<span class="op">-</span><span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">1</span>), <span class="dt">las=</span><span class="dv">2</span>)</span>
-<span id="cb33-12"><a href="quadratic-llr.html#cb33-12"></a><span class="co">#title(main = &quot;Figure 3. Quadratic approximation\n of binomial log-likelihood ratio\n 4 out of 10 subjects&quot;)</span></span>
-<span id="cb33-13"><a href="quadratic-llr.html#cb33-13"></a><span class="kw">abline</span>(<span class="dt">h=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">lty=</span><span class="dv">1</span>, <span class="dt">col=</span><span class="st">&quot;red&quot;</span>)</span>
-<span id="cb33-14"><a href="quadratic-llr.html#cb33-14"></a><span class="kw">axis</span>(<span class="dv">4</span>, <span class="dt">at=</span><span class="op">-</span><span class="fl">1.92</span>, <span class="dt">las=</span><span class="dv">2</span>)</span>
-<span id="cb33-15"><a href="quadratic-llr.html#cb33-15"></a></span>
-<span id="cb33-16"><a href="quadratic-llr.html#cb33-16"></a><span class="kw">legend</span>(<span class="dt">x=</span><span class="fl">0.17</span>, <span class="dt">y=</span> <span class="fl">-6.5</span> ,<span class="dt">xpd =</span> <span class="ot">TRUE</span>,  <span class="dt">legend=</span><span class="kw">c</span>(<span class="st">&quot;logLR&quot;</span>,<span class="st">&quot;Quadratic&quot;</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
-<span id="cb33-17"><a href="quadratic-llr.html#cb33-17"></a>       <span class="dt">col=</span><span class="kw">c</span>(<span class="st">&quot;black&quot;</span>,<span class="st">&quot;red&quot;</span>), <span class="dt">lty=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>), <span class="dt">horiz =</span> <span class="ot">TRUE</span>) <span class="co">#the legend is below the graph</span></span></code></pre></div>
-<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin4-10"></span>
-<img src="bookdown_files/figure-html/qua-apprx-bin4-10-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 4 out of 10 subjects" width="90%" />
-<p class="caption">
-圖 14.3: Quadratic approximation of binomial log-likelihood ratio 4 out of 10 subjects
-</p>
-</div>
-<ol start="2" style="list-style-type: decimal">
-<li><span class="math inline">\(\hat\pi=0.4, n=1000, k=400\)</span></li>
-</ol>
-<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin400-1000"></span>
-<img src="bookdown_files/figure-html/qua-apprx-bin400-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 400 out of 1000 subjects" width="90%" />
-<p class="caption">
-圖 14.4: Quadratic approximation of binomial log-likelihood ratio 400 out of 1000 subjects
-</p>
-</div>
-<ol start="3" style="list-style-type: decimal">
-<li><span class="math inline">\(\hat\pi=0.01, n=100, k=1\)</span></li>
-</ol>
-<p>注意此圖中紅線提示的近似二次曲線，信賴區間的下限已經低於0，是無法接受的近似。</p>
-<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin1-1000"></span>
-<img src="bookdown_files/figure-html/qua-apprx-bin1-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 1 out of 100 subjects" width="90%" />
-<p class="caption">
-圖 14.5: Quadratic approximation of binomial log-likelihood ratio 1 out of 100 subjects
-</p>
-</div>
-<ol start="4" style="list-style-type: decimal">
-<li><span class="math inline">\(\hat\pi=0.01, n=1000, k=10\)</span></li>
-</ol>
-<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin10-1000"></span>
-<img src="bookdown_files/figure-html/qua-apprx-bin10-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 10 out of 1000 subjects" width="90%" />
-<p class="caption">
-圖 14.6: Quadratic approximation of binomial log-likelihood ratio 10 out of 1000 subjects
-</p>
-</div>
-<ol start="5" style="list-style-type: decimal">
-<li><span class="math inline">\(\hat\pi=0.01, n=10000, k=100\)</span></li>
-</ol>
-<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin100-1000"></span>
-<img src="bookdown_files/figure-html/qua-apprx-bin100-1000-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 100 out of 10000 subjects" width="90%" />
-<p class="caption">
-圖 14.7: Quadratic approximation of binomial log-likelihood ratio 100 out of 10000 subjects
-</p>
-</div>
-<ol start="6" style="list-style-type: decimal">
-<li><span class="math inline">\(\hat\pi=0.99, n=100, k=99\)</span></li>
-</ol>
-<p>注意此圖中紅線提示的近似二次曲線，信賴區間的上限已經大於1，和上面的 Figure 5. 一樣也是無法接受的近似。</p>
-<div class="figure" style="text-align: center"><span id="fig:qua-apprx-bin99-100"></span>
-<img src="bookdown_files/figure-html/qua-apprx-bin99-100-1.png" alt="Quadratic approximation of binomial log-likelihood ratio 99 out of 100 subjects" width="90%" />
-<p class="caption">
-圖 14.8: Quadratic approximation of binomial log-likelihood ratio 99 out of 100 subjects
-</p>
-</div>
-<p>總結： 二次方程近似時，在二項分佈的情況下，隨着 <span class="math inline">\(n, k\)</span> 增加，近似越理想。</p>
+
 </div>
 </div>
-</div>
+
+
+
             </section>
 
           </div>
         </div>
       </div>
-<a href="llr.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="hypothesis-test.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="-its-all-about-interaction.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="revision.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -2150,7 +1890,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/02-Inference.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/08-Intro-to-Bayes.Rmd",
 "text": "編輯"
 },
 "history": {
