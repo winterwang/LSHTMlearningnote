@@ -274,6 +274,7 @@ compare( m8.1, m8.2, m8.3 )
 d.A1 <- dd[dd$cid == 1,]
 plot(d.A1$rugged_std, d.A1$log_gdp_std, pch = 16, 
      col = rangi2, 
+     bty = "n",
      main = "African nations",
      xlab = "ruggedness (standardized)", 
      ylab = "log GDP (as proportion of mean)", 
@@ -293,6 +294,7 @@ shade(mu_ci, rugged_seq, col = col.alpha(rangi2, 0.3))
 d.A2 <- dd[dd$cid == 2,]
 plot(d.A2$rugged_std, d.A2$log_gdp_std, pch = 1, 
      col = "black", 
+     bty = "n",
      main = "Non-African nations",
      xlab = "ruggedness (standardized)", 
      ylab = "log GDP (as proportion of mean)", 
@@ -418,7 +420,7 @@ $$
 ```{r introBayes11-15, cache=TRUE}
 m8.5 <- quap(
   alist(
-  blooms_std ~ dnorm( mu, sigma ),
+  blooms_std ~ dnorm( mu, sigma ), 
   mu <- a + bw * water_cent + bs * shade_cent + bws * water_cent * shade_cent, 
   a ~ dnorm( 0.5, 0.25 ), 
   bw ~ dnorm( 0, 0.25 ), 
@@ -429,5 +431,53 @@ m8.5 <- quap(
 )
 precis(m8.5)
 ```
+
+### 繪製事後預測圖
+
+三聯畫 (triptych) 會是幫助我們理解連續變量之間交互作用的極佳示意圖。每個圖都需要能夠表達模型所預測的水與開花尺寸大小之間的關係，同時，每張圖會指定陽光爲某一個固定值，來看陽光，水，和開花尺寸三者之間的關係的變化。由於本例中，已知陽光（或者水）只有三個強度的取值：-1，0，1。所以三聯圖是首選。其他時候，如果是處理嚴格的連續變量的話，你完全可以選取三個代表性的取值，如最低值，中位數，和最大值來繪製三聯圖。
+
+
+```{r introBayes11-fig06, cache=TRUE, fig.width=11, fig.height=4,  fig.cap="Triptych plots of posterior predicted blooms across water and shade treatments. (without an interaction between water and shade)", fig.align='center'}
+par(mfrow = c(1,3)) # 3 plots in a row
+
+for (s in -1:1) {
+  idx <- which( d$shade_cent == s) 
+  plot( d$water_cent[idx], d$blooms_std[idx], 
+        xlim = c(-1, 1), 
+        bty = "n",
+        ylim = c(0, 1), 
+        main = paste("m8.4 (no interaction)\npost: shade = ", s),
+        xlab = "water (centered)", 
+        ylab = "blooms (rescaled)", 
+        pch = 16, 
+        col = rangi2)
+  mu <- link(m8.4, data = data.frame(shade_cent = s, water_cent = -1:1))
+  for( i in 1:20 ) lines( -1:1, mu[i, ], col = col.alpha("black", 0.3))
+}
+```
+
+圖 \@ref(fig:introBayes11-fig06) 顯示的是沒有交互作用項時給出的事後預測直線。每個陽光，水條件下，水和開花尺寸之間關係的直線並沒有斜率上的顯著變化。給 `m8.5` 繪製相似的三聯圖，可以看出斜率隨着不同陽光強度發生了變化：
+
+
+```{r introBayes11-fig07, cache=TRUE, fig.width=11, fig.height=4,  fig.cap="Triptych plots of posterior predicted blooms across water and shade treatments. (with an interaction between water and shade)", fig.align='center'}
+par(mfrow = c(1,3)) # 3 plots in a row
+
+for (s in -1:1) {
+  idx <- which( d$shade_cent == s) 
+  plot( d$water_cent[idx], d$blooms_std[idx], 
+        xlim = c(-1, 1), 
+        bty = "n",
+        ylim = c(0, 1), 
+        main = paste("m8.5 (with interaction)\npost: shade = ", s),
+        xlab = "water (centered)", 
+        ylab = "blooms (rescaled)", 
+        pch = 16, 
+        col = rangi2)
+  mu <- link(m8.5, data = data.frame(shade_cent = s, water_cent = -1:1))
+  for( i in 1:20 ) lines( -1:1, mu[i, ], col = col.alpha("black", 0.3))
+}
+```
+
+很明顯，加入了交互作用之後的模型更加符合實際情況，圖 \@ref(fig:introBayes11-fig07) 中不同強度陽光條件下，水和開花尺寸之間的關係的斜率發生了顯著的變化。當陽光不強時，水和開花尺寸之間的關係斜率較大，當陽光強度增加，這個斜率在下降。
 
 
