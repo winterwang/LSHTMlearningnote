@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-10-22" />
+<meta name="date" content="2020-10-26" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -868,6 +868,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="52" data-path="-mcmc.html"><a href="-mcmc.html"><i class="fa fa-check"></i><b>52</b> 馬可夫鏈蒙地卡羅 MCMC</a>
 <ul>
 <li class="chapter" data-level="52.1" data-path="-mcmc.html"><a href="-mcmc.html#國王訪問個各島嶼問題"><i class="fa fa-check"></i><b>52.1</b> 國王訪問個各島嶼問題</a></li>
+<li class="chapter" data-level="52.2" data-path="-mcmc.html"><a href="-mcmc.html#metropolis-演算法"><i class="fa fa-check"></i><b>52.2</b> Metropolis 演算法</a></li>
+<li class="chapter" data-level="52.3" data-path="-mcmc.html"><a href="-mcmc.html#簡單的-hmc-hamitonian-monte-carlo-ulam"><i class="fa fa-check"></i><b>52.3</b> 簡單的 HMC (Hamitonian Monte Carlo) <code>ulam</code></a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="53" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>53</b> 重要概念複習</a>
@@ -1847,6 +1849,175 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 圖 52.2: Results of the king following the Metropolis algorithm. This figure shows the long-run behavior of the algorithm, as the time spent on each island turns out to be proportional to its population size.
 </p>
 </div>
+</div>
+<div id="metropolis-演算法" class="section level2" number="52.2">
+<h2><span class="header-section-number">52.2</span> Metropolis 演算法</h2>
+<p>上文中國王行程的例子其實是 Metropolis 演算法的一個特例，這就是一個簡單的馬可夫鏈蒙地卡羅過程。我們可以利用這個MCMC過程對模型給出的複雜的事後概率分佈樣本進行採樣。</p>
+<ul>
+<li>例子中的“島嶼”，其實就是統計模型中的各種參數，它可以不必是離散型的，完全可以是連續型的變量。</li>
+<li>每個島嶼的“人口規模”，其實是每個參數的事後概率分佈，在參數不同取值時的概率大小。</li>
+<li>每個島嶼國王實際留駐的時間“週”，其實就是我們通過這個 Metropolis 演算法對事後概率分佈採集的樣本。</li>
+</ul>
+</div>
+<div id="簡單的-hmc-hamitonian-monte-carlo-ulam" class="section level2" number="52.3">
+<h2><span class="header-section-number">52.3</span> 簡單的 HMC (Hamitonian Monte Carlo) <code>ulam</code></h2>
+<p>這裏使用非洲大陸地理的數據 <code>rugged</code>，來作爲簡單的HMC過程的示範。</p>
+<div class="sourceCode" id="cb807"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb807-1"><a href="-mcmc.html#cb807-1"></a><span class="kw">data</span>(<span class="st">&quot;rugged&quot;</span>)</span>
+<span id="cb807-2"><a href="-mcmc.html#cb807-2"></a>d &lt;-<span class="st"> </span>rugged</span>
+<span id="cb807-3"><a href="-mcmc.html#cb807-3"></a>d<span class="op">$</span>log_gdp &lt;-<span class="st"> </span><span class="kw">log</span>(d<span class="op">$</span>rgdppc_<span class="dv">2000</span>)</span>
+<span id="cb807-4"><a href="-mcmc.html#cb807-4"></a>dd &lt;-<span class="st"> </span>d[ <span class="kw">complete.cases</span>(d<span class="op">$</span>rgdppc_<span class="dv">2000</span>), ]</span>
+<span id="cb807-5"><a href="-mcmc.html#cb807-5"></a>dd<span class="op">$</span>log_gdp_std &lt;-<span class="st"> </span>dd<span class="op">$</span>log_gdp <span class="op">/</span><span class="st"> </span><span class="kw">mean</span>(dd<span class="op">$</span>log_gdp)</span>
+<span id="cb807-6"><a href="-mcmc.html#cb807-6"></a>dd<span class="op">$</span>rugged_std &lt;-<span class="st"> </span>dd<span class="op">$</span>rugged <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(dd<span class="op">$</span>rugged)</span>
+<span id="cb807-7"><a href="-mcmc.html#cb807-7"></a>dd<span class="op">$</span>cid &lt;-<span class="st"> </span><span class="kw">ifelse</span>( dd<span class="op">$</span>cont_africa <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span></code></pre></div>
+<p>之前，我們使用二次方程近似法 <code>quap()</code> 時，加入了交互作用項的模型是：</p>
+<div class="sourceCode" id="cb808"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb808-1"><a href="-mcmc.html#cb808-1"></a>m8<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb808-2"><a href="-mcmc.html#cb808-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb808-3"><a href="-mcmc.html#cb808-3"></a>    log_gdp_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(mu, sigma),</span>
+<span id="cb808-4"><a href="-mcmc.html#cb808-4"></a>    mu &lt;-<span class="st"> </span>a[cid] <span class="op">+</span><span class="st"> </span>b[cid] <span class="op">*</span><span class="st"> </span>(rugged_std <span class="op">-</span><span class="st"> </span><span class="fl">0.215</span>) , </span>
+<span id="cb808-5"><a href="-mcmc.html#cb808-5"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">1</span>, <span class="fl">0.1</span> ), </span>
+<span id="cb808-6"><a href="-mcmc.html#cb808-6"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.3</span> ), </span>
+<span id="cb808-7"><a href="-mcmc.html#cb808-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>( <span class="dv">1</span> )</span>
+<span id="cb808-8"><a href="-mcmc.html#cb808-8"></a>  ), <span class="dt">data =</span> dd</span>
+<span id="cb808-9"><a href="-mcmc.html#cb808-9"></a>)</span>
+<span id="cb808-10"><a href="-mcmc.html#cb808-10"></a><span class="kw">precis</span>( m8<span class="fl">.3</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
+<pre><code>##              mean           sd         5.5%        94.5%
+## a[1]   0.88655682 0.0156750452  0.861505070  0.911608569
+## a[2]   1.05057127 0.0099361951  1.034691314  1.066451232
+## b[1]   0.13251798 0.0742015273  0.013929608  0.251106352
+## b[2]  -0.14263748 0.0547471324 -0.230133970 -0.055140987
+## sigma  0.10948955 0.0059346769  0.100004789  0.118974309</code></pre>
+<p>當我們準備使用 HMC 來採樣時，我們需要額外加以準備：</p>
+<ol style="list-style-type: decimal">
+<li>先處理所有需要中心化或者重新更改尺度的變量。</li>
+<li>重新製作一個不含有多餘變量的數據集。（推薦）</li>
+</ol>
+<div class="sourceCode" id="cb810"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb810-1"><a href="-mcmc.html#cb810-1"></a>dat_slim &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb810-2"><a href="-mcmc.html#cb810-2"></a>  <span class="dt">log_gdp_std =</span> dd<span class="op">$</span>log_gdp_std, </span>
+<span id="cb810-3"><a href="-mcmc.html#cb810-3"></a>  <span class="dt">rugged_std =</span> dd<span class="op">$</span>rugged_std,</span>
+<span id="cb810-4"><a href="-mcmc.html#cb810-4"></a>  <span class="dt">cid =</span> <span class="kw">as.integer</span>(dd<span class="op">$</span>cid)</span>
+<span id="cb810-5"><a href="-mcmc.html#cb810-5"></a>)</span>
+<span id="cb810-6"><a href="-mcmc.html#cb810-6"></a><span class="kw">str</span>(dat_slim)</span></code></pre></div>
+<pre><code>## List of 3
+##  $ log_gdp_std: num [1:170] 0.88 0.965 1.166 1.104 0.915 ...
+##  $ rugged_std : num [1:170] 0.138 0.553 0.124 0.125 0.433 ...
+##  $ cid        : int [1:170] 1 2 2 2 2 2 2 2 2 1 ...</code></pre>
+<p>準備好了數據之後，接下來，我們使用 Stan 進行事後分佈樣本採集：</p>
+<div class="sourceCode" id="cb812"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb812-1"><a href="-mcmc.html#cb812-1"></a>m9<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb812-2"><a href="-mcmc.html#cb812-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb812-3"><a href="-mcmc.html#cb812-3"></a>    log_gdp_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb812-4"><a href="-mcmc.html#cb812-4"></a>    mu &lt;-<span class="st"> </span>a[cid] <span class="op">+</span><span class="st"> </span>b[cid] <span class="op">*</span><span class="st"> </span>( rugged_std <span class="op">-</span><span class="st"> </span><span class="fl">0.215</span> ) , </span>
+<span id="cb812-5"><a href="-mcmc.html#cb812-5"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), </span>
+<span id="cb812-6"><a href="-mcmc.html#cb812-6"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), </span>
+<span id="cb812-7"><a href="-mcmc.html#cb812-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb812-8"><a href="-mcmc.html#cb812-8"></a>  ), <span class="dt">data =</span> dat_slim, <span class="dt">chains =</span> <span class="dv">1</span> </span>
+<span id="cb812-9"><a href="-mcmc.html#cb812-9"></a>)</span></code></pre></div>
+<pre><code>## 
+## SAMPLING FOR MODEL &#39;f3314e777e4c586121dcc9de98266129&#39; NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 2.7e-05 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.27 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 1: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 1: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 1: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 1: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 0.042148 seconds (Warm-up)
+## Chain 1:                0.027666 seconds (Sampling)
+## Chain 1:                0.069814 seconds (Total)
+## Chain 1:</code></pre>
+<div class="sourceCode" id="cb814"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb814-1"><a href="-mcmc.html#cb814-1"></a><span class="kw">precis</span>( m9<span class="fl">.1</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
+<pre><code>##              mean           sd         5.5%        94.5%     n_eff      Rhat4
+## a[1]   0.88762598 0.0158139609  0.859848549  0.911856753 697.68286 0.99811888
+## a[2]   1.05074808 0.0103372479  1.035717029  1.066637227 777.02098 0.99808908
+## b[1]   0.13473017 0.0752015577  0.018559852  0.261751292 769.03930 0.99849918
+## b[2]  -0.14209256 0.0535298779 -0.225545276 -0.058127179 823.03571 0.99870607
+## sigma  0.11101502 0.0059144792  0.101778834  0.120212208 680.78693 0.99799968</code></pre>
+<p>我們還可以使用多条採樣鏈，及使用多個計算機內核以平行計算提升效率：</p>
+<div class="sourceCode" id="cb816"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb816-1"><a href="-mcmc.html#cb816-1"></a>m9<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb816-2"><a href="-mcmc.html#cb816-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb816-3"><a href="-mcmc.html#cb816-3"></a>    log_gdp_std <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb816-4"><a href="-mcmc.html#cb816-4"></a>    mu &lt;-<span class="st"> </span>a[cid] <span class="op">+</span><span class="st"> </span>b[cid] <span class="op">*</span><span class="st"> </span>( rugged_std <span class="op">-</span><span class="st"> </span><span class="fl">0.215</span> ) , </span>
+<span id="cb816-5"><a href="-mcmc.html#cb816-5"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), </span>
+<span id="cb816-6"><a href="-mcmc.html#cb816-6"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), </span>
+<span id="cb816-7"><a href="-mcmc.html#cb816-7"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb816-8"><a href="-mcmc.html#cb816-8"></a>  ), <span class="dt">data =</span> dat_slim, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cores =</span> <span class="dv">4</span></span>
+<span id="cb816-9"><a href="-mcmc.html#cb816-9"></a>)</span>
+<span id="cb816-10"><a href="-mcmc.html#cb816-10"></a><span class="kw">show</span>( m9<span class="fl">.1</span> )</span></code></pre></div>
+<pre><code>## Hamiltonian Monte Carlo approximation
+## 2000 samples from 4 chains
+## 
+## Sampling durations (seconds):
+##         warmup sample total
+## chain:1   0.06   0.04  0.10
+## chain:2   0.06   0.05  0.11
+## chain:3   0.06   0.04  0.11
+## chain:4   0.06   0.04  0.10
+## 
+## Formula:
+## log_gdp_std ~ dnorm(mu, sigma)
+## mu &lt;- a[cid] + b[cid] * (rugged_std - 0.215)
+## a[cid] ~ dnorm(1, 0.1)
+## b[cid] ~ dnorm(0, 0.3)
+## sigma ~ dexp(1)</code></pre>
+<div class="sourceCode" id="cb818"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb818-1"><a href="-mcmc.html#cb818-1"></a><span class="kw">precis</span>( m9<span class="fl">.1</span> , <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##              mean           sd         5.5%        94.5%     n_eff      Rhat4
+## a[1]   0.88674306 0.0156563425  0.861586947  0.911396112 2903.2637 0.99990676
+## a[2]   1.05027714 0.0099248637  1.033960001  1.065427772 2879.2357 1.00061580
+## b[1]   0.13081462 0.0762146077  0.012007032  0.251835824 2377.3737 0.99927176
+## b[2]  -0.14259349 0.0571381311 -0.230158554 -0.048035652 2930.1460 0.99966040
+## sigma  0.11147787 0.0059532340  0.102428961  0.121188453 2456.4643 1.00007763</code></pre>
+<p>除了使用 <code>traceplot()</code> 來進行診斷給出軌跡圖之外：</p>
+<div class="sourceCode" id="cb820"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb820-1"><a href="-mcmc.html#cb820-1"></a><span class="kw">traceplot</span>(m9<span class="fl">.1</span>)</span></code></pre></div>
+<pre><code>## [1] 1000
+## [1] 1
+## [1] 1000</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:introBayes12-fig03"></span>
+<img src="bookdown_files/figure-html/introBayes12-fig03-1.png" alt="Trace plot of the Markov chain from the ruggedness model, m9.1. (Gray region is warmup)" width="768" />
+<p class="caption">
+圖 52.3: Trace plot of the Markov chain from the ruggedness model, m9.1. (Gray region is warmup)
+</p>
+</div>
+<p>還可以使用 <code>trunkplot()</code> 繪製 軌跡排序圖 (trace rank plot)。</p>
+<div class="sourceCode" id="cb822"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb822-1"><a href="-mcmc.html#cb822-1"></a> <span class="kw">trankplot</span>( m9<span class="fl">.1</span> )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes12-fig04"></span>
+<img src="bookdown_files/figure-html/introBayes12-fig04-1.png" alt="Trunk plot of the Markov chain from the ruggedness model, m9.1." width="768" />
+<p class="caption">
+圖 52.4: Trunk plot of the Markov chain from the ruggedness model, m9.1.
+</p>
+</div>
+<p>使用 <code>stancode()</code> 可以閱讀計算機自動生成的 Stan 代碼：</p>
+<div class="sourceCode" id="cb823"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb823-1"><a href="-mcmc.html#cb823-1"></a><span class="kw">stancode</span>(m9<span class="fl">.1</span>)</span></code></pre></div>
+<pre><code>## data{
+##     vector[170] log_gdp_std;
+##     vector[170] rugged_std;
+##     int cid[170];
+## }
+## parameters{
+##     vector[2] a;
+##     vector[2] b;
+##     real&lt;lower=0&gt; sigma;
+## }
+## model{
+##     vector[170] mu;
+##     sigma ~ exponential( 1 );
+##     b ~ normal( 0 , 0.3 );
+##     a ~ normal( 1 , 0.1 );
+##     for ( i in 1:170 ) {
+##         mu[i] = a[cid[i]] + b[cid[i]] * (rugged_std[i] - 0.215);
+##     }
+##     log_gdp_std ~ normal( mu , sigma );
+## }</code></pre>
 
 </div>
 </div>

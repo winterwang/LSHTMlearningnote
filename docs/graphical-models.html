@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-10-22" />
+<meta name="date" content="2020-10-26" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -868,6 +868,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="52" data-path="-mcmc.html"><a href="-mcmc.html"><i class="fa fa-check"></i><b>52</b> 馬可夫鏈蒙地卡羅 MCMC</a>
 <ul>
 <li class="chapter" data-level="52.1" data-path="-mcmc.html"><a href="-mcmc.html#國王訪問個各島嶼問題"><i class="fa fa-check"></i><b>52.1</b> 國王訪問個各島嶼問題</a></li>
+<li class="chapter" data-level="52.2" data-path="-mcmc.html"><a href="-mcmc.html#metropolis-演算法"><i class="fa fa-check"></i><b>52.2</b> Metropolis 演算法</a></li>
+<li class="chapter" data-level="52.3" data-path="-mcmc.html"><a href="-mcmc.html#簡單的-hmc-hamitonian-monte-carlo-ulam"><i class="fa fa-check"></i><b>52.3</b> 簡單的 HMC (Hamitonian Monte Carlo) <code>ulam</code></a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="53" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>53</b> 重要概念複習</a>
@@ -1808,21 +1810,21 @@ Y(x) \perp \!\!\! \perp X|\mathbf{C}, \forall x
 \end{aligned}
 \]</span></p>
 <p>那麼這些變量之間關系對應的 DAG 圖就是這樣子:</p>
-<div class="sourceCode" id="cb2145"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2145-1"><a href="graphical-models.html#cb2145-1"></a>g &lt;-<span class="st"> </span><span class="kw">dagitty</span>(<span class="st">&#39;dag {</span></span>
-<span id="cb2145-2"><a href="graphical-models.html#cb2145-2"></a><span class="st">    V6 [pos=&quot;2,0&quot;]</span></span>
-<span id="cb2145-3"><a href="graphical-models.html#cb2145-3"></a><span class="st">    V4 [pos=&quot;1,-1&quot;]</span></span>
-<span id="cb2145-4"><a href="graphical-models.html#cb2145-4"></a><span class="st">    V5 [pos=&quot;1,1&quot;]</span></span>
-<span id="cb2145-5"><a href="graphical-models.html#cb2145-5"></a><span class="st">    V2 [pos=&quot;-1,-1&quot;]</span></span>
-<span id="cb2145-6"><a href="graphical-models.html#cb2145-6"></a><span class="st">    V3 [pos=&quot;-1,1&quot;]   </span></span>
-<span id="cb2145-7"><a href="graphical-models.html#cb2145-7"></a><span class="st">    V1 [pos=&quot;-2,0&quot;]   </span></span>
-<span id="cb2145-8"><a href="graphical-models.html#cb2145-8"></a></span>
-<span id="cb2145-9"><a href="graphical-models.html#cb2145-9"></a><span class="st">   V1 -&gt; V4</span></span>
-<span id="cb2145-10"><a href="graphical-models.html#cb2145-10"></a><span class="st">   V1 -&gt; V5 -&gt; V6 </span></span>
-<span id="cb2145-11"><a href="graphical-models.html#cb2145-11"></a><span class="st">   V1 -&gt; V3 -&gt; V4 </span></span>
-<span id="cb2145-12"><a href="graphical-models.html#cb2145-12"></a><span class="st">   V2 -&gt; V3 -&gt; V4 </span></span>
-<span id="cb2145-13"><a href="graphical-models.html#cb2145-13"></a><span class="st">   V2 -&gt; V5 -&gt; V6</span></span>
-<span id="cb2145-14"><a href="graphical-models.html#cb2145-14"></a><span class="st">}&#39;</span>)</span>
-<span id="cb2145-15"><a href="graphical-models.html#cb2145-15"></a><span class="kw">plot</span>(g)</span></code></pre></div>
+<div class="sourceCode" id="cb2164"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2164-1"><a href="graphical-models.html#cb2164-1"></a>g &lt;-<span class="st"> </span><span class="kw">dagitty</span>(<span class="st">&#39;dag {</span></span>
+<span id="cb2164-2"><a href="graphical-models.html#cb2164-2"></a><span class="st">    V6 [pos=&quot;2,0&quot;]</span></span>
+<span id="cb2164-3"><a href="graphical-models.html#cb2164-3"></a><span class="st">    V4 [pos=&quot;1,-1&quot;]</span></span>
+<span id="cb2164-4"><a href="graphical-models.html#cb2164-4"></a><span class="st">    V5 [pos=&quot;1,1&quot;]</span></span>
+<span id="cb2164-5"><a href="graphical-models.html#cb2164-5"></a><span class="st">    V2 [pos=&quot;-1,-1&quot;]</span></span>
+<span id="cb2164-6"><a href="graphical-models.html#cb2164-6"></a><span class="st">    V3 [pos=&quot;-1,1&quot;]   </span></span>
+<span id="cb2164-7"><a href="graphical-models.html#cb2164-7"></a><span class="st">    V1 [pos=&quot;-2,0&quot;]   </span></span>
+<span id="cb2164-8"><a href="graphical-models.html#cb2164-8"></a></span>
+<span id="cb2164-9"><a href="graphical-models.html#cb2164-9"></a><span class="st">   V1 -&gt; V4</span></span>
+<span id="cb2164-10"><a href="graphical-models.html#cb2164-10"></a><span class="st">   V1 -&gt; V5 -&gt; V6 </span></span>
+<span id="cb2164-11"><a href="graphical-models.html#cb2164-11"></a><span class="st">   V1 -&gt; V3 -&gt; V4 </span></span>
+<span id="cb2164-12"><a href="graphical-models.html#cb2164-12"></a><span class="st">   V2 -&gt; V3 -&gt; V4 </span></span>
+<span id="cb2164-13"><a href="graphical-models.html#cb2164-13"></a><span class="st">   V2 -&gt; V5 -&gt; V6</span></span>
+<span id="cb2164-14"><a href="graphical-models.html#cb2164-14"></a><span class="st">}&#39;</span>)</span>
+<span id="cb2164-15"><a href="graphical-models.html#cb2164-15"></a><span class="kw">plot</span>(g)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:DAG01"></span>
 <img src="bookdown_files/figure-html/DAG01-1.png" alt="Example of a DAG" width="50%" />
 <p class="caption">

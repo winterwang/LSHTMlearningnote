@@ -55,5 +55,112 @@ plot(table(positions),
       col = rangi2)
 ```
 
+## Metropolis 演算法
+
+上文中國王行程的例子其實是 Metropolis 演算法的一個特例，這就是一個簡單的馬可夫鏈蒙地卡羅過程。我們可以利用這個MCMC過程對模型給出的複雜的事後概率分佈樣本進行採樣。
+
+
+- 例子中的“島嶼”，其實就是統計模型中的各種參數，它可以不必是離散型的，完全可以是連續型的變量。
+- 每個島嶼的“人口規模”，其實是每個參數的事後概率分佈，在參數不同取值時的概率大小。
+- 每個島嶼國王實際留駐的時間“週”，其實就是我們通過這個 Metropolis 演算法對事後概率分佈採集的樣本。
+
+## 簡單的 HMC (Hamitonian Monte Carlo) `ulam`
+
+這裏使用非洲大陸地理的數據 `rugged`，來作爲簡單的HMC過程的示範。
+
+```{r introBayes12-02, cache=TRUE}
+data("rugged")
+d <- rugged
+d$log_gdp <- log(d$rgdppc_2000)
+dd <- d[ complete.cases(d$rgdppc_2000), ]
+dd$log_gdp_std <- dd$log_gdp / mean(dd$log_gdp)
+dd$rugged_std <- dd$rugged / max(dd$rugged)
+dd$cid <- ifelse( dd$cont_africa == 1, 1, 2)
+```
+
+之前，我們使用二次方程近似法 `quap()` 時，加入了交互作用項的模型是：
+
+```{r introBayes12-03, cache=TRUE}
+m8.3 <- quap(
+  alist(
+    log_gdp_std ~ dnorm(mu, sigma),
+    mu <- a[cid] + b[cid] * (rugged_std - 0.215) , 
+    a[cid] ~ dnorm( 1, 0.1 ), 
+    b[cid] ~ dnorm( 0, 0.3 ), 
+    sigma ~ dexp( 1 )
+  ), data = dd
+)
+precis( m8.3, depth = 2 )
+```
+
+
+當我們準備使用 HMC 來採樣時，我們需要額外加以準備：
+
+1. 先處理所有需要中心化或者重新更改尺度的變量。
+2. 重新製作一個不含有多餘變量的數據集。（推薦）
+
+
+```{r introBayes12-04, cache=TRUE}
+dat_slim <- list(
+  log_gdp_std = dd$log_gdp_std, 
+  rugged_std = dd$rugged_std,
+  cid = as.integer(dd$cid)
+)
+str(dat_slim)
+```
+
+
+
+準備好了數據之後，接下來，我們使用 Stan 進行事後分佈樣本採集：
+
+```{r introBayes12-05, cache=TRUE}
+m9.1 <- ulam(
+  alist(
+    log_gdp_std ~ dnorm( mu, sigma ), 
+    mu <- a[cid] + b[cid] * ( rugged_std - 0.215 ) , 
+    a[cid] ~ dnorm(1, 0.1), 
+    b[cid] ~ dnorm(0, 0.3), 
+    sigma ~ dexp(1)
+  ), data = dat_slim, chains = 1 
+)
+precis( m9.1, depth = 2 )
+```
+
+我們還可以使用多条採樣鏈，及使用多個計算機內核以平行計算提升效率：
+
+
+```{r introBayes12-06, cache=TRUE}
+m9.1 <- ulam(
+  alist(
+    log_gdp_std ~ dnorm( mu, sigma ), 
+    mu <- a[cid] + b[cid] * ( rugged_std - 0.215 ) , 
+    a[cid] ~ dnorm(1, 0.1), 
+    b[cid] ~ dnorm(0, 0.3), 
+    sigma ~ dexp(1)
+  ), data = dat_slim, chains = 4, cores = 4
+)
+show( m9.1 )
+precis( m9.1 , depth = 2)
+```
+
+除了使用 `traceplot()` 來進行診斷給出軌跡圖之外：
+
+
+```{r  introBayes12-fig03, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Trace plot of the Markov chain from the ruggedness model, m9.1. (Gray region is warmup)", fig.align='center'}
+traceplot(m9.1)
+```
+
+還可以使用 `trunkplot()` 繪製 軌跡排序圖 (trace rank plot)。
+
+```{r introBayes12-fig04, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Trunk plot of the Markov chain from the ruggedness model, m9.1.", fig.align='center'}
+ trankplot( m9.1 )
+```
+
+使用 `stancode()` 可以閱讀計算機自動生成的 Stan 代碼：
+
+
+```{r introBayes12-07, cache=TRUE}
+stancode(m9.1)
+```
 
 
