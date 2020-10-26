@@ -870,6 +870,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="52.1" data-path="-mcmc.html"><a href="-mcmc.html#國王訪問個各島嶼問題"><i class="fa fa-check"></i><b>52.1</b> 國王訪問個各島嶼問題</a></li>
 <li class="chapter" data-level="52.2" data-path="-mcmc.html"><a href="-mcmc.html#metropolis-演算法"><i class="fa fa-check"></i><b>52.2</b> Metropolis 演算法</a></li>
 <li class="chapter" data-level="52.3" data-path="-mcmc.html"><a href="-mcmc.html#簡單的-hmc-hamitonian-monte-carlo-ulam"><i class="fa fa-check"></i><b>52.3</b> 簡單的 HMC (Hamitonian Monte Carlo) <code>ulam</code></a></li>
+<li class="chapter" data-level="52.4" data-path="-mcmc.html"><a href="-mcmc.html#調教你的模型"><i class="fa fa-check"></i><b>52.4</b> 調教你的模型</a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="53" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>53</b> 重要概念複習</a>
@@ -2018,6 +2019,130 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##     }
 ##     log_gdp_std ~ normal( mu , sigma );
 ## }</code></pre>
+</div>
+<div id="調教你的模型" class="section level2" number="52.4">
+<h2><span class="header-section-number">52.4</span> 調教你的模型</h2>
+<p>有些模型給出的事後概率密度十分的寬且不準確，這常常是由於不加思索地給予所謂的“無信息先驗概率分佈”，也就是常見的平先驗概率分佈 (flat priors)。你可能會發現它給出的事後樣本採集鏈十分的野蠻，一會兒非常大，一會兒非常地小。下面是一個最簡單的例子，它用於計算兩個來自高斯分佈的觀察值 -1，和 1 的事後均值和標準差，使用的就是典型的平分佈作爲先驗概率分佈：</p>
+<div class="sourceCode" id="cb825"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb825-1"><a href="-mcmc.html#cb825-1"></a>y &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb825-2"><a href="-mcmc.html#cb825-2"></a><span class="kw">set.seed</span>(<span class="dv">11</span>)</span>
+<span id="cb825-3"><a href="-mcmc.html#cb825-3"></a>m9<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb825-4"><a href="-mcmc.html#cb825-4"></a>  <span class="kw">alist</span>(</span>
+<span id="cb825-5"><a href="-mcmc.html#cb825-5"></a>    y <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( mu, sigma ), </span>
+<span id="cb825-6"><a href="-mcmc.html#cb825-6"></a>    mu &lt;-<span class="st"> </span>alpha, </span>
+<span id="cb825-7"><a href="-mcmc.html#cb825-7"></a>    alpha <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span> , <span class="dv">1000</span> ),</span>
+<span id="cb825-8"><a href="-mcmc.html#cb825-8"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="fl">0.0001</span>)</span>
+<span id="cb825-9"><a href="-mcmc.html#cb825-9"></a>  ), <span class="dt">data  =</span> <span class="kw">list</span>(<span class="dt">y =</span> y), <span class="dt">chains =</span> <span class="dv">3</span></span>
+<span id="cb825-10"><a href="-mcmc.html#cb825-10"></a>)</span></code></pre></div>
+<pre><code>## 
+## SAMPLING FOR MODEL &#39;d7803dd6cca566b2b2321f4996382725&#39; NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 1e-05 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.1 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 1: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 1: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 1: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 1: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 0.071523 seconds (Warm-up)
+## Chain 1:                0.018019 seconds (Sampling)
+## Chain 1:                0.089542 seconds (Total)
+## Chain 1: 
+## 
+## SAMPLING FOR MODEL &#39;d7803dd6cca566b2b2321f4996382725&#39; NOW (CHAIN 2).
+## Chain 2: 
+## Chain 2: Gradient evaluation took 4e-06 seconds
+## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.04 seconds.
+## Chain 2: Adjust your expectations accordingly!
+## Chain 2: 
+## Chain 2: 
+## Chain 2: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 2: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 2: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 2: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 2: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 2: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 2: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 2: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 2: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 2: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 2: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 2: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 2: 
+## Chain 2:  Elapsed Time: 0.064305 seconds (Warm-up)
+## Chain 2:                0.01956 seconds (Sampling)
+## Chain 2:                0.083865 seconds (Total)
+## Chain 2: 
+## 
+## SAMPLING FOR MODEL &#39;d7803dd6cca566b2b2321f4996382725&#39; NOW (CHAIN 3).
+## Chain 3: 
+## Chain 3: Gradient evaluation took 4e-06 seconds
+## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.04 seconds.
+## Chain 3: Adjust your expectations accordingly!
+## Chain 3: 
+## Chain 3: 
+## Chain 3: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 3: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 3: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 3: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 3: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 3: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 3: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 3: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 3: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 3: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 3: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 3: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 3: 
+## Chain 3:  Elapsed Time: 0.067437 seconds (Warm-up)
+## Chain 3:                0.018783 seconds (Sampling)
+## Chain 3:                0.08622 seconds (Total)
+## Chain 3:</code></pre>
+<pre><code>## Warning: There were 82 divergent transitions after warmup. See
+## http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+## to find out why this is a problem and how to eliminate them.</code></pre>
+<pre><code>## Warning: Examine the pairs() plot to diagnose sampling problems</code></pre>
+<pre><code>## Warning: The largest R-hat is 1.07, indicating chains have not mixed.
+## Running the chains for more iterations may help. See
+## http://mc-stan.org/misc/warnings.html#r-hat</code></pre>
+<pre><code>## Warning: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.
+## Running the chains for more iterations may help. See
+## http://mc-stan.org/misc/warnings.html#bulk-ess</code></pre>
+<pre><code>## Warning: Tail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable.
+## Running the chains for more iterations may help. See
+## http://mc-stan.org/misc/warnings.html#tail-ess</code></pre>
+<div class="sourceCode" id="cb832"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb832-1"><a href="-mcmc.html#cb832-1"></a><span class="kw">precis</span>(m9<span class="fl">.2</span>)</span></code></pre></div>
+<pre><code>##             mean         sd        5.5%      94.5%     n_eff     Rhat4
+## alpha   9.166007  345.61898 -437.590250  520.93025 102.84571 1.0283245
+## sigma 620.035602 1514.59848   18.534647 2518.88736 198.57399 1.0384214</code></pre>
+<p>你會看見你的計算機給出的結果非常的奇怪，且有警報提示可能計算出錯。上述結果肯定是不正常的，因為觀察值 -1，和 1 的平均值應該是 0 。你看上面的結果給出的可信區間也是多麼的荒謬。可用的有效樣本量也是小的可憐。你可以看看它的軌跡圖，和軌跡排序圖是多麼地糟糕：</p>
+<div class="sourceCode" id="cb834"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb834-1"><a href="-mcmc.html#cb834-1"></a><span class="kw">traceplot</span>(m9<span class="fl">.2</span>)</span></code></pre></div>
+<pre><code>## [1] 1000
+## [1] 1
+## [1] 1000</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:introBayes12-fig05"></span>
+<img src="bookdown_files/figure-html/introBayes12-fig05-1.png" alt="Diagnosing trace plot from three trains by model m9.2. These chains are not healthy. " width="960" />
+<p class="caption">
+圖 52.5: Diagnosing trace plot from three trains by model m9.2. These chains are not healthy.
+</p>
+</div>
+<div class="sourceCode" id="cb836"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb836-1"><a href="-mcmc.html#cb836-1"></a><span class="kw">trankplot</span>(m9<span class="fl">.2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes12-fig06"></span>
+<img src="bookdown_files/figure-html/introBayes12-fig06-1.png" alt="Diagnosing trankplot from three chains by model 9.2. These chains are not healthy. " width="960" />
+<p class="caption">
+圖 52.6: Diagnosing trankplot from three chains by model 9.2. These chains are not healthy.
+</p>
+</div>
 
 </div>
 </div>
