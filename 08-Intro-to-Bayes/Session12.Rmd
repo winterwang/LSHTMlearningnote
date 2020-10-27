@@ -281,4 +281,52 @@ m9.4 <- ulam(
 precis(m9.4)
 ```
 
-看上面的模型給出的估計是多麼的可怕。有效樣本量竟然只有個位數。$\hat{R}$ 的估計值也是大得驚人。
+看上面的模型給出的估計是多麼的可怕。有效樣本量竟然只有個位數。$\hat{R}$ 的估計值也是大得驚人。`a1, a2` 的取值距離0都十分遙遠，標準差也大得驚人，且它們之和十分接近 0 。這就是兩個參數之和可求，但是他們各自卻有無窮解的實例。你觀察一下上述模型的軌跡圖：
+
+
+```{r introBayes12-fig09, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trace plot from three trains by model m9.4. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples.", fig.align='center'}
+traceplot(m9.4)
+```
+
+
+```{r introBayes12-fig10, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trank plot from three trains by model m9.5. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples.", fig.align='center'}
+trankplot(m9.4)
+```
+
+
+同樣地，對先驗概率分佈加以調整之後，有助於我們的模型事後樣本的採集。
+
+```{r introBayes12-12, cache=TRUE}
+set.seed(384)
+m9.5 <- ulam(
+  alist(
+    y ~ dnorm( mu, sigma ),
+    mu <- a1 + a2, 
+    a1 ~ dnorm( 0, 10 ),
+    a2 ~ dnorm( 0, 10 ), 
+    sigma ~ dexp(1)
+  ), data = list(y = y), chains = 3
+)
+
+precis(m9.5)
+```
+
+這時 `m9.5` 運行的速度提升了很多，且 `a1, a2` 的事後樣本估計比之前的 `m9.4` 要良好得多。軌跡圖和軌跡排序圖也要改善了很多：
+
+
+```{r introBayes12-fig11, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trace plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors", fig.align='center'}
+traceplot(m9.5)
+```
+
+
+
+```{r introBayes12-fig12, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trank plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors", fig.align='center'}
+trankplot(m9.5)
+```
+
+
+
+如果一個模型，它的事後概率分佈的採樣過程太過於漫長，那麼它很可能就是由於有些參數出現了無法被估計的現象。請試着給它的先驗概率分佈加一些較爲微弱的信息以改善模型的樣本採集過程。儘量不要使用完全無信息的平概率分佈作爲先驗概率分佈。
+
+
+
