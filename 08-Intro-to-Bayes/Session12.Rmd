@@ -241,6 +241,44 @@ trankplot(m9.3)
 
 ### 無法被確認的參數 non-identifiable parameters
 
-之前我們就遇見了參數共線性給模型造成的麻煩 (Chapter \@ref())
+之前我們就遇見了參數共線性給模型造成的麻煩 (Chapter \@ref(multicollinearity))。這裏我們來觀察一下共線性變量造成的參數無法被估計的時候，MCMC給出的結果和預警會是怎樣的：
 
+1. 我們先從標準正（常）態分佈中隨機抽取100個觀察數據；
 
+```{r introBayes12-10, cache=TRUE}
+set.seed(41)
+y <- rnorm(100, mean = 0, sd = 1)
+```
+
+2. 我們“錯誤地”使用下面的模型；
+
+$$
+\begin{aligned}
+y_i & \sim \text{Normal}(\mu, \sigma) \\ 
+\mu & = \alpha_1 + \alpha_2 \\ 
+\alpha_1 & \sim \text{Normal}(0, 1000) \\
+\alpha_2 & \sim \text{Normal}(0, 1000) \\ 
+\sigma & \sim \text{Exponential}(1)
+\end{aligned}
+$$
+
+上述模型中的線性回歸模型，包含了兩個參數 $\alpha_1, \alpha_2$ 他們是無法被估計的，但是他們的和，是可以被估計的，且由於我們先從正（常）態分佈中採集的觀察數據樣本，我們知道這個和應該在 0 附近不會太遠。
+
+3. 下面的代碼是上述模型的翻譯，這時 Stan 運行的時間會較長；
+
+```{r introBayes12-11, cache=TRUE}
+set.seed(384)
+m9.4 <- ulam(
+  alist(
+    y ~ dnorm( mu, sigma ),
+    mu <- a1 + a2, 
+    a1 ~ dnorm( 0, 1000 ),
+    a2 ~ dnorm( 0, 1000 ), 
+    sigma ~ dexp(1)
+  ), data = list(y = y), chains = 3
+)
+
+precis(m9.4)
+```
+
+看上面的模型給出的估計是多麼的可怕。有效樣本量竟然只有個位數。$\hat{R}$ 的估計值也是大得驚人。
