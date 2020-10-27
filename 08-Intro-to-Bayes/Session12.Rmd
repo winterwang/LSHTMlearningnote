@@ -193,3 +193,54 @@ traceplot(m9.2)
 ```{r introBayes12-fig06, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trankplot from three chains by model 9.2. These chains are not healthy. ", fig.align='center'}
 trankplot(m9.2)
 ```
+
+
+
+讓我們把模型修改成一個微調了先驗概率分佈的模型：
+
+$$
+\begin{aligned}
+y_i & \sim \text{Normal}(\mu, \sigma) \\
+\mu & = \alpha \\
+\color{red}{\alpha} &\; \color{red}{\sim \text{Normal}(1, 10)} \\ 
+\color{red}{\sigma} &\; \color{red}{\sim \text{Exponential}(1)}
+\end{aligned}
+$$
+
+我們僅僅是給均值，和對應的標準差增加了一點點比平概率分佈多一些信息的分佈。於是這個模型可以變成：
+
+
+```{r  introBayes12-09, cache=TRUE}
+set.seed(11)
+m9.3 <- ulam(
+  alist(
+    y ~ dnorm( mu, sigma ), 
+    mu <- alpha, 
+    alpha ~ dnorm(1, 10), 
+    sigma ~ dexp(1)
+  ), data = list(y = y), chains = 3
+)
+precis(m9.3)
+```
+
+
+可以看見，調教了一點點的先驗概率分佈之後給出的事後概率分佈估計就變得合理許多了。新的模型的軌跡圖和軌跡排序圖也變得合理許多：
+
+
+```{r introBayes12-fig07, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trace plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition.", fig.align='center'}
+traceplot(m9.3)
+```
+
+```{r introBayes12-fig08, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trank plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition.", fig.align='center'}
+trankplot(m9.3)
+```
+
+
+可以看到對先驗概率分佈稍微增加一些微弱的信息之後，即便只有兩個觀察變量的數據給出的似然 likelihood 也已經遠遠把先驗概率的信息給掩蓋掉了，我們給出的先驗概率的均值是1，但是觀察數據兩個 -1 和 1 的均值是 0。
+
+
+### 無法被確認的參數 non-identifiable parameters
+
+之前我們就遇見了參數共線性給模型造成的麻煩 (Chapter \@ref())
+
+
