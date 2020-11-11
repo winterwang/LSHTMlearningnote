@@ -1,4 +1,4 @@
-> Bayesian updating is entropy maximization.
+> Bayesian updating is entropy maximization.... Information entropy is a way of counting how many unique arrangements correspond to a distribution. 
 > ~ Richard McElreath
 
 > A sensitivity analysis explores how changes in assumptions influence inference. If none of the alternative assumptions you consider have much impact on inference, that's worth reporting. Likewise, if the alternatives you consider to have an important impact on inference, that's also worth reporting. 
@@ -32,6 +32,151 @@ $$
 data(chimpanzees)
 d <- chimpanzees
 str(d)
+```
+
+上述數據其實來自 [@silk2005chimpanzees] ，該實驗講的是針對類人猿或者黑猩猩做的社會學實驗。設計是這樣的，在一張桌子上擺了四個盤子和兩個槓桿。其中東側槓桿，西側槓桿的功能是相同的，就是分別把放在槓桿裝置上的兩個盤子送往桌子的南北兩側。其中一側槓桿控制的兩個盤子裏只有一個裝有食物，另一側槓桿控制的兩個盤子都裝有食物。社會學研究做的實驗是，讓參加實驗的黑猩猩自行選擇搖動東側還是西側的槓桿。但是有的黑猩猩的對面會坐另外一只不能控制槓桿的同類。當相同的實驗在人類學生羣體中實施的時候，幾乎所有對面還坐有另一明學生的實驗學生都選擇了去搖動能夠控制兩盤食物的槓桿，也就是傾向於讓對面的同類也能獲得食物而不是只選擇自己有食物。這被叫做社會傾向化 (prosocial option)。於是我們的疑問是，是否類人猿黑猩猩也會有相似的行爲呢？也就是當對面也坐有同類時會作出社會傾向化的選擇呢？
+
+上述數據中的兩個變量是特別關鍵的，
+
+- `prosoc_left`: 二進制變量，0 表示右側槓桿是社會傾向化，1 表示左側槓桿是社會傾向化。
+- `condition`: 二進制變量，0 表示對面沒有同伴，1 表示對面坐有同伴。
+
+也就是說，在我們的模型中，我們希望研究這兩個變量之間是不是存在交互作用。我們希望分析下列四種情況下，類人猿黑猩猩作出的選擇：
+
+- `prosoc_left = 0` and `condition = 0`，右側槓桿有兩份食物，對面沒有同伴；
+- `prosoc_left = 1` and `condition = 0`，左側槓桿有兩份食物，對面沒有同伴；
+- `prosoc_left = 0` and `condition = 1`，右側槓桿有兩份食物，對面有同伴；
+- `prosoc_left = 1` and `condition = 1`，左側槓桿有兩份食物，對面有同伴；
+
+熟悉廣義線性回歸模型，比如邏輯回歸模型的朋友可能最開始想到的方法是用上述啞變量來建立簡單的交互作用項放在模型結構裏就可以解決問題了。但是我們知道使用啞變量的缺點是使得先驗概率分佈的設定變得困難，所以我們希望不要使用啞變量的方法，轉而使用更加靈活的索引變量法 (index variable):
+
+```{r introBayes13-02, cache=TRUE}
+d$treatment <- 1 + d$prosoc_left + 2 * d$condition
+xtabs( ~ treatment + prosoc_left + condition, d)
+```
+
+
+於是，我們現在可以把這個實驗蘊含的數學模型寫下來：
+
+
+$$
+\begin{aligned}
+L_i & \sim \text{Binomial}(1, p_i) \\
+\text{logit}(p_i) & = \alpha_{\text{ACTOR}[i]} + \beta_{\text{TREATMENT}[i]} \\ 
+\alpha_j & \sim \text{To be determined} \\
+\beta_k & \sim \text{To be determined} \\
+\end{aligned}
+$$
+
+這裏的 $L_i \sim \text{Binomial}(1, p_i)$ 其實等價於 $L_i \sim \text{Bernoulli}(p_i)$。同時我們還需要決定每個參數的先驗概率分佈。其中有七隻黑猩猩，所以有 7 個 $\alpha$ 的先驗概率，還有 4 個回歸係數 $\beta$ 屬於上面描述的四種不同的條件。
+
+在思考如何給這些參數設定先驗概率分佈時，我們先從最簡單的一個邏輯回歸模型出發：
+
+
+$$
+\begin{aligned}
+L_i & \sim \text{Binomial}(1, p_i) \\ 
+\text{logit}(p_i) & = \alpha \\ 
+\alpha & \sim \text{Normal}(0, \omega)
+\end{aligned}
+$$
+
+這時，我們需要先決定這個 $\omega$ 作爲一個合理的先驗概率分佈。我們先從相當平坦的一個分佈開始，例如 $\omega = 10$。
+
+```{r introBayes13-03, cache=TRUE}
+m11.1 <- quap(
+  alist(
+    pulled_left ~ dbinom( 1, p ), 
+    logit(p) <- a, 
+    a ~ dnorm( 0, 10 )
+  ), data = d
+)
+```
+
+接下來，我們從 `m11.1` 中的先驗概率採集一些樣本：
+
+```{r introBayes13-04, cache=TRUE}
+set.seed(1999) 
+prior <- extract.prior( m11.1, n = 10000)
+```
+
+接下來還有一步，就是要把數據通過鏈接函數的逆函數轉換回去原來的 0-1 之間的概率尺度。對於邏輯回歸來說，鏈接函數就是 `logit` 函數，其逆函數就是 `inv_logit`。
+
+```{r introBayes13-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the intercept produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 1.5) prior produces something more reasonable (blue).", fig.align='center'}
+p <- inv_logit( prior$a )
+dens( p, adj = 0.1 ,
+      bty = "n",
+      xlab = "prior prob pull left")
+m11.1 <- quap(
+  alist(
+    pulled_left ~ dbinom( 1, p ), 
+    logit(p) <- a, 
+    a ~ dnorm( 0, 1.5 )
+  ), data = d
+)
+set.seed(1999) 
+prior <- extract.prior( m11.1, n = 10000)
+p1 <- inv_logit( prior$a )
+lines( density(p1), adj = 0.1, 
+       col = rangi2)
+text(0.15, 9, "a ~ dnorm(0, 10)")
+text(0.5, 1.8, "a ~ dnorm(0, 1.5)", col = rangi2)
+```
+
+圖 \@ref(fig:introBayes13-fig01) 給出的先驗概率是多麼地不合理，它把大部分的概率權重都分配給了0，或者1附近的概率。這代表什麼含義呢？ 如果你使用 $\alpha \sim \text{Normal}(0,10)$ 作爲截距的先驗概率分佈，代表你初期的設定是，在還沒有開始進行實驗之前，我們認爲實驗對象的黑猩猩要麼總是去拉左手的槓桿，要麼永遠都不去拉左手槓桿。這其實不用說也知道是十分不合理的。如果我們把 $\omega = 1.5$ 作爲先驗概率分佈的方差的話，給出的圖形，會合理地多 (圖 \@ref(fig:introBayes13-fig01) 中藍色概率密度曲線)。
+
+這裏告訴我們的是，一個先驗概率分佈在 logit 尺度上的平坦分佈，在回到原來的概率尺度上的時候，會給出事與願違的非平坦分佈結果。
+
+接下來我們再來考慮不同條件下的回歸係數 $\beta$，在這裏，術語可以使用治療效果 (treatment effect) 來表達。假如我們再次自作聰明地使用平坦的分佈 $\text{Normal}(0,10)$ 作先驗概率分佈，看它會給出怎樣的結果：
+
+
+```{r introBayes13-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the treatment effect also produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 0.5) prior produces something more reasonable (blue).", fig.align='center'}
+m11.2 <- quap(
+  alist(
+    pulled_left ~ dbinom( 1, p ), 
+    logit(p) <- a + b[treatment], 
+    a ~ dnorm( 0, 1.5 ), 
+    b[treatment] ~ dnorm( 0, 10 )
+  ), data = d
+)
+set.seed(1999)
+prior <- extract.prior( m11.2, n = 10000) 
+p <- sapply( 1:4, function(k) inv_logit(prior$a + prior$b[, k]))
+dens(abs(p[,1] - p[,2]), adj = 0.1, 
+      bty = "n",
+      xlab = "prior diff between treatments")
+text(0.8, 9, "b ~ dnorm(0, 10)")
+
+m11.2.1 <- quap(
+  alist(
+    pulled_left ~ dbinom( 1, p ), 
+    logit(p) <- a + b[treatment], 
+    a ~ dnorm( 0, 1.5 ), 
+    b[treatment] ~ dnorm( 0, 0.5 )
+  ), data = d
+)
+set.seed(1999)
+prior <- extract.prior( m11.2.1, n = 10000) 
+p1 <- sapply( 1:4, function(k) inv_logit(prior$a + prior$b[, k]))
+lines(density(abs(p1[,1] - p1[,2])), adj = 0.1, 
+       col = rangi2)
+text(0.3, 4, "b ~ dnorm(0, 0.5)", col = rangi2)
+```
+
+修改了先驗概率分佈的方差 $\omega = 0.5$ 之後，我們發現大部分的概率密度被分配到了 0 附近而不是原來的非 0 即 1。但是此時的先驗療效差的平均值是：
+
+```{r introBayes13-05, cache=TRUE}
+mean(abs(p1[,1] - p1[,2]))
+```
+
+也就是 10% 左右的療效差，也就是不同條件下的概率不至於變得非常大。
+
+
+於是我們搞定了該怎樣設定先驗概率的問題之後，進入模型的運行階段：
+
+
+```{r introBayes13-06, cache=TRUE}
+
 ```
 
 
