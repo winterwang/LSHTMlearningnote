@@ -34,7 +34,7 @@ d <- chimpanzees
 str(d)
 ```
 
-上述數據其實來自 [@silk2005chimpanzees] ，該實驗講的是針對類人猿或者黑猩猩做的社會學實驗。設計是這樣的，在一張桌子上擺了四個盤子和兩個槓桿。其中東側槓桿，西側槓桿的功能是相同的，就是分別把放在槓桿裝置上的兩個盤子送往桌子的南北兩側。其中一側槓桿控制的兩個盤子裏只有一個裝有食物，另一側槓桿控制的兩個盤子都裝有食物。社會學研究做的實驗是，讓參加實驗的黑猩猩自行選擇搖動東側還是西側的槓桿。但是有的黑猩猩的對面會坐另外一只不能控制槓桿的同類。當相同的實驗在人類學生羣體中實施的時候，幾乎所有對面還坐有另一明學生的實驗學生都選擇了去搖動能夠控制兩盤食物的槓桿，也就是傾向於讓對面的同類也能獲得食物而不是只選擇自己有食物。這被叫做社會傾向化 (prosocial option)。於是我們的疑問是，是否類人猿黑猩猩也會有相似的行爲呢？也就是當對面也坐有同類時會作出社會傾向化的選擇呢？
+上述數據其實來自 [@silk2005chimpanzees] ，該實驗講的是針對類人猿或者黑猩猩做的社會學實驗。設計是這樣的，在一張桌子上擺了四個盤子和兩個槓桿。其中東側槓桿，西側槓桿的功能是相同的，就是分別把放在槓桿裝置上的兩個盤子送往桌子的南北兩側。其中一側槓桿控制的兩個盤子裏只有一個裝有食物，另一側槓桿控制的兩個盤子都裝有食物。社會學研究做的實驗是，讓參加實驗的黑猩猩自行選擇搖動東側還是西側的槓桿。但是有的黑猩猩的對面會坐另外一只不能控制槓桿的同類。當相同的實驗在人類學生羣體中實施的時候，幾乎所有對面還坐有另一名學生的實驗學生都選擇了去搖動能夠控制兩盤食物的槓桿，也就是傾向於讓對面的同類也能獲得食物而不是只選擇自己有食物。這被叫做社會傾向化 (prosocial option)。於是我們的疑問是，是否類人猿黑猩猩也會有相似的行爲呢？也就是當對面也坐有同類時會作出社會傾向化的選擇呢？
 
 上述數據中的兩個變量是特別關鍵的，
 
@@ -172,12 +172,67 @@ mean(abs(p1[,1] - p1[,2]))
 也就是 10% 左右的療效差，也就是不同條件下的概率不至於變得非常大。
 
 
-於是我們搞定了該怎樣設定先驗概率的問題之後，進入模型的運行階段：
+於是我們搞定了該怎樣設定先驗概率的問題之後，進入數據準備，和模型的運行階段：
 
 
 ```{r introBayes13-06, cache=TRUE}
-
+# trimmed data list 
+dat_list <- list(
+  pulled_left = d$pulled_left, 
+  actor = d$actor, 
+  treatment = as.integer(d$treatment)
+)
 ```
+
+
+數據準備好了以後，讓我們來使用 Markov Chain 運行這個邏輯回歸模型：
+
+
+```{r introBayes13-07, cache=TRUE}
+m11.4 <- ulam(
+  alist(
+    pulled_left ~ dbinom( 1, p ), 
+    logit(p) <- a[actor] + b[treatment], 
+    a[actor] ~ dnorm( 0, 1.5 ), 
+    b[treatment] ~ dnorm( 0, 0.5 )
+  ), data = dat_list, chains = 4, log_lik = TRUE
+)
+precis( m11.4, depth = 2 )
+```
+
+上述模型運行的結果中，前面 7 個每隻黑猩猩的截距，也就是代表了每隻黑猩猩本身會主動去拉動左邊槓桿的傾向性。我們來把這個數據轉換到它本身應該有的數據尺度上來看：
+
+```{r introBayes13-fig03, cache=TRUE, fig.width=6.5, fig.height=5,  fig.cap="The intercepts unique to each chimpanzee, on the probability scale.", fig.align='center'}
+post <- extract.samples(m11.4)
+p_left <- inv_logit( post$a )
+plot( precis(as.data.frame(p_left)), xlim = c(0,1))
+```
+
+
+
+可以看到，比較明顯的傾向於去拉右側槓桿的是1，3，4，5這四隻黑猩猩。2號和7號黑猩猩則體現出了相反的興趣。這是每隻黑猩猩本身對於拉左右兩側哪隻槓桿的最基本的傾向性分析。接下來我們來看不同的條件下的效果差別：
+
+
+```{r introBayes13-fig04, cache=TRUE, fig.width=6.5, fig.height=5,  fig.cap="The treatment effect by different conditions, on the log-odds scale.", fig.align='center'}
+labs <- c("R/N", "L/N", "R/P", "L/P")
+plot( precis(m11.4, depth = 2, pars = "b"), labels = labs)
+```
+
+
+我們通過該實驗希望獲得的分析結果是，到底桌子對面坐與不坐同類，黑猩猩是否會作出不同的社會化傾向選擇？也就是黑猩猩是否會根據對面有沒有同類而去拉那個有兩個食物那一側的槓桿。這意味着我們希望比較的是第一行和第三行，也就是當兩份食物都在右側槓桿時，對面有沒有同類是否會改變黑猩猩拉動右側槓桿的選擇；同時我們也希望比較第二行和第四行的結果，也就是兩份食物都在左側槓桿時，對面有沒有同類是否會改變黑猩猩拉動左側槓桿的選擇。其實我們看圖 \@ref(fig:introBayes13-fig04) 已經能夠猜出大概沒有差異的的結果了。但是我們是可以對這兩個條件下的差異作出比較，並計算其可信區間的：
+
+```{r introBayes13-fig05, cache=TRUE, fig.width=6.5, fig.height=5,  fig.cap="The treatment effect difference compared between R/N R/P, and L/N L/P, on the log-odds scale.", fig.align='center'}
+diffs <- list(
+  db13 = post$b[, 1] - post$b[, 3], 
+  db24 = post$b[, 2] - post$b[, 4]
+)
+
+plot(precis(diffs))
+```
+
+`db13, db14` 就是我們希望求的比較有/沒有同伴坐在桌子對面是否影響黑猩猩作出社會化傾向選擇的療效差異 (the contrast between the no-partner/partner treatments)。`db13` 的準確解釋是，當右側槓桿控制兩份食物時，對面有同伴/沒有同伴的情況下，黑猩猩會傾向於去使用左側槓桿的療效差異 (treatment effect difference)。所以，如果有證據證明有同伴的情況下，黑猩猩會傾向於作出社會化選擇，那麼我們應該會看到不等於零的療效差異，也就是會在有同伴的時候更多的去拉右邊的槓桿。但其實 `db13` 的結果似乎顯示有微弱的證據證明，當沒有同伴時，黑猩猩會略微更多的傾向於拉左邊槓桿（沒有社會化傾向），當然這個證據很微弱，可信區間也包括沒有療效差異的 0。相似地，`db24` 比較的是，當兩份食物出現在左側槓桿時，對面有同伴/沒有同伴情況之間拉動左側槓桿的療效差異。如果我們期待黑猩猩會作出會社會化傾向選擇當對面坐有同伴的話，我們會希望這個 `db24` 的取值會顯著小於零，但事實上卻沒有符合這樣期待的結果。
+
+
 
 
 
