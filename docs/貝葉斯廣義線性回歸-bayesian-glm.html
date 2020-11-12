@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-11-11" />
+<meta name="date" content="2020-11-12" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1569,7 +1569,7 @@ y \sim \text{Binomial}(n, p)
 ##  $ prosoc_left : int  0 0 1 0 1 1 1 1 0 0 ...
 ##  $ chose_prosoc: int  1 0 0 1 1 1 0 0 1 1 ...
 ##  $ pulled_left : int  0 1 0 0 1 1 0 0 0 0 ...</code></pre>
-<p>上述數據其實來自 <span class="citation">(Silk et al. <a href="#ref-silk2005chimpanzees" role="doc-biblioref">2005</a>)</span> ，該實驗講的是針對類人猿或者黑猩猩做的社會學實驗。設計是這樣的，在一張桌子上擺了四個盤子和兩個槓桿。其中東側槓桿，西側槓桿的功能是相同的，就是分別把放在槓桿裝置上的兩個盤子送往桌子的南北兩側。其中一側槓桿控制的兩個盤子裏只有一個裝有食物，另一側槓桿控制的兩個盤子都裝有食物。社會學研究做的實驗是，讓參加實驗的黑猩猩自行選擇搖動東側還是西側的槓桿。但是有的黑猩猩的對面會坐另外一只不能控制槓桿的同類。當相同的實驗在人類學生羣體中實施的時候，幾乎所有對面還坐有另一明學生的實驗學生都選擇了去搖動能夠控制兩盤食物的槓桿，也就是傾向於讓對面的同類也能獲得食物而不是只選擇自己有食物。這被叫做社會傾向化 (prosocial option)。於是我們的疑問是，是否類人猿黑猩猩也會有相似的行爲呢？也就是當對面也坐有同類時會作出社會傾向化的選擇呢？</p>
+<p>上述數據其實來自 <span class="citation">(Silk et al. <a href="#ref-silk2005chimpanzees" role="doc-biblioref">2005</a>)</span> ，該實驗講的是針對類人猿或者黑猩猩做的社會學實驗。設計是這樣的，在一張桌子上擺了四個盤子和兩個槓桿。其中東側槓桿，西側槓桿的功能是相同的，就是分別把放在槓桿裝置上的兩個盤子送往桌子的南北兩側。其中一側槓桿控制的兩個盤子裏只有一個裝有食物，另一側槓桿控制的兩個盤子都裝有食物。社會學研究做的實驗是，讓參加實驗的黑猩猩自行選擇搖動東側還是西側的槓桿。但是有的黑猩猩的對面會坐另外一只不能控制槓桿的同類。當相同的實驗在人類學生羣體中實施的時候，幾乎所有對面還坐有另一名學生的實驗學生都選擇了去搖動能夠控制兩盤食物的槓桿，也就是傾向於讓對面的同類也能獲得食物而不是只選擇自己有食物。這被叫做社會傾向化 (prosocial option)。於是我們的疑問是，是否類人猿黑猩猩也會有相似的行爲呢？也就是當對面也坐有同類時會作出社會傾向化的選擇呢？</p>
 <p>上述數據中的兩個變量是特別關鍵的，</p>
 <ul>
 <li><code>prosoc_left</code>: 二進制變量，0 表示右側槓桿是社會傾向化，1 表示左側槓桿是社會傾向化。</li>
@@ -1699,6 +1699,168 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 <div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb873-1"></a><span class="kw">mean</span>(<span class="kw">abs</span>(p1[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>p1[,<span class="dv">2</span>]))</span></code></pre></div>
 <pre><code>## [1] 0.098386632</code></pre>
 <p>也就是 10% 左右的療效差，也就是不同條件下的概率不至於變得非常大。</p>
+<p>於是我們搞定了該怎樣設定先驗概率的問題之後，進入數據準備，和模型的運行階段：</p>
+<div class="sourceCode" id="cb875"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb875-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-1"></a><span class="co"># trimmed data list </span></span>
+<span id="cb875-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-2"></a>dat_list &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb875-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-3"></a>  <span class="dt">pulled_left =</span> d<span class="op">$</span>pulled_left, </span>
+<span id="cb875-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-4"></a>  <span class="dt">actor =</span> d<span class="op">$</span>actor, </span>
+<span id="cb875-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-5"></a>  <span class="dt">treatment =</span> <span class="kw">as.integer</span>(d<span class="op">$</span>treatment)</span>
+<span id="cb875-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-6"></a>)</span></code></pre></div>
+<p>數據準備好了以後，讓我們來使用 Markov Chain 運行這個邏輯回歸模型：</p>
+<div class="sourceCode" id="cb876"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb876-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-1"></a>m11<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb876-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb876-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-3"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb876-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>b[treatment], </span>
+<span id="cb876-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-5"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb876-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-6"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> )</span>
+<span id="cb876-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-7"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb876-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-8"></a>)</span></code></pre></div>
+<pre><code>## 
+## SAMPLING FOR MODEL &#39;82480dff1a626a42c2ca9de938d65b9d&#39; NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 6.5e-05 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.65 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 1: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 1: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 1: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 1: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 0.313872 seconds (Warm-up)
+## Chain 1:                0.335592 seconds (Sampling)
+## Chain 1:                0.649464 seconds (Total)
+## Chain 1: 
+## 
+## SAMPLING FOR MODEL &#39;82480dff1a626a42c2ca9de938d65b9d&#39; NOW (CHAIN 2).
+## Chain 2: 
+## Chain 2: Gradient evaluation took 4.8e-05 seconds
+## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.48 seconds.
+## Chain 2: Adjust your expectations accordingly!
+## Chain 2: 
+## Chain 2: 
+## Chain 2: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 2: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 2: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 2: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 2: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 2: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 2: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 2: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 2: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 2: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 2: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 2: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 2: 
+## Chain 2:  Elapsed Time: 0.327142 seconds (Warm-up)
+## Chain 2:                0.270332 seconds (Sampling)
+## Chain 2:                0.597474 seconds (Total)
+## Chain 2: 
+## 
+## SAMPLING FOR MODEL &#39;82480dff1a626a42c2ca9de938d65b9d&#39; NOW (CHAIN 3).
+## Chain 3: 
+## Chain 3: Gradient evaluation took 4.2e-05 seconds
+## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.42 seconds.
+## Chain 3: Adjust your expectations accordingly!
+## Chain 3: 
+## Chain 3: 
+## Chain 3: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 3: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 3: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 3: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 3: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 3: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 3: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 3: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 3: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 3: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 3: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 3: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 3: 
+## Chain 3:  Elapsed Time: 0.325826 seconds (Warm-up)
+## Chain 3:                0.267954 seconds (Sampling)
+## Chain 3:                0.59378 seconds (Total)
+## Chain 3: 
+## 
+## SAMPLING FOR MODEL &#39;82480dff1a626a42c2ca9de938d65b9d&#39; NOW (CHAIN 4).
+## Chain 4: 
+## Chain 4: Gradient evaluation took 4.3e-05 seconds
+## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.43 seconds.
+## Chain 4: Adjust your expectations accordingly!
+## Chain 4: 
+## Chain 4: 
+## Chain 4: Iteration:   1 / 1000 [  0%]  (Warmup)
+## Chain 4: Iteration: 100 / 1000 [ 10%]  (Warmup)
+## Chain 4: Iteration: 200 / 1000 [ 20%]  (Warmup)
+## Chain 4: Iteration: 300 / 1000 [ 30%]  (Warmup)
+## Chain 4: Iteration: 400 / 1000 [ 40%]  (Warmup)
+## Chain 4: Iteration: 500 / 1000 [ 50%]  (Warmup)
+## Chain 4: Iteration: 501 / 1000 [ 50%]  (Sampling)
+## Chain 4: Iteration: 600 / 1000 [ 60%]  (Sampling)
+## Chain 4: Iteration: 700 / 1000 [ 70%]  (Sampling)
+## Chain 4: Iteration: 800 / 1000 [ 80%]  (Sampling)
+## Chain 4: Iteration: 900 / 1000 [ 90%]  (Sampling)
+## Chain 4: Iteration: 1000 / 1000 [100%]  (Sampling)
+## Chain 4: 
+## Chain 4:  Elapsed Time: 0.32519 seconds (Warm-up)
+## Chain 4:                0.275925 seconds (Sampling)
+## Chain 4:                0.601115 seconds (Total)
+## Chain 4:</code></pre>
+<div class="sourceCode" id="cb878"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb878-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb878-1"></a><span class="kw">precis</span>( m11<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
+<pre><code>##              mean         sd         5.5%        94.5%      n_eff     Rhat4
+## a[1] -0.454528384 0.32784554 -0.974289793  0.056337329  618.68588 1.0077899
+## a[2]  3.875703937 0.72755168  2.766577132  5.147479217 1306.51622 1.0025155
+## a[3] -0.750302976 0.33196834 -1.278575815 -0.221997949  658.67549 1.0060117
+## a[4] -0.746466971 0.33534806 -1.283052917 -0.232894587  671.87596 1.0102549
+## a[5] -0.450259964 0.32048260 -0.972506082  0.039839563  872.49338 1.0019393
+## a[6]  0.477485747 0.31354283 -0.011671408  0.988217297  629.08551 1.0091487
+## a[7]  1.950363542 0.40976409  1.291966325  2.609784873  986.14787 1.0017700
+## b[1] -0.039402758 0.27891457 -0.475172333  0.391039984  683.56834 1.0071468
+## b[2]  0.483039914 0.27985372  0.041473420  0.914323700  633.84844 1.0053936
+## b[3] -0.380825647 0.27648954 -0.828977753  0.057105236  632.37705 1.0067710
+## b[4]  0.374910681 0.27407066 -0.062467628  0.808194812  592.12092 1.0084258</code></pre>
+<p>上述模型運行的結果中，前面 7 個每隻黑猩猩的截距，也就是代表了每隻黑猩猩本身會主動去拉動左邊槓桿的傾向性。我們來把這個數據轉換到它本身應該有的數據尺度上來看：</p>
+<div class="sourceCode" id="cb880"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb880-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb880-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m11<span class="fl">.4</span>)</span>
+<span id="cb880-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb880-2"></a>p_left &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( post<span class="op">$</span>a )</span>
+<span id="cb880-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb880-3"></a><span class="kw">plot</span>( <span class="kw">precis</span>(<span class="kw">as.data.frame</span>(p_left)), <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes13-fig03"></span>
+<img src="bookdown_files/figure-html/introBayes13-fig03-1.png" alt="The intercepts unique to each chimpanzee, on the probability scale." width="624" />
+<p class="caption">
+圖 53.3: The intercepts unique to each chimpanzee, on the probability scale.
+</p>
+</div>
+<p>可以看到，比較明顯的傾向於去拉右側槓桿的是1，3，4，5這四隻黑猩猩。2號和7號黑猩猩則體現出了相反的興趣。這是每隻黑猩猩本身對於拉左右兩側哪隻槓桿的最基本的傾向性分析。接下來我們來看不同的條件下的效果差別：</p>
+<div class="sourceCode" id="cb881"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb881-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb881-1"></a>labs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;R/N&quot;</span>, <span class="st">&quot;L/N&quot;</span>, <span class="st">&quot;R/P&quot;</span>, <span class="st">&quot;L/P&quot;</span>)</span>
+<span id="cb881-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb881-2"></a><span class="kw">plot</span>( <span class="kw">precis</span>(m11<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span>, <span class="dt">pars =</span> <span class="st">&quot;b&quot;</span>), <span class="dt">labels =</span> labs)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes13-fig04"></span>
+<img src="bookdown_files/figure-html/introBayes13-fig04-1.png" alt="The treatment effect by different conditions, on the log-odds scale." width="624" />
+<p class="caption">
+圖 53.4: The treatment effect by different conditions, on the log-odds scale.
+</p>
+</div>
+<p>我們通過該實驗希望獲得的分析結果是，到底桌子對面坐與不坐同類，黑猩猩是否會作出不同的社會化傾向選擇？也就是黑猩猩是否會根據對面有沒有同類而去拉那個有兩個食物那一側的槓桿。這意味着我們希望比較的是第一行和第三行，也就是當兩份食物都在右側槓桿時，對面有沒有同類是否會改變黑猩猩拉動右側槓桿的選擇；同時我們也希望比較第二行和第四行的結果，也就是兩份食物都在左側槓桿時，對面有沒有同類是否會改變黑猩猩拉動左側槓桿的選擇。其實我們看圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig04">53.4</a> 已經能夠猜出大概沒有差異的的結果了。但是我們是可以對這兩個條件下的差異作出比較，並計算其可信區間的：</p>
+<div class="sourceCode" id="cb882"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb882-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-1"></a>diffs &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb882-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-2"></a>  <span class="dt">db13 =</span> post<span class="op">$</span>b[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>b[, <span class="dv">3</span>], </span>
+<span id="cb882-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-3"></a>  <span class="dt">db24 =</span> post<span class="op">$</span>b[, <span class="dv">2</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>b[, <span class="dv">4</span>]</span>
+<span id="cb882-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-4"></a>)</span>
+<span id="cb882-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-5"></a></span>
+<span id="cb882-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-6"></a><span class="kw">plot</span>(<span class="kw">precis</span>(diffs))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes13-fig05"></span>
+<img src="bookdown_files/figure-html/introBayes13-fig05-1.png" alt="The treatment effect difference compared between R/N R/P, and L/N L/P, on the log-odds scale." width="624" />
+<p class="caption">
+圖 53.5: The treatment effect difference compared between R/N R/P, and L/N L/P, on the log-odds scale.
+</p>
+</div>
+<p><code>db13, db14</code> 就是我們希望求的比較有/沒有同伴坐在桌子對面是否影響黑猩猩作出社會化傾向選擇的療效差異 (the contrast between the no-partner/partner treatments)。<code>db13</code> 的準確解釋是，當右側槓桿控制兩份食物時，對面有同伴/沒有同伴的情況下，黑猩猩會傾向於去使用左側槓桿的療效差異 (treatment effect difference)。所以，如果有證據證明有同伴的情況下，黑猩猩會傾向於作出社會化選擇，那麼我們應該會看到不等於零的療效差異，也就是會在有同伴的時候更多的去拉右邊的槓桿。但其實 <code>db13</code> 的結果似乎顯示有微弱的證據證明，當沒有同伴時，黑猩猩會略微更多的傾向於拉左邊槓桿（沒有社會化傾向），當然這個證據很微弱，可信區間也包括沒有療效差異的 0。相似地，<code>db24</code> 比較的是，當兩份食物出現在左側槓桿時，對面有同伴/沒有同伴情況之間拉動左側槓桿的療效差異。如果我們期待黑猩猩會作出會社會化傾向選擇當對面坐有同伴的話，我們會希望這個 <code>db24</code> 的取值會顯著小於零，但事實上卻沒有符合這樣期待的結果。</p>
 
 </div>
 </div>
