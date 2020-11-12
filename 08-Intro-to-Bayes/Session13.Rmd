@@ -233,6 +233,74 @@ plot(precis(diffs))
 `db13, db14` 就是我們希望求的比較有/沒有同伴坐在桌子對面是否影響黑猩猩作出社會化傾向選擇的療效差異 (the contrast between the no-partner/partner treatments)。`db13` 的準確解釋是，當右側槓桿控制兩份食物時，對面有同伴/沒有同伴的情況下，黑猩猩會傾向於去使用左側槓桿的療效差異 (treatment effect difference)。所以，如果有證據證明有同伴的情況下，黑猩猩會傾向於作出社會化選擇，那麼我們應該會看到不等於零的療效差異，也就是會在有同伴的時候更多的去拉右邊的槓桿。但其實 `db13` 的結果似乎顯示有微弱的證據證明，當沒有同伴時，黑猩猩會略微更多的傾向於拉左邊槓桿（沒有社會化傾向），當然這個證據很微弱，可信區間也包括沒有療效差異的 0。相似地，`db24` 比較的是，當兩份食物出現在左側槓桿時，對面有同伴/沒有同伴情況之間拉動左側槓桿的療效差異。如果我們期待黑猩猩會作出會社會化傾向選擇當對面坐有同伴的話，我們會希望這個 `db24` 的取值會顯著小於零，但事實上卻沒有符合這樣期待的結果。
 
 
+我們可以利用上述運行好的模型結果來進行事後的預測，爲每一只黑猩猩估計它在四種條件下主動去拉左側槓桿的概率。同時我們還可以把它們和每隻黑猩猩實際觀察到的拉動左側槓桿概率作直觀的比較：
 
+
+下面的代碼計算出的是一個 $7\times 4$ 的矩陣，每一行有四列結果，代表7只黑猩猩在4中條件下實際觀察到拉動左側槓桿的概率，其中第一只黑猩猩的四種條件下拉動左側槓桿的概率分別是：`0.3333 0.5000 0.2778 0.5556`。
+
+```{r  introBayes13-08, cache=TRUE}
+pl <- by( d$pulled_left, list(d$actor, d$treatment), mean)
+pl[1, ]
+str(pl)
+```
+
+把每隻猩猩的四個條件下的觀察值散點圖繪製如下圖 \@ref(fig:introBayes13-fig06)：
+
+```{r introBayes13-fig06, cache=TRUE, fig.width=7, fig.height=4,  fig.cap="Observed data for the chimpanzee data. Data are grouped by actor. Open points are non-partner treatments. Filled points are partner treatments. The right R and left L sides of the prosocial options are labeled in the figure.", fig.align='center'}
+plot(NULL, xlim = c(1, 28), ylim = c(0, 1), xlab = "", 
+     ylab = "proportion left lever", xaxt = "n", yaxt = "n")
+axis(2, at = seq(0, 1, by = 0.2), labels = seq(0, 1, by = 0.2))
+abline( h = 0.5, lty = 2 )
+for (j in 1:7 ) abline( v = (j - 1) * 4 + 4.5, lwd = 0.5 )
+for (j in 1:7 ) text( (j - 1) * 4 + 2.5, 1.1, concat("actor ", j), xpd = TRUE)
+for (j in (1:7)[-2] ) {
+  lines( (j - 1)*4 + c(1,3), pl[j, c(1,3)], lwd = 2, col = rangi2)
+  lines( (j - 1)*4 + c(2,4), pl[j, c(2,4)], lwd = 2, col = rangi2)
+}
+points( 1:28, t(pl), pch = 16, col = "white", cex =  1.7)
+points( 1:28, t(pl), pch = c(1,1,16,16), col = rangi2, lwd = 2)
+yoff <- 0.01
+text( 1, pl[1,1] - yoff, "R/N", pos = 1, cex = 0.8)
+text( 2, pl[1,2] + yoff, "L/N", pos = 3, cex = 0.8)
+text( 3, pl[1,3] - yoff, "R/P", pos = 1, cex = 0.8)
+text( 4, pl[1,4] + yoff, "L/P", pos = 3, cex = 0.8)
+mtext( "observed proportions\n")
+```
+
+
+
+接下來我們來計算模型運行之後的這些概率的預測值。圖 \@ref(fig:introBayes13-fig07) 生成的代碼如下。模型本身告訴我們，有沒有同伴坐在桌子對面，基本上不會影響黑猩猩的選擇。(The model expects no change when adding a partner.) 大部分的選擇變化取決於黑猩猩本身，也就是每隻黑猩猩自己的模型截距。
+
+```{r introBayes13-fig07, cache=TRUE, fig.width=7, fig.height=4,  fig.cap="Posterior predictions for the chimpanzee data. Data are grouped by actor. Open points are non-partner treatments. Filled points are partner treatments. The right R and left L sides of the prosocial options are labeled in the figure. 89% compatibility intervals for each proportion for each actor are shown as well.", fig.align='center'}
+dat <- list( actor = rep(1:7, each = 4), 
+             treatment = rep(1:4, times = 7))
+p_post <- link( m11.4, data = dat )
+p_mu <- apply( p_post, 2, mean )
+p_ci <- apply( p_post, 2, PI )
+
+p_mu <- matrix(p_mu, nrow = 7, ncol = 4, byrow = TRUE)
+
+plot(NULL, xlim = c(1, 28), ylim = c(0, 1), xlab = "", 
+     ylab = "proportion left lever", xaxt = "n", yaxt = "n")
+axis(2, at = seq(0, 1, by = 0.2), labels = seq(0, 1, by = 0.2))
+abline( h = 0.5, lty = 2 )
+for (j in 1:7 ) abline( v = (j - 1) * 4 + 4.5, lwd = 0.5 )
+for (j in 1:7 ) text( (j - 1) * 4 + 2.5, 1.1, concat("actor ", j), xpd = TRUE)
+for (j in (1:7)[-2] ) {
+  lines( (j - 1)*4 + c(1,3), p_mu[j, c(1,3)], lwd = 2)
+  lines( (j - 1)*4 + c(2,4), p_mu[j, c(2,4)], lwd = 2)
+}
+for (j in 1:28) {
+  lines( c(j, j), p_ci[c(1, 2), j], lwd = 2)
+}
+points( 1:28, t(p_mu), pch = 16, col = "white", cex =  1.7)
+points( 1:28, t(p_mu), pch = c(1,1,16,16), lwd = 2)
+yoff <- 0.07
+text( 1, p_mu[1,1] - yoff, "R/N", pos = 1, cex = 0.8)
+text( 2, p_mu[1,2] + yoff, "L/N", pos = 3, cex = 0.8)
+text( 3, p_mu[1,3] - yoff, "R/P", pos = 1, cex = 0.8)
+text( 4, p_mu[1,4] + yoff, "L/P", pos = 3, cex = 0.8)
+mtext( "posterior prediction proportions\n")
+```
 
 
