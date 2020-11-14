@@ -312,5 +312,32 @@ mtext( "posterior prediction proportions\n")
 ```
 
 
+`m11.4` 模型實際上直接跳過了只有 `procosial option` 和 `partner` 兩個變量時的模型直接加了交互作用項的模型。下面的代碼運行的模型是沒有交互作用項的版本，我麼來比較一下兩個模型的擬合度：
+
+```{r introBayes13-09, cache=TRUE}
+d$side <- d$prosoc_left + 1 # right = 1, left = 2
+d$cond <- d$condition + 1 # no partner = 1, with partner = 2
+
+dat_list2 <- list(
+  pulled_left = d$pulled_left, 
+  actor = d$actor, 
+  side = d$side, 
+  cond = d$cond
+)
+
+m11.5 <- ulam(
+  alist(
+    pulled_left  ~ dbinom( 1, p ), 
+    logit(p) <- a[actor] + bs[side] + bc[cond] , 
+    a[actor] ~ dnorm( 0, 1.5 ), 
+    bs[side] ~ dnorm( 0, 0.5 ), 
+    bc[cond] ~ dnorm( 0, 0.5 )
+  ), data = dat_list2, chains = 4, log_lik = TRUE
+)
+
+precis(m11.5, depth = 2)
+
+compare(m11.5, m11.4)
+```
 
 
