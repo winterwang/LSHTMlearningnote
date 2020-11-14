@@ -341,3 +341,157 @@ compare(m11.5, m11.4)
 ```
 
 
+我們可以看到無論是 `m11.5` 本身給出的模型運行結果，還是從模型比較給出的報告，我們都認爲加不加這個交互作用項其實沒有太大的影響。這裏只是把如何進行模型之間的比較拿來做示範而已。但是這裏我們需要用到有交互作用項的模型 `m11.4`，因爲這是該實驗設計的初衷和目的之一。
+
+
+### 相對還是絕對？
+
+> Consider for example the parable of relative shark and absolute deer. People are very afraid of shark, but not so afraid of deer. But each year, deer kill many more people than sharks do. In this comparison, absolute risks are being compared: the lifetime risk of death from deer vastly exceeds the lifetime risk death from shark bite. 
+
+### 歸納後的二進制數據：繼續使用黑猩猩數據
+
+前面黑猩猩數據的邏輯回歸模型實例中，我們使用的數據是每一隻黑猩猩，在每次以實驗作出的是否拉動左側槓桿的單個實驗數據 individual data。但是事實上很多數據在獲取的時候是已經被整理彙總過的。相同的信息可以被整理成更加簡約的數據形式。我們可以從原始數據計算每隻黑猩猩，在不同的實驗條件下拉動左側槓桿的次數：
+
+```{r  introBayes13-10, cache=TRUE}
+d_aggregated <- aggregate(
+  d$pulled_left, 
+  list( treatment = d$treatment, 
+        actor = d$actor, 
+        side = d$side, 
+        cond = d$cond), 
+  sum
+)
+colnames(d_aggregated)[5] <- "left_pulls"
+head(d_aggregated, 10)
+```
+
+彙總後的數據中 `left_pulls` 就是不同條件下每隻黑猩猩拉動左側槓桿的次數彙總。記得2號黑猩猩始終都拉左側槓桿，所以你看 `actor = 2` 的時候 `left_pulls = 18` 都是保持不變的。也就是說，每隻黑猩猩在每種條件下都進行了總共18次的測試。接下來我們可以使用這個歸納彙總過的數據來做和 `m11.4` 完全相同的統計推斷：
+
+
+```{r introBayes13-11, cache=TRUE}
+dat <- with(d_aggregated, 
+            list(
+              left_pulls = left_pulls, 
+              treatment = treatment, 
+              actor = actor, 
+              side = side, 
+              cond = cond
+            ))
+
+m11.6 <- ulam(
+  alist(
+    left_pulls ~ dbinom( 18, p ), # it used to be dbinom( 1, p )
+    logit(p) <- a[actor] + b[treatment], 
+    a[actor] ~ dnorm( 0, 1.5 ), 
+    b[treatment] ~ dnorm( 0 , 0.5 )
+  ), data =  dat, chains = 4, log_lik = TRUE
+)
+
+precis(m11.6, depth = 2)
+```
+
+運行結果和 `m11.4` 是完全一致的。但是，如果你比較 `m11.6, m11.4` 兩個模型之間卻給出了差異很大的模型特徵值：
+
+
+```{r  introBayes13-12, cache=TRUE}
+compare(m11.6, m11.4, func = PSIS)
+compare(m11.6, m11.4)
+```
+
+你看見比較之後給出很多的結果。這主要是由於數據被彙總之後和沒有被彙總之前的產生差異很大的對數概率。例如同樣是計算 `dbinom(6, 9, 0.2)`，如果是彙總型數據，它計算的概率公式還包含一個複雜的常數項：
+
+$$
+\begin{aligned}
+\text{Pr}(6|9, p) = \frac{6!}{6!(9 - 6)!}p^6 (1-p)^{9-6}
+\end{aligned}
+$$
+
+計算概率的公式的前半部分 $\frac{6!}{6!(9 - 6)!}$ 雖然很醜陋，但是它是計算所有 9 次試驗中出現 6 次成功的全部可能的組合。但是當我們把數據分割成 9 個單獨的實驗數據的話，這部分醜陋的相乘項就不見了：
+
+
+$$
+\begin{aligned}
+\text{Pr}(1,1,1,1,1,1,0,0,0 | p) = p^6 (1 - p)^{9 - 6}
+\end{aligned}
+$$
+
+所以兩種數據形式，兩種模型給出的參數估計結果完全一致，但是他們兩個模型之間的特徵值差異很大。簡單地看下列計算比較兩種數據形式給出的對數概率和的結果差異有多大：
+
+
+```{r introBayes13-13, cache=TRUE}
+# deviance of aggregated 6-in-9
+-2*dbinom(6, 9, 0.2, log = TRUE)
+# deviance of dis-aggregated
+-2*sum(dbern(c(1,1,1,1,1,1,0,0,0), 0.2, log = TRUE))
+```
+
+但我們其實根本不用在乎這兩者之間模型的特徵值差異。所有模型參數的事後概率分佈估計都會是完全一致的。另外還有一個警報：`Model comparison is valid only for models fit to exactly the same observations.` 提示我們這兩個模型之間的觀察值個數不同。
+
+### 彙總型二進制數據：大學錄取數據
+
+有時候不同的彙總數據，他們各自的試驗總次數不一定總是像黑猩猩數據那樣都是相同的。例如下面的大學錄取數據，一共只有12行：
+
+
+```{r introBayes13-14, cache=TRUE}
+data("UCBadmit")
+d <- UCBadmit
+d
+```
+
+該數據是某大學的6個研究生院的申請人數，被拒人數，合格人數的彙總。雖然每個申請人都有單獨的數據，但是上面的彙總後數據把這些申請數據根據每個學院，和申請人的性別進行了彙總，所以最後只剩下12行，但是這12行的數據其實包含了總數爲 4526 個學生的研究生院申請結果。我們來使用這個數據分析一下性別是否在錄取結果上造成了影響。爲了回答這個問題，我們希望建立一個結果變量是錄取結果 `admit` ，預測變量是申請人性別 `applicant.gender` 的邏輯回歸模型。用數學模型可以描述爲：
+
+
+$$
+\begin{aligned}
+A_i & \sim \text{Binomial}(N_i, p_i) \\ 
+\text{logit}(p_i) & = \alpha_{\text{GID}[i]} \\ 
+\alpha_j & \sim \text{Normal}(0, 1.5)
+\end{aligned}
+$$
+
+其中，
+
+- $N_i$ 是第 $i$ 行數據的申請人數 `applications[i]`
+- $\text{GID}[i]$ 表示申請人的性別，1 是男性，2 是女性
+
+
+我們來把該數學模型描述成代碼：
+
+
+```{r introBayes13-15, cache=TRUE}
+dat_list <- list(
+  admit = d$admit, 
+  applications = d$applications, 
+  gid = ifelse( d$applicant.gender == "male", 1, 2)
+)
+
+m11.7 <- ulam(
+  alist(
+    admit ~ dbinom( applications, p ), 
+    logit(p) <-  a[gid], 
+    a[gid] ~ dnorm( 0, 1.5 )
+  ), data = dat_list, chains = 4
+)
+
+precis(m11.7, depth = 2)
+```
+
+我們可以看到表示男性申請學生的數據 `a[1]` 是大於女性申請人的 `a[2]` 的事後概率分佈的。我們還需要計算這兩個羣體之間被錄取的概率差的事後分佈：
+
+
+```{r introBayes13-16, cache=TRUE}
+post <- extract.samples(m11.7)
+diff_a <- post$a[,1] - post$a[,2]
+diff_p <- inv_logit(post$a[,1]) - inv_logit(post$a[,2])
+precis( list( diff_a = diff_a, diff_p = diff_p ))
+```
+
+可以看到男生平均要比女生被錄取的概率高 12% - 17%。
+
+
+
+
+
+
+
+
