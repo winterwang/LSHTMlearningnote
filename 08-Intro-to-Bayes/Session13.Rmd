@@ -486,7 +486,7 @@ diff_p <- inv_logit(post$a[,1]) - inv_logit(post$a[,2])
 precis( list( diff_a = diff_a, diff_p = diff_p ))
 ```
 
-可以看到男生平均要比女生被錄取的概率高 12% ~ 17%。在我們開始懷疑是不是有“系統性性別歧視”之前，讓我們先把觀察值和模型推測值繪製成圖來實際觀察到底有沒有男女錄取概率的差別 (圖 \@ref(fig:introBayes13-fig08))：
+可以看到男生平均要比女生被錄取的概率高 12% ~ 16%。在我們開始懷疑是不是有“系統性性別歧視”之前，讓我們先把觀察值和模型推測值繪製成圖來實際觀察到底有沒有男女錄取概率的差別 (圖 \@ref(fig:introBayes13-fig08))：
 
 
 ```{r introBayes13-fig08, cache=TRUE, fig.width=6, fig.height=4,  fig.cap="Posterior check for model m11.7. Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% inervals of the expectation, and 89% interval of simulated samples, respectively.", fig.align='center'}
@@ -503,10 +503,82 @@ for( i in 1:6 ) {
 }
 ```
 
-看圖 \@ref(fig:introBayes13-fig08) 中的模型推測錄取率和實際觀察的錄取率之間差別有多大，模型簡直預測能力差到難以置信。在實際觀察的數據中，有且僅有兩個學院（C，E）有女性申請者的被錄取率略低於男性申請人。但是不知道爲什麼模型卻給出了男性申請人錄取率要高於女性申請人這樣歪曲事實的結果。通常情況下，這樣離譜的模型推測結果是由於代碼編寫的錯誤才會造成的。但是真的是這樣嗎？我們用的模型 `m11.7` 其實是在問，在這個大學裏平均的男性申請者錄取率和女性申請錄取率之差。但事實上我們看男性申請者和女性申請者並不同時申請不同的學院。從 A 學院到 F 學院的男女的錄取率都在遞減。你去看實際申請人數就知道女性申請者，就知道申請A,B學院的女性申請者人數非常地少，女性申請者傾向於申請錄取率特別低（< 10%）的F學院。
+看圖 \@ref(fig:introBayes13-fig08) 中的模型推測錄取率和實際觀察的錄取率之間差別有多大，模型簡直預測能力差到難以置信。在實際觀察的數據中，有且僅有兩個學院（C，E）有女性申請者的被錄取率略低於男性申請人。但是不知道爲什麼模型卻給出了男性申請人錄取率要高於女性申請人這樣歪曲事實的結果。通常情況下，這樣離譜的模型推測結果是由於代碼編寫的錯誤才會造成的。但是真的是這樣嗎？我們用的模型 `m11.7` 其實是在問，在這個大學裏平均的男性申請者錄取率和女性申請錄取率之差。但事實上我們看男性申請者和女性申請者並不同時申請不同的學院。從 A 學院到 F 學院的男女的錄取率都在遞減。你去看實際申請人數就知道女性申請者中申請A,B學院的實際人數非常地少，女性申請者傾向於申請錄取率特別低（< 10%）的F學院。
+
+所以說，儘管從整所大學的錄取率來說，女性似乎要普遍低於男性，但是你仔細看每個學院各自的錄取率的話就知道這並不是事實。此時我們可能面對的選擇是應該適當地修改我們的研究問題，我們實際上應該提的問題是：“在這個大學的不同學院內，平均地講男性和女性申請人的錄取率有沒有顯著差別？”回答這個問題的模型，應該表達成爲：
 
 
+$$
+\begin{aligned}
+A_i & \sim \text{Binomial}(N_i, p_i) \\
+\text{logit}(p_i) & = \alpha_{\text{GID}[i]} + \delta_{\text{DEPT}[i]}\\ 
+\alpha_j & \sim \text{Normal}(0, 1.5) \\ 
+\delta_k & \sim \text{Normal}(0, 1.5)
+\end{aligned}
+$$
 
+修改了模型表達之後，我們賦予了每個學院自己各自的平均錄取率的對數比值(log-odds = logit)，$\delta_{\text{DEPT}[i]}$。修改之後的模型同樣也能推算整個大學的錄取率，只是增加了對不同學院各自錄取傾向的考量。下面的代碼運行修改之後的模型。
+
+
+```{r introBayes13-17, cache=TRUE}
+dat_list$dept_id <- rep(1:6, each = 2)
+m11.8 <- ulam(
+  alist(
+    admit ~ dbinom( applications, p ) , 
+    logit(p) <- a[gid] + delta[dept_id] , 
+    a[gid] ~ dnorm( 0, 1.5 ), 
+    delta[dept_id] ~ dnorm( 0, 1.5 )
+  ), data = dat_list, chains = 4, iter = 4000
+)
+precis( m11.8, depth = 2 )
+```
+
+
+模型 `m11.8` 的運行結果就矯正了我們之前可能存在的性別歧視的誤解。考慮了不同學院各自的平均錄取率之後，男女申請人之間的平均錄取率的對數比值就變得很接近了。有了模型 `m11.8` 的事後概率分佈樣本，我們可以簡單的計算男女錄取率的學院調整後之差：
+
+
+```{r  introBayes13-18, cache=TRUE}
+post <- extract.samples(m11.8)
+diff_a <- post$a[, 1] - post$a[, 2]
+diff_p <- inv_logit(post$a[, 1]) - inv_logit(post$a[, 2])
+precis(list(diff_a = diff_a, diff_p = diff_p))
+```
+
+所以，當考慮了不同學院各自本身的錄取率差異之後，沒有證據表明在申請人錄取率上有顯著的性別歧視。我們來回到原始數據去看看這個過程實際是怎樣的。簡單歸納一下每個學院各自的實際男女申請人的比例：
+
+```{r introBayes13-19, cache=TRUE}
+pg <- with( dat_list, sapply(1:6, function(k)
+  applications[dept_id == k]/sum(applications[dept_id == k])))
+rownames(pg) <- c("male", "female")
+colnames(pg) <- unique(d$dept)
+round(pg, 3)
+
+# simpler version:
+
+d %>% 
+  group_by(dept) %>% 
+  mutate( rel.freq = paste0(round(applications * 100/sum(applications), 2), "%"))
+  
+```
+
+
+所以實際男性申請人佔比例在 A 學院達到了 88.4% 以上，像 E 學院的男性申請人的比例則僅僅只有 32.7% 左右。也就從另一個角度解釋了我們觀察到的現象，也就是說，錄取率較低的學院中女性申請人比例相當地高。模型 `m11.8` 給出的各個學院錄取率的推測值也和實際觀測值十分地接近 (圖 \@ref(fig:introBayes13-fig09))。
+
+```{r introBayes13-fig09, cache=TRUE, fig.width=6, fig.height=4,  fig.cap="Posterior check for model m11.8. Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% inervals of the expectation, and 89% interval of simulated samples, respectively.", fig.align='center'}
+postcheck( m11.8 )
+# draw lines connecting points from same dept 
+
+for( i in 1:6 ) {
+  x <- 1 + 2*(i - 1)
+  y1 <- d$admit[x] / d$applications[x]
+  y2 <- d$admit[x + 1] / d$applications[x + 1]
+  lines(c(x, x + 1), c(y1, y2), col = rangi2, lwd = 2)
+  text(x + 0.5, (y1 + y2)/2 + 0.05, 
+       d$dept[x], cex = 0.8, col = rangi2)
+}
+```
+
+## 泊松回歸模型 Poisson regression 
 
 
 
