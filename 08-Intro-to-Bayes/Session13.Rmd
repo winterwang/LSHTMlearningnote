@@ -609,6 +609,64 @@ d <- Kline
 d
 ```
 
-- 結果變量是 `total_tools`。我們使用泊松回歸，用對數函數鏈接方程，來分析這個數據。
+我們思考的研究模型是這樣的：
+
+- 模型的結果變量是 `total_tools`。我們決定使用泊松回歸模型，用對數函數鏈接方程來分析這個數據。
 - 我們實際上認爲 `total_tools` 和人口 `population` 的對數（對數就是指的人口規模, the magnitude of the population）之間是正關係。
+- 使用的工具的種類數量 `total_tools` 同時被認爲和族羣之間接觸的頻率 `contact` 應該呈現正關係，因爲多數人認爲增加不同島嶼族羣之間的交流和接觸會顯然增加原住民部落本身獲取更加多種類的生產工具。
+- 另外還有人認爲，人口規模大小 `population` 還會通過部落族羣之間的交流頻率 `contact` 作爲媒介影響到結果變量  `total_tools`。
+
+接下來我們給數據中增加幾個需要使用的轉換後的變量：
+
+
+```{r introBayes13-21, cache=TRUE}
+d$P <- scale( log(d$population) ) # standardize the log(population) into mean = 0, sd = 1
+d$contact_id <- ifelse( d$contact == "high", 2, 1)
+```
+
+我們把符合上述思考和假設的模型描述爲含有交互作用項的數學模型：
+
+$$
+\begin{aligned}
+T_i & \sim \text{Poisson}(\lambda_i) \\ 
+\log \lambda_i & = \alpha_{\text{CID}[i]} + \beta_{\text{CID}[i]} \log P_i \\
+\alpha_i & \sim \text{ to be determined } \\ 
+\beta_j  & \sim \text{ to be determined }
+\end{aligned}
+$$
+
+其中，
+
+- $P_i$ 是人口規模，
+- $\text{CID}[i]$ 是 `contact_id`。
+
+接下來我們考慮怎樣爲 $\alpha_i, \beta_j$ 設置合適的先驗概率分佈。和二項分佈數據使用的邏輯回歸模型類似，當我們選擇使用對數鏈接函數把數據進行轉換之後，原先在簡單線性回歸模型中適合使用的平坦分佈會變得不合適。爲了更直觀的說明這個現象，我們先使用最簡單的只有截距的泊松回歸模型，給該截距的先驗概率分佈使用平坦分佈 $\text{Normal}(0,10)$。
+
+
+$$
+\begin{aligned}
+T_i & \sim \text{Poisson}(\lambda_i) \\ 
+\log \lambda_i & = \alpha \\
+\alpha & \sim \text{Normal}(0, 10) \\ 
+\end{aligned}
+$$
+
+當我們給截距設定的先驗概率分佈設定成 $\text{Normal}(0,10)$ 會對時間發生率 $\lambda$ 在它原本的尺度上有怎樣的體現呢？如果截距 $\alpha$ 是服從正（常）態分佈的話，那麼 $\lambda$ 就會服從對數正（常）態分佈。我們來繪製一下這兩個分佈的概率密度分佈：
+
+```{r introBayes13-fig10, cache=TRUE, fig.width=5, fig.height=4.5,  fig.cap="Prior predictive distribution of the mean lambda of a simple Poisson GLM, considering only the intercept alpha. A flat conventional prior (black) creates absurd expecations on the outcome scale. The mean of this distribution is exp(50) stupidly large. It is easy to do better by shifting prior mass above zero (blue).", fig.align='center'}
+
+curve( dlnorm(x, 0, 10), from = 0, to = 100, n = 200, 
+       bty = "n", 
+       xlab = "mean numbber of tools (lambda)", 
+       ylab = "Density")
+text(20, 0.06, "a ~ dnorm(0, 10)")
+curve( dlnorm(x, 3, 0.5), add = TRUE, 
+       col = rangi2, lwd = 2)
+text(50, 0.03, "a ~ dnorm(3, 0.5)", col = rangi2)
+```
+
+圖 \@ref(fig:introBayes13-fig10) 顯示，當我們使用 $\alpha \sim \text{Normal}(0, 10)$ 作爲截距的先驗概率分佈時，我們看到結果變量使用工具的數量竟然出現了一個特別接近零的尖峯，這其實意味着我們的先驗概率分佈認爲不論是哪個島嶼哪個部落的居民使用的工具數量基本上是 0，這顯然是不合理的。
+
+
+
 
