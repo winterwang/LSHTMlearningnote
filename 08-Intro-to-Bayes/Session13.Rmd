@@ -83,7 +83,7 @@ $$
 
 這時，我們需要先決定這個 $\omega$ 作爲一個合理的先驗概率分佈。我們先從相當平坦的一個分佈開始，例如 $\omega = 10$。
 
-```{r introBayes13-03, cache=TRUE}
+```{r introBayes13-03, cache=TRUE, results="hide"}
 m11.1 <- quap(
   alist(
     pulled_left ~ dbinom( 1, p ), 
@@ -102,7 +102,7 @@ prior <- extract.prior( m11.1, n = 10000)
 
 接下來還有一步，就是要把數據通過鏈接函數的逆函數轉換回去原來的 0-1 之間的概率尺度。對於邏輯回歸來說，鏈接函數就是 `logit` 函數，其逆函數就是 `inv_logit`。
 
-```{r introBayes13-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the intercept produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 1.5) prior produces something more reasonable (blue).", fig.align='center'}
+```{r introBayes13-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the intercept produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 1.5) prior produces something more reasonable (blue).", fig.align='center', results="hide"}
 p <- inv_logit( prior$a )
 dens( p, adj = 0.1 ,
       bty = "n",
@@ -130,7 +130,7 @@ text(0.5, 1.8, "a ~ dnorm(0, 1.5)", col = rangi2)
 接下來我們再來考慮不同條件下的回歸係數 $\beta$，在這裏，術語可以使用治療效果 (treatment effect) 來表達。假如我們再次自作聰明地使用平坦的分佈 $\text{Normal}(0,10)$ 作先驗概率分佈，看它會給出怎樣的結果：
 
 
-```{r introBayes13-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the treatment effect also produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 0.5) prior produces something more reasonable (blue).", fig.align='center'}
+```{r introBayes13-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the treatment effect also produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 0.5) prior produces something more reasonable (blue).", fig.align='center', results="hide"}
 m11.2 <- quap(
   alist(
     pulled_left ~ dbinom( 1, p ), 
@@ -188,7 +188,7 @@ dat_list <- list(
 數據準備好了以後，讓我們來使用 Markov Chain 運行這個邏輯回歸模型：
 
 
-```{r introBayes13-07, cache=TRUE}
+```{r introBayes13-07, cache=TRUE, results="hide"}
 m11.4 <- ulam(
   alist(
     pulled_left ~ dbinom( 1, p ), 
@@ -197,13 +197,15 @@ m11.4 <- ulam(
     b[treatment] ~ dnorm( 0, 0.5 )
   ), data = dat_list, chains = 4, log_lik = TRUE
 )
+```
+```{r introBayes13-0701, cache=TRUE}
 precis( m11.4, depth = 2 )
 ```
 
 
 這個模型 `m11.4` 的實際 Stan 代碼是:
 
-```{r introBayes13-0701}
+```{r introBayes13-070102}
 stancode(m11.4)
 ```
 
@@ -314,7 +316,7 @@ mtext( "posterior prediction proportions\n")
 
 `m11.4` 模型實際上直接跳過了只有 `procosial option` 和 `partner` 兩個變量時的模型直接加了交互作用項的模型。下面的代碼運行的模型是沒有交互作用項的版本，我麼來比較一下兩個模型的擬合度：
 
-```{r introBayes13-09, cache=TRUE}
+```{r introBayes13-09, cache=TRUE, results="hide"}
 d$side <- d$prosoc_left + 1 # right = 1, left = 2
 d$cond <- d$condition + 1 # no partner = 1, with partner = 2
 
@@ -334,11 +336,14 @@ m11.5 <- ulam(
     bc[cond] ~ dnorm( 0, 0.5 )
   ), data = dat_list2, chains = 4, log_lik = TRUE
 )
+```
 
+```{r introBayes13-0901, cache=TRUE}
 precis(m11.5, depth = 2)
 
 compare(m11.5, m11.4)
 ```
+
 
 
 我們可以看到無論是 `m11.5` 本身給出的模型運行結果，還是從模型比較給出的報告，我們都認爲加不加這個交互作用項其實沒有太大的影響。這裏只是把如何進行模型之間的比較拿來做示範而已。但是這裏我們需要用到有交互作用項的模型 `m11.4`，因爲這是該實驗設計的初衷和目的之一。
@@ -368,7 +373,7 @@ head(d_aggregated, 10)
 彙總後的數據中 `left_pulls` 就是不同條件下每隻黑猩猩拉動左側槓桿的次數彙總。記得2號黑猩猩始終都拉左側槓桿，所以你看 `actor = 2` 的時候 `left_pulls = 18` 都是保持不變的。也就是說，每隻黑猩猩在每種條件下都進行了總共18次的測試。接下來我們可以使用這個歸納彙總過的數據來做和 `m11.4` 完全相同的統計推斷：
 
 
-```{r introBayes13-11, cache=TRUE}
+```{r introBayes13-11, cache=TRUE, results="hide"}
 dat <- with(d_aggregated, 
             list(
               left_pulls = left_pulls, 
@@ -386,9 +391,13 @@ m11.6 <- ulam(
     b[treatment] ~ dnorm( 0 , 0.5 )
   ), data =  dat, chains = 4, log_lik = TRUE
 )
+```
 
+```{r introBayes13-1101, cache=TRUE}
 precis(m11.6, depth = 2)
 ```
+
+
 
 運行結果和 `m11.4` 是完全一致的。但是，如果你比較 `m11.6, m11.4` 兩個模型之間卻給出了差異很大的模型特徵值：
 
@@ -458,7 +467,7 @@ $$
 我們來把該數學模型描述成代碼：
 
 
-```{r introBayes13-15, cache=TRUE}
+```{r introBayes13-15, cache=TRUE, results="hide"}
 dat_list <- list(
   admit = d$admit, 
   applications = d$applications, 
@@ -472,7 +481,10 @@ m11.7 <- ulam(
     a[gid] ~ dnorm( 0, 1.5 )
   ), data = dat_list, chains = 4
 )
+```
 
+
+```{r introBayes13-1501, cache=TRUE}
 precis(m11.7, depth = 2)
 ```
 
@@ -520,7 +532,7 @@ $$
 修改了模型表達之後，我們賦予了每個學院自己各自的平均錄取率的對數比值(log-odds = logit)，$\delta_{\text{DEPT}[i]}$。修改之後的模型同樣也能推算整個大學的錄取率，只是增加了對不同學院各自錄取傾向的考量。下面的代碼運行修改之後的模型。
 
 
-```{r introBayes13-17, cache=TRUE}
+```{r introBayes13-17, cache=TRUE, results="hide"}
 dat_list$dept_id <- rep(1:6, each = 2)
 m11.8 <- ulam(
   alist(
@@ -530,6 +542,11 @@ m11.8 <- ulam(
     delta[dept_id] ~ dnorm( 0, 1.5 )
   ), data = dat_list, chains = 4, iter = 4000
 )
+
+```
+
+
+```{r introBayes13-1701, cache=TRUE}
 precis( m11.8, depth = 2 )
 ```
 
@@ -665,8 +682,115 @@ curve( dlnorm(x, 3, 0.5), add = TRUE,
 text(50, 0.03, "a ~ dnorm(3, 0.5)", col = rangi2)
 ```
 
-圖 \@ref(fig:introBayes13-fig10) 顯示，當我們使用 $\alpha \sim \text{Normal}(0, 10)$ 作爲截距的先驗概率分佈時，我們看到結果變量使用工具的數量竟然出現了一個特別接近零的尖峯，這其實意味着我們的先驗概率分佈認爲不論是哪個島嶼哪個部落的居民使用的工具數量基本上是 0，這顯然是不合理的。
+圖 \@ref(fig:introBayes13-fig10) 顯示，當我們使用 $\alpha \sim \text{Normal}(0, 10)$ 作爲截距的先驗概率分佈時，我們看到結果變量使用工具的數量竟然出現了一個特別接近零的尖峯，這其實意味着我們的先驗概率分佈認爲不論是哪個島嶼哪個部落的居民使用的工具數量基本上是 0，這顯然是不合理的。而且你看它右邊的尾巴特別的長，有多長呢？對數正（常）態分佈的期望值計算公式是 $\exp(\mu + \sigma^2/2)$，也就是說現在設定的先驗概率分佈 $\alpha \sim \text{Normal}(0, 10)$ 的均值其實達到了 $\exp(50) = 5.185e+21$。我們隨便模擬一個對數正（常）態分佈看它的均值會是怎樣的不可思議地大：
+
+```{r  introBayes13-22, cache=TRUE}
+a <- rnorm(10000, 0, 10)
+lambda <- exp(a)
+mean( lambda )
+```
+
+於是我們修改了一下預期，把截距的先驗概率分佈修改成 $\text{Normal}(3, 0.5)$，展示在圖 \@ref(fig:introBayes13-fig10) 中藍色的曲線。此時的新對數正（常）態分佈的均值是 $\exp(3 + 0.5^2/2) \approx 22.8$，也就是說這個先驗概率認爲在沒有分析數據之前，我們估計平均來說每個部落的族羣平均的生產工具的數量在20個左右。這樣的假設是不是會合理很多？用相似的邏輯我們用來給人口規模 ($\log$ `population`) 回歸係數 $\beta$ 設定合理的先驗概率分佈，目標是希望把數據限制在合適的範圍內以免採樣效率太低。先用一個我們傳統上認爲的平坦分佈 $\text{Normal}(0,10)$ 來看看它的戲劇性效果。
+
+```{r introBayes13-fig11, cache=TRUE, fig.width=5.5, fig.height=4.5,  fig.cap="Struggling with slope priors in a Poisson GLM. A flat prior produces explosive trends on the outcome scale.", fig.align='center'}
+N <- 100 
+a <- rnorm(N, 3, 0.5)
+b <- rnorm(N, 0, 10)
+plot(NULL, 
+     xlim = c(-2, 2), 
+     ylim = c(0, 100),
+     main = "b ~ dnorm(0, 10)", 
+     ylab = "total tools", 
+     xlab = "log population (std)")
+for(i in 1:N) curve(exp( a[i] + b[i]*x), add = TRUE, col = grau())
+```
+
+圖 \@ref(fig:introBayes13-fig11) 就是當截距是合理的先驗概率分佈，但是斜率是常用的“平坦分佈”時給出的人口規模和工具數量之間的可怕的關係。它其實是在說，當我們還沒見到實際數據時，我們認爲在平均人口規模（因爲橫軸的人口規模被標準化了）的部落族羣附近，使用的工具種類數量要麼就是暴增，要麼是暴減。這是非常不合常理的。我們需要不那麼“平坦”的先驗概率分佈，給我們合理的結果。經過多種嘗試，我們認爲 $\beta \sim \text{Normal}(0, 0.2)$ 會是一個理性的選擇（圖\@ref(fig:introBayes13-fig12)）。在實際分析數據之前，我們認爲不論是哪個部落，最多的生產工具種類也不會超過100種之多。
+
+
+```{r introBayes13-fig12, cache=TRUE, fig.width=5.5, fig.height=4.5,  fig.cap="Struggling with slope priors in a Poisson GLM. A regularizing prior remains mostly within the space of outcomes.", fig.align='center'}
+N <- 100 
+a <- rnorm(N, 3, 0.5)
+b <- rnorm(N, 0, 0.2)
+plot(NULL, 
+     xlim = c(-2, 2), 
+     ylim = c(0, 100),
+     main = "b ~ dnorm(0, 0.2)", 
+     ylab = "total tools", 
+     xlab = "log population (std)")
+for(i in 1:N) curve(exp( a[i] + b[i]*x), add = TRUE, col = grau())
+```
+
+
+我們把橫軸修改成爲沒有被標準化的 `log population` 之後，先驗概率分佈之間的關係如圖 \@ref(fig:introBayes13-fig13)。
+
+```{r introBayes13-fig13, cache=TRUE, fig.width=5.5, fig.height=4.5,  fig.cap="Struggling with slope priors in a Poisson GLM. A regularizing prior remains mostly within the space of outcomes. Now horizontal axis on unstandardized scale.", fig.align='center'}
+N <- 100 
+a <- rnorm(N, 3, 0.5)
+b <- rnorm(N, 0, 0.2)
+
+x_seq <- seq( from = log(100), to = log(200000), length.out = 100)
+lambda <- sapply( x_seq, function(x) exp(a + b*x))
+plot(NULL, 
+     xlim = range(x_seq), 
+     ylim = c(0, 500),
+     main = "a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)", 
+     ylab = "total tools", 
+     xlab = "log population (un-std)")
+for(i in 1:N) lines(x_seq, lambda[i, ], col = grau(), lwd = 1.5)
+```
+
+最後我們再把橫軸的人口重新轉換到最原始的尺度上來，成爲圖 \@ref(fig:introBayes13-fig14) 顯示的
 
 
 
+```{r introBayes13-fig14, cache=TRUE, fig.width=5.5, fig.height=4.5,  fig.cap="Struggling with slope priors in a Poisson GLM. A flat prior produces explosive trends on the outcome scale.", fig.align='center'}
+
+plot(NULL, 
+     xlim = range(exp(x_seq)), 
+     ylim = c(0, 500),
+     main = "a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)", 
+     ylab = "total tools", 
+     xlab = "population (un-std)")
+for(i in 1:N) lines(exp(x_seq), lambda[i, ], col = grau(), lwd = 1.5)
+```
+
+
+
+可以看到這是泊松回歸模型認爲的真實的預測變量和結果變量之間存在的關係，這是一種對數線性(log-linear)關係。自然地解釋就是，人口數量本身數值的增加，只能對工具種類的增加造成微弱的影響。許多的預測變量，都應該被取了對數之後再放入你的回歸模型中去，因爲這才是真實的關係。接下來終於到了模型本身的運行了：
+
+
+```{r introBayes13-23, cache=TRUE, results="hide"}
+dat <- list(
+  T = d$total_tools,
+  P = d$P,
+  cid = d$contact_id
+)
+
+# intercept only
+ m11.9 <- ulam(
+   alist(
+     T ~ dpois( lambda ), 
+     log(lambda) <- a, 
+     a ~ dnorm( 3, 0.5 )
+   ), data = dat, chains = 4, log_lik = TRUE
+ )
+
+# interaction model
+m11.10 <- ulam(
+  alist(
+    T ~ dpois( lambda ), 
+    log(lambda) <- a[cid] + b[cid] * P, 
+    a[cid] ~ dnorm( 3, 0.5 ), 
+    b[cid] ~ dnorm( 0, 0.2 )
+  ), data = dat, chains = 4, log_lik = TRUE
+)
+```
+
+
+```{r introBayes13-24, cache=TRUE}
+precis(m11.9)
+precis(m11.10, depth = 2)
+compare(m11.9, m11.10, func = PSIS)
+```
 
