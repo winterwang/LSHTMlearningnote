@@ -697,6 +697,7 @@ N <- 100
 a <- rnorm(N, 3, 0.5)
 b <- rnorm(N, 0, 10)
 plot(NULL, 
+      bty = "n", 
      xlim = c(-2, 2), 
      ylim = c(0, 100),
      main = "b ~ dnorm(0, 10)", 
@@ -713,6 +714,7 @@ N <- 100
 a <- rnorm(N, 3, 0.5)
 b <- rnorm(N, 0, 0.2)
 plot(NULL, 
+      bty = "n", 
      xlim = c(-2, 2), 
      ylim = c(0, 100),
      main = "b ~ dnorm(0, 0.2)", 
@@ -732,6 +734,7 @@ b <- rnorm(N, 0, 0.2)
 x_seq <- seq( from = log(100), to = log(200000), length.out = 100)
 lambda <- sapply( x_seq, function(x) exp(a + b*x))
 plot(NULL, 
+      bty = "n", 
      xlim = range(x_seq), 
      ylim = c(0, 500),
      main = "a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)", 
@@ -744,9 +747,9 @@ for(i in 1:N) lines(x_seq, lambda[i, ], col = grau(), lwd = 1.5)
 
 
 
-```{r introBayes13-fig14, cache=TRUE, fig.width=5.5, fig.height=4.5,  fig.cap="Struggling with slope priors in a Poisson GLM. A flat prior produces explosive trends on the outcome scale.", fig.align='center'}
+```{r introBayes13-fig14, cache=TRUE, fig.width=5.5, fig.height=4.5,  fig.cap="Struggling with slope priors in a Poisson GLM. A regularizing prior remains mostly within the space of outcomes. Now horizontal axis on unstandardized original scale for population.", fig.align='center'}
 
-plot(NULL, 
+plot(NULL,  bty = "n", 
      xlim = range(exp(x_seq)), 
      ylim = c(0, 500),
      main = "a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)", 
@@ -793,4 +796,77 @@ precis(m11.9)
 precis(m11.10, depth = 2)
 compare(m11.9, m11.10, func = PSIS)
 ```
+
+我們又一次看見了關於 `Pareto k` 的警報。這提示我們數據種存在一些對模型結果影響較大的觀察值。具體可以通過繪製PSIS圖來觀察模型的事後概率分佈。
+
+```{r introBayes13-fig15, cache=TRUE, message=FALSE, fig.width=5.5, fig.height=4.5,  fig.cap="Posterior predictions for the Oceanic tools model. Filled points are societies with historically high contact. Open points are those with low contact. Point size is scaled by relative PSIS Pareto's k values. Larger points are more influential. The solid curve is the posterior mean for high contact societies. The dashed curve is the same for low contact societies. 89% compatibility intervals are shown by the shaded regions. (Standardized log population scale, as in the model code)", fig.align='center'}
+k <- PSIS( m11.10, pointwise = TRUE)$k
+plot(dat$P, dat$T, 
+     xlab = "log population (std)", 
+     ylab = "total tolls", 
+     col = rangi2, 
+      bty = "n", 
+     pch = ifelse( dat$cid == 1, 1, 16), 
+     lwd = 2, 
+     ylim = c(0, 75), 
+     cex = 1 + normalize(k))
+
+# set up the horizontal axis values to compute predictions at
+
+ns <- 100 
+P_seq <- seq( from = -1.4, to = 3, length.out = ns)
+
+# Predictions for cid = 1 (low contact)
+lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 1 ) )
+lmu <- apply(lambda, 2, mean) 
+lci <- apply(lambda, 2, PI)
+lines( P_seq, lmu, lty = 2, lwd = 1.5)
+shade(lci, P_seq, xpd = FALSE)
+
+# Predictions for cid = 2 (high contact)
+lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 2 ))
+lmu <- apply( lambda, 2, mean)
+lci <- apply( lambda, 2, PI)
+lines( P_seq, lmu, lty = 1, lwd = 1.5)
+shade( lci, P_seq, xpd = FALSE
+       )
+```
+
+
+圖 \@ref(fig:introBayes13-fig15) 中空心的點表示與其他族羣部落交流較少的島嶼，實心點是與其他族羣部落交流較頻繁的島嶼。點的大小個 Pareto K 值成正比例。下面的代碼把橫軸人口還原到原始的尺度上。
+
+
+```{r introBayes13-fig1, cache=TRUE, message=FALSE, fig.width=5.5, fig.height=4.5,  fig.cap="Posterior predictions for the Oceanic tools model. Filled points are societies with historically high contact. Open points are those with low contact. Point size is scaled by relative PSIS Pareto's k values. Larger points are more influential. The solid curve is the posterior mean for high contact societies. The dashed curve is the same for low contact societies. 89% compatibility intervals are shown by the shaded regions. (Same predictions on the natural population scale.)", fig.align='center'}
+
+plot( d$population, d$total_tools, 
+            bty = "n", 
+      xlab = "population", 
+      ylab = "total tools", 
+      col = rangi2, pch = ifelse( dat$cid == 1, 1, 16), lwd = 2, 
+      ylim = c(0, 75), cex = 1 + normalize(k))
+
+ns <- 100
+
+P_seq <- seq( from = -5, to = 3, length.out = ns )
+# 1.53 is sd of log(population)
+# 9 is mean of log(population)
+
+pop_seq <- exp( P_seq*1.53 + 9 )
+
+lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 1 ))
+lmu <- apply( lambda, 2, mean)
+lci <- apply( lambda, 2, PI)
+
+lines( pop_seq, lmu, lty = 2, lwd = 1.5 )
+shade( lci, pop_seq, xpd = FALSE )
+
+lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 2 ))
+lmu <- apply( lambda, 2, mean )
+lci <- apply( lambda, 2, PI )
+lines( pop_seq, lmu, lty = 1, lwd = 1.5 )
+shade( lci, pop_seq, xpd = FALSE )
+```
+
+檢查 k 值我們發現，夏威夷 (k = 1.01) 是對模型結果影響最大的點。夏威夷擁有最多的人口，和種類數量最多的生產工具。
+
 
