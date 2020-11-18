@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-11-17" />
+<meta name="date" content="2020-11-18" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1563,9 +1563,9 @@ y \sim \text{Binomial}(n, p)
 <p>不論是上述哪種二項式回歸，使用的鏈接方程都是邏輯函數 logit function。</p>
 <div id="邏輯回歸模型數據實例prosocial-chimpanzees" class="section level3">
 <h3><span class="header-section-number">53.1.1</span> 邏輯回歸模型數據實例：prosocial chimpanzees</h3>
-<div class="sourceCode" id="cb865"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb865-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-1"></a><span class="kw">data</span>(chimpanzees)</span>
-<span id="cb865-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-2"></a>d &lt;-<span class="st"> </span>chimpanzees</span>
-<span id="cb865-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-3"></a><span class="kw">str</span>(d)</span></code></pre></div>
+<div class="sourceCode" id="cb861"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb861-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb861-1"></a><span class="kw">data</span>(chimpanzees)</span>
+<span id="cb861-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb861-2"></a>d &lt;-<span class="st"> </span>chimpanzees</span>
+<span id="cb861-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb861-3"></a><span class="kw">str</span>(d)</span></code></pre></div>
 <pre><code>## &#39;data.frame&#39;:    504 obs. of  8 variables:
 ##  $ actor       : int  1 1 1 1 1 1 1 1 1 1 ...
 ##  $ recipient   : int  NA NA NA NA NA NA NA NA NA NA ...
@@ -1589,8 +1589,8 @@ y \sim \text{Binomial}(n, p)
 <li><code>prosoc_left = 1</code> and <code>condition = 1</code>，左側槓桿有兩份食物，對面有同伴；</li>
 </ul>
 <p>熟悉廣義線性回歸模型，比如邏輯回歸模型的朋友可能最開始想到的方法是用上述啞變量來建立簡單的交互作用項放在模型結構裏就可以解決問題了。但是我們知道使用啞變量的缺點是使得先驗概率分佈的設定變得困難，所以我們希望不要使用啞變量的方法，轉而使用更加靈活的索引變量法 (index variable):</p>
-<div class="sourceCode" id="cb867"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb867-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-1"></a>d<span class="op">$</span>treatment &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span>d<span class="op">$</span>prosoc_left <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>d<span class="op">$</span>condition</span>
-<span id="cb867-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-2"></a><span class="kw">xtabs</span>( <span class="op">~</span><span class="st"> </span>treatment <span class="op">+</span><span class="st"> </span>prosoc_left <span class="op">+</span><span class="st"> </span>condition, d)</span></code></pre></div>
+<div class="sourceCode" id="cb863"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb863-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb863-1"></a>d<span class="op">$</span>treatment &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span>d<span class="op">$</span>prosoc_left <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>d<span class="op">$</span>condition</span>
+<span id="cb863-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb863-2"></a><span class="kw">xtabs</span>( <span class="op">~</span><span class="st"> </span>treatment <span class="op">+</span><span class="st"> </span>prosoc_left <span class="op">+</span><span class="st"> </span>condition, d)</span></code></pre></div>
 <pre><code>## , , condition = 0
 ## 
 ##          prosoc_left
@@ -1627,35 +1627,35 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 \end{aligned}
 \]</span></p>
 <p>這時，我們需要先決定這個 <span class="math inline">\(\omega\)</span> 作爲一個合理的先驗概率分佈。我們先從相當平坦的一個分佈開始，例如 <span class="math inline">\(\omega = 10\)</span>。</p>
-<div class="sourceCode" id="cb869"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb869-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-1"></a>m11<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
-<span id="cb869-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-2"></a>  <span class="kw">alist</span>(</span>
-<span id="cb869-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-3"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
-<span id="cb869-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a, </span>
-<span id="cb869-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> )</span>
-<span id="cb869-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-6"></a>  ), <span class="dt">data =</span> d</span>
-<span id="cb869-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-7"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb865"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb865-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-1"></a>m11<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb865-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb865-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-3"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb865-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a, </span>
+<span id="cb865-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> )</span>
+<span id="cb865-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-6"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb865-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb865-7"></a>)</span></code></pre></div>
 <p>接下來，我們從 <code>m11.1</code> 中的先驗概率採集一些樣本：</p>
-<div class="sourceCode" id="cb870"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb870-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb870-1"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>) </span>
-<span id="cb870-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb870-2"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11<span class="fl">.1</span>, <span class="dt">n =</span> <span class="dv">10000</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb866"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb866-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb866-1"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>) </span>
+<span id="cb866-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb866-2"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11<span class="fl">.1</span>, <span class="dt">n =</span> <span class="dv">10000</span>)</span></code></pre></div>
 <p>接下來還有一步，就是要把數據通過鏈接函數的逆函數轉換回去原來的 0-1 之間的概率尺度。對於邏輯回歸來說，鏈接函數就是 <code>logit</code> 函數，其逆函數就是 <code>inv_logit</code>。</p>
-<div class="sourceCode" id="cb871"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb871-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-1"></a>p &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( prior<span class="op">$</span>a )</span>
-<span id="cb871-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-2"></a><span class="kw">dens</span>( p, <span class="dt">adj =</span> <span class="fl">0.1</span> ,</span>
-<span id="cb871-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-3"></a>      <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
-<span id="cb871-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-4"></a>      <span class="dt">xlab =</span> <span class="st">&quot;prior prob pull left&quot;</span>)</span>
-<span id="cb871-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-5"></a>m11<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
-<span id="cb871-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-6"></a>  <span class="kw">alist</span>(</span>
-<span id="cb871-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-7"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
-<span id="cb871-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-8"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a, </span>
-<span id="cb871-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-9"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> )</span>
-<span id="cb871-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-10"></a>  ), <span class="dt">data =</span> d</span>
-<span id="cb871-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-11"></a>)</span>
-<span id="cb871-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-12"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>) </span>
-<span id="cb871-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-13"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11<span class="fl">.1</span>, <span class="dt">n =</span> <span class="dv">10000</span>)</span>
-<span id="cb871-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-14"></a>p1 &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( prior<span class="op">$</span>a )</span>
-<span id="cb871-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-15"></a><span class="kw">lines</span>( <span class="kw">density</span>(p1), <span class="dt">adj =</span> <span class="fl">0.1</span>, </span>
-<span id="cb871-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-16"></a>       <span class="dt">col =</span> rangi2)</span>
-<span id="cb871-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-17"></a><span class="kw">text</span>(<span class="fl">0.15</span>, <span class="dv">9</span>, <span class="st">&quot;a ~ dnorm(0, 10)&quot;</span>)</span>
-<span id="cb871-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-18"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="fl">1.8</span>, <span class="st">&quot;a ~ dnorm(0, 1.5)&quot;</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="sourceCode" id="cb867"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb867-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-1"></a>p &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( prior<span class="op">$</span>a )</span>
+<span id="cb867-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-2"></a><span class="kw">dens</span>( p, <span class="dt">adj =</span> <span class="fl">0.1</span> ,</span>
+<span id="cb867-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-3"></a>      <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb867-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-4"></a>      <span class="dt">xlab =</span> <span class="st">&quot;prior prob pull left&quot;</span>)</span>
+<span id="cb867-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-5"></a>m11<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb867-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-6"></a>  <span class="kw">alist</span>(</span>
+<span id="cb867-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-7"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb867-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-8"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a, </span>
+<span id="cb867-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-9"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> )</span>
+<span id="cb867-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-10"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb867-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-11"></a>)</span>
+<span id="cb867-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-12"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>) </span>
+<span id="cb867-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-13"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11<span class="fl">.1</span>, <span class="dt">n =</span> <span class="dv">10000</span>)</span>
+<span id="cb867-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-14"></a>p1 &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( prior<span class="op">$</span>a )</span>
+<span id="cb867-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-15"></a><span class="kw">lines</span>( <span class="kw">density</span>(p1), <span class="dt">adj =</span> <span class="fl">0.1</span>, </span>
+<span id="cb867-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-16"></a>       <span class="dt">col =</span> rangi2)</span>
+<span id="cb867-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-17"></a><span class="kw">text</span>(<span class="fl">0.15</span>, <span class="dv">9</span>, <span class="st">&quot;a ~ dnorm(0, 10)&quot;</span>)</span>
+<span id="cb867-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb867-18"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="fl">1.8</span>, <span class="st">&quot;a ~ dnorm(0, 1.5)&quot;</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig01"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig01-1.png" alt="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the intercept produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 1.5) prior produces something more reasonable (blue)." width="576" />
 <p class="caption">
@@ -1665,36 +1665,36 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 <p>圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig01">53.1</a> 給出的先驗概率是多麼地不合理，它把大部分的概率權重都分配給了0，或者1附近的概率。這代表什麼含義呢？ 如果你使用 <span class="math inline">\(\alpha \sim \text{Normal}(0,10)\)</span> 作爲截距的先驗概率分佈，代表你初期的設定是，在還沒有開始進行實驗之前，我們認爲實驗對象的黑猩猩要麼總是去拉左手的槓桿，要麼永遠都不去拉左手槓桿。這其實不用說也知道是十分不合理的。如果我們把 <span class="math inline">\(\omega = 1.5\)</span> 作爲先驗概率分佈的方差的話，給出的圖形，會合理地多 (圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig01">53.1</a> 中藍色概率密度曲線)。</p>
 <p>這裏告訴我們的是，一個先驗概率分佈在 logit 尺度上的平坦分佈，在回到原來的概率尺度上的時候，會給出事與願違的非平坦分佈結果。</p>
 <p>接下來我們再來考慮不同條件下的回歸係數 <span class="math inline">\(\beta\)</span>，在這裏，術語可以使用治療效果 (treatment effect) 來表達。假如我們再次自作聰明地使用平坦的分佈 <span class="math inline">\(\text{Normal}(0,10)\)</span> 作先驗概率分佈，看它會給出怎樣的結果：</p>
-<div class="sourceCode" id="cb872"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb872-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-1"></a>m11<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
-<span id="cb872-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-2"></a>  <span class="kw">alist</span>(</span>
-<span id="cb872-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-3"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
-<span id="cb872-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[treatment], </span>
-<span id="cb872-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
-<span id="cb872-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-6"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> )</span>
-<span id="cb872-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-7"></a>  ), <span class="dt">data =</span> d</span>
-<span id="cb872-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-8"></a>)</span>
-<span id="cb872-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-9"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>)</span>
-<span id="cb872-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-10"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11<span class="fl">.2</span>, <span class="dt">n =</span> <span class="dv">10000</span>) </span>
-<span id="cb872-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-11"></a>p &lt;-<span class="st"> </span><span class="kw">sapply</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) <span class="kw">inv_logit</span>(prior<span class="op">$</span>a <span class="op">+</span><span class="st"> </span>prior<span class="op">$</span>b[, k]))</span>
-<span id="cb872-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-12"></a><span class="kw">dens</span>(<span class="kw">abs</span>(p[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>p[,<span class="dv">2</span>]), <span class="dt">adj =</span> <span class="fl">0.1</span>, </span>
-<span id="cb872-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-13"></a>      <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
-<span id="cb872-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-14"></a>      <span class="dt">xlab =</span> <span class="st">&quot;prior diff between treatments&quot;</span>)</span>
-<span id="cb872-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-15"></a><span class="kw">text</span>(<span class="fl">0.8</span>, <span class="dv">9</span>, <span class="st">&quot;b ~ dnorm(0, 10)&quot;</span>)</span>
-<span id="cb872-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-16"></a></span>
-<span id="cb872-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-17"></a>m11.<span class="fl">2.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
-<span id="cb872-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-18"></a>  <span class="kw">alist</span>(</span>
-<span id="cb872-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-19"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
-<span id="cb872-20"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-20"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[treatment], </span>
-<span id="cb872-21"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-21"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
-<span id="cb872-22"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-22"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> )</span>
-<span id="cb872-23"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-23"></a>  ), <span class="dt">data =</span> d</span>
-<span id="cb872-24"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-24"></a>)</span>
-<span id="cb872-25"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-25"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>)</span>
-<span id="cb872-26"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-26"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11.<span class="fl">2.1</span>, <span class="dt">n =</span> <span class="dv">10000</span>) </span>
-<span id="cb872-27"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-27"></a>p1 &lt;-<span class="st"> </span><span class="kw">sapply</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) <span class="kw">inv_logit</span>(prior<span class="op">$</span>a <span class="op">+</span><span class="st"> </span>prior<span class="op">$</span>b[, k]))</span>
-<span id="cb872-28"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-28"></a><span class="kw">lines</span>(<span class="kw">density</span>(<span class="kw">abs</span>(p1[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>p1[,<span class="dv">2</span>])), <span class="dt">adj =</span> <span class="fl">0.1</span>, </span>
-<span id="cb872-29"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-29"></a>       <span class="dt">col =</span> rangi2)</span>
-<span id="cb872-30"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-30"></a><span class="kw">text</span>(<span class="fl">0.3</span>, <span class="dv">4</span>, <span class="st">&quot;b ~ dnorm(0, 0.5)&quot;</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="sourceCode" id="cb868"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb868-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-1"></a>m11<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb868-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb868-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-3"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb868-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[treatment], </span>
+<span id="cb868-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-5"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb868-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-6"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> )</span>
+<span id="cb868-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-7"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb868-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-8"></a>)</span>
+<span id="cb868-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-9"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>)</span>
+<span id="cb868-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-10"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11<span class="fl">.2</span>, <span class="dt">n =</span> <span class="dv">10000</span>) </span>
+<span id="cb868-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-11"></a>p &lt;-<span class="st"> </span><span class="kw">sapply</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) <span class="kw">inv_logit</span>(prior<span class="op">$</span>a <span class="op">+</span><span class="st"> </span>prior<span class="op">$</span>b[, k]))</span>
+<span id="cb868-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-12"></a><span class="kw">dens</span>(<span class="kw">abs</span>(p[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>p[,<span class="dv">2</span>]), <span class="dt">adj =</span> <span class="fl">0.1</span>, </span>
+<span id="cb868-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-13"></a>      <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb868-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-14"></a>      <span class="dt">xlab =</span> <span class="st">&quot;prior diff between treatments&quot;</span>)</span>
+<span id="cb868-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-15"></a><span class="kw">text</span>(<span class="fl">0.8</span>, <span class="dv">9</span>, <span class="st">&quot;b ~ dnorm(0, 10)&quot;</span>)</span>
+<span id="cb868-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-16"></a></span>
+<span id="cb868-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-17"></a>m11.<span class="fl">2.1</span> &lt;-<span class="st"> </span><span class="kw">quap</span>(</span>
+<span id="cb868-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-18"></a>  <span class="kw">alist</span>(</span>
+<span id="cb868-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-19"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb868-20"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-20"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a <span class="op">+</span><span class="st"> </span>b[treatment], </span>
+<span id="cb868-21"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-21"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb868-22"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-22"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> )</span>
+<span id="cb868-23"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-23"></a>  ), <span class="dt">data =</span> d</span>
+<span id="cb868-24"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-24"></a>)</span>
+<span id="cb868-25"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-25"></a><span class="kw">set.seed</span>(<span class="dv">1999</span>)</span>
+<span id="cb868-26"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-26"></a>prior &lt;-<span class="st"> </span><span class="kw">extract.prior</span>( m11.<span class="fl">2.1</span>, <span class="dt">n =</span> <span class="dv">10000</span>) </span>
+<span id="cb868-27"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-27"></a>p1 &lt;-<span class="st"> </span><span class="kw">sapply</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>, <span class="cf">function</span>(k) <span class="kw">inv_logit</span>(prior<span class="op">$</span>a <span class="op">+</span><span class="st"> </span>prior<span class="op">$</span>b[, k]))</span>
+<span id="cb868-28"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-28"></a><span class="kw">lines</span>(<span class="kw">density</span>(<span class="kw">abs</span>(p1[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>p1[,<span class="dv">2</span>])), <span class="dt">adj =</span> <span class="fl">0.1</span>, </span>
+<span id="cb868-29"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-29"></a>       <span class="dt">col =</span> rangi2)</span>
+<span id="cb868-30"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb868-30"></a><span class="kw">text</span>(<span class="fl">0.3</span>, <span class="dv">4</span>, <span class="st">&quot;b ~ dnorm(0, 0.5)&quot;</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig02"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig02-1.png" alt="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the treatment effect also produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 0.5) prior produces something more reasonable (blue)." width="576" />
 <p class="caption">
@@ -1702,26 +1702,26 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 </p>
 </div>
 <p>修改了先驗概率分佈的方差 <span class="math inline">\(\omega = 0.5\)</span> 之後，我們發現大部分的概率密度被分配到了 0 附近而不是原來的非 0 即 1。但是此時的先驗療效差的平均值是：</p>
-<div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb873-1"></a><span class="kw">mean</span>(<span class="kw">abs</span>(p1[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>p1[,<span class="dv">2</span>]))</span></code></pre></div>
+<div class="sourceCode" id="cb869"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb869-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb869-1"></a><span class="kw">mean</span>(<span class="kw">abs</span>(p1[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>p1[,<span class="dv">2</span>]))</span></code></pre></div>
 <pre><code>## [1] 0.098386632</code></pre>
 <p>也就是 10% 左右的療效差，也就是不同條件下的概率不至於變得非常大。</p>
 <p>於是我們搞定了該怎樣設定先驗概率的問題之後，進入數據準備，和模型的運行階段：</p>
-<div class="sourceCode" id="cb875"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb875-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-1"></a><span class="co"># trimmed data list </span></span>
-<span id="cb875-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-2"></a>dat_list &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb875-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-3"></a>  <span class="dt">pulled_left =</span> d<span class="op">$</span>pulled_left, </span>
-<span id="cb875-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-4"></a>  <span class="dt">actor =</span> d<span class="op">$</span>actor, </span>
-<span id="cb875-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-5"></a>  <span class="dt">treatment =</span> <span class="kw">as.integer</span>(d<span class="op">$</span>treatment)</span>
-<span id="cb875-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-6"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb871"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb871-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-1"></a><span class="co"># trimmed data list </span></span>
+<span id="cb871-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-2"></a>dat_list &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb871-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-3"></a>  <span class="dt">pulled_left =</span> d<span class="op">$</span>pulled_left, </span>
+<span id="cb871-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-4"></a>  <span class="dt">actor =</span> d<span class="op">$</span>actor, </span>
+<span id="cb871-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-5"></a>  <span class="dt">treatment =</span> <span class="kw">as.integer</span>(d<span class="op">$</span>treatment)</span>
+<span id="cb871-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb871-6"></a>)</span></code></pre></div>
 <p>數據準備好了以後，讓我們來使用 Markov Chain 運行這個邏輯回歸模型：</p>
-<div class="sourceCode" id="cb876"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb876-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-1"></a>m11<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb876-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-2"></a>  <span class="kw">alist</span>(</span>
-<span id="cb876-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-3"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
-<span id="cb876-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>b[treatment], </span>
-<span id="cb876-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-5"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
-<span id="cb876-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-6"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> )</span>
-<span id="cb876-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-7"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
-<span id="cb876-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb876-8"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb877-1"></a><span class="kw">precis</span>( m11<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
+<div class="sourceCode" id="cb872"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb872-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-1"></a>m11<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb872-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb872-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-3"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb872-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>b[treatment], </span>
+<span id="cb872-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-5"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb872-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-6"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> )</span>
+<span id="cb872-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-7"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb872-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb872-8"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb873-1"></a><span class="kw">precis</span>( m11<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
 <pre><code>##              mean         sd         5.5%        94.5%      n_eff     Rhat4
 ## a[1] -0.454528384 0.32784554 -0.974289793  0.056337329  618.68588 1.0077899
 ## a[2]  3.875703937 0.72755168  2.766577132  5.147479217 1306.51622 1.0025155
@@ -1735,7 +1735,7 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 ## b[3] -0.380825647 0.27648954 -0.828977753  0.057105236  632.37705 1.0067710
 ## b[4]  0.374910681 0.27407066 -0.062467628  0.808194812  592.12092 1.0084258</code></pre>
 <p>這個模型 <code>m11.4</code> 的實際 Stan 代碼是:</p>
-<div class="sourceCode" id="cb879"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb879-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb879-1"></a><span class="kw">stancode</span>(m11<span class="fl">.4</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb875"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb875-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb875-1"></a><span class="kw">stancode</span>(m11<span class="fl">.4</span>)</span></code></pre></div>
 <pre><code>## data{
 ##     int pulled_left[504];
 ##     int treatment[504];
@@ -1765,9 +1765,9 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 ##     for ( i in 1:504 ) log_lik[i] = binomial_lpmf( pulled_left[i] | 1 , p[i] );
 ## }</code></pre>
 <p>上述模型運行的結果中，前面 7 個每隻黑猩猩的截距，也就是代表了每隻黑猩猩本身會主動去拉動左邊槓桿的傾向性。我們來把這個數據轉換到它本身應該有的數據尺度上來看：</p>
-<div class="sourceCode" id="cb881"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb881-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb881-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m11<span class="fl">.4</span>)</span>
-<span id="cb881-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb881-2"></a>p_left &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( post<span class="op">$</span>a )</span>
-<span id="cb881-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb881-3"></a><span class="kw">plot</span>( <span class="kw">precis</span>(<span class="kw">as.data.frame</span>(p_left)), <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb877-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m11<span class="fl">.4</span>)</span>
+<span id="cb877-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb877-2"></a>p_left &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( post<span class="op">$</span>a )</span>
+<span id="cb877-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb877-3"></a><span class="kw">plot</span>( <span class="kw">precis</span>(<span class="kw">as.data.frame</span>(p_left)), <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig03"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig03-1.png" alt="The intercepts unique to each chimpanzee, on the probability scale." width="624" />
 <p class="caption">
@@ -1775,8 +1775,8 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 </p>
 </div>
 <p>可以看到，比較明顯的傾向於去拉右側槓桿的是1，3，4，5這四隻黑猩猩。2號和7號黑猩猩則體現出了相反的興趣。這是每隻黑猩猩本身對於拉左右兩側哪隻槓桿的最基本的傾向性分析。接下來我們來看不同的條件下的效果差別：</p>
-<div class="sourceCode" id="cb882"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb882-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-1"></a>labs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;R/N&quot;</span>, <span class="st">&quot;L/N&quot;</span>, <span class="st">&quot;R/P&quot;</span>, <span class="st">&quot;L/P&quot;</span>)</span>
-<span id="cb882-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-2"></a><span class="kw">plot</span>( <span class="kw">precis</span>(m11<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span>, <span class="dt">pars =</span> <span class="st">&quot;b&quot;</span>), <span class="dt">labels =</span> labs)</span></code></pre></div>
+<div class="sourceCode" id="cb878"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb878-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb878-1"></a>labs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;R/N&quot;</span>, <span class="st">&quot;L/N&quot;</span>, <span class="st">&quot;R/P&quot;</span>, <span class="st">&quot;L/P&quot;</span>)</span>
+<span id="cb878-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb878-2"></a><span class="kw">plot</span>( <span class="kw">precis</span>(m11<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span>, <span class="dt">pars =</span> <span class="st">&quot;b&quot;</span>), <span class="dt">labels =</span> labs)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig04"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig04-1.png" alt="The treatment effect by different conditions, on the log-odds scale." width="624" />
 <p class="caption">
@@ -1784,12 +1784,12 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 </p>
 </div>
 <p>我們通過該實驗希望獲得的分析結果是，到底桌子對面坐與不坐同類，黑猩猩是否會作出不同的社會化傾向選擇？也就是黑猩猩是否會根據對面有沒有同類而去拉那個有兩個食物那一側的槓桿。這意味着我們希望比較的是第一行和第三行，也就是當兩份食物都在右側槓桿時，對面有沒有同類是否會改變黑猩猩拉動右側槓桿的選擇；同時我們也希望比較第二行和第四行的結果，也就是兩份食物都在左側槓桿時，對面有沒有同類是否會改變黑猩猩拉動左側槓桿的選擇。其實我們看圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig04">53.4</a> 已經能夠猜出大概沒有差異的的結果了。但是我們是可以對這兩個條件下的差異作出比較，並計算其可信區間的：</p>
-<div class="sourceCode" id="cb883"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb883-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb883-1"></a>diffs &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb883-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb883-2"></a>  <span class="dt">db13 =</span> post<span class="op">$</span>b[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>b[, <span class="dv">3</span>], </span>
-<span id="cb883-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb883-3"></a>  <span class="dt">db24 =</span> post<span class="op">$</span>b[, <span class="dv">2</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>b[, <span class="dv">4</span>]</span>
-<span id="cb883-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb883-4"></a>)</span>
-<span id="cb883-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb883-5"></a></span>
-<span id="cb883-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb883-6"></a><span class="kw">plot</span>(<span class="kw">precis</span>(diffs))</span></code></pre></div>
+<div class="sourceCode" id="cb879"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb879-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb879-1"></a>diffs &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb879-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb879-2"></a>  <span class="dt">db13 =</span> post<span class="op">$</span>b[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>b[, <span class="dv">3</span>], </span>
+<span id="cb879-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb879-3"></a>  <span class="dt">db24 =</span> post<span class="op">$</span>b[, <span class="dv">2</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>b[, <span class="dv">4</span>]</span>
+<span id="cb879-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb879-4"></a>)</span>
+<span id="cb879-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb879-5"></a></span>
+<span id="cb879-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb879-6"></a><span class="kw">plot</span>(<span class="kw">precis</span>(diffs))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig05"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig05-1.png" alt="The treatment effect difference compared between R/N R/P, and L/N L/P, on the log-odds scale." width="624" />
 <p class="caption">
@@ -1799,35 +1799,35 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 <p><code>db13, db14</code> 就是我們希望求的比較有/沒有同伴坐在桌子對面是否影響黑猩猩作出社會化傾向選擇的療效差異 (the contrast between the no-partner/partner treatments)。<code>db13</code> 的準確解釋是，當右側槓桿控制兩份食物時，對面有同伴/沒有同伴的情況下，黑猩猩會傾向於去使用左側槓桿的療效差異 (treatment effect difference)。所以，如果有證據證明有同伴的情況下，黑猩猩會傾向於作出社會化選擇，那麼我們應該會看到不等於零的療效差異，也就是會在有同伴的時候更多的去拉右邊的槓桿。但其實 <code>db13</code> 的結果似乎顯示有微弱的證據證明，當沒有同伴時，黑猩猩會略微更多的傾向於拉左邊槓桿（沒有社會化傾向），當然這個證據很微弱，可信區間也包括沒有療效差異的 0。相似地，<code>db24</code> 比較的是，當兩份食物出現在左側槓桿時，對面有同伴/沒有同伴情況之間拉動左側槓桿的療效差異。如果我們期待黑猩猩會作出會社會化傾向選擇當對面坐有同伴的話，我們會希望這個 <code>db24</code> 的取值會顯著小於零，但事實上卻沒有符合這樣期待的結果。</p>
 <p>我們可以利用上述運行好的模型結果來進行事後的預測，爲每一只黑猩猩估計它在四種條件下主動去拉左側槓桿的概率。同時我們還可以把它們和每隻黑猩猩實際觀察到的拉動左側槓桿概率作直觀的比較：</p>
 <p>下面的代碼計算出的是一個 <span class="math inline">\(7\times 4\)</span> 的矩陣，每一行有四列結果，代表7只黑猩猩在4中條件下實際觀察到拉動左側槓桿的概率，其中第一只黑猩猩的四種條件下拉動左側槓桿的概率分別是：<code>0.3333 0.5000 0.2778 0.5556</code>。</p>
-<div class="sourceCode" id="cb884"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb884-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-1"></a>pl &lt;-<span class="st"> </span><span class="kw">by</span>( d<span class="op">$</span>pulled_left, <span class="kw">list</span>(d<span class="op">$</span>actor, d<span class="op">$</span>treatment), mean)</span>
-<span id="cb884-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-2"></a>pl[<span class="dv">1</span>, ]</span></code></pre></div>
+<div class="sourceCode" id="cb880"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb880-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb880-1"></a>pl &lt;-<span class="st"> </span><span class="kw">by</span>( d<span class="op">$</span>pulled_left, <span class="kw">list</span>(d<span class="op">$</span>actor, d<span class="op">$</span>treatment), mean)</span>
+<span id="cb880-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb880-2"></a>pl[<span class="dv">1</span>, ]</span></code></pre></div>
 <pre><code>##          1          2          3          4 
 ## 0.33333333 0.50000000 0.27777778 0.55555556</code></pre>
-<div class="sourceCode" id="cb886"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb886-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-1"></a><span class="kw">str</span>(pl)</span></code></pre></div>
+<div class="sourceCode" id="cb882"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb882-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb882-1"></a><span class="kw">str</span>(pl)</span></code></pre></div>
 <pre><code>##  &#39;by&#39; num [1:7, 1:4] 0.333 1 0.278 0.333 0.333 ...
 ##  - attr(*, &quot;dimnames&quot;)=List of 2
 ##   ..$ : chr [1:7] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...
 ##   ..$ : chr [1:4] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot;
 ##  - attr(*, &quot;call&quot;)= language by.default(data = d$pulled_left, INDICES = list(d$actor, d$treatment), FUN = mean)</code></pre>
 <p>把每隻猩猩的四個條件下的觀察值散點圖繪製如下圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig06">53.6</a>：</p>
-<div class="sourceCode" id="cb888"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb888-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-1"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">28</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="dt">xlab =</span> <span class="st">&quot;&quot;</span>, </span>
-<span id="cb888-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-2"></a>     <span class="dt">ylab =</span> <span class="st">&quot;proportion left lever&quot;</span>, <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)</span>
-<span id="cb888-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-3"></a><span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>), <span class="dt">labels =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>))</span>
-<span id="cb888-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-4"></a><span class="kw">abline</span>( <span class="dt">h =</span> <span class="fl">0.5</span>, <span class="dt">lty =</span> <span class="dv">2</span> )</span>
-<span id="cb888-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-5"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">abline</span>( <span class="dt">v =</span> (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">4.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
-<span id="cb888-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-6"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">text</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">2.5</span>, <span class="fl">1.1</span>, <span class="kw">concat</span>(<span class="st">&quot;actor &quot;</span>, j), <span class="dt">xpd =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb888-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-7"></a><span class="cf">for</span> (j <span class="cf">in</span> (<span class="dv">1</span><span class="op">:</span><span class="dv">7</span>)[<span class="op">-</span><span class="dv">2</span>] ) {</span>
-<span id="cb888-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-8"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>), pl[j, <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">col =</span> rangi2)</span>
-<span id="cb888-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-9"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>), pl[j, <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">col =</span> rangi2)</span>
-<span id="cb888-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-10"></a>}</span>
-<span id="cb888-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-11"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(pl), <span class="dt">pch =</span> <span class="dv">16</span>, <span class="dt">col =</span> <span class="st">&quot;white&quot;</span>, <span class="dt">cex =</span>  <span class="fl">1.7</span>)</span>
-<span id="cb888-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-12"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(pl), <span class="dt">pch =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">16</span>,<span class="dv">16</span>), <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb888-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-13"></a>yoff &lt;-<span class="st"> </span><span class="fl">0.01</span></span>
-<span id="cb888-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-14"></a><span class="kw">text</span>( <span class="dv">1</span>, pl[<span class="dv">1</span>,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb888-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-15"></a><span class="kw">text</span>( <span class="dv">2</span>, pl[<span class="dv">1</span>,<span class="dv">2</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb888-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-16"></a><span class="kw">text</span>( <span class="dv">3</span>, pl[<span class="dv">1</span>,<span class="dv">3</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb888-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-17"></a><span class="kw">text</span>( <span class="dv">4</span>, pl[<span class="dv">1</span>,<span class="dv">4</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb888-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb888-18"></a><span class="kw">mtext</span>( <span class="st">&quot;observed proportions</span><span class="ch">\n</span><span class="st">&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb884"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb884-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-1"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">28</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="dt">xlab =</span> <span class="st">&quot;&quot;</span>, </span>
+<span id="cb884-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-2"></a>     <span class="dt">ylab =</span> <span class="st">&quot;proportion left lever&quot;</span>, <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb884-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-3"></a><span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>), <span class="dt">labels =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>))</span>
+<span id="cb884-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-4"></a><span class="kw">abline</span>( <span class="dt">h =</span> <span class="fl">0.5</span>, <span class="dt">lty =</span> <span class="dv">2</span> )</span>
+<span id="cb884-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-5"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">abline</span>( <span class="dt">v =</span> (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">4.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb884-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-6"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">text</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">2.5</span>, <span class="fl">1.1</span>, <span class="kw">concat</span>(<span class="st">&quot;actor &quot;</span>, j), <span class="dt">xpd =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb884-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-7"></a><span class="cf">for</span> (j <span class="cf">in</span> (<span class="dv">1</span><span class="op">:</span><span class="dv">7</span>)[<span class="op">-</span><span class="dv">2</span>] ) {</span>
+<span id="cb884-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-8"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>), pl[j, <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb884-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-9"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>), pl[j, <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb884-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-10"></a>}</span>
+<span id="cb884-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-11"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(pl), <span class="dt">pch =</span> <span class="dv">16</span>, <span class="dt">col =</span> <span class="st">&quot;white&quot;</span>, <span class="dt">cex =</span>  <span class="fl">1.7</span>)</span>
+<span id="cb884-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-12"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(pl), <span class="dt">pch =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">16</span>,<span class="dv">16</span>), <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb884-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-13"></a>yoff &lt;-<span class="st"> </span><span class="fl">0.01</span></span>
+<span id="cb884-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-14"></a><span class="kw">text</span>( <span class="dv">1</span>, pl[<span class="dv">1</span>,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb884-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-15"></a><span class="kw">text</span>( <span class="dv">2</span>, pl[<span class="dv">1</span>,<span class="dv">2</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb884-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-16"></a><span class="kw">text</span>( <span class="dv">3</span>, pl[<span class="dv">1</span>,<span class="dv">3</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb884-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-17"></a><span class="kw">text</span>( <span class="dv">4</span>, pl[<span class="dv">1</span>,<span class="dv">4</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb884-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb884-18"></a><span class="kw">mtext</span>( <span class="st">&quot;observed proportions</span><span class="ch">\n</span><span class="st">&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig06"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig06-1.png" alt="Observed data for the chimpanzee data. Data are grouped by actor. Open points are non-partner treatments. Filled points are partner treatments. The right R and left L sides of the prosocial options are labeled in the figure." width="672" />
 <p class="caption">
@@ -1835,35 +1835,35 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 </p>
 </div>
 <p>接下來我們來計算模型運行之後的這些概率的預測值。圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig07">53.7</a> 生成的代碼如下。模型本身告訴我們，有沒有同伴坐在桌子對面，基本上不會影響黑猩猩的選擇。(The model expects no change when adding a partner.) 大部分的選擇變化取決於黑猩猩本身，也就是每隻黑猩猩自己的模型截距。</p>
-<div class="sourceCode" id="cb889"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb889-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-1"></a>dat &lt;-<span class="st"> </span><span class="kw">list</span>( <span class="dt">actor =</span> <span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">7</span>, <span class="dt">each =</span> <span class="dv">4</span>), </span>
-<span id="cb889-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-2"></a>             <span class="dt">treatment =</span> <span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">4</span>, <span class="dt">times =</span> <span class="dv">7</span>))</span>
-<span id="cb889-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-3"></a>p_post &lt;-<span class="st"> </span><span class="kw">link</span>( m11<span class="fl">.4</span>, <span class="dt">data =</span> dat )</span>
-<span id="cb889-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-4"></a>p_mu &lt;-<span class="st"> </span><span class="kw">apply</span>( p_post, <span class="dv">2</span>, mean )</span>
-<span id="cb889-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-5"></a>p_ci &lt;-<span class="st"> </span><span class="kw">apply</span>( p_post, <span class="dv">2</span>, PI )</span>
-<span id="cb889-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-6"></a></span>
-<span id="cb889-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-7"></a>p_mu &lt;-<span class="st"> </span><span class="kw">matrix</span>(p_mu, <span class="dt">nrow =</span> <span class="dv">7</span>, <span class="dt">ncol =</span> <span class="dv">4</span>, <span class="dt">byrow =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb889-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-8"></a></span>
-<span id="cb889-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-9"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">28</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="dt">xlab =</span> <span class="st">&quot;&quot;</span>, </span>
-<span id="cb889-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-10"></a>     <span class="dt">ylab =</span> <span class="st">&quot;proportion left lever&quot;</span>, <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)</span>
-<span id="cb889-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-11"></a><span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>), <span class="dt">labels =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>))</span>
-<span id="cb889-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-12"></a><span class="kw">abline</span>( <span class="dt">h =</span> <span class="fl">0.5</span>, <span class="dt">lty =</span> <span class="dv">2</span> )</span>
-<span id="cb889-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-13"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">abline</span>( <span class="dt">v =</span> (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">4.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
-<span id="cb889-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-14"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">text</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">2.5</span>, <span class="fl">1.1</span>, <span class="kw">concat</span>(<span class="st">&quot;actor &quot;</span>, j), <span class="dt">xpd =</span> <span class="ot">TRUE</span>)</span>
-<span id="cb889-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-15"></a><span class="cf">for</span> (j <span class="cf">in</span> (<span class="dv">1</span><span class="op">:</span><span class="dv">7</span>)[<span class="op">-</span><span class="dv">2</span>] ) {</span>
-<span id="cb889-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-16"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>), p_mu[j, <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb889-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-17"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>), p_mu[j, <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb889-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-18"></a>}</span>
-<span id="cb889-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-19"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>) {</span>
-<span id="cb889-20"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-20"></a>  <span class="kw">lines</span>( <span class="kw">c</span>(j, j), p_ci[<span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), j], <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb889-21"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-21"></a>}</span>
-<span id="cb889-22"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-22"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(p_mu), <span class="dt">pch =</span> <span class="dv">16</span>, <span class="dt">col =</span> <span class="st">&quot;white&quot;</span>, <span class="dt">cex =</span>  <span class="fl">1.7</span>)</span>
-<span id="cb889-23"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-23"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(p_mu), <span class="dt">pch =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">16</span>,<span class="dv">16</span>), <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb889-24"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-24"></a>yoff &lt;-<span class="st"> </span><span class="fl">0.07</span></span>
-<span id="cb889-25"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-25"></a><span class="kw">text</span>( <span class="dv">1</span>, p_mu[<span class="dv">1</span>,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb889-26"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-26"></a><span class="kw">text</span>( <span class="dv">2</span>, p_mu[<span class="dv">1</span>,<span class="dv">2</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb889-27"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-27"></a><span class="kw">text</span>( <span class="dv">3</span>, p_mu[<span class="dv">1</span>,<span class="dv">3</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb889-28"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-28"></a><span class="kw">text</span>( <span class="dv">4</span>, p_mu[<span class="dv">1</span>,<span class="dv">4</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
-<span id="cb889-29"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-29"></a><span class="kw">mtext</span>( <span class="st">&quot;posterior prediction proportions</span><span class="ch">\n</span><span class="st">&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb885"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb885-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-1"></a>dat &lt;-<span class="st"> </span><span class="kw">list</span>( <span class="dt">actor =</span> <span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">7</span>, <span class="dt">each =</span> <span class="dv">4</span>), </span>
+<span id="cb885-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-2"></a>             <span class="dt">treatment =</span> <span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">4</span>, <span class="dt">times =</span> <span class="dv">7</span>))</span>
+<span id="cb885-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-3"></a>p_post &lt;-<span class="st"> </span><span class="kw">link</span>( m11<span class="fl">.4</span>, <span class="dt">data =</span> dat )</span>
+<span id="cb885-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-4"></a>p_mu &lt;-<span class="st"> </span><span class="kw">apply</span>( p_post, <span class="dv">2</span>, mean )</span>
+<span id="cb885-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-5"></a>p_ci &lt;-<span class="st"> </span><span class="kw">apply</span>( p_post, <span class="dv">2</span>, PI )</span>
+<span id="cb885-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-6"></a></span>
+<span id="cb885-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-7"></a>p_mu &lt;-<span class="st"> </span><span class="kw">matrix</span>(p_mu, <span class="dt">nrow =</span> <span class="dv">7</span>, <span class="dt">ncol =</span> <span class="dv">4</span>, <span class="dt">byrow =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb885-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-8"></a></span>
+<span id="cb885-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-9"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">28</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="dt">xlab =</span> <span class="st">&quot;&quot;</span>, </span>
+<span id="cb885-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-10"></a>     <span class="dt">ylab =</span> <span class="st">&quot;proportion left lever&quot;</span>, <span class="dt">xaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">yaxt =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb885-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-11"></a><span class="kw">axis</span>(<span class="dv">2</span>, <span class="dt">at =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>), <span class="dt">labels =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">by =</span> <span class="fl">0.2</span>))</span>
+<span id="cb885-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-12"></a><span class="kw">abline</span>( <span class="dt">h =</span> <span class="fl">0.5</span>, <span class="dt">lty =</span> <span class="dv">2</span> )</span>
+<span id="cb885-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-13"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">abline</span>( <span class="dt">v =</span> (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">4.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb885-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-14"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span> ) <span class="kw">text</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">*</span><span class="st"> </span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="fl">2.5</span>, <span class="fl">1.1</span>, <span class="kw">concat</span>(<span class="st">&quot;actor &quot;</span>, j), <span class="dt">xpd =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb885-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-15"></a><span class="cf">for</span> (j <span class="cf">in</span> (<span class="dv">1</span><span class="op">:</span><span class="dv">7</span>)[<span class="op">-</span><span class="dv">2</span>] ) {</span>
+<span id="cb885-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-16"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>), p_mu[j, <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">3</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb885-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-17"></a>  <span class="kw">lines</span>( (j <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)<span class="op">*</span><span class="dv">4</span> <span class="op">+</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>), p_mu[j, <span class="kw">c</span>(<span class="dv">2</span>,<span class="dv">4</span>)], <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb885-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-18"></a>}</span>
+<span id="cb885-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-19"></a><span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>) {</span>
+<span id="cb885-20"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-20"></a>  <span class="kw">lines</span>( <span class="kw">c</span>(j, j), p_ci[<span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), j], <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb885-21"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-21"></a>}</span>
+<span id="cb885-22"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-22"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(p_mu), <span class="dt">pch =</span> <span class="dv">16</span>, <span class="dt">col =</span> <span class="st">&quot;white&quot;</span>, <span class="dt">cex =</span>  <span class="fl">1.7</span>)</span>
+<span id="cb885-23"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-23"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">28</span>, <span class="kw">t</span>(p_mu), <span class="dt">pch =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">16</span>,<span class="dv">16</span>), <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb885-24"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-24"></a>yoff &lt;-<span class="st"> </span><span class="fl">0.07</span></span>
+<span id="cb885-25"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-25"></a><span class="kw">text</span>( <span class="dv">1</span>, p_mu[<span class="dv">1</span>,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb885-26"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-26"></a><span class="kw">text</span>( <span class="dv">2</span>, p_mu[<span class="dv">1</span>,<span class="dv">2</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/N&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb885-27"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-27"></a><span class="kw">text</span>( <span class="dv">3</span>, p_mu[<span class="dv">1</span>,<span class="dv">3</span>] <span class="op">-</span><span class="st"> </span>yoff, <span class="st">&quot;R/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">1</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb885-28"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-28"></a><span class="kw">text</span>( <span class="dv">4</span>, p_mu[<span class="dv">1</span>,<span class="dv">4</span>] <span class="op">+</span><span class="st"> </span>yoff, <span class="st">&quot;L/P&quot;</span>, <span class="dt">pos =</span> <span class="dv">3</span>, <span class="dt">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb885-29"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb885-29"></a><span class="kw">mtext</span>( <span class="st">&quot;posterior prediction proportions</span><span class="ch">\n</span><span class="st">&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig07"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig07-1.png" alt="Posterior predictions for the chimpanzee data. Data are grouped by actor. Open points are non-partner treatments. Filled points are partner treatments. The right R and left L sides of the prosocial options are labeled in the figure. 89% compatibility intervals for each proportion for each actor are shown as well." width="672" />
 <p class="caption">
@@ -1871,26 +1871,26 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 </p>
 </div>
 <p><code>m11.4</code> 模型實際上直接跳過了只有 <code>procosial option</code> 和 <code>partner</code> 兩個變量時的模型直接加了交互作用項的模型。下面的代碼運行的模型是沒有交互作用項的版本，我麼來比較一下兩個模型的擬合度：</p>
-<div class="sourceCode" id="cb890"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb890-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-1"></a>d<span class="op">$</span>side &lt;-<span class="st"> </span>d<span class="op">$</span>prosoc_left <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="co"># right = 1, left = 2</span></span>
-<span id="cb890-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-2"></a>d<span class="op">$</span>cond &lt;-<span class="st"> </span>d<span class="op">$</span>condition <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="co"># no partner = 1, with partner = 2</span></span>
-<span id="cb890-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-3"></a></span>
-<span id="cb890-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-4"></a>dat_list2 &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb890-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-5"></a>  <span class="dt">pulled_left =</span> d<span class="op">$</span>pulled_left, </span>
-<span id="cb890-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-6"></a>  <span class="dt">actor =</span> d<span class="op">$</span>actor, </span>
-<span id="cb890-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-7"></a>  <span class="dt">side =</span> d<span class="op">$</span>side, </span>
-<span id="cb890-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-8"></a>  <span class="dt">cond =</span> d<span class="op">$</span>cond</span>
-<span id="cb890-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-9"></a>)</span>
-<span id="cb890-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-10"></a></span>
-<span id="cb890-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-11"></a>m11<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb890-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-12"></a>  <span class="kw">alist</span>(</span>
-<span id="cb890-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-13"></a>    pulled_left  <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
-<span id="cb890-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-14"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>bs[side] <span class="op">+</span><span class="st"> </span>bc[cond] , </span>
-<span id="cb890-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-15"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
-<span id="cb890-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-16"></a>    bs[side] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
-<span id="cb890-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-17"></a>    bc[cond] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> )</span>
-<span id="cb890-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-18"></a>  ), <span class="dt">data =</span> dat_list2, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
-<span id="cb890-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb890-19"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb891"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb891-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-1"></a><span class="kw">precis</span>(m11<span class="fl">.5</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb886"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb886-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-1"></a>d<span class="op">$</span>side &lt;-<span class="st"> </span>d<span class="op">$</span>prosoc_left <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="co"># right = 1, left = 2</span></span>
+<span id="cb886-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-2"></a>d<span class="op">$</span>cond &lt;-<span class="st"> </span>d<span class="op">$</span>condition <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="co"># no partner = 1, with partner = 2</span></span>
+<span id="cb886-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-3"></a></span>
+<span id="cb886-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-4"></a>dat_list2 &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb886-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-5"></a>  <span class="dt">pulled_left =</span> d<span class="op">$</span>pulled_left, </span>
+<span id="cb886-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-6"></a>  <span class="dt">actor =</span> d<span class="op">$</span>actor, </span>
+<span id="cb886-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-7"></a>  <span class="dt">side =</span> d<span class="op">$</span>side, </span>
+<span id="cb886-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-8"></a>  <span class="dt">cond =</span> d<span class="op">$</span>cond</span>
+<span id="cb886-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-9"></a>)</span>
+<span id="cb886-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-10"></a></span>
+<span id="cb886-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-11"></a>m11<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb886-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-12"></a>  <span class="kw">alist</span>(</span>
+<span id="cb886-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-13"></a>    pulled_left  <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb886-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-14"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>bs[side] <span class="op">+</span><span class="st"> </span>bc[cond] , </span>
+<span id="cb886-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-15"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb886-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-16"></a>    bs[side] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb886-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-17"></a>    bc[cond] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> )</span>
+<span id="cb886-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-18"></a>  ), <span class="dt">data =</span> dat_list2, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb886-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb886-19"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb887"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb887-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb887-1"></a><span class="kw">precis</span>(m11<span class="fl">.5</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
 <pre><code>##               mean         sd         5.5%        94.5%      n_eff      Rhat4
 ## a[1]  -0.642881802 0.44165739 -1.341233052  0.078126711  629.45025 1.00432614
 ## a[2]   3.764697278 0.77525869  2.570274101  5.046571791 1227.09977 1.00311619
@@ -1903,7 +1903,7 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 ## bs[2]  0.506460453 0.33697249 -0.038639841  1.064147670  704.09029 1.00486015
 ## bc[1]  0.263602459 0.33446074 -0.273079551  0.803124046  739.94771 0.99997245
 ## bc[2]  0.021626728 0.33676519 -0.499078076  0.562852705  719.03155 1.00009181</code></pre>
-<div class="sourceCode" id="cb893"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb893-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-1"></a><span class="kw">compare</span>(m11<span class="fl">.5</span>, m11<span class="fl">.4</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb889"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb889-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb889-1"></a><span class="kw">compare</span>(m11<span class="fl">.5</span>, m11<span class="fl">.4</span>)</span></code></pre></div>
 <pre><code>##            WAIC        SE     dWAIC      dSE     pWAIC     weight
 ## m11.5 530.53937 19.159884 0.0000000       NA 7.6777996 0.72829024
 ## m11.4 532.51130 18.911418 1.9719304 1.298639 8.6051487 0.27170976</code></pre>
@@ -1918,16 +1918,16 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 <div id="歸納後的二進制數據繼續使用黑猩猩數據" class="section level3">
 <h3><span class="header-section-number">53.1.3</span> 歸納後的二進制數據：繼續使用黑猩猩數據</h3>
 <p>前面黑猩猩數據的邏輯回歸模型實例中，我們使用的數據是每一隻黑猩猩，在每次以實驗作出的是否拉動左側槓桿的單個實驗數據 individual data。但是事實上很多數據在獲取的時候是已經被整理彙總過的。相同的信息可以被整理成更加簡約的數據形式。我們可以從原始數據計算每隻黑猩猩，在不同的實驗條件下拉動左側槓桿的次數：</p>
-<div class="sourceCode" id="cb895"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb895-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-1"></a>d_aggregated &lt;-<span class="st"> </span><span class="kw">aggregate</span>(</span>
-<span id="cb895-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-2"></a>  d<span class="op">$</span>pulled_left, </span>
-<span id="cb895-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-3"></a>  <span class="kw">list</span>( <span class="dt">treatment =</span> d<span class="op">$</span>treatment, </span>
-<span id="cb895-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-4"></a>        <span class="dt">actor =</span> d<span class="op">$</span>actor, </span>
-<span id="cb895-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-5"></a>        <span class="dt">side =</span> d<span class="op">$</span>side, </span>
-<span id="cb895-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-6"></a>        <span class="dt">cond =</span> d<span class="op">$</span>cond), </span>
-<span id="cb895-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-7"></a>  sum</span>
-<span id="cb895-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-8"></a>)</span>
-<span id="cb895-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-9"></a><span class="kw">colnames</span>(d_aggregated)[<span class="dv">5</span>] &lt;-<span class="st"> &quot;left_pulls&quot;</span></span>
-<span id="cb895-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb895-10"></a><span class="kw">head</span>(d_aggregated, <span class="dv">10</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb891"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb891-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-1"></a>d_aggregated &lt;-<span class="st"> </span><span class="kw">aggregate</span>(</span>
+<span id="cb891-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-2"></a>  d<span class="op">$</span>pulled_left, </span>
+<span id="cb891-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-3"></a>  <span class="kw">list</span>( <span class="dt">treatment =</span> d<span class="op">$</span>treatment, </span>
+<span id="cb891-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-4"></a>        <span class="dt">actor =</span> d<span class="op">$</span>actor, </span>
+<span id="cb891-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-5"></a>        <span class="dt">side =</span> d<span class="op">$</span>side, </span>
+<span id="cb891-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-6"></a>        <span class="dt">cond =</span> d<span class="op">$</span>cond), </span>
+<span id="cb891-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-7"></a>  sum</span>
+<span id="cb891-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-8"></a>)</span>
+<span id="cb891-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-9"></a><span class="kw">colnames</span>(d_aggregated)[<span class="dv">5</span>] &lt;-<span class="st"> &quot;left_pulls&quot;</span></span>
+<span id="cb891-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb891-10"></a><span class="kw">head</span>(d_aggregated, <span class="dv">10</span>)</span></code></pre></div>
 <pre><code>##    treatment actor side cond left_pulls
 ## 1          1     1    1    1          6
 ## 2          1     2    1    1         18
@@ -1940,24 +1940,24 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 ## 9          2     2    2    1         18
 ## 10         2     3    2    1         11</code></pre>
 <p>彙總後的數據中 <code>left_pulls</code> 就是不同條件下每隻黑猩猩拉動左側槓桿的次數彙總。記得2號黑猩猩始終都拉左側槓桿，所以你看 <code>actor = 2</code> 的時候 <code>left_pulls = 18</code> 都是保持不變的。也就是說，每隻黑猩猩在每種條件下都進行了總共18次的測試。接下來我們可以使用這個歸納彙總過的數據來做和 <code>m11.4</code> 完全相同的統計推斷：</p>
-<div class="sourceCode" id="cb897"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb897-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-1"></a>dat &lt;-<span class="st"> </span><span class="kw">with</span>(d_aggregated, </span>
-<span id="cb897-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-2"></a>            <span class="kw">list</span>(</span>
-<span id="cb897-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-3"></a>              <span class="dt">left_pulls =</span> left_pulls, </span>
-<span id="cb897-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-4"></a>              <span class="dt">treatment =</span> treatment, </span>
-<span id="cb897-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-5"></a>              <span class="dt">actor =</span> actor, </span>
-<span id="cb897-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-6"></a>              <span class="dt">side =</span> side, </span>
-<span id="cb897-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-7"></a>              <span class="dt">cond =</span> cond</span>
-<span id="cb897-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-8"></a>            ))</span>
-<span id="cb897-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-9"></a></span>
-<span id="cb897-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-10"></a>m11<span class="fl">.6</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb897-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-11"></a>  <span class="kw">alist</span>(</span>
-<span id="cb897-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-12"></a>    left_pulls <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">18</span>, p ), <span class="co"># it used to be dbinom( 1, p )</span></span>
-<span id="cb897-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-13"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>b[treatment], </span>
-<span id="cb897-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-14"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
-<span id="cb897-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-15"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span> , <span class="fl">0.5</span> )</span>
-<span id="cb897-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-16"></a>  ), <span class="dt">data =</span>  dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
-<span id="cb897-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb897-17"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb898"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb898-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb898-1"></a><span class="kw">precis</span>(m11<span class="fl">.6</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb893"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb893-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-1"></a>dat &lt;-<span class="st"> </span><span class="kw">with</span>(d_aggregated, </span>
+<span id="cb893-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-2"></a>            <span class="kw">list</span>(</span>
+<span id="cb893-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-3"></a>              <span class="dt">left_pulls =</span> left_pulls, </span>
+<span id="cb893-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-4"></a>              <span class="dt">treatment =</span> treatment, </span>
+<span id="cb893-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-5"></a>              <span class="dt">actor =</span> actor, </span>
+<span id="cb893-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-6"></a>              <span class="dt">side =</span> side, </span>
+<span id="cb893-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-7"></a>              <span class="dt">cond =</span> cond</span>
+<span id="cb893-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-8"></a>            ))</span>
+<span id="cb893-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-9"></a></span>
+<span id="cb893-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-10"></a>m11<span class="fl">.6</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb893-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-11"></a>  <span class="kw">alist</span>(</span>
+<span id="cb893-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-12"></a>    left_pulls <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">18</span>, p ), <span class="co"># it used to be dbinom( 1, p )</span></span>
+<span id="cb893-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-13"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>b[treatment], </span>
+<span id="cb893-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-14"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb893-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-15"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span> , <span class="fl">0.5</span> )</span>
+<span id="cb893-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-16"></a>  ), <span class="dt">data =</span>  dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb893-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb893-17"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb894"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb894-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb894-1"></a><span class="kw">precis</span>(m11<span class="fl">.6</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
 <pre><code>##              mean         sd         5.5%        94.5%      n_eff      Rhat4
 ## a[1] -0.450439063 0.31986404 -0.948781815  0.057499155  728.33404 1.00267173
 ## a[2]  3.881184673 0.74892656  2.732569763  5.165345418 1435.16436 1.00041143
@@ -1971,7 +1971,7 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 ## b[3] -0.377506044 0.28028818 -0.825760413  0.064112293  665.69146 1.00309855
 ## b[4]  0.382278643 0.27977100 -0.071567349  0.821076027  734.19525 1.00101103</code></pre>
 <p>運行結果和 <code>m11.4</code> 是完全一致的。但是，如果你比較 <code>m11.6, m11.4</code> 兩個模型之間卻給出了差異很大的模型特徵值：</p>
-<div class="sourceCode" id="cb900"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb900-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb900-1"></a><span class="kw">compare</span>(m11<span class="fl">.6</span>, m11<span class="fl">.4</span>, <span class="dt">func =</span> PSIS)</span></code></pre></div>
+<div class="sourceCode" id="cb896"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb896-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb896-1"></a><span class="kw">compare</span>(m11<span class="fl">.6</span>, m11<span class="fl">.4</span>, <span class="dt">func =</span> PSIS)</span></code></pre></div>
 <pre><code>## Warning in compare(m11.6, m11.4, func = PSIS): Different numbers of observations found for at least two models.
 ## Model comparison is valid only for models fit to exactly the same observations.
 ## Number of observations for each model:
@@ -1981,7 +1981,7 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 <pre><code>##            PSIS         SE    dPSIS       dSE     pPSIS        weight
 ## m11.6 114.14139  8.4565025   0.0000        NA 8.4036755 1.0000000e+00
 ## m11.4 532.56459 18.9319823 418.4232 9.4852221 8.6317936 1.3821545e-91</code></pre>
-<div class="sourceCode" id="cb904"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb904-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb904-1"></a><span class="kw">compare</span>(m11<span class="fl">.6</span>, m11<span class="fl">.4</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb900"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb900-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb900-1"></a><span class="kw">compare</span>(m11<span class="fl">.6</span>, m11<span class="fl">.4</span>)</span></code></pre></div>
 <pre><code>## Warning in compare(m11.6, m11.4): Different numbers of observations found for at least two models.
 ## Model comparison is valid only for models fit to exactly the same observations.
 ## Number of observations for each model:
@@ -2003,20 +2003,20 @@ L_i &amp; \sim \text{Binomial}(1, p_i) \\
 \end{aligned}
 \]</span></p>
 <p>所以兩種數據形式，兩種模型給出的參數估計結果完全一致，但是他們兩個模型之間的特徵值差異很大。簡單地看下列計算比較兩種數據形式給出的對數概率和的結果差異有多大：</p>
-<div class="sourceCode" id="cb907"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb907-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb907-1"></a><span class="co"># deviance of aggregated 6-in-9</span></span>
-<span id="cb907-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb907-2"></a><span class="dv">-2</span><span class="op">*</span><span class="kw">dbinom</span>(<span class="dv">6</span>, <span class="dv">9</span>, <span class="fl">0.2</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb903"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb903-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb903-1"></a><span class="co"># deviance of aggregated 6-in-9</span></span>
+<span id="cb903-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb903-2"></a><span class="dv">-2</span><span class="op">*</span><span class="kw">dbinom</span>(<span class="dv">6</span>, <span class="dv">9</span>, <span class="fl">0.2</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <pre><code>## [1] 11.790483</code></pre>
-<div class="sourceCode" id="cb909"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb909-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-1"></a><span class="co"># deviance of dis-aggregated</span></span>
-<span id="cb909-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-2"></a><span class="dv">-2</span><span class="op">*</span><span class="kw">sum</span>(<span class="kw">dbern</span>(<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>), <span class="fl">0.2</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb905"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb905-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb905-1"></a><span class="co"># deviance of dis-aggregated</span></span>
+<span id="cb905-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb905-2"></a><span class="dv">-2</span><span class="op">*</span><span class="kw">sum</span>(<span class="kw">dbern</span>(<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>), <span class="fl">0.2</span>, <span class="dt">log =</span> <span class="ot">TRUE</span>))</span></code></pre></div>
 <pre><code>## [1] 20.652116</code></pre>
 <p>但我們其實根本不用在乎這兩者之間模型的特徵值差異。所有模型參數的事後概率分佈估計都會是完全一致的。另外還有一個警報：<code>Model comparison is valid only for models fit to exactly the same observations.</code> 提示我們這兩個模型之間的觀察值個數不同。</p>
 </div>
 <div id="彙總型二進制數據大學錄取數據" class="section level3">
 <h3><span class="header-section-number">53.1.4</span> 彙總型二進制數據：大學錄取數據</h3>
 <p>有時候不同的彙總數據，他們各自的試驗總次數不一定總是像黑猩猩數據那樣都是相同的。例如下面的大學錄取數據，一共只有12行：</p>
-<div class="sourceCode" id="cb911"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb911-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb911-1"></a><span class="kw">data</span>(<span class="st">&quot;UCBadmit&quot;</span>)</span>
-<span id="cb911-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb911-2"></a>d &lt;-<span class="st"> </span>UCBadmit</span>
-<span id="cb911-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb911-3"></a>d</span></code></pre></div>
+<div class="sourceCode" id="cb907"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb907-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb907-1"></a><span class="kw">data</span>(<span class="st">&quot;UCBadmit&quot;</span>)</span>
+<span id="cb907-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb907-2"></a>d &lt;-<span class="st"> </span>UCBadmit</span>
+<span id="cb907-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb907-3"></a>d</span></code></pre></div>
 <pre><code>##    dept applicant.gender admit reject applications
 ## 1     A             male   512    313          825
 ## 2     A           female    89     19          108
@@ -2044,43 +2044,43 @@ A_i &amp; \sim \text{Binomial}(N_i, p_i) \\
 <li><span class="math inline">\(\text{GID}[i]\)</span> 表示申請人的性別，1 是男性，2 是女性</li>
 </ul>
 <p>我們來把該數學模型描述成代碼：</p>
-<div class="sourceCode" id="cb913"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb913-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-1"></a>dat_list &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb913-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-2"></a>  <span class="dt">admit =</span> d<span class="op">$</span>admit, </span>
-<span id="cb913-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-3"></a>  <span class="dt">applications =</span> d<span class="op">$</span>applications, </span>
-<span id="cb913-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-4"></a>  <span class="dt">gid =</span> <span class="kw">ifelse</span>( d<span class="op">$</span>applicant.gender <span class="op">==</span><span class="st"> &quot;male&quot;</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
-<span id="cb913-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-5"></a>)</span>
-<span id="cb913-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-6"></a></span>
-<span id="cb913-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-7"></a>m11<span class="fl">.7</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb913-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-8"></a>  <span class="kw">alist</span>(</span>
-<span id="cb913-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-9"></a>    admit <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( applications, p ), </span>
-<span id="cb913-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-10"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st">  </span>a[gid], </span>
-<span id="cb913-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-11"></a>    a[gid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> )</span>
-<span id="cb913-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-12"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span></span>
-<span id="cb913-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb913-13"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb914"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb914-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-1"></a><span class="kw">precis</span>(m11<span class="fl">.7</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb909"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb909-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-1"></a>dat_list &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb909-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-2"></a>  <span class="dt">admit =</span> d<span class="op">$</span>admit, </span>
+<span id="cb909-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-3"></a>  <span class="dt">applications =</span> d<span class="op">$</span>applications, </span>
+<span id="cb909-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-4"></a>  <span class="dt">gid =</span> <span class="kw">ifelse</span>( d<span class="op">$</span>applicant.gender <span class="op">==</span><span class="st"> &quot;male&quot;</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb909-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-5"></a>)</span>
+<span id="cb909-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-6"></a></span>
+<span id="cb909-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-7"></a>m11<span class="fl">.7</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb909-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-8"></a>  <span class="kw">alist</span>(</span>
+<span id="cb909-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-9"></a>    admit <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( applications, p ), </span>
+<span id="cb909-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-10"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st">  </span>a[gid], </span>
+<span id="cb909-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-11"></a>    a[gid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> )</span>
+<span id="cb909-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-12"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span></span>
+<span id="cb909-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb909-13"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb910"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb910-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb910-1"></a><span class="kw">precis</span>(m11<span class="fl">.7</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
 <pre><code>##             mean          sd        5.5%       94.5%     n_eff      Rhat4
 ## a[1] -0.21951420 0.040696305 -0.28434862 -0.15442614 1189.3524 1.00107524
 ## a[2] -0.83097667 0.051571061 -0.91204616 -0.74481997 1240.2814 0.99936605</code></pre>
 <p>我們可以看到表示男性申請學生的數據 <code>a[1]</code> 是大於女性申請人的 <code>a[2]</code> 的事後概率分佈的。我們還需要計算這兩個羣體之間被錄取的概率差的事後分佈：</p>
-<div class="sourceCode" id="cb916"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb916-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb916-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m11<span class="fl">.7</span>)</span>
-<span id="cb916-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb916-2"></a>diff_a &lt;-<span class="st"> </span>post<span class="op">$</span>a[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>a[,<span class="dv">2</span>]</span>
-<span id="cb916-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb916-3"></a>diff_p &lt;-<span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[,<span class="dv">1</span>]) <span class="op">-</span><span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[,<span class="dv">2</span>])</span>
-<span id="cb916-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb916-4"></a><span class="kw">precis</span>( <span class="kw">list</span>( <span class="dt">diff_a =</span> diff_a, <span class="dt">diff_p =</span> diff_p ))</span></code></pre></div>
+<div class="sourceCode" id="cb912"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb912-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb912-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m11<span class="fl">.7</span>)</span>
+<span id="cb912-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb912-2"></a>diff_a &lt;-<span class="st"> </span>post<span class="op">$</span>a[,<span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>a[,<span class="dv">2</span>]</span>
+<span id="cb912-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb912-3"></a>diff_p &lt;-<span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[,<span class="dv">1</span>]) <span class="op">-</span><span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[,<span class="dv">2</span>])</span>
+<span id="cb912-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb912-4"></a><span class="kw">precis</span>( <span class="kw">list</span>( <span class="dt">diff_a =</span> diff_a, <span class="dt">diff_p =</span> diff_p ))</span></code></pre></div>
 <pre><code>##              mean          sd       5.5%      94.5%   histogram
 ## diff_a 0.61146247 0.066907183 0.50294674 0.71783478   ▁▁▃▇▇▅▂▁▁
 ## diff_p 0.14181416 0.015104082 0.11686734 0.16595556 ▁▁▂▃▇▇▅▂▁▁▁</code></pre>
 <p>可以看到男生平均要比女生被錄取的概率高 12% ~ 16%。在我們開始懷疑是不是有“系統性性別歧視”之前，讓我們先把觀察值和模型推測值繪製成圖來實際觀察到底有沒有男女錄取概率的差別 (圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig08">53.8</a>)：</p>
-<div class="sourceCode" id="cb918"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb918-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-1"></a><span class="kw">postcheck</span>( m11<span class="fl">.7</span> )</span>
-<span id="cb918-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-2"></a><span class="co"># draw lines connecting points from same dept </span></span>
-<span id="cb918-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-3"></a></span>
-<span id="cb918-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-4"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">6</span> ) {</span>
-<span id="cb918-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-5"></a>  x &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">2</span><span class="op">*</span>(i <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)</span>
-<span id="cb918-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-6"></a>  y1 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x]</span>
-<span id="cb918-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-7"></a>  y2 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>]</span>
-<span id="cb918-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-8"></a>  <span class="kw">lines</span>(<span class="kw">c</span>(x, x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>), <span class="kw">c</span>(y1, y2), <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb918-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-9"></a>  <span class="kw">text</span>(x <span class="op">+</span><span class="st"> </span><span class="fl">0.5</span>, (y1 <span class="op">+</span><span class="st"> </span>y2)<span class="op">/</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="fl">0.05</span>, </span>
-<span id="cb918-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-10"></a>       d<span class="op">$</span>dept[x], <span class="dt">cex =</span> <span class="fl">0.8</span>, <span class="dt">col =</span> rangi2)</span>
-<span id="cb918-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-11"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb914"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb914-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-1"></a><span class="kw">postcheck</span>( m11<span class="fl">.7</span> )</span>
+<span id="cb914-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-2"></a><span class="co"># draw lines connecting points from same dept </span></span>
+<span id="cb914-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-3"></a></span>
+<span id="cb914-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-4"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">6</span> ) {</span>
+<span id="cb914-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-5"></a>  x &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">2</span><span class="op">*</span>(i <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)</span>
+<span id="cb914-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-6"></a>  y1 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x]</span>
+<span id="cb914-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-7"></a>  y2 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>]</span>
+<span id="cb914-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-8"></a>  <span class="kw">lines</span>(<span class="kw">c</span>(x, x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>), <span class="kw">c</span>(y1, y2), <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb914-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-9"></a>  <span class="kw">text</span>(x <span class="op">+</span><span class="st"> </span><span class="fl">0.5</span>, (y1 <span class="op">+</span><span class="st"> </span>y2)<span class="op">/</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="fl">0.05</span>, </span>
+<span id="cb914-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-10"></a>       d<span class="op">$</span>dept[x], <span class="dt">cex =</span> <span class="fl">0.8</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb914-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb914-11"></a>}</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig08"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig08-1.png" alt="Posterior check for model m11.7. Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% inervals of the expectation, and 89% interval of simulated samples, respectively." width="576" />
 <p class="caption">
@@ -2098,16 +2098,16 @@ A_i &amp; \sim \text{Binomial}(N_i, p_i) \\
 \end{aligned}
 \]</span></p>
 <p>修改了模型表達之後，我們賦予了每個學院自己各自的平均錄取率的對數比值(log-odds = logit)，<span class="math inline">\(\delta_{\text{DEPT}[i]}\)</span>。修改之後的模型同樣也能推算整個大學的錄取率，只是增加了對不同學院各自錄取傾向的考量。下面的代碼運行修改之後的模型。</p>
-<div class="sourceCode" id="cb919"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb919-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-1"></a>dat_list<span class="op">$</span>dept_id &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">6</span>, <span class="dt">each =</span> <span class="dv">2</span>)</span>
-<span id="cb919-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-2"></a>m11<span class="fl">.8</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb919-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-3"></a>  <span class="kw">alist</span>(</span>
-<span id="cb919-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-4"></a>    admit <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( applications, p ) , </span>
-<span id="cb919-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-5"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[gid] <span class="op">+</span><span class="st"> </span>delta[dept_id] , </span>
-<span id="cb919-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-6"></a>    a[gid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
-<span id="cb919-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-7"></a>    delta[dept_id] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> )</span>
-<span id="cb919-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-8"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">iter =</span> <span class="dv">4000</span></span>
-<span id="cb919-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb919-9"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb920"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb920-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb920-1"></a><span class="kw">precis</span>( m11<span class="fl">.8</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
+<div class="sourceCode" id="cb915"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb915-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-1"></a>dat_list<span class="op">$</span>dept_id &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">6</span>, <span class="dt">each =</span> <span class="dv">2</span>)</span>
+<span id="cb915-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-2"></a>m11<span class="fl">.8</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb915-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-3"></a>  <span class="kw">alist</span>(</span>
+<span id="cb915-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-4"></a>    admit <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( applications, p ) , </span>
+<span id="cb915-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-5"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[gid] <span class="op">+</span><span class="st"> </span>delta[dept_id] , </span>
+<span id="cb915-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-6"></a>    a[gid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb915-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-7"></a>    delta[dept_id] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> )</span>
+<span id="cb915-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-8"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">iter =</span> <span class="dv">4000</span></span>
+<span id="cb915-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb915-9"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb916"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb916-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb916-1"></a><span class="kw">precis</span>( m11<span class="fl">.8</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
 <pre><code>##                 mean         sd        5.5%       94.5%     n_eff     Rhat4
 ## a[1]     -0.53955995 0.53666180 -1.40365115  0.31747197 538.05446 1.0084777
 ## a[2]     -0.44329071 0.53694139 -1.30351061  0.40968178 544.84232 1.0083277
@@ -2118,27 +2118,27 @@ A_i &amp; \sim \text{Binomial}(N_i, p_i) \\
 ## delta[5] -0.61694326 0.54168390 -1.47572653  0.25336436 553.52782 1.0082381
 ## delta[6] -2.17482265 0.55173898 -3.04744577 -1.28924174 552.28067 1.0086332</code></pre>
 <p>模型 <code>m11.8</code> 的運行結果就矯正了我們之前可能存在的性別歧視的誤解。考慮了不同學院各自的平均錄取率之後，男女申請人之間的平均錄取率的對數比值就變得很接近了。有了模型 <code>m11.8</code> 的事後概率分佈樣本，我們可以簡單的計算男女錄取率的學院調整後之差：</p>
-<div class="sourceCode" id="cb922"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb922-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m11<span class="fl">.8</span>)</span>
-<span id="cb922-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-2"></a>diff_a &lt;-<span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">2</span>]</span>
-<span id="cb922-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-3"></a>diff_p &lt;-<span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[, <span class="dv">1</span>]) <span class="op">-</span><span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[, <span class="dv">2</span>])</span>
-<span id="cb922-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-4"></a><span class="kw">precis</span>(<span class="kw">list</span>(<span class="dt">diff_a =</span> diff_a, <span class="dt">diff_p =</span> diff_p))</span></code></pre></div>
+<div class="sourceCode" id="cb918"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb918-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m11<span class="fl">.8</span>)</span>
+<span id="cb918-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-2"></a>diff_a &lt;-<span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">2</span>]</span>
+<span id="cb918-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-3"></a>diff_p &lt;-<span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[, <span class="dv">1</span>]) <span class="op">-</span><span class="st"> </span><span class="kw">inv_logit</span>(post<span class="op">$</span>a[, <span class="dv">2</span>])</span>
+<span id="cb918-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb918-4"></a><span class="kw">precis</span>(<span class="kw">list</span>(<span class="dt">diff_a =</span> diff_a, <span class="dt">diff_p =</span> diff_p))</span></code></pre></div>
 <pre><code>##                mean          sd         5.5%        94.5%      histogram
 ## diff_a -0.096269238 0.081369732 -0.223896921 0.0350135303 ▁▁▁▁▂▅▇▇▅▂▁▁▁▁
 ## diff_p -0.021450556 0.018499080 -0.051071453 0.0074480439       ▁▁▂▇▇▂▁▁</code></pre>
 <p>所以，當考慮了不同學院各自本身的錄取率差異之後，沒有證據表明在申請人錄取率上有顯著的性別歧視。我們來回到原始數據去看看這個過程實際是怎樣的。簡單歸納一下每個學院各自的實際男女申請人的比例：</p>
-<div class="sourceCode" id="cb924"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb924-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-1"></a>pg &lt;-<span class="st"> </span><span class="kw">with</span>( dat_list, <span class="kw">sapply</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">6</span>, <span class="cf">function</span>(k)</span>
-<span id="cb924-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-2"></a>  applications[dept_id <span class="op">==</span><span class="st"> </span>k]<span class="op">/</span><span class="kw">sum</span>(applications[dept_id <span class="op">==</span><span class="st"> </span>k])))</span>
-<span id="cb924-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-3"></a><span class="kw">rownames</span>(pg) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;male&quot;</span>, <span class="st">&quot;female&quot;</span>)</span>
-<span id="cb924-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-4"></a><span class="kw">colnames</span>(pg) &lt;-<span class="st"> </span><span class="kw">unique</span>(d<span class="op">$</span>dept)</span>
-<span id="cb924-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-5"></a><span class="kw">round</span>(pg, <span class="dv">3</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb920"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb920-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb920-1"></a>pg &lt;-<span class="st"> </span><span class="kw">with</span>( dat_list, <span class="kw">sapply</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">6</span>, <span class="cf">function</span>(k)</span>
+<span id="cb920-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb920-2"></a>  applications[dept_id <span class="op">==</span><span class="st"> </span>k]<span class="op">/</span><span class="kw">sum</span>(applications[dept_id <span class="op">==</span><span class="st"> </span>k])))</span>
+<span id="cb920-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb920-3"></a><span class="kw">rownames</span>(pg) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;male&quot;</span>, <span class="st">&quot;female&quot;</span>)</span>
+<span id="cb920-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb920-4"></a><span class="kw">colnames</span>(pg) &lt;-<span class="st"> </span><span class="kw">unique</span>(d<span class="op">$</span>dept)</span>
+<span id="cb920-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb920-5"></a><span class="kw">round</span>(pg, <span class="dv">3</span>)</span></code></pre></div>
 <pre><code>##            A     B     C     D     E     F
 ## male   0.884 0.957 0.354 0.527 0.327 0.522
 ## female 0.116 0.043 0.646 0.473 0.673 0.478</code></pre>
-<div class="sourceCode" id="cb926"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb926-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb926-1"></a><span class="co"># simpler version:</span></span>
-<span id="cb926-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb926-2"></a></span>
-<span id="cb926-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb926-3"></a>d <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb926-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb926-4"></a><span class="st">  </span><span class="kw">group_by</span>(dept) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb926-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb926-5"></a><span class="st">  </span><span class="kw">mutate</span>( <span class="dt">rel.freq =</span> <span class="kw">paste0</span>(<span class="kw">round</span>(applications <span class="op">*</span><span class="st"> </span><span class="dv">100</span><span class="op">/</span><span class="kw">sum</span>(applications), <span class="dv">2</span>), <span class="st">&quot;%&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb922"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb922-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-1"></a><span class="co"># simpler version:</span></span>
+<span id="cb922-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-2"></a></span>
+<span id="cb922-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-3"></a>d <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb922-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-4"></a><span class="st">  </span><span class="kw">group_by</span>(dept) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb922-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb922-5"></a><span class="st">  </span><span class="kw">mutate</span>( <span class="dt">rel.freq =</span> <span class="kw">paste0</span>(<span class="kw">round</span>(applications <span class="op">*</span><span class="st"> </span><span class="dv">100</span><span class="op">/</span><span class="kw">sum</span>(applications), <span class="dv">2</span>), <span class="st">&quot;%&quot;</span>))</span></code></pre></div>
 <pre><code>## # A tibble: 12 x 6
 ## # Groups:   dept [6]
 ##    dept  applicant.gender admit reject applications rel.freq
@@ -2156,17 +2156,17 @@ A_i &amp; \sim \text{Binomial}(N_i, p_i) \\
 ## 11 F     male                22    351          373 52.24%  
 ## 12 F     female              24    317          341 47.76%</code></pre>
 <p>所以實際男性申請人佔比例在 A 學院達到了 88.4% 以上，像 E 學院的男性申請人的比例則僅僅只有 32.7% 左右。也就從另一個角度解釋了我們觀察到的現象，也就是說，錄取率較低的學院中女性申請人比例相當地高。模型 <code>m11.8</code> 給出的各個學院錄取率的推測值也和實際觀測值十分地接近 (圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig09">53.9</a>)。</p>
-<div class="sourceCode" id="cb928"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb928-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-1"></a><span class="kw">postcheck</span>( m11<span class="fl">.8</span> )</span>
-<span id="cb928-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-2"></a><span class="co"># draw lines connecting points from same dept </span></span>
-<span id="cb928-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-3"></a></span>
-<span id="cb928-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-4"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">6</span> ) {</span>
-<span id="cb928-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-5"></a>  x &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">2</span><span class="op">*</span>(i <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)</span>
-<span id="cb928-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-6"></a>  y1 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x]</span>
-<span id="cb928-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-7"></a>  y2 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>]</span>
-<span id="cb928-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-8"></a>  <span class="kw">lines</span>(<span class="kw">c</span>(x, x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>), <span class="kw">c</span>(y1, y2), <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb928-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-9"></a>  <span class="kw">text</span>(x <span class="op">+</span><span class="st"> </span><span class="fl">0.5</span>, (y1 <span class="op">+</span><span class="st"> </span>y2)<span class="op">/</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="fl">0.05</span>, </span>
-<span id="cb928-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-10"></a>       d<span class="op">$</span>dept[x], <span class="dt">cex =</span> <span class="fl">0.8</span>, <span class="dt">col =</span> rangi2)</span>
-<span id="cb928-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-11"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb924"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb924-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-1"></a><span class="kw">postcheck</span>( m11<span class="fl">.8</span> )</span>
+<span id="cb924-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-2"></a><span class="co"># draw lines connecting points from same dept </span></span>
+<span id="cb924-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-3"></a></span>
+<span id="cb924-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-4"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">6</span> ) {</span>
+<span id="cb924-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-5"></a>  x &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="dv">2</span><span class="op">*</span>(i <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)</span>
+<span id="cb924-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-6"></a>  y1 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x]</span>
+<span id="cb924-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-7"></a>  y2 &lt;-<span class="st"> </span>d<span class="op">$</span>admit[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>] <span class="op">/</span><span class="st"> </span>d<span class="op">$</span>applications[x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>]</span>
+<span id="cb924-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-8"></a>  <span class="kw">lines</span>(<span class="kw">c</span>(x, x <span class="op">+</span><span class="st"> </span><span class="dv">1</span>), <span class="kw">c</span>(y1, y2), <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb924-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-9"></a>  <span class="kw">text</span>(x <span class="op">+</span><span class="st"> </span><span class="fl">0.5</span>, (y1 <span class="op">+</span><span class="st"> </span>y2)<span class="op">/</span><span class="dv">2</span> <span class="op">+</span><span class="st"> </span><span class="fl">0.05</span>, </span>
+<span id="cb924-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-10"></a>       d<span class="op">$</span>dept[x], <span class="dt">cex =</span> <span class="fl">0.8</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb924-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb924-11"></a>}</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig09"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig09-1.png" alt="Posterior check for model m11.8. Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% inervals of the expectation, and 89% interval of simulated samples, respectively." width="576" />
 <p class="caption">
@@ -2192,9 +2192,9 @@ y_i &amp; \sim \text{Poisson}(\lambda_i) \\
 <div id="泊松回歸實例太平洋島國居民使用的工具" class="section level3">
 <h3><span class="header-section-number">53.2.1</span> 泊松回歸實例：太平洋島國居民使用的工具</h3>
 <p>太平洋島國的原住民使用的各種不同工具給人類學家提供了非常好的研究人類工具和技術進化的過程。有些理論認爲較大的人口規模會產生較爲複雜精密的工具。於是自然地，太平洋島國的島嶼大小面積各不相同，也就天然地限制了每個島嶼原住民人口規模，可以用來分析上述理論。另外不同族羣之間接觸的頻率也會影響族羣的人口規模，從而和工具的技術進化相關。我們使用這個太平洋島國工具數據來分析這個話題。</p>
-<div class="sourceCode" id="cb929"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb929-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb929-1"></a><span class="kw">data</span>(Kline)</span>
-<span id="cb929-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb929-2"></a>d &lt;-<span class="st"> </span>Kline</span>
-<span id="cb929-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb929-3"></a>d</span></code></pre></div>
+<div class="sourceCode" id="cb925"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb925-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb925-1"></a><span class="kw">data</span>(Kline)</span>
+<span id="cb925-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb925-2"></a>d &lt;-<span class="st"> </span>Kline</span>
+<span id="cb925-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb925-3"></a>d</span></code></pre></div>
 <pre><code>##       culture population contact total_tools mean_TU
 ## 1    Malekula       1100     low          13     3.2
 ## 2     Tikopia       1500     low          22     4.7
@@ -2214,8 +2214,8 @@ y_i &amp; \sim \text{Poisson}(\lambda_i) \\
 <li>另外還有人認爲，人口規模大小 <code>population</code> 還會通過部落族羣之間的交流頻率 <code>contact</code> 作爲媒介影響到結果變量 <code>total_tools</code>。</li>
 </ul>
 <p>接下來我們給數據中增加幾個需要使用的轉換後的變量：</p>
-<div class="sourceCode" id="cb931"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb931-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-1"></a>d<span class="op">$</span>P &lt;-<span class="st"> </span><span class="kw">scale</span>( <span class="kw">log</span>(d<span class="op">$</span>population) ) <span class="co"># standardize the log(population) into mean = 0, sd = 1</span></span>
-<span id="cb931-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-2"></a>d<span class="op">$</span>contact_id &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>contact <span class="op">==</span><span class="st"> &quot;high&quot;</span>, <span class="dv">2</span>, <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb927"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb927-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb927-1"></a>d<span class="op">$</span>P &lt;-<span class="st"> </span><span class="kw">scale</span>( <span class="kw">log</span>(d<span class="op">$</span>population) ) <span class="co"># standardize the log(population) into mean = 0, sd = 1</span></span>
+<span id="cb927-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb927-2"></a>d<span class="op">$</span>contact_id &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>contact <span class="op">==</span><span class="st"> &quot;high&quot;</span>, <span class="dv">2</span>, <span class="dv">1</span>)</span></code></pre></div>
 <p>我們把符合上述思考和假設的模型描述爲含有交互作用項的數學模型：</p>
 <p><span class="math display">\[
 \begin{aligned}
@@ -2239,14 +2239,14 @@ T_i &amp; \sim \text{Poisson}(\lambda_i) \\
 \end{aligned}
 \]</span></p>
 <p>當我們給截距設定的先驗概率分佈設定成 <span class="math inline">\(\text{Normal}(0,10)\)</span> 會對時間發生率 <span class="math inline">\(\lambda\)</span> 在它原本的尺度上有怎樣的體現呢？如果截距 <span class="math inline">\(\alpha\)</span> 是服從正（常）態分佈的話，那麼 <span class="math inline">\(\lambda\)</span> 就會服從對數正（常）態分佈。我們來繪製一下這兩個分佈的概率密度分佈：</p>
-<div class="sourceCode" id="cb932"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb932-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-1"></a><span class="kw">curve</span>( <span class="kw">dlnorm</span>(x, <span class="dv">0</span>, <span class="dv">10</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">100</span>, <span class="dt">n =</span> <span class="dv">200</span>, </span>
-<span id="cb932-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-2"></a>       <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
-<span id="cb932-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-3"></a>       <span class="dt">xlab =</span> <span class="st">&quot;mean numbber of tools (lambda)&quot;</span>, </span>
-<span id="cb932-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-4"></a>       <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>)</span>
-<span id="cb932-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-5"></a><span class="kw">text</span>(<span class="dv">20</span>, <span class="fl">0.06</span>, <span class="st">&quot;a ~ dnorm(0, 10)&quot;</span>)</span>
-<span id="cb932-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-6"></a><span class="kw">curve</span>( <span class="kw">dlnorm</span>(x, <span class="dv">3</span>, <span class="fl">0.5</span>), <span class="dt">add =</span> <span class="ot">TRUE</span>, </span>
-<span id="cb932-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-7"></a>       <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb932-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-8"></a><span class="kw">text</span>(<span class="dv">50</span>, <span class="fl">0.03</span>, <span class="st">&quot;a ~ dnorm(3, 0.5)&quot;</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="sourceCode" id="cb928"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb928-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-1"></a><span class="kw">curve</span>( <span class="kw">dlnorm</span>(x, <span class="dv">0</span>, <span class="dv">10</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">100</span>, <span class="dt">n =</span> <span class="dv">200</span>, </span>
+<span id="cb928-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-2"></a>       <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb928-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-3"></a>       <span class="dt">xlab =</span> <span class="st">&quot;mean numbber of tools (lambda)&quot;</span>, </span>
+<span id="cb928-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-4"></a>       <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>)</span>
+<span id="cb928-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-5"></a><span class="kw">text</span>(<span class="dv">20</span>, <span class="fl">0.06</span>, <span class="st">&quot;a ~ dnorm(0, 10)&quot;</span>)</span>
+<span id="cb928-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-6"></a><span class="kw">curve</span>( <span class="kw">dlnorm</span>(x, <span class="dv">3</span>, <span class="fl">0.5</span>), <span class="dt">add =</span> <span class="ot">TRUE</span>, </span>
+<span id="cb928-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-7"></a>       <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb928-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb928-8"></a><span class="kw">text</span>(<span class="dv">50</span>, <span class="fl">0.03</span>, <span class="st">&quot;a ~ dnorm(3, 0.5)&quot;</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig10"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig10-1.png" alt="Prior predictive distribution of the mean lambda of a simple Poisson GLM, considering only the intercept alpha. A flat conventional prior (black) creates absurd expecations on the outcome scale. The mean of this distribution is exp(50) stupidly large. It is easy to do better by shifting prior mass above zero (blue)." width="480" />
 <p class="caption">
@@ -2254,21 +2254,21 @@ T_i &amp; \sim \text{Poisson}(\lambda_i) \\
 </p>
 </div>
 <p>圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig10">53.10</a> 顯示，當我們使用 <span class="math inline">\(\alpha \sim \text{Normal}(0, 10)\)</span> 作爲截距的先驗概率分佈時，我們看到結果變量使用工具的數量竟然出現了一個特別接近零的尖峯，這其實意味着我們的先驗概率分佈認爲不論是哪個島嶼哪個部落的居民使用的工具數量基本上是 0，這顯然是不合理的。而且你看它右邊的尾巴特別的長，有多長呢？對數正（常）態分佈的期望值計算公式是 <span class="math inline">\(\exp(\mu + \sigma^2/2)\)</span>，也就是說現在設定的先驗概率分佈 <span class="math inline">\(\alpha \sim \text{Normal}(0, 10)\)</span> 的均值其實達到了 <span class="math inline">\(\exp(50) = 5.185e+21\)</span>。我們隨便模擬一個對數正（常）態分佈看它的均值會是怎樣的不可思議地大：</p>
-<div class="sourceCode" id="cb933"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb933-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-1"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>, <span class="dv">0</span>, <span class="dv">10</span>)</span>
-<span id="cb933-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-2"></a>lambda &lt;-<span class="st"> </span><span class="kw">exp</span>(a)</span>
-<span id="cb933-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-3"></a><span class="kw">mean</span>( lambda )</span></code></pre></div>
+<div class="sourceCode" id="cb929"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb929-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb929-1"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">10000</span>, <span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb929-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb929-2"></a>lambda &lt;-<span class="st"> </span><span class="kw">exp</span>(a)</span>
+<span id="cb929-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb929-3"></a><span class="kw">mean</span>( lambda )</span></code></pre></div>
 <pre><code>## [1] 1.5512806e+14</code></pre>
 <p>於是我們修改了一下預期，把截距的先驗概率分佈修改成 <span class="math inline">\(\text{Normal}(3, 0.5)\)</span>，展示在圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig10">53.10</a> 中藍色的曲線。此時的新對數正（常）態分佈的均值是 <span class="math inline">\(\exp(3 + 0.5^2/2) \approx 22.8\)</span>，也就是說這個先驗概率認爲在沒有分析數據之前，我們估計平均來說每個部落的族羣平均的生產工具的數量在20個左右。這樣的假設是不是會合理很多？用相似的邏輯我們用來給人口規模 (<span class="math inline">\(\log\)</span> <code>population</code>) 回歸係數 <span class="math inline">\(\beta\)</span> 設定合理的先驗概率分佈，目標是希望把數據限制在合適的範圍內以免採樣效率太低。先用一個我們傳統上認爲的平坦分佈 <span class="math inline">\(\text{Normal}(0,10)\)</span> 來看看它的戲劇性效果。</p>
-<div class="sourceCode" id="cb935"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb935-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-1"></a>N &lt;-<span class="st"> </span><span class="dv">100</span> </span>
-<span id="cb935-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-2"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">3</span>, <span class="fl">0.5</span>)</span>
-<span id="cb935-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-3"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">0</span>, <span class="dv">10</span>)</span>
-<span id="cb935-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-4"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
-<span id="cb935-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-5"></a>     <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">2</span>), </span>
-<span id="cb935-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-6"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">100</span>),</span>
-<span id="cb935-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-7"></a>     <span class="dt">main =</span> <span class="st">&quot;b ~ dnorm(0, 10)&quot;</span>, </span>
-<span id="cb935-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-8"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
-<span id="cb935-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-9"></a>     <span class="dt">xlab =</span> <span class="st">&quot;log population (std)&quot;</span>)</span>
-<span id="cb935-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-10"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">curve</span>(<span class="kw">exp</span>( a[i] <span class="op">+</span><span class="st"> </span>b[i]<span class="op">*</span>x), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">grau</span>())</span></code></pre></div>
+<div class="sourceCode" id="cb931"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb931-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-1"></a>N &lt;-<span class="st"> </span><span class="dv">100</span> </span>
+<span id="cb931-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-2"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">3</span>, <span class="fl">0.5</span>)</span>
+<span id="cb931-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-3"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb931-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-4"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
+<span id="cb931-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-5"></a>     <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">2</span>), </span>
+<span id="cb931-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-6"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">100</span>),</span>
+<span id="cb931-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-7"></a>     <span class="dt">main =</span> <span class="st">&quot;b ~ dnorm(0, 10)&quot;</span>, </span>
+<span id="cb931-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-8"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
+<span id="cb931-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-9"></a>     <span class="dt">xlab =</span> <span class="st">&quot;log population (std)&quot;</span>)</span>
+<span id="cb931-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb931-10"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">curve</span>(<span class="kw">exp</span>( a[i] <span class="op">+</span><span class="st"> </span>b[i]<span class="op">*</span>x), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">grau</span>())</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig11"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig11-1.png" alt="Struggling with slope priors in a Poisson GLM. A flat prior produces explosive trends on the outcome scale." width="528" />
 <p class="caption">
@@ -2276,16 +2276,16 @@ T_i &amp; \sim \text{Poisson}(\lambda_i) \\
 </p>
 </div>
 <p>圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig11">53.11</a> 就是當截距是合理的先驗概率分佈，但是斜率是常用的“平坦分佈”時給出的人口規模和工具數量之間的可怕的關係。它其實是在說，當我們還沒見到實際數據時，我們認爲在平均人口規模（因爲橫軸的人口規模被標準化了）的部落族羣附近，使用的工具種類數量要麼就是暴增，要麼是暴減。這是非常不合常理的。我們需要不那麼“平坦”的先驗概率分佈，給我們合理的結果。經過多種嘗試，我們認爲 <span class="math inline">\(\beta \sim \text{Normal}(0, 0.2)\)</span> 會是一個理性的選擇（圖<a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig12">53.12</a>）。在實際分析數據之前，我們認爲不論是哪個部落，最多的生產工具種類也不會超過100種之多。</p>
-<div class="sourceCode" id="cb936"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb936-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-1"></a>N &lt;-<span class="st"> </span><span class="dv">100</span> </span>
-<span id="cb936-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-2"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">3</span>, <span class="fl">0.5</span>)</span>
-<span id="cb936-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-3"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">0</span>, <span class="fl">0.2</span>)</span>
-<span id="cb936-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-4"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
-<span id="cb936-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-5"></a>     <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">2</span>), </span>
-<span id="cb936-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-6"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">100</span>),</span>
-<span id="cb936-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-7"></a>     <span class="dt">main =</span> <span class="st">&quot;b ~ dnorm(0, 0.2)&quot;</span>, </span>
-<span id="cb936-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-8"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
-<span id="cb936-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-9"></a>     <span class="dt">xlab =</span> <span class="st">&quot;log population (std)&quot;</span>)</span>
-<span id="cb936-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-10"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">curve</span>(<span class="kw">exp</span>( a[i] <span class="op">+</span><span class="st"> </span>b[i]<span class="op">*</span>x), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">grau</span>())</span></code></pre></div>
+<div class="sourceCode" id="cb932"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb932-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-1"></a>N &lt;-<span class="st"> </span><span class="dv">100</span> </span>
+<span id="cb932-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-2"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">3</span>, <span class="fl">0.5</span>)</span>
+<span id="cb932-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-3"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">0</span>, <span class="fl">0.2</span>)</span>
+<span id="cb932-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-4"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
+<span id="cb932-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-5"></a>     <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">2</span>, <span class="dv">2</span>), </span>
+<span id="cb932-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-6"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">100</span>),</span>
+<span id="cb932-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-7"></a>     <span class="dt">main =</span> <span class="st">&quot;b ~ dnorm(0, 0.2)&quot;</span>, </span>
+<span id="cb932-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-8"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
+<span id="cb932-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-9"></a>     <span class="dt">xlab =</span> <span class="st">&quot;log population (std)&quot;</span>)</span>
+<span id="cb932-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb932-10"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">curve</span>(<span class="kw">exp</span>( a[i] <span class="op">+</span><span class="st"> </span>b[i]<span class="op">*</span>x), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">grau</span>())</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig12"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig12-1.png" alt="Struggling with slope priors in a Poisson GLM. A regularizing prior remains mostly within the space of outcomes." width="528" />
 <p class="caption">
@@ -2293,19 +2293,19 @@ T_i &amp; \sim \text{Poisson}(\lambda_i) \\
 </p>
 </div>
 <p>我們把橫軸修改成爲沒有被標準化的 <code>log population</code> 之後，先驗概率分佈之間的關係如圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig13">53.13</a>。</p>
-<div class="sourceCode" id="cb937"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb937-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-1"></a>N &lt;-<span class="st"> </span><span class="dv">100</span> </span>
-<span id="cb937-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-2"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">3</span>, <span class="fl">0.5</span>)</span>
-<span id="cb937-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-3"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">0</span>, <span class="fl">0.2</span>)</span>
-<span id="cb937-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-4"></a></span>
-<span id="cb937-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-5"></a>x_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">log</span>(<span class="dv">100</span>), <span class="dt">to =</span> <span class="kw">log</span>(<span class="dv">200000</span>), <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
-<span id="cb937-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-6"></a>lambda &lt;-<span class="st"> </span><span class="kw">sapply</span>( x_seq, <span class="cf">function</span>(x) <span class="kw">exp</span>(a <span class="op">+</span><span class="st"> </span>b<span class="op">*</span>x))</span>
-<span id="cb937-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-7"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
-<span id="cb937-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-8"></a>     <span class="dt">xlim =</span> <span class="kw">range</span>(x_seq), </span>
-<span id="cb937-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-9"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">500</span>),</span>
-<span id="cb937-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-10"></a>     <span class="dt">main =</span> <span class="st">&quot;a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)&quot;</span>, </span>
-<span id="cb937-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-11"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
-<span id="cb937-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-12"></a>     <span class="dt">xlab =</span> <span class="st">&quot;log population (un-std)&quot;</span>)</span>
-<span id="cb937-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb937-13"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">lines</span>(x_seq, lambda[i, ], <span class="dt">col =</span> <span class="kw">grau</span>(), <span class="dt">lwd =</span> <span class="fl">1.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb933"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb933-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-1"></a>N &lt;-<span class="st"> </span><span class="dv">100</span> </span>
+<span id="cb933-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-2"></a>a &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">3</span>, <span class="fl">0.5</span>)</span>
+<span id="cb933-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-3"></a>b &lt;-<span class="st"> </span><span class="kw">rnorm</span>(N, <span class="dv">0</span>, <span class="fl">0.2</span>)</span>
+<span id="cb933-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-4"></a></span>
+<span id="cb933-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-5"></a>x_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="kw">log</span>(<span class="dv">100</span>), <span class="dt">to =</span> <span class="kw">log</span>(<span class="dv">200000</span>), <span class="dt">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb933-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-6"></a>lambda &lt;-<span class="st"> </span><span class="kw">sapply</span>( x_seq, <span class="cf">function</span>(x) <span class="kw">exp</span>(a <span class="op">+</span><span class="st"> </span>b<span class="op">*</span>x))</span>
+<span id="cb933-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-7"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
+<span id="cb933-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-8"></a>     <span class="dt">xlim =</span> <span class="kw">range</span>(x_seq), </span>
+<span id="cb933-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-9"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">500</span>),</span>
+<span id="cb933-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-10"></a>     <span class="dt">main =</span> <span class="st">&quot;a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)&quot;</span>, </span>
+<span id="cb933-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-11"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
+<span id="cb933-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-12"></a>     <span class="dt">xlab =</span> <span class="st">&quot;log population (un-std)&quot;</span>)</span>
+<span id="cb933-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb933-13"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">lines</span>(x_seq, lambda[i, ], <span class="dt">col =</span> <span class="kw">grau</span>(), <span class="dt">lwd =</span> <span class="fl">1.5</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig13"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig13-1.png" alt="Struggling with slope priors in a Poisson GLM. A regularizing prior remains mostly within the space of outcomes. Now horizontal axis on unstandardized scale." width="528" />
 <p class="caption">
@@ -2313,13 +2313,13 @@ T_i &amp; \sim \text{Poisson}(\lambda_i) \\
 </p>
 </div>
 <p>最後我們再把橫軸的人口重新轉換到最原始的尺度上來，成爲圖 <a href="貝葉斯廣義線性回歸-bayesian-glm.html#fig:introBayes13-fig14">53.14</a> 顯示的</p>
-<div class="sourceCode" id="cb938"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb938-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-1"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
-<span id="cb938-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-2"></a>     <span class="dt">xlim =</span> <span class="kw">range</span>(<span class="kw">exp</span>(x_seq)), </span>
-<span id="cb938-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-3"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">500</span>),</span>
-<span id="cb938-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-4"></a>     <span class="dt">main =</span> <span class="st">&quot;a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)&quot;</span>, </span>
-<span id="cb938-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-5"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
-<span id="cb938-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-6"></a>     <span class="dt">xlab =</span> <span class="st">&quot;population (un-std)&quot;</span>)</span>
-<span id="cb938-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-7"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">lines</span>(<span class="kw">exp</span>(x_seq), lambda[i, ], <span class="dt">col =</span> <span class="kw">grau</span>(), <span class="dt">lwd =</span> <span class="fl">1.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb934"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb934-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb934-1"></a><span class="kw">plot</span>(<span class="ot">NULL</span>, </span>
+<span id="cb934-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb934-2"></a>     <span class="dt">xlim =</span> <span class="kw">range</span>(<span class="kw">exp</span>(x_seq)), </span>
+<span id="cb934-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb934-3"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">500</span>),</span>
+<span id="cb934-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb934-4"></a>     <span class="dt">main =</span> <span class="st">&quot;a ~ dnorm(3, 0.5); b ~ dnorm(0, 0.2)&quot;</span>, </span>
+<span id="cb934-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb934-5"></a>     <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
+<span id="cb934-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb934-6"></a>     <span class="dt">xlab =</span> <span class="st">&quot;population (un-std)&quot;</span>)</span>
+<span id="cb934-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb934-7"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N) <span class="kw">lines</span>(<span class="kw">exp</span>(x_seq), lambda[i, ], <span class="dt">col =</span> <span class="kw">grau</span>(), <span class="dt">lwd =</span> <span class="fl">1.5</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes13-fig14"></span>
 <img src="bookdown_files/figure-html/introBayes13-fig14-1.png" alt="Struggling with slope priors in a Poisson GLM. A flat prior produces explosive trends on the outcome scale." width="528" />
 <p class="caption">
@@ -2327,40 +2327,40 @@ T_i &amp; \sim \text{Poisson}(\lambda_i) \\
 </p>
 </div>
 <p>可以看到這是泊松回歸模型認爲的真實的預測變量和結果變量之間存在的關係，這是一種對數線性(log-linear)關係。自然地解釋就是，人口數量本身數值的增加，只能對工具種類的增加造成微弱的影響。許多的預測變量，都應該被取了對數之後再放入你的回歸模型中去，因爲這才是真實的關係。接下來終於到了模型本身的運行了：</p>
-<div class="sourceCode" id="cb939"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb939-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-1"></a>dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb939-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-2"></a>  <span class="dt">T =</span> d<span class="op">$</span>total_tools,</span>
-<span id="cb939-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-3"></a>  <span class="dt">P =</span> d<span class="op">$</span>P,</span>
-<span id="cb939-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-4"></a>  <span class="dt">cid =</span> d<span class="op">$</span>contact_id</span>
-<span id="cb939-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-5"></a>)</span>
-<span id="cb939-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-6"></a></span>
-<span id="cb939-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-7"></a><span class="co"># intercept only</span></span>
-<span id="cb939-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-8"></a> m11<span class="fl">.9</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb939-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-9"></a>   <span class="kw">alist</span>(</span>
-<span id="cb939-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-10"></a>     T <span class="op">~</span><span class="st"> </span><span class="kw">dpois</span>( lambda ), </span>
-<span id="cb939-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-11"></a>     <span class="kw">log</span>(lambda) &lt;-<span class="st"> </span>a, </span>
-<span id="cb939-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-12"></a>     a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">3</span>, <span class="fl">0.5</span> )</span>
-<span id="cb939-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-13"></a>   ), <span class="dt">data =</span> dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
-<span id="cb939-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-14"></a> )</span>
-<span id="cb939-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-15"></a></span>
-<span id="cb939-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-16"></a><span class="co"># interaction model</span></span>
-<span id="cb939-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-17"></a>m11<span class="fl">.10</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb939-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-18"></a>  <span class="kw">alist</span>(</span>
-<span id="cb939-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-19"></a>    T <span class="op">~</span><span class="st"> </span><span class="kw">dpois</span>( lambda ), </span>
-<span id="cb939-20"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-20"></a>    <span class="kw">log</span>(lambda) &lt;-<span class="st"> </span>a[cid] <span class="op">+</span><span class="st"> </span>b[cid] <span class="op">*</span><span class="st"> </span>P, </span>
-<span id="cb939-21"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-21"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">3</span>, <span class="fl">0.5</span> ), </span>
-<span id="cb939-22"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-22"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.2</span> )</span>
-<span id="cb939-23"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-23"></a>  ), <span class="dt">data =</span> dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
-<span id="cb939-24"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb939-24"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb940"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb940-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb940-1"></a><span class="kw">precis</span>(m11<span class="fl">.9</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb935"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb935-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-1"></a>dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb935-2"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-2"></a>  <span class="dt">T =</span> d<span class="op">$</span>total_tools,</span>
+<span id="cb935-3"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-3"></a>  <span class="dt">P =</span> d<span class="op">$</span>P,</span>
+<span id="cb935-4"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-4"></a>  <span class="dt">cid =</span> d<span class="op">$</span>contact_id</span>
+<span id="cb935-5"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-5"></a>)</span>
+<span id="cb935-6"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-6"></a></span>
+<span id="cb935-7"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-7"></a><span class="co"># intercept only</span></span>
+<span id="cb935-8"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-8"></a> m11<span class="fl">.9</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb935-9"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-9"></a>   <span class="kw">alist</span>(</span>
+<span id="cb935-10"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-10"></a>     T <span class="op">~</span><span class="st"> </span><span class="kw">dpois</span>( lambda ), </span>
+<span id="cb935-11"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-11"></a>     <span class="kw">log</span>(lambda) &lt;-<span class="st"> </span>a, </span>
+<span id="cb935-12"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-12"></a>     a <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">3</span>, <span class="fl">0.5</span> )</span>
+<span id="cb935-13"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-13"></a>   ), <span class="dt">data =</span> dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb935-14"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-14"></a> )</span>
+<span id="cb935-15"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-15"></a></span>
+<span id="cb935-16"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-16"></a><span class="co"># interaction model</span></span>
+<span id="cb935-17"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-17"></a>m11<span class="fl">.10</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb935-18"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-18"></a>  <span class="kw">alist</span>(</span>
+<span id="cb935-19"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-19"></a>    T <span class="op">~</span><span class="st"> </span><span class="kw">dpois</span>( lambda ), </span>
+<span id="cb935-20"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-20"></a>    <span class="kw">log</span>(lambda) &lt;-<span class="st"> </span>a[cid] <span class="op">+</span><span class="st"> </span>b[cid] <span class="op">*</span><span class="st"> </span>P, </span>
+<span id="cb935-21"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-21"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">3</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb935-22"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-22"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.2</span> )</span>
+<span id="cb935-23"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-23"></a>  ), <span class="dt">data =</span> dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb935-24"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb935-24"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb936"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb936-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb936-1"></a><span class="kw">precis</span>(m11<span class="fl">.9</span>)</span></code></pre></div>
 <pre><code>##        mean          sd      5.5%    94.5%     n_eff     Rhat4
 ## a 3.5377039 0.050667367 3.4570772 3.617185 753.71493 1.0018066</code></pre>
-<div class="sourceCode" id="cb942"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb942-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb942-1"></a><span class="kw">precis</span>(m11<span class="fl">.10</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb938"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb938-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb938-1"></a><span class="kw">precis</span>(m11<span class="fl">.10</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
 <pre><code>##            mean          sd         5.5%      94.5%     n_eff      Rhat4
 ## a[1] 3.32040371 0.087364289  3.174037198 3.45679750 1582.1987 0.99994566
 ## a[2] 3.60754634 0.074334304  3.490852877 3.73020431 1970.5720 1.00085989
 ## b[1] 0.37747778 0.052976874  0.291144575 0.46080172 1666.1065 1.00056869
 ## b[2] 0.19782911 0.160772767 -0.061798109 0.45354309 1800.5222 1.00056557</code></pre>
-<div class="sourceCode" id="cb944"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb944-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb944-1"></a><span class="kw">compare</span>(m11<span class="fl">.9</span>, m11<span class="fl">.10</span>, <span class="dt">func =</span> PSIS)</span></code></pre></div>
+<div class="sourceCode" id="cb940"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb940-1"><a href="貝葉斯廣義線性回歸-bayesian-glm.html#cb940-1"></a><span class="kw">compare</span>(m11<span class="fl">.9</span>, m11<span class="fl">.10</span>, <span class="dt">func =</span> PSIS)</span></code></pre></div>
 <pre><code>## Some Pareto k values are very high (&gt;1). Set pointwise=TRUE to inspect individual points.
 ## Some Pareto k values are very high (&gt;1). Set pointwise=TRUE to inspect individual points.</code></pre>
 <pre><code>##              PSIS        SE     dPSIS       dSE     pPSIS        weight
