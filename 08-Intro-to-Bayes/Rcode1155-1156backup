@@ -1,0 +1,83 @@
+<!-- ## 多項式回歸模型 multinomial and categorical models -->
+
+<!-- 當試驗的結果出現的種類不是 “成功，失敗”，“0，1” 這樣簡單的兩種結果，而是三種或者更多的結果，且並沒有明顯的順序之分的話，這樣的結果產生的概率分佈，被命名爲**多項式分佈 Multinomial distribution**。它的概率函數，也就是假如有 $k$ 種不同的事件會發生的概率分別是 $p_1, \dots, p_k$，在 $n$ 次獨立試驗中，觀察到 $y_i, \dots, y_k$ 結果的概率是： -->
+
+<!-- $$ -->
+<!-- \text{Pr}(y_1, \dots, y_k | n, p_1, \dots, p_k) = \frac{n!}{\prod_i y_i!} \prod_{i = 1}^{k} p_i^{y_i} -->
+<!-- $$ -->
+
+
+<!-- 多項式分佈的最佳鏈接函數是多項式 logit 函數，也被叫做 softmax 函數： -->
+
+
+<!-- $$ -->
+<!-- \text{Pr}(k|s_1, s_2, \dots, s_K) = \frac{\exp(s_k)}{\sum_{i = 1}^K\exp(s_i)} -->
+<!-- $$ -->
+
+<!-- 使用該鏈接函數建立的回歸模型，又被叫做多項式邏輯回歸 multinomial logistic regression。 -->
+
+<!-- ### 與不同的結果相匹配的預測變量 predictors matched to outcomes -->
+
+<!-- 假如我們希望分析的是一個年輕人羣體怎樣選擇自己的職業。其中一個特別重要的變量應該是預計收入 (expected income)。下面的代碼是我們使用計算機模擬的三種職業，和對應的可能影響該職業收入的特徵。 -->
+
+<!-- ```{r introBayes13-25, cache=TRUE} -->
+<!-- # simulate career choices among 500 individuals -->
+<!-- N <- 500                        # number of individuals -->
+<!-- income <- c(1, 2, 5)            # expected income of each career -->
+<!-- score <- 0.5*income             # scores for each career, based on income -->
+<!-- # next line converts scores to probabilities  -->
+<!-- p <- softmax(score[1], score[2], score[3]) -->
+
+<!-- # now simulate choice -->
+<!-- # outcome career holds event type values, not counts -->
+<!-- career <- rep(NA, N) # empty vector of choices for each  -->
+<!-- # sample chosen career for each individual -->
+<!-- set.seed(34302) -->
+<!-- for (i in 1:N) career[i] <- sample(1:3, size = 1, prob = p) -->
+<!-- ``` -->
+
+
+<!-- 上面的模擬數據，需要使用適合多項式邏輯回歸模型的 `dcategorical` 似然函數，鏈接函數要使用多項式邏輯鏈接函數 (multinomial logit link) `softmax`。於是每種職業選擇作爲結果變量時都可以有自己的線性回歸模型，加入它自己可能存在的特徵。這樣的模型使用 `Stan` 語言本身來表達的話可以寫作： -->
+
+
+<!-- ```{r introBayes13-26, cache=TRUE} -->
+<!-- code_m11.13 <- " -->
+<!-- data{ -->
+<!--       int N; // number of individuals -->
+<!--       int K; // number of possible careers -->
+<!--       int career[N]; // outcome -->
+<!--       vector[K] career_income; -->
+<!-- } -->
+
+<!-- parameters{ -->
+<!--       vector[K-1] a;   // intercepts -->
+<!--       real<lower=0> b; // association of income with choice -->
+<!-- } -->
+
+<!-- model{ -->
+<!--       vector[K] p;  -->
+<!--       vector[K] s;  -->
+<!--       a ~ normal( 0 , 1 );  -->
+<!--       b ~ normal( 0, 0.5 );  -->
+<!--       s[1] = a[1] + b * career_income[1]; -->
+<!--       s[2] = a[2] + b * career_income[2];  -->
+<!--       s[3] = 0;  // pivot -->
+<!--       p = softmax( s );  -->
+<!--       career ~ categorical( p ); -->
+<!-- } -->
+<!-- " -->
+<!-- ``` -->
+
+
+<!-- 然後我們來設定給Stan運行的數據，並激活 Stan 運行： -->
+
+
+<!-- ```{r introBayes13-27, cache=F, results="hide"} -->
+<!-- dat_list <- list(N = N, K = 3, career = career, career_income = income) -->
+<!-- m11.13 <- stan(model_code = code_m11.13, data = dat_list, -->
+<!--                iter = 3000, chains = 4, control = list(adapt_delta = 0.99)) -->
+<!-- ``` -->
+
+<!-- ```{r introBayes13-28, cache=TRUE} -->
+<!-- precis( m11.13, depth = 2) -->
+<!-- ``` -->
