@@ -2,7 +2,7 @@
 
 Beta 二項分佈模型其實是一系列的二項分佈模型的混合體 (a mixture of binomial distributions)。它假定的是每個二進制觀測值，都有自己的實際成功概率。該模型的目的是估計這些成功概率所構成的概率分佈 (estimate the distribution of probabilities of success)，而不是某一個特定的試驗的成功概率。
 
-我們使用大學錄取率這個數據來解釋這個模型。這個數據本身如果我們不知道每個學院之間的錄取率相差很大，也就是當數據本身如果不含有學院 (`dept`) 信息時，我們可能會誤認爲整所大學的錄取率都是一樣的。我們之前是通過在邏輯回歸模型種增加學院 `dept` 這一個變量來獲得正確的男女申請人錄取率之差的比較的。這裏我們轉換一個思路，使用beta二項分佈模型，並且不把學院當作已知變量，看這個模型的神奇之處。它的靈活性在於，該模型會初始默認每一行觀測值，都其實有自己的錄取（成功）概率，而不是統一的錄取概率。這些不同的錄取概率本身構成了一個分佈，它可以用 beta 分佈來描述。beta分佈有兩個參數，一個是平均成功概率 (average probability) $\bar{p}$，還有一個是描述概率分佈密度形狀的形狀參數 (shape parameter) $\theta$。$\theta$ 負責描述這些概率在 $[0, 1]$ 的範圍內的分佈有多寬泛 (how spread out the distribution is)。當 $\theta = 2$ 時，是一個平坦分佈，也就是從 0 到 1 之間的所有概率的概率是相同的 (every probability from 0 to 1 is equally likely)。當 $\theta > 2$，分佈變得越來越向中間的平均概率處集中 (more concentrated)，當 $\theta <  2$，分佈本身則越來越向兩邊的極端概率處靠攏 (dispersed that extreme probabilities near 0 and 1 are more likely than the mean)。它的概率密度分佈圖可以用下面的代碼來獲得：
+下面我們使用大學錄取率這個數據來解釋這個模型。這個數據本身假如我們不知道每個學院之間的錄取率相差很大，也就是當數據本身如果不含有學院 (`dept`) 信息時，我們可能會誤認爲整所大學的錄取率都是一樣的。我們之前是通過在邏輯回歸模型種增加學院 `dept` 這一個變量來獲得正確的男女申請人錄取率之差的比較的。這裏我們轉換一個思路，使用beta二項分佈模型，並且不把學院當作已知變量，看這個模型的神奇之處。它的靈活性在於，該模型會初始默認每一行觀測值，都其實有自己的錄取（成功）概率，而不是統一的錄取概率。這些不同的錄取概率本身構成了一個分佈，它可以用 beta 分佈來描述。beta分佈有兩個參數，一個是平均成功概率 (average probability) $\bar{p}$，還有一個是描述概率分佈密度形狀的形狀參數 (shape parameter) $\theta$。$\theta$ 負責描述這些概率在 $[0, 1]$ 的範圍內的分佈有多寬泛 (how spread out the distribution is)。當 $\theta = 2$ 時，是一個平坦分佈，也就是從 0 到 1 之間的所有概率的概率是相同的 (every probability from 0 to 1 is equally likely)。當 $\theta > 2$，分佈變得越來越向中間的平均概率處集中 (more concentrated)，當 $\theta <  2$，分佈本身則越來越向兩邊的極端概率處靠攏 (dispersed that extreme probabilities near 0 and 1 are more likely than the mean)。它的概率密度分佈圖可以用下面的代碼來獲得：
 
 
 ```{r introBayes14-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="", fig.align='center'}
@@ -17,5 +17,61 @@ curve( dbeta2(x, 0.5, 2), from = 0, to = 1,
 text(0.5, 2, "beta(p = 0.5, theta = 5)")
 text(0.5, 0.3, "beta(p = 0.5, theta = 1)", col = rangi2)
 text(0.5, 1.2, "beta(p = 0.5, theta = 2)", col = "red")
+```
+
+
+接下來我們思考如何把線性模型和 $\bar{p}$ 聯繫起來，需要達到的效果是當預測變量發生變化時，我們應該觀察到錄取率的平均值會隨之發生變化。如果用數學表達式來描述就是：
+
+
+$$
+\begin{aligned}
+ A_i & \sim \text{BetaBinomial}(N_i, \bar{p}_i, \theta) \\ 
+ \text{logit}(\bar{p}_i) & = \alpha_{\text{GID}[i]}　\\
+ \alpha_j & = \text{Normal}(0, 1.5) \\ 
+ \theta  & = \phi + 2\\ 
+ \phi & \sim \text{Exponential}(1) 
+\end{aligned}
+$$
+
+其中，
+
+- $A_i$ 是結果變量，表示被錄取（成功）與否。
+- $N_i$ 是申請人總數。
+- $\text{GID}[i]$ 是表示性別的索引變量（男性 = 1，女性 = 2）。
+- 我們希望把 Beta 分佈的概率分散程度 (dispersion) 控制在大於2。這是因爲我們不忍爲錄取概率在任何一個學院會是趨向於兩極化的（要麼不錄取，要麼錄取）而應該是集中在某個平均值附近的，那麼這樣的Beta分佈需要的分散程度 $\theta$ 必須大於等於2。當它等於2時，我們看見概率是一個均一分佈，也就是所有的學院錄取率保持不變。爲了滿足這個分散程度取值大於等於2，我們使用的是一個簡單的技巧，用 $\phi + 2$ 表示 $\theta$ 並且使 $\phi$ 服從指數分佈，因爲服從指數分佈的值是大於等於零的。
+
+下面的代碼運行的是上述的模型：
+
+
+```{r introBayes14-01, cache=TRUE,  results="hide"}
+data("UCBadmit")
+d <- UCBadmit
+d$gid <- ifelse( d$applicant.gender == "male", 1L, 2L )
+dat <- list(
+        A = d$admit,
+        N = d$applications,
+        gid = d$gid
+)
+m12.1 <- ulam(
+        alist(
+                A ~ dbetabinom( N, pbar, theta), 
+                logit(pbar) <- a[gid], 
+                a[gid] ~ dnorm( 0, 1.5 ), 
+                transpars> theta <<- phi + 2.0, 
+                phi ~ dexp(1)
+        ), data = dat, chains = 4,
+        control = list(adapt_delta = 0.9, 
+                       max_treedepth = 15)
+)
+```
+
+
+注意到，我們爲 `theta` 特別標註了它是被轉換過後的參數，`transpars>`，這樣 Stan 就會把 `theta` 作爲結果之一保存下來。我們可以使用採樣過後的 `m12.1` 計算其事後的男女錄取率之差:
+ 
+
+```{r introBayes14-02, cache=TRUE}
+post <- extract.samples(m12.1)
+post$da <- post$a[, 1] - post$a[, 2]
+precis(post, depth = 2)
 ```
 
