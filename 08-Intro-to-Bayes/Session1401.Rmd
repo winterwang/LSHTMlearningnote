@@ -5,7 +5,7 @@ Beta 二項分佈模型其實是一系列的二項分佈模型的混合體 (a mi
 下面我們使用大學錄取率這個數據來解釋這個模型。這個數據本身假如我們不知道每個學院之間的錄取率相差很大，也就是當數據本身如果不含有學院 (`dept`) 信息時，我們可能會誤認爲整所大學的錄取率都是一樣的。我們之前是通過在邏輯回歸模型種增加學院 `dept` 這一個變量來獲得正確的男女申請人錄取率之差的比較的。這裏我們轉換一個思路，使用beta二項分佈模型，並且不把學院當作已知變量，看這個模型的神奇之處。它的靈活性在於，該模型會初始默認每一行觀測值，都其實有自己的錄取（成功）概率，而不是統一的錄取概率。這些不同的錄取概率本身構成了一個分佈，它可以用 beta 分佈來描述。beta分佈有兩個參數，一個是平均成功概率 (average probability) $\bar{p}$，還有一個是描述概率分佈密度形狀的形狀參數 (shape parameter) $\theta$。$\theta$ 負責描述這些概率在 $[0, 1]$ 的範圍內的分佈有多寬泛 (how spread out the distribution is)。當 $\theta = 2$ 時，是一個平坦分佈，也就是從 0 到 1 之間的所有概率的概率是相同的 (every probability from 0 to 1 is equally likely)。當 $\theta > 2$，分佈變得越來越向中間的平均概率處集中 (more concentrated)，當 $\theta <  2$，分佈本身則越來越向兩邊的極端概率處靠攏 (dispersed that extreme probabilities near 0 and 1 are more likely than the mean)。它的概率密度分佈圖可以用下面的代碼來獲得：
 
 
-```{r introBayes14-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="", fig.align='center'}
+```{r introBayes14-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Beta distributions with different means and dispersion.", fig.align='center'}
 curve( dbeta2(x, 0.5, 5), from = 0, to = 1, 
        xlab = "probability", ylab = "Density", 
        bty = "n", ylim = c(0, 4),
@@ -59,10 +59,9 @@ m12.1 <- ulam(
                 a[gid] ~ dnorm( 0, 1.5 ), 
                 transpars> theta <<- phi + 2.0, 
                 phi ~ dexp(1)
-        ), data = dat, chains = 4,
-        control = list(adapt_delta = 0.9, 
-                       max_treedepth = 15)
+        ), data = dat, chains = 4, cmdstan = TRUE
 )
+# if you also failed compliation please see https://github.com/rmcelreath/rethinking/issues/267
 ```
 
 
@@ -74,4 +73,48 @@ post <- extract.samples(m12.1)
 post$da <- post$a[, 1] - post$a[, 2]
 precis(post, depth = 2)
 ```
+
+上面對 `m12.1` 的時候樣本進行的計算和比較可以看見，`a[1]` 是男性申請人被錄取的對數比值 log-odds，它的均值似乎略微比 `a[2]` 女性申請人被錄取的對數比值稍微低一些。但是，它們二者的差的事後均值 `da` 沒有顯著偏離 0，其事後概率分佈的可信區間也包括0。所以並沒有太多的證據表明男女申請人之間在這所大學的錄取率上有任何性別的歧視或者偏差。但是記得我們在前一個章節裏，使用簡單的邏輯回歸模型時，除非把學院這一變量加入預測變量中加以考慮才能獲得相似的正確答案。之前當沒有加入學院這一變量的時候，我們其實被告知男女之間有較大的錄取率的性別差，特別是女生的錄取率在表面上看起來似乎比較低。但是當我們把簡單邏輯回歸模型棄用之後，選擇使用beta二項分佈回歸模型在 `m12.1` 中之後，即使沒有把學院變量放進模型中去，依然獲得了準確的男女之間錄取率的比較結果。這是爲什麼呢？
+
+其實當選用 beta 二項分佈的時候，我們允許了每一行的數據，也就是每一個學院的男性申請人數據，和每一個學院的女性申請人數據分別擁有自己的截距。這些截距其實是從一個均值是 $\bar{p}_i$，分散程度是 $\theta$ 的 beta 分佈中採集而來的。我們可以直觀地繪製這個 beta 分佈的形狀來加深對 `m12.1` 模型的理解：
+
+
+```{r introBayes14-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior distributions for m12.1. The thick curves are the posterior mean beta distribution for male and female applicants. The ligher curves represents 100 combinations of bar(p) and theta sampled from the posterior.", fig.align='center'}
+gid <- 2
+# draw posterior mean beta distribution
+
+curve( dbeta2(x, mean(logistic(post$a[, gid])), mean(post$theta)), 
+       from = 0, to = 1, ylab = "Density", xlab = "probability admit", 
+       ylim = c(0, 3), lwd = 2, bty = "n")
+curve( dbeta2(x, mean(logistic(post$a[, gid - 1])), mean(post$theta)), 
+       from = 0, to = 1, ylab = "Density", xlab = "probability admit", 
+       ylim = c(0, 3), lwd = 2, add =  TRUE, col = rangi2)
+# Draw 50 beta distributions sampled from posterior
+
+for( i in 1:50 ) {
+  p <- logistic( post$a[i, gid] )
+  theta <- post$theta[i]
+  curve( dbeta2(x, p, theta), add = TRUE, col = col.alpha("black", 0.2))
+}
+for( i in 1:50 ) {
+  p <- logistic( post$a[i, gid-1] )
+  theta <- post$theta[i]
+  curve( dbeta2(x, p, theta), add = TRUE, col = col.alpha(rangi2, 0.2))
+}
+
+mtext("distribution of female admission rates (black); male admission rates (blue)")
+```
+
+
+如圖 \@ref(fig:introBayes14-fig02) 所示的，我們允許了不同的錄取率，這樣一來不論男女，在不同的學院之間錄取率的差異被考慮了進來，男女之間的差異也就不那麼明顯了。同時也避免了模型錯誤地認爲女性受到了錄取上的歧視。雖然模型 `m12.1` 並不知道有學院這個變量（我們並沒有在模型中的任何地方加入學院這個變量），它依然靈活準確地給出了允許不同錄取率這一重要的方案，它使用 beta 分佈來估計該錄取概率在不同的人羣中可能的變化，我們可以再看看該模型的事後證實檢驗 (posterior validation check):
+
+```{r introBayes14-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior validation check for m12.1. As a result of widely dispersed beta distributions on the figure above, the raw data (blue) is contained within the prediction intervals.", fig.align='center'}
+
+postcheck(m12.1)
+```
+
+
+
+
+
 
