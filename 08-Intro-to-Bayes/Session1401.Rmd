@@ -114,7 +114,47 @@ postcheck(m12.1)
 ```
 
 
+## 負二項分佈模型，伽馬泊松回歸模型 Negative-binomial/gamma-Poisson
+
+類似beta二項分佈模型和邏輯回歸模型之間的關係，負二項分佈模型 (negative-binomial)，或者更準確的名字叫做伽馬泊松回歸模型，和泊松回歸模型之間的關係。伽馬泊松回歸模型其實是允許了每一個泊松計數 Poisson count 擁有各自不同的事件發生率。它估計的是一個叫做伽馬分佈的形狀，用來描述該泊松事件的發生率本身的分佈。預測變量估計的是一個伽馬分佈的形狀，而不是簡單的事件發生率的期望值 $\lambda$。這樣做有什麼好處呢？一是使得模型變得更加靈活，不用被泊松回歸模型的均值方差必須相等的條件給限制住。伽馬泊松回歸模型擁有兩個重要參數需要估計，一個是發生率的均值 (mean of rate) $\lambda_i$，另一個是表示該伽馬分佈的分散程度 dispersion 的參數 $\phi$。
+
+$$
+y_i \sim \text{Gamma-Poisson}(\lambda_i, \phi)
+$$
+
+其中，$\lambda_i$ 可以被視爲和普通的泊松分佈的發生率參數相似，但是分散程度 dispersion 參數 $\phi$ 是必須大於零的，它控制着方差的大小。伽馬泊松分佈的方差是 $\lambda + \lambda^2/\phi$。所以，當 $\phi$ 越大，該方差約接近 $\lambda$，也就是越接近一般的泊松回歸模型。
+
+我們用之前用過的太平洋島國生產工具數據來演示該模型的使用和分析過程。之前使用簡單泊松回歸模型時，我們發現夏威夷島的工具種類數據是一個非常有影響力的觀測值。當我們把模型改成伽馬泊松回歸分佈時，夏威夷數據對模型結果的影響應該會小很多。因爲伽馬泊松回歸模型本身就預計數據本身的均值有較大的差異。
 
 
+```{r introBayes14-03, cache=TRUE, results="hide"}
+data(Kline)
+d <- Kline
+d$P <- standardize( log(d$population) )
+d$contact_id <- ifelse( d$contact == "high", 2L, 1L )
+
+dat2 <- list(
+  T = d$total_tools, 
+  P = d$population, 
+  cid = d$contact_id
+)
+
+m12.2 <- ulam(
+  alist(
+    T ~ dgampois( lambda, phi ), 
+    lambda <- exp(a[cid]) * P^b[cid] / g,
+    a[cid] ~ dnorm(1, 1), 
+    b[cid] ~ dexp(1), 
+    g ~ dexp(1), 
+    phi ~ dexp(1)
+  ), data =  dat2, chains = 4, log_lik = TRUE
+)
+
+```
+
+
+```{r introBayes14-04, cache=TRUE}
+precis(m12.2, depth = 2)
+```
 
 

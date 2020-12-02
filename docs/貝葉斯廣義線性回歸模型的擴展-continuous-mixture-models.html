@@ -760,6 +760,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul></li>
 <li class="chapter" data-level="54" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><i class="fa fa-check"></i><b>54</b> 貝葉斯廣義線性回歸模型的擴展 continuous mixture models</a><ul>
 <li class="chapter" data-level="54.1" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#beta-二項分佈模型-beta-binomial-model"><i class="fa fa-check"></i><b>54.1</b> Beta 二項分佈模型 beta-binomial model</a></li>
+<li class="chapter" data-level="54.2" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#負二項分佈模型伽馬泊松回歸模型-negative-binomialgamma-poisson"><i class="fa fa-check"></i><b>54.2</b> 負二項分佈模型，伽馬泊松回歸模型 Negative-binomial/gamma-Poisson</a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="55" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>55</b> 重要概念複習</a><ul>
@@ -1642,6 +1643,45 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 圖 54.3: Posterior validation check for m12.1. As a result of widely dispersed beta distributions on the figure above, the raw data (blue) is contained within the prediction intervals.
 </p>
 </div>
+</div>
+<div id="負二項分佈模型伽馬泊松回歸模型-negative-binomialgamma-poisson" class="section level2">
+<h2><span class="header-section-number">54.2</span> 負二項分佈模型，伽馬泊松回歸模型 Negative-binomial/gamma-Poisson</h2>
+<p>類似beta二項分佈模型和邏輯回歸模型之間的關係，負二項分佈模型 (negative-binomial)，或者更準確的名字叫做伽馬泊松回歸模型，和泊松回歸模型之間的關係。伽馬泊松回歸模型其實是允許了每一個泊松計數 Poisson count 擁有各自不同的事件發生率。它估計的是一個叫做伽馬分佈的形狀，用來描述該泊松事件的發生率本身的分佈。預測變量估計的是一個伽馬分佈的形狀，而不是簡單的事件發生率的期望值 <span class="math inline">\(\lambda\)</span>。這樣做有什麼好處呢？一是使得模型變得更加靈活，不用被泊松回歸模型的均值方差必須相等的條件給限制住。伽馬泊松回歸模型擁有兩個重要參數需要估計，一個是發生率的均值 (mean of rate) <span class="math inline">\(\lambda_i\)</span>，另一個是表示該伽馬分佈的分散程度 dispersion 的參數 <span class="math inline">\(\phi\)</span>。</p>
+<p><span class="math display">\[
+y_i \sim \text{Gamma-Poisson}(\lambda_i, \phi)
+\]</span></p>
+<p>其中，<span class="math inline">\(\lambda_i\)</span> 可以被視爲和普通的泊松分佈的發生率參數相似，但是分散程度 dispersion 參數 <span class="math inline">\(\phi\)</span> 是必須大於零的，它控制着方差的大小。伽馬泊松分佈的方差是 <span class="math inline">\(\lambda + \lambda^2/\phi\)</span>。所以，當 <span class="math inline">\(\phi\)</span> 越大，該方差約接近 <span class="math inline">\(\lambda\)</span>，也就是越接近一般的泊松回歸模型。</p>
+<p>我們用之前用過的太平洋島國生產工具數據來演示該模型的使用和分析過程。之前使用簡單泊松回歸模型時，我們發現夏威夷島的工具種類數據是一個非常有影響力的觀測值。當我們把模型改成伽馬泊松回歸分佈時，夏威夷數據對模型結果的影響應該會小很多。因爲伽馬泊松回歸模型本身就預計數據本身的均值有較大的差異。</p>
+<div class="sourceCode" id="cb951"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb951-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-1"></a><span class="kw">data</span>(Kline)</span>
+<span id="cb951-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-2"></a>d &lt;-<span class="st"> </span>Kline</span>
+<span id="cb951-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-3"></a>d<span class="op">$</span>P &lt;-<span class="st"> </span><span class="kw">standardize</span>( <span class="kw">log</span>(d<span class="op">$</span>population) )</span>
+<span id="cb951-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-4"></a>d<span class="op">$</span>contact_id &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>contact <span class="op">==</span><span class="st"> &quot;high&quot;</span>, 2L, 1L )</span>
+<span id="cb951-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-5"></a></span>
+<span id="cb951-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-6"></a>dat2 &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb951-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-7"></a>  <span class="dt">T =</span> d<span class="op">$</span>total_tools, </span>
+<span id="cb951-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-8"></a>  <span class="dt">P =</span> d<span class="op">$</span>population, </span>
+<span id="cb951-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-9"></a>  <span class="dt">cid =</span> d<span class="op">$</span>contact_id</span>
+<span id="cb951-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-10"></a>)</span>
+<span id="cb951-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-11"></a></span>
+<span id="cb951-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-12"></a>m12<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb951-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-13"></a>  <span class="kw">alist</span>(</span>
+<span id="cb951-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-14"></a>    T <span class="op">~</span><span class="st"> </span><span class="kw">dgampois</span>( lambda, phi ), </span>
+<span id="cb951-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-15"></a>    lambda &lt;-<span class="st"> </span><span class="kw">exp</span>(a[cid]) <span class="op">*</span><span class="st"> </span>P<span class="op">^</span>b[cid] <span class="op">/</span><span class="st"> </span>g,</span>
+<span id="cb951-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-16"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">1</span>, <span class="dv">1</span>), </span>
+<span id="cb951-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-17"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb951-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-18"></a>    g <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb951-19"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-19"></a>    phi <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb951-20"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-20"></a>  ), <span class="dt">data =</span>  dat2, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb951-21"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-21"></a>)</span></code></pre></div>
+<pre><code>## recompiling to avoid crashing R session</code></pre>
+<div class="sourceCode" id="cb953"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb953-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-1"></a><span class="kw">precis</span>(m12<span class="fl">.2</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##            mean         sd         5.5%      94.5%      n_eff      Rhat4
+## a[1] 0.91878755 0.84936412 -0.414150801 2.29151954 1385.12141 1.00001531
+## a[2] 1.06753014 0.97461567 -0.518964973 2.58920781  888.65016 1.00366212
+## b[1] 0.24875651 0.09598722  0.103864200 0.40425733 1336.12390 0.99962945
+## b[2] 0.26250633 0.13253700  0.054932581 0.47487321  765.62002 1.00215008
+## g    1.08477532 0.86006018  0.223950273 2.66803675 1162.68594 0.99813928
+## phi  3.66598571 1.63483363  1.529073806 6.65003808  874.03587 1.00326906</code></pre>
 
 </div>
 </div>
