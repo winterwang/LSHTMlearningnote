@@ -131,12 +131,12 @@ $$
 data(Kline)
 d <- Kline
 d$P <- standardize( log(d$population) )
-d$contact_id <- ifelse( d$contact == "high", 2L, 1L )
+d$cid <- ifelse( d$contact == "high", 2L, 1L )
 
 dat2 <- list(
   T = d$total_tools, 
   P = d$population, 
-  cid = d$contact_id
+  cid = d$cid
 )
 
 m12.2 <- ulam(
@@ -156,5 +156,48 @@ m12.2 <- ulam(
 ```{r introBayes14-04, cache=TRUE}
 precis(m12.2, depth = 2)
 ```
+
+
+```{r  introBayes14-fig04, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="", fig.align='center'}
+k <- PSIS( m12.2, pointwise = TRUE)$k
+
+plot( d$population, d$total_tools, 
+            bty = "n", 
+      xlab = "population", 
+      ylab = "total tools", 
+      col = rangi2, pch = ifelse( d$cid == 1, 1, 16), lwd = 2, 
+      ylim = c(0, 75), cex = 1 + normalize(k))
+
+
+ns <- 100
+
+P_seq <- seq( from = -5, to = 3, length.out = ns )
+# 1.53 is sd of log(population)
+# 9 is mean of log(population)
+
+pop_seq <- exp( P_seq*1.53 + 9 )
+
+lambda <- link( m12.2, data = data.frame( P = P_seq, 
+                                          cid = 1))
+lmu <- apply( lambda, 2, mean)
+lci <- apply( lambda, 2, PI)
+
+lines( pop_seq, lmu, lty = 2, lwd = 1.5 )
+shade( lci, pop_seq, xpd = FALSE )
+
+lambda <- link( m12.2, data = data.frame( P = P_seq, cid = 2 ))
+lmu <- apply( lambda, 2, mean )
+lci <- apply( lambda, 2, PI )
+lines( pop_seq, lmu, lty = 1, lwd = 1.5 )
+shade( lci, pop_seq, xpd = FALSE )
+```
+
+
+
+## 零膨脹模型 zero-inflated models
+
+很多時候，觀察事件發生的數量種，含有很多零的數值。產生這些零觀察值的原因可能不只一個。可能是因爲多種不同的原因導致的這樣的數據的產生。假設你去森林裏打算數一種知更鳥。那你觀察不到知更鳥的原因很可能是，森林裏真的沒有知更鳥；另一種可能的原因是，你的腳步聲嚇跑了這些本來生活在樹林裏的知更鳥。所以當產生零的機制有多種時，我們可能可以通過一種叫做零膨脹模型 (zero-inflated models) 的方法來建立回歸模型，分析數據。
+
+### 零膨脹泊松回歸模型 zero-inflated Poisson
 
 
