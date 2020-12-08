@@ -329,3 +329,103 @@ mean( exp( post$al )) # rate finish manuscripts, when working
 
 處理這樣結果的最佳解決方案是使用一種該叫做累積鏈接函數 (cumulative link function)。很容易理解我們設定數值爲3的累積概率，它**等於比三小的數值 1， 2，以及它本身**的概率之和。
 
+數據來自經典的[關於有軌電車的道德悖論問題](https://zh.wikipedia.org/wiki/%E6%9C%89%E8%BD%A8%E7%94%B5%E8%BD%A6%E9%9A%BE%E9%A2%98)。結果變量是 `Trolley` 數據中的 `response` 變量，它的答案是從 1-7 遞增的表示道德上認爲可以接受的程度。我們先描述一下這個結果變量的分佈情況：
+
+```{r introBayes14-fig06, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Histogram of discrete response in the sample.", fig.align='center'}
+data("Trolley")
+d <- Trolley
+simplehist( d$response, 
+            xlab = "response",
+            xlim = c(1,7),
+            bty = "n")
+
+```
+
+### 用不同的截距來描述一個有順序的分佈 describing an ordered distribution with intercepts
+
+簡單地，我們可以使用這些結果的累積概率，取他們的對數累積比值 log-cumulative-odds。第一步是計算累積概率：
+
+```{r introBayes14-fig07, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Cumulative proportion of each response.", fig.align='center'}
+# discrete proportion of each response value
+pr_k <- table(d$response) / nrow(d)
+
+# cumsm converts to cumulative proportions
+cum_pr_k <- cumsum( pr_k )
+
+# plot
+plot(1:7, cum_pr_k, 
+     type = "b", 
+     xlab = "response", 
+     ylab = "cumulative proportion", 
+     ylim = c(0, 1),
+     bty = "n")
+```
+
+下一步就可以計算對數累積比值。我們需要的是一系列不同的截距 $\alpha_k$。每一個截距本身都使用對數累積比值作爲尺度，表示每一種選擇結果的累積概率：
+
+
+$$
+\log\frac{\text{Pr}(y_i \leqslant k)}{1 - \text{Pr}(y_i \leqslant k)} = \alpha_k
+$$
+
+實際計算過程可以是：
+
+
+```{r introBayes14-fig08, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Log-cumulative-odds of each response. Note that the log-cumulative-odds of response value 7 is infinity, so it is not shown.", fig.align='center'}
+round( lco <- logit( cum_pr_k ), 2)
+plot(1:6, lco[1:6], 
+     type = "b", 
+     xlab = "response", 
+     ylab = "log-cumulative-odds", 
+     # ylim = c(0, 1),
+     bty = "n")
+```
+
+
+```{r  introBayes14-fig09, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Cumulative probability and ordered likelihood. The horizontal axis displays possible observable outcomes, from 1 through 7. The vertical axis displays cumulative probability. The gray bars over each outcome show cumulative probability. These keep growing with each successive outcome value. The darker line segments show the discrete probability of each individual outcome. These are the likelihoods that go into Bayes' theorem.", fig.align='center'}
+# primary data
+d_plot <-
+  d %>%
+  count(response) %>%
+  mutate(pr_k     = n / nrow(d),
+         cum_pr_k = cumsum(n / nrow(d))) %>% 
+  mutate(discrete_probability = ifelse(response == 1, cum_pr_k, cum_pr_k - pr_k))
+
+# annotation
+text <-
+  tibble(text     = 1:7,
+         response = seq(from = 1.25, to = 7.25, by = 1),
+         cum_pr_k = d_plot$cum_pr_k - .065)
+
+d_plot %>% 
+  ggplot(aes(x = response, y = cum_pr_k,
+             color = cum_pr_k, fill = cum_pr_k)) +
+  geom_line(color = canva_pal("Green fields")(4)[1]) +
+  geom_point(shape = 21, colour = "grey92", 
+             size = 2.5, stroke = 1) +
+  geom_linerange(aes(ymin = 0, ymax = cum_pr_k),
+                 alpha = 1/2, color = canva_pal("Green fields")(4)[1]) +
+  geom_linerange(aes(x = response + .025,
+                     ymin = ifelse(response == 1, 0, discrete_probability), 
+                     ymax = cum_pr_k),
+                 color = "black") +
+  # number annotation
+  geom_text(data = text, 
+            aes(label = text),
+            size = 4) +
+  scale_fill_gradient(low = canva_pal("Green fields")(4)[4],
+                      high = canva_pal("Green fields")(4)[1]) +
+  scale_color_gradient(low = canva_pal("Green fields")(4)[4],
+                       high = canva_pal("Green fields")(4)[1]) +
+  scale_x_continuous(breaks = 1:7) +
+  scale_y_continuous("cumulative proportion", breaks = c(0, .5, 1), limits = c(0, 1)) +
+  theme_bw() + 
+  theme(axis.ticks = element_blank(),
+        axis.title.y = element_text(angle = 90),
+        legend.position = "none") 
+```
+
+
+
+
+

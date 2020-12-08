@@ -764,7 +764,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="54.3" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#零膨脹模型-zero-inflated-models"><i class="fa fa-check"></i><b>54.3</b> 零膨脹模型 zero-inflated models</a><ul>
 <li class="chapter" data-level="54.3.1" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#零膨脹泊松回歸模型-zero-inflated-poisson"><i class="fa fa-check"></i><b>54.3.1</b> 零膨脹泊松回歸模型 zero-inflated Poisson</a></li>
 </ul></li>
-<li class="chapter" data-level="54.4" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#帶順序含義的多類別結果變量-ordered-categorical-outcomes"><i class="fa fa-check"></i><b>54.4</b> 帶順序含義的多類別結果變量 ordered categorical outcomes</a></li>
+<li class="chapter" data-level="54.4" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#帶順序含義的多類別結果變量-ordered-categorical-outcomes"><i class="fa fa-check"></i><b>54.4</b> 帶順序含義的多類別結果變量 ordered categorical outcomes</a><ul>
+<li class="chapter" data-level="54.4.1" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#用不同的截距來描述一個有順序的分佈-describing-an-ordered-distribution-with-intercepts"><i class="fa fa-check"></i><b>54.4.1</b> 用不同的截距來描述一個有順序的分佈 describing an ordered distribution with intercepts</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="55" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>55</b> 重要概念複習</a><ul>
@@ -1828,7 +1830,109 @@ y_i &amp; \sim \text{ZIPoisson}(p_i, \lambda_i) \\
 <h2><span class="header-section-number">54.4</span> 帶順序含義的多類別結果變量 ordered categorical outcomes</h2>
 <p>在某些心理學甚至普通的自然科學研究裏，我們非常容易碰見的一種結果變量是帶有順序的多類別結果，例如你可能被問過「如果從1-7中選擇一個數字來表達你的喜愛程度，數字越高表示越喜愛的話，你對壽司類食物的嗜好程度是多少數值？」，那麼這樣的問題的答案就是一系列從1-7的數值。這樣的結果變量之間是存在順序的區別的，被叫做順序類別 ordered categories。它和計數型變量不同，不同順序之間的跨度，可以是不一樣的。也就是1-2 之間的喜好程度之差，很可能不同於 6-7 之間的喜好程度之差。我們無法把這樣的結果簡單地視爲連續型的變量。</p>
 <p>處理這樣結果的最佳解決方案是使用一種該叫做累積鏈接函數 (cumulative link function)。很容易理解我們設定數值爲3的累積概率，它<strong>等於比三小的數值 1， 2，以及它本身</strong>的概率之和。</p>
+<p>數據來自經典的<a href="https://zh.wikipedia.org/wiki/%E6%9C%89%E8%BD%A8%E7%94%B5%E8%BD%A6%E9%9A%BE%E9%A2%98">關於有軌電車的道德悖論問題</a>。結果變量是 <code>Trolley</code> 數據中的 <code>response</code> 變量，它的答案是從 1-7 遞增的表示道德上認爲可以接受的程度。我們先描述一下這個結果變量的分佈情況：</p>
+<div class="sourceCode" id="cb966"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb966-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb966-1"></a><span class="kw">data</span>(<span class="st">&quot;Trolley&quot;</span>)</span>
+<span id="cb966-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb966-2"></a>d &lt;-<span class="st"> </span>Trolley</span>
+<span id="cb966-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb966-3"></a><span class="kw">simplehist</span>( d<span class="op">$</span>response, </span>
+<span id="cb966-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb966-4"></a>            <span class="dt">xlab =</span> <span class="st">&quot;response&quot;</span>,</span>
+<span id="cb966-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb966-5"></a>            <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">7</span>),</span>
+<span id="cb966-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb966-6"></a>            <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes14-fig06"></span>
+<img src="bookdown_files/figure-html/introBayes14-fig06-1.png" alt="Histogram of discrete response in the sample." width="576" />
+<p class="caption">
+圖 54.6: Histogram of discrete response in the sample.
+</p>
+</div>
+<div id="用不同的截距來描述一個有順序的分佈-describing-an-ordered-distribution-with-intercepts" class="section level3">
+<h3><span class="header-section-number">54.4.1</span> 用不同的截距來描述一個有順序的分佈 describing an ordered distribution with intercepts</h3>
+<p>簡單地，我們可以使用這些結果的累積概率，取他們的對數累積比值 log-cumulative-odds。第一步是計算累積概率：</p>
+<div class="sourceCode" id="cb967"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb967-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-1"></a><span class="co"># discrete proportion of each response value</span></span>
+<span id="cb967-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-2"></a>pr_k &lt;-<span class="st"> </span><span class="kw">table</span>(d<span class="op">$</span>response) <span class="op">/</span><span class="st"> </span><span class="kw">nrow</span>(d)</span>
+<span id="cb967-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-3"></a></span>
+<span id="cb967-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-4"></a><span class="co"># cumsm converts to cumulative proportions</span></span>
+<span id="cb967-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-5"></a>cum_pr_k &lt;-<span class="st"> </span><span class="kw">cumsum</span>( pr_k )</span>
+<span id="cb967-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-6"></a></span>
+<span id="cb967-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-7"></a><span class="co"># plot</span></span>
+<span id="cb967-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-8"></a><span class="kw">plot</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">7</span>, cum_pr_k, </span>
+<span id="cb967-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-9"></a>     <span class="dt">type =</span> <span class="st">&quot;b&quot;</span>, </span>
+<span id="cb967-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-10"></a>     <span class="dt">xlab =</span> <span class="st">&quot;response&quot;</span>, </span>
+<span id="cb967-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-11"></a>     <span class="dt">ylab =</span> <span class="st">&quot;cumulative proportion&quot;</span>, </span>
+<span id="cb967-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-12"></a>     <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb967-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb967-13"></a>     <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes14-fig07"></span>
+<img src="bookdown_files/figure-html/introBayes14-fig07-1.png" alt="Cumulative proportion of each response." width="576" />
+<p class="caption">
+圖 54.7: Cumulative proportion of each response.
+</p>
+</div>
+<p>下一步就可以計算對數累積比值。我們需要的是一系列不同的截距 <span class="math inline">\(\alpha_k\)</span>。每一個截距本身都使用對數累積比值作爲尺度，表示每一種選擇結果的累積概率：</p>
+<p><span class="math display">\[
+\log\frac{\text{Pr}(y_i \leqslant k)}{1 - \text{Pr}(y_i \leqslant k)} = \alpha_k
+\]</span></p>
+<p>實際計算過程可以是：</p>
+<div class="sourceCode" id="cb968"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb968-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb968-1"></a><span class="kw">round</span>( lco &lt;-<span class="st"> </span><span class="kw">logit</span>( cum_pr_k ), <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##     1     2     3     4     5     6     7 
+## -1.92 -1.27 -0.72  0.25  0.89  1.77   Inf</code></pre>
+<div class="sourceCode" id="cb970"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb970-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb970-1"></a><span class="kw">plot</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">6</span>, lco[<span class="dv">1</span><span class="op">:</span><span class="dv">6</span>], </span>
+<span id="cb970-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb970-2"></a>     <span class="dt">type =</span> <span class="st">&quot;b&quot;</span>, </span>
+<span id="cb970-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb970-3"></a>     <span class="dt">xlab =</span> <span class="st">&quot;response&quot;</span>, </span>
+<span id="cb970-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb970-4"></a>     <span class="dt">ylab =</span> <span class="st">&quot;log-cumulative-odds&quot;</span>, </span>
+<span id="cb970-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb970-5"></a>     <span class="co"># ylim = c(0, 1),</span></span>
+<span id="cb970-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb970-6"></a>     <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes14-fig08"></span>
+<img src="bookdown_files/figure-html/introBayes14-fig08-1.png" alt="Log-cumulative-odds of each response. Note that the log-cumulative-odds of response value 7 is infinity, so it is not shown." width="576" />
+<p class="caption">
+圖 54.8: Log-cumulative-odds of each response. Note that the log-cumulative-odds of response value 7 is infinity, so it is not shown.
+</p>
+</div>
+<div class="sourceCode" id="cb971"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb971-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-1"></a><span class="co"># primary data</span></span>
+<span id="cb971-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-2"></a>d_plot &lt;-</span>
+<span id="cb971-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-3"></a><span class="st">  </span>d <span class="op">%&gt;%</span></span>
+<span id="cb971-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-4"></a><span class="st">  </span><span class="kw">count</span>(response) <span class="op">%&gt;%</span></span>
+<span id="cb971-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">pr_k     =</span> n <span class="op">/</span><span class="st"> </span><span class="kw">nrow</span>(d),</span>
+<span id="cb971-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-6"></a>         <span class="dt">cum_pr_k =</span> <span class="kw">cumsum</span>(n <span class="op">/</span><span class="st"> </span><span class="kw">nrow</span>(d))) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb971-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">discrete_probability =</span> <span class="kw">ifelse</span>(response <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, cum_pr_k, cum_pr_k <span class="op">-</span><span class="st"> </span>pr_k))</span>
+<span id="cb971-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-8"></a></span>
+<span id="cb971-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-9"></a><span class="co"># annotation</span></span>
+<span id="cb971-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-10"></a>text &lt;-</span>
+<span id="cb971-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-11"></a><span class="st">  </span><span class="kw">tibble</span>(<span class="dt">text     =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span>,</span>
+<span id="cb971-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-12"></a>         <span class="dt">response =</span> <span class="kw">seq</span>(<span class="dt">from =</span> <span class="fl">1.25</span>, <span class="dt">to =</span> <span class="fl">7.25</span>, <span class="dt">by =</span> <span class="dv">1</span>),</span>
+<span id="cb971-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-13"></a>         <span class="dt">cum_pr_k =</span> d_plot<span class="op">$</span>cum_pr_k <span class="op">-</span><span class="st"> </span><span class="fl">.065</span>)</span>
+<span id="cb971-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-14"></a></span>
+<span id="cb971-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-15"></a>d_plot <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb971-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-16"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> response, <span class="dt">y =</span> cum_pr_k,</span>
+<span id="cb971-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-17"></a>             <span class="dt">color =</span> cum_pr_k, <span class="dt">fill =</span> cum_pr_k)) <span class="op">+</span></span>
+<span id="cb971-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-18"></a><span class="st">  </span><span class="kw">geom_line</span>(<span class="dt">color =</span> <span class="kw">canva_pal</span>(<span class="st">&quot;Green fields&quot;</span>)(<span class="dv">4</span>)[<span class="dv">1</span>]) <span class="op">+</span></span>
+<span id="cb971-19"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-19"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">shape =</span> <span class="dv">21</span>, <span class="dt">colour =</span> <span class="st">&quot;grey92&quot;</span>, </span>
+<span id="cb971-20"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-20"></a>             <span class="dt">size =</span> <span class="fl">2.5</span>, <span class="dt">stroke =</span> <span class="dv">1</span>) <span class="op">+</span></span>
+<span id="cb971-21"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-21"></a><span class="st">  </span><span class="kw">geom_linerange</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> <span class="dv">0</span>, <span class="dt">ymax =</span> cum_pr_k),</span>
+<span id="cb971-22"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-22"></a>                 <span class="dt">alpha =</span> <span class="dv">1</span><span class="op">/</span><span class="dv">2</span>, <span class="dt">color =</span> <span class="kw">canva_pal</span>(<span class="st">&quot;Green fields&quot;</span>)(<span class="dv">4</span>)[<span class="dv">1</span>]) <span class="op">+</span></span>
+<span id="cb971-23"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-23"></a><span class="st">  </span><span class="kw">geom_linerange</span>(<span class="kw">aes</span>(<span class="dt">x =</span> response <span class="op">+</span><span class="st"> </span><span class="fl">.025</span>,</span>
+<span id="cb971-24"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-24"></a>                     <span class="dt">ymin =</span> <span class="kw">ifelse</span>(response <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, <span class="dv">0</span>, discrete_probability), </span>
+<span id="cb971-25"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-25"></a>                     <span class="dt">ymax =</span> cum_pr_k),</span>
+<span id="cb971-26"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-26"></a>                 <span class="dt">color =</span> <span class="st">&quot;black&quot;</span>) <span class="op">+</span></span>
+<span id="cb971-27"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-27"></a><span class="st">  </span><span class="co"># number annotation</span></span>
+<span id="cb971-28"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-28"></a><span class="st">  </span><span class="kw">geom_text</span>(<span class="dt">data =</span> text, </span>
+<span id="cb971-29"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-29"></a>            <span class="kw">aes</span>(<span class="dt">label =</span> text),</span>
+<span id="cb971-30"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-30"></a>            <span class="dt">size =</span> <span class="dv">4</span>) <span class="op">+</span></span>
+<span id="cb971-31"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-31"></a><span class="st">  </span><span class="kw">scale_fill_gradient</span>(<span class="dt">low =</span> <span class="kw">canva_pal</span>(<span class="st">&quot;Green fields&quot;</span>)(<span class="dv">4</span>)[<span class="dv">4</span>],</span>
+<span id="cb971-32"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-32"></a>                      <span class="dt">high =</span> <span class="kw">canva_pal</span>(<span class="st">&quot;Green fields&quot;</span>)(<span class="dv">4</span>)[<span class="dv">1</span>]) <span class="op">+</span></span>
+<span id="cb971-33"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-33"></a><span class="st">  </span><span class="kw">scale_color_gradient</span>(<span class="dt">low =</span> <span class="kw">canva_pal</span>(<span class="st">&quot;Green fields&quot;</span>)(<span class="dv">4</span>)[<span class="dv">4</span>],</span>
+<span id="cb971-34"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-34"></a>                       <span class="dt">high =</span> <span class="kw">canva_pal</span>(<span class="st">&quot;Green fields&quot;</span>)(<span class="dv">4</span>)[<span class="dv">1</span>]) <span class="op">+</span></span>
+<span id="cb971-35"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-35"></a><span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span>) <span class="op">+</span></span>
+<span id="cb971-36"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-36"></a><span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="st">&quot;cumulative proportion&quot;</span>, <span class="dt">breaks =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">.5</span>, <span class="dv">1</span>), <span class="dt">limits =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="op">+</span></span>
+<span id="cb971-37"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-37"></a><span class="st">  </span><span class="kw">theme_bw</span>() <span class="op">+</span><span class="st"> </span></span>
+<span id="cb971-38"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-38"></a><span class="st">  </span><span class="kw">theme</span>(<span class="dt">axis.ticks =</span> <span class="kw">element_blank</span>(),</span>
+<span id="cb971-39"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-39"></a>        <span class="dt">axis.title.y =</span> <span class="kw">element_text</span>(<span class="dt">angle =</span> <span class="dv">90</span>),</span>
+<span id="cb971-40"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb971-40"></a>        <span class="dt">legend.position =</span> <span class="st">&quot;none&quot;</span>) </span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes14-fig09"></span>
+<img src="bookdown_files/figure-html/introBayes14-fig09-1.png" alt="Cumulative probability and ordered likelihood. The horizontal axis displays possible observable outcomes, from 1 through 7. The vertical axis displays cumulative probability. The gray bars over each outcome show cumulative probability. These keep growing with each successive outcome value. The darker line segments show the discrete probability of each individual outcome. These are the likelihoods that go into Bayes' theorem." width="576" />
+<p class="caption">
+圖 54.9: Cumulative probability and ordered likelihood. The horizontal axis displays possible observable outcomes, from 1 through 7. The vertical axis displays cumulative probability. The gray bars over each outcome show cumulative probability. These keep growing with each successive outcome value. The darker line segments show the discrete probability of each individual outcome. These are the likelihoods that go into Bayes’ theorem.
+</p>
+</div>
 
+</div>
 </div>
 </div>
 
