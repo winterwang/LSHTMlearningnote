@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-02" />
+<meta name="date" content="2020-12-08" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -761,6 +761,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="54" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><i class="fa fa-check"></i><b>54</b> 貝葉斯廣義線性回歸模型的擴展 continuous mixture models</a><ul>
 <li class="chapter" data-level="54.1" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#beta-二項分佈模型-beta-binomial-model"><i class="fa fa-check"></i><b>54.1</b> Beta 二項分佈模型 beta-binomial model</a></li>
 <li class="chapter" data-level="54.2" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#負二項分佈模型伽馬泊松回歸模型-negative-binomialgamma-poisson"><i class="fa fa-check"></i><b>54.2</b> 負二項分佈模型，伽馬泊松回歸模型 Negative-binomial/gamma-Poisson</a></li>
+<li class="chapter" data-level="54.3" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#零膨脹模型-zero-inflated-models"><i class="fa fa-check"></i><b>54.3</b> 零膨脹模型 zero-inflated models</a><ul>
+<li class="chapter" data-level="54.3.1" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#零膨脹泊松回歸模型-zero-inflated-poisson"><i class="fa fa-check"></i><b>54.3.1</b> 零膨脹泊松回歸模型 zero-inflated Poisson</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="55" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>55</b> 重要概念複習</a><ul>
@@ -1541,17 +1544,17 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2><span class="header-section-number">54.1</span> Beta 二項分佈模型 beta-binomial model</h2>
 <p>Beta 二項分佈模型其實是一系列的二項分佈模型的混合體 (a mixture of binomial distributions)。它假定的是每個二進制觀測值，都有自己的實際成功概率。該模型的目的是估計這些成功概率所構成的概率分佈 (estimate the distribution of probabilities of success)，而不是某一個特定的試驗的成功概率。</p>
 <p>下面我們使用大學錄取率這個數據來解釋這個模型。這個數據本身假如我們不知道每個學院之間的錄取率相差很大，也就是當數據本身如果不含有學院 (<code>dept</code>) 信息時，我們可能會誤認爲整所大學的錄取率都是一樣的。我們之前是通過在邏輯回歸模型種增加學院 <code>dept</code> 這一個變量來獲得正確的男女申請人錄取率之差的比較的。這裏我們轉換一個思路，使用beta二項分佈模型，並且不把學院當作已知變量，看這個模型的神奇之處。它的靈活性在於，該模型會初始默認每一行觀測值，都其實有自己的錄取（成功）概率，而不是統一的錄取概率。這些不同的錄取概率本身構成了一個分佈，它可以用 beta 分佈來描述。beta分佈有兩個參數，一個是平均成功概率 (average probability) <span class="math inline">\(\bar{p}\)</span>，還有一個是描述概率分佈密度形狀的形狀參數 (shape parameter) <span class="math inline">\(\theta\)</span>。<span class="math inline">\(\theta\)</span> 負責描述這些概率在 <span class="math inline">\([0, 1]\)</span> 的範圍內的分佈有多寬泛 (how spread out the distribution is)。當 <span class="math inline">\(\theta = 2\)</span> 時，是一個平坦分佈，也就是從 0 到 1 之間的所有概率的概率是相同的 (every probability from 0 to 1 is equally likely)。當 <span class="math inline">\(\theta &gt; 2\)</span>，分佈變得越來越向中間的平均概率處集中 (more concentrated)，當 <span class="math inline">\(\theta &lt; 2\)</span>，分佈本身則越來越向兩邊的極端概率處靠攏 (dispersed that extreme probabilities near 0 and 1 are more likely than the mean)。它的概率密度分佈圖可以用下面的代碼來獲得：</p>
-<div class="sourceCode" id="cb945"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb945-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-1"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="fl">0.5</span>, <span class="dv">5</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, </span>
-<span id="cb945-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-2"></a>       <span class="dt">xlab =</span> <span class="st">&quot;probability&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, </span>
-<span id="cb945-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-3"></a>       <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">4</span>),</span>
-<span id="cb945-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-4"></a>       <span class="dt">main =</span> <span class="st">&quot;beta distributions with different parameters&quot;</span>)</span>
-<span id="cb945-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-5"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="fl">0.5</span>, <span class="dv">1</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, </span>
-<span id="cb945-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-6"></a>       <span class="dt">add =</span>  <span class="ot">TRUE</span>, <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
-<span id="cb945-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-7"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="fl">0.5</span>, <span class="dv">2</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, </span>
-<span id="cb945-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-8"></a>       <span class="dt">add =</span>  <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
-<span id="cb945-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-9"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="dv">2</span>, <span class="st">&quot;beta(p = 0.5, theta = 5)&quot;</span>)</span>
-<span id="cb945-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-10"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="fl">0.3</span>, <span class="st">&quot;beta(p = 0.5, theta = 1)&quot;</span>, <span class="dt">col =</span> rangi2)</span>
-<span id="cb945-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb945-11"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="fl">1.2</span>, <span class="st">&quot;beta(p = 0.5, theta = 2)&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb947"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb947-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-1"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="fl">0.5</span>, <span class="dv">5</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, </span>
+<span id="cb947-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-2"></a>       <span class="dt">xlab =</span> <span class="st">&quot;probability&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, </span>
+<span id="cb947-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-3"></a>       <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">4</span>),</span>
+<span id="cb947-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-4"></a>       <span class="dt">main =</span> <span class="st">&quot;beta distributions with different parameters&quot;</span>)</span>
+<span id="cb947-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-5"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="fl">0.5</span>, <span class="dv">1</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, </span>
+<span id="cb947-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-6"></a>       <span class="dt">add =</span>  <span class="ot">TRUE</span>, <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb947-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-7"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="fl">0.5</span>, <span class="dv">2</span>), <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, </span>
+<span id="cb947-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-8"></a>       <span class="dt">add =</span>  <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb947-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-9"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="dv">2</span>, <span class="st">&quot;beta(p = 0.5, theta = 5)&quot;</span>)</span>
+<span id="cb947-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-10"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="fl">0.3</span>, <span class="st">&quot;beta(p = 0.5, theta = 1)&quot;</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb947-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-11"></a><span class="kw">text</span>(<span class="fl">0.5</span>, <span class="fl">1.2</span>, <span class="st">&quot;beta(p = 0.5, theta = 2)&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes14-fig01"></span>
 <img src="bookdown_files/figure-html/introBayes14-fig01-1.png" alt="Beta distributions with different means and dispersion." width="576" />
 <p class="caption">
@@ -1576,28 +1579,28 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li>我們希望把 Beta 分佈的概率分散程度 (dispersion) 控制在大於2。這是因爲我們不忍爲錄取概率在任何一個學院會是趨向於兩極化的（要麼不錄取，要麼錄取）而應該是集中在某個平均值附近的，那麼這樣的Beta分佈需要的分散程度 <span class="math inline">\(\theta\)</span> 必須大於等於2。當它等於2時，我們看見概率是一個均一分佈，也就是所有的學院錄取率保持不變。爲了滿足這個分散程度取值大於等於2，我們使用的是一個簡單的技巧，用 <span class="math inline">\(\phi + 2\)</span> 表示 <span class="math inline">\(\theta\)</span> 並且使 <span class="math inline">\(\phi\)</span> 服從指數分佈，因爲服從指數分佈的值是大於等於零的。</li>
 </ul>
 <p>下面的代碼運行的是上述的模型：</p>
-<div class="sourceCode" id="cb946"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb946-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-1"></a><span class="kw">data</span>(<span class="st">&quot;UCBadmit&quot;</span>)</span>
-<span id="cb946-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-2"></a>d &lt;-<span class="st"> </span>UCBadmit</span>
-<span id="cb946-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-3"></a>d<span class="op">$</span>gid &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>applicant.gender <span class="op">==</span><span class="st"> &quot;male&quot;</span>, 1L, 2L )</span>
-<span id="cb946-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-4"></a>dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb946-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-5"></a>        <span class="dt">A =</span> d<span class="op">$</span>admit,</span>
-<span id="cb946-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-6"></a>        <span class="dt">N =</span> d<span class="op">$</span>applications,</span>
-<span id="cb946-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-7"></a>        <span class="dt">gid =</span> d<span class="op">$</span>gid</span>
-<span id="cb946-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-8"></a>)</span>
-<span id="cb946-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-9"></a>m12<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb946-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-10"></a>        <span class="kw">alist</span>(</span>
-<span id="cb946-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-11"></a>                A <span class="op">~</span><span class="st"> </span><span class="kw">dbetabinom</span>( N, pbar, theta), </span>
-<span id="cb946-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-12"></a>                <span class="kw">logit</span>(pbar) &lt;-<span class="st"> </span>a[gid], </span>
-<span id="cb946-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-13"></a>                a[gid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
-<span id="cb946-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-14"></a>                transpars<span class="op">&gt;</span><span class="st"> </span>theta &lt;&lt;-<span class="st"> </span>phi <span class="op">+</span><span class="st"> </span><span class="fl">2.0</span>, </span>
-<span id="cb946-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-15"></a>                phi <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
-<span id="cb946-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-16"></a>        ), <span class="dt">data =</span> dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cmdstan =</span> <span class="ot">TRUE</span></span>
-<span id="cb946-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-17"></a>)</span>
-<span id="cb946-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb946-18"></a><span class="co"># if you also failed compliation please see https://github.com/rmcelreath/rethinking/issues/267</span></span></code></pre></div>
+<div class="sourceCode" id="cb948"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb948-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-1"></a><span class="kw">data</span>(<span class="st">&quot;UCBadmit&quot;</span>)</span>
+<span id="cb948-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-2"></a>d &lt;-<span class="st"> </span>UCBadmit</span>
+<span id="cb948-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-3"></a>d<span class="op">$</span>gid &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>applicant.gender <span class="op">==</span><span class="st"> &quot;male&quot;</span>, 1L, 2L )</span>
+<span id="cb948-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-4"></a>dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb948-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-5"></a>        <span class="dt">A =</span> d<span class="op">$</span>admit,</span>
+<span id="cb948-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-6"></a>        <span class="dt">N =</span> d<span class="op">$</span>applications,</span>
+<span id="cb948-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-7"></a>        <span class="dt">gid =</span> d<span class="op">$</span>gid</span>
+<span id="cb948-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-8"></a>)</span>
+<span id="cb948-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-9"></a>m12<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb948-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-10"></a>        <span class="kw">alist</span>(</span>
+<span id="cb948-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-11"></a>                A <span class="op">~</span><span class="st"> </span><span class="kw">dbetabinom</span>( N, pbar, theta), </span>
+<span id="cb948-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-12"></a>                <span class="kw">logit</span>(pbar) &lt;-<span class="st"> </span>a[gid], </span>
+<span id="cb948-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-13"></a>                a[gid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb948-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-14"></a>                transpars<span class="op">&gt;</span><span class="st"> </span>theta &lt;&lt;-<span class="st"> </span>phi <span class="op">+</span><span class="st"> </span><span class="fl">2.0</span>, </span>
+<span id="cb948-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-15"></a>                phi <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb948-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-16"></a>        ), <span class="dt">data =</span> dat, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cmdstan =</span> <span class="ot">TRUE</span></span>
+<span id="cb948-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-17"></a>)</span>
+<span id="cb948-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb948-18"></a><span class="co"># if you also failed compliation please see https://github.com/rmcelreath/rethinking/issues/267</span></span></code></pre></div>
 <p>注意到，我們爲 <code>theta</code> 特別標註了它是被轉換過後的參數，<code>transpars&gt;</code>，這樣 Stan 就會把 <code>theta</code> 作爲結果之一保存下來。我們可以使用採樣過後的 <code>m12.1</code> 計算其事後的男女錄取率之差:</p>
-<div class="sourceCode" id="cb947"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb947-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m12<span class="fl">.1</span>)</span>
-<span id="cb947-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-2"></a>post<span class="op">$</span>da &lt;-<span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">2</span>]</span>
-<span id="cb947-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb947-3"></a><span class="kw">precis</span>(post, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb949"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb949-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>(m12<span class="fl">.1</span>)</span>
+<span id="cb949-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-2"></a>post<span class="op">$</span>da &lt;-<span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">1</span>] <span class="op">-</span><span class="st"> </span>post<span class="op">$</span>a[, <span class="dv">2</span>]</span>
+<span id="cb949-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-3"></a><span class="kw">precis</span>(post, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
 <pre><code>##              mean         sd        5.5%      94.5%    histogram
 ## a[1]  -0.46102599 0.41890715 -1.12215465 0.20582182     ▁▁▂▇▇▂▁▁
 ## a[2]  -0.34264527 0.42171645 -0.99140995 0.30524319      ▁▁▅▇▃▁▁
@@ -1606,29 +1609,29 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## da    -0.11838072 0.59597083 -1.06743127 0.87451226    ▁▁▁▃▇▇▂▁▁</code></pre>
 <p>上面對 <code>m12.1</code> 的時候樣本進行的計算和比較可以看見，<code>a[1]</code> 是男性申請人被錄取的對數比值 log-odds，它的均值似乎略微比 <code>a[2]</code> 女性申請人被錄取的對數比值稍微低一些。但是，它們二者的差的事後均值 <code>da</code> 沒有顯著偏離 0，其事後概率分佈的可信區間也包括0。所以並沒有太多的證據表明男女申請人之間在這所大學的錄取率上有任何性別的歧視或者偏差。但是記得我們在前一個章節裏，使用簡單的邏輯回歸模型時，除非把學院這一變量加入預測變量中加以考慮才能獲得相似的正確答案。之前當沒有加入學院這一變量的時候，我們其實被告知男女之間有較大的錄取率的性別差，特別是女生的錄取率在表面上看起來似乎比較低。但是當我們把簡單邏輯回歸模型棄用之後，選擇使用beta二項分佈回歸模型在 <code>m12.1</code> 中之後，即使沒有把學院變量放進模型中去，依然獲得了準確的男女之間錄取率的比較結果。這是爲什麼呢？</p>
 <p>其實當選用 beta 二項分佈的時候，我們允許了每一行的數據，也就是每一個學院的男性申請人數據，和每一個學院的女性申請人數據分別擁有自己的截距。這些截距其實是從一個均值是 <span class="math inline">\(\bar{p}_i\)</span>，分散程度是 <span class="math inline">\(\theta\)</span> 的 beta 分佈中採集而來的。我們可以直觀地繪製這個 beta 分佈的形狀來加深對 <code>m12.1</code> 模型的理解：</p>
-<div class="sourceCode" id="cb949"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb949-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-1"></a>gid &lt;-<span class="st"> </span><span class="dv">2</span></span>
-<span id="cb949-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-2"></a><span class="co"># draw posterior mean beta distribution</span></span>
-<span id="cb949-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-3"></a></span>
-<span id="cb949-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-4"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="kw">mean</span>(<span class="kw">logistic</span>(post<span class="op">$</span>a[, gid])), <span class="kw">mean</span>(post<span class="op">$</span>theta)), </span>
-<span id="cb949-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-5"></a>       <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;probability admit&quot;</span>, </span>
-<span id="cb949-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-6"></a>       <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>), <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span>
-<span id="cb949-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-7"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="kw">mean</span>(<span class="kw">logistic</span>(post<span class="op">$</span>a[, gid <span class="op">-</span><span class="st"> </span><span class="dv">1</span>])), <span class="kw">mean</span>(post<span class="op">$</span>theta)), </span>
-<span id="cb949-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-8"></a>       <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;probability admit&quot;</span>, </span>
-<span id="cb949-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-9"></a>       <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>), <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">add =</span>  <span class="ot">TRUE</span>, <span class="dt">col =</span> rangi2)</span>
-<span id="cb949-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-10"></a><span class="co"># Draw 50 beta distributions sampled from posterior</span></span>
-<span id="cb949-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-11"></a></span>
-<span id="cb949-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-12"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">50</span> ) {</span>
-<span id="cb949-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-13"></a>  p &lt;-<span class="st"> </span><span class="kw">logistic</span>( post<span class="op">$</span>a[i, gid] )</span>
-<span id="cb949-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-14"></a>  theta &lt;-<span class="st"> </span>post<span class="op">$</span>theta[i]</span>
-<span id="cb949-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-15"></a>  <span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, p, theta), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.2</span>))</span>
-<span id="cb949-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-16"></a>}</span>
-<span id="cb949-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-17"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">50</span> ) {</span>
-<span id="cb949-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-18"></a>  p &lt;-<span class="st"> </span><span class="kw">logistic</span>( post<span class="op">$</span>a[i, gid<span class="dv">-1</span>] )</span>
-<span id="cb949-19"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-19"></a>  theta &lt;-<span class="st"> </span>post<span class="op">$</span>theta[i]</span>
-<span id="cb949-20"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-20"></a>  <span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, p, theta), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">col.alpha</span>(rangi2, <span class="fl">0.2</span>))</span>
-<span id="cb949-21"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-21"></a>}</span>
-<span id="cb949-22"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-22"></a></span>
-<span id="cb949-23"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb949-23"></a><span class="kw">mtext</span>(<span class="st">&quot;distribution of female admission rates (black); male admission rates (blue)&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb951"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb951-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-1"></a>gid &lt;-<span class="st"> </span><span class="dv">2</span></span>
+<span id="cb951-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-2"></a><span class="co"># draw posterior mean beta distribution</span></span>
+<span id="cb951-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-3"></a></span>
+<span id="cb951-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-4"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="kw">mean</span>(<span class="kw">logistic</span>(post<span class="op">$</span>a[, gid])), <span class="kw">mean</span>(post<span class="op">$</span>theta)), </span>
+<span id="cb951-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-5"></a>       <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;probability admit&quot;</span>, </span>
+<span id="cb951-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-6"></a>       <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>), <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb951-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-7"></a><span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, <span class="kw">mean</span>(<span class="kw">logistic</span>(post<span class="op">$</span>a[, gid <span class="op">-</span><span class="st"> </span><span class="dv">1</span>])), <span class="kw">mean</span>(post<span class="op">$</span>theta)), </span>
+<span id="cb951-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-8"></a>       <span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> <span class="dv">1</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;probability admit&quot;</span>, </span>
+<span id="cb951-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-9"></a>       <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>), <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">add =</span>  <span class="ot">TRUE</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb951-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-10"></a><span class="co"># Draw 50 beta distributions sampled from posterior</span></span>
+<span id="cb951-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-11"></a></span>
+<span id="cb951-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-12"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">50</span> ) {</span>
+<span id="cb951-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-13"></a>  p &lt;-<span class="st"> </span><span class="kw">logistic</span>( post<span class="op">$</span>a[i, gid] )</span>
+<span id="cb951-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-14"></a>  theta &lt;-<span class="st"> </span>post<span class="op">$</span>theta[i]</span>
+<span id="cb951-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-15"></a>  <span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, p, theta), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.2</span>))</span>
+<span id="cb951-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-16"></a>}</span>
+<span id="cb951-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-17"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">50</span> ) {</span>
+<span id="cb951-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-18"></a>  p &lt;-<span class="st"> </span><span class="kw">logistic</span>( post<span class="op">$</span>a[i, gid<span class="dv">-1</span>] )</span>
+<span id="cb951-19"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-19"></a>  theta &lt;-<span class="st"> </span>post<span class="op">$</span>theta[i]</span>
+<span id="cb951-20"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-20"></a>  <span class="kw">curve</span>( <span class="kw">dbeta2</span>(x, p, theta), <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">col =</span> <span class="kw">col.alpha</span>(rangi2, <span class="fl">0.2</span>))</span>
+<span id="cb951-21"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-21"></a>}</span>
+<span id="cb951-22"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-22"></a></span>
+<span id="cb951-23"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-23"></a><span class="kw">mtext</span>(<span class="st">&quot;distribution of female admission rates (black); male admission rates (blue)&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes14-fig02"></span>
 <img src="bookdown_files/figure-html/introBayes14-fig02-1.png" alt="Posterior distributions for m12.1. The thick curves are the posterior mean beta distribution for male and female applicants. The ligher curves represents 100 combinations of bar(p) and theta sampled from the posterior." width="576" />
 <p class="caption">
@@ -1636,7 +1639,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </p>
 </div>
 <p>如圖 <a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#fig:introBayes14-fig02">54.2</a> 所示的，我們允許了不同的錄取率，這樣一來不論男女，在不同的學院之間錄取率的差異被考慮了進來，男女之間的差異也就不那麼明顯了。同時也避免了模型錯誤地認爲女性受到了錄取上的歧視。雖然模型 <code>m12.1</code> 並不知道有學院這個變量（我們並沒有在模型中的任何地方加入學院這個變量），它依然靈活準確地給出了允許不同錄取率這一重要的方案，它使用 beta 分佈來估計該錄取概率在不同的人羣中可能的變化，我們可以再看看該模型的事後證實檢驗 (posterior validation check):</p>
-<div class="sourceCode" id="cb950"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb950-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb950-1"></a><span class="kw">postcheck</span>(m12<span class="fl">.1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb952"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb952-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb952-1"></a><span class="kw">postcheck</span>(m12<span class="fl">.1</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes14-fig03"></span>
 <img src="bookdown_files/figure-html/introBayes14-fig03-1.png" alt="Posterior validation check for m12.1. As a result of widely dispersed beta distributions on the figure above, the raw data (blue) is contained within the prediction intervals." width="576" />
 <p class="caption">
@@ -1652,29 +1655,28 @@ y_i \sim \text{Gamma-Poisson}(\lambda_i, \phi)
 \]</span></p>
 <p>其中，<span class="math inline">\(\lambda_i\)</span> 可以被視爲和普通的泊松分佈的發生率參數相似，但是分散程度 dispersion 參數 <span class="math inline">\(\phi\)</span> 是必須大於零的，它控制着方差的大小。伽馬泊松分佈的方差是 <span class="math inline">\(\lambda + \lambda^2/\phi\)</span>。所以，當 <span class="math inline">\(\phi\)</span> 越大，該方差約接近 <span class="math inline">\(\lambda\)</span>，也就是越接近一般的泊松回歸模型。</p>
 <p>我們用之前用過的太平洋島國生產工具數據來演示該模型的使用和分析過程。之前使用簡單泊松回歸模型時，我們發現夏威夷島的工具種類數據是一個非常有影響力的觀測值。當我們把模型改成伽馬泊松回歸分佈時，夏威夷數據對模型結果的影響應該會小很多。因爲伽馬泊松回歸模型本身就預計數據本身的均值有較大的差異。</p>
-<div class="sourceCode" id="cb951"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb951-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-1"></a><span class="kw">data</span>(Kline)</span>
-<span id="cb951-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-2"></a>d &lt;-<span class="st"> </span>Kline</span>
-<span id="cb951-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-3"></a>d<span class="op">$</span>P &lt;-<span class="st"> </span><span class="kw">standardize</span>( <span class="kw">log</span>(d<span class="op">$</span>population) )</span>
-<span id="cb951-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-4"></a>d<span class="op">$</span>contact_id &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>contact <span class="op">==</span><span class="st"> &quot;high&quot;</span>, 2L, 1L )</span>
-<span id="cb951-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-5"></a></span>
-<span id="cb951-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-6"></a>dat2 &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb951-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-7"></a>  <span class="dt">T =</span> d<span class="op">$</span>total_tools, </span>
-<span id="cb951-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-8"></a>  <span class="dt">P =</span> d<span class="op">$</span>population, </span>
-<span id="cb951-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-9"></a>  <span class="dt">cid =</span> d<span class="op">$</span>contact_id</span>
-<span id="cb951-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-10"></a>)</span>
-<span id="cb951-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-11"></a></span>
-<span id="cb951-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-12"></a>m12<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
-<span id="cb951-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-13"></a>  <span class="kw">alist</span>(</span>
-<span id="cb951-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-14"></a>    T <span class="op">~</span><span class="st"> </span><span class="kw">dgampois</span>( lambda, phi ), </span>
-<span id="cb951-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-15"></a>    lambda &lt;-<span class="st"> </span><span class="kw">exp</span>(a[cid]) <span class="op">*</span><span class="st"> </span>P<span class="op">^</span>b[cid] <span class="op">/</span><span class="st"> </span>g,</span>
-<span id="cb951-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-16"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">1</span>, <span class="dv">1</span>), </span>
-<span id="cb951-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-17"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
-<span id="cb951-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-18"></a>    g <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
-<span id="cb951-19"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-19"></a>    phi <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
-<span id="cb951-20"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-20"></a>  ), <span class="dt">data =</span>  dat2, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
-<span id="cb951-21"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb951-21"></a>)</span></code></pre></div>
-<pre><code>## recompiling to avoid crashing R session</code></pre>
-<div class="sourceCode" id="cb953"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb953-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-1"></a><span class="kw">precis</span>(m12<span class="fl">.2</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb953"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb953-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-1"></a><span class="kw">data</span>(Kline)</span>
+<span id="cb953-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-2"></a>d &lt;-<span class="st"> </span>Kline</span>
+<span id="cb953-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-3"></a>d<span class="op">$</span>P &lt;-<span class="st"> </span><span class="kw">standardize</span>( <span class="kw">log</span>(d<span class="op">$</span>population) )</span>
+<span id="cb953-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-4"></a>d<span class="op">$</span>cid &lt;-<span class="st"> </span><span class="kw">ifelse</span>( d<span class="op">$</span>contact <span class="op">==</span><span class="st"> &quot;high&quot;</span>, 2L, 1L )</span>
+<span id="cb953-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-5"></a></span>
+<span id="cb953-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-6"></a>dat2 &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb953-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-7"></a>  <span class="dt">T =</span> d<span class="op">$</span>total_tools, </span>
+<span id="cb953-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-8"></a>  <span class="dt">P =</span> d<span class="op">$</span>population, </span>
+<span id="cb953-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-9"></a>  <span class="dt">cid =</span> d<span class="op">$</span>cid</span>
+<span id="cb953-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-10"></a>)</span>
+<span id="cb953-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-11"></a></span>
+<span id="cb953-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-12"></a>m12<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb953-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-13"></a>  <span class="kw">alist</span>(</span>
+<span id="cb953-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-14"></a>    T <span class="op">~</span><span class="st"> </span><span class="kw">dgampois</span>( lambda, phi ), </span>
+<span id="cb953-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-15"></a>    lambda &lt;-<span class="st"> </span><span class="kw">exp</span>(a[cid]) <span class="op">*</span><span class="st"> </span>P<span class="op">^</span>b[cid] <span class="op">/</span><span class="st"> </span>g,</span>
+<span id="cb953-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-16"></a>    a[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">1</span>, <span class="dv">1</span>), </span>
+<span id="cb953-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-17"></a>    b[cid] <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb953-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-18"></a>    g <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb953-19"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-19"></a>    phi <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb953-20"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-20"></a>  ), <span class="dt">data =</span>  dat2, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb953-21"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-21"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb954"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb954-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb954-1"></a><span class="kw">precis</span>(m12<span class="fl">.2</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
 <pre><code>##            mean         sd         5.5%      94.5%      n_eff      Rhat4
 ## a[1] 0.91878755 0.84936412 -0.414150801 2.29151954 1385.12141 1.00001531
 ## a[2] 1.06753014 0.97461567 -0.518964973 2.58920781  888.65016 1.00366212
@@ -1682,7 +1684,53 @@ y_i \sim \text{Gamma-Poisson}(\lambda_i, \phi)
 ## b[2] 0.26250633 0.13253700  0.054932581 0.47487321  765.62002 1.00215008
 ## g    1.08477532 0.86006018  0.223950273 2.66803675 1162.68594 0.99813928
 ## phi  3.66598571 1.63483363  1.529073806 6.65003808  874.03587 1.00326906</code></pre>
+<div class="sourceCode" id="cb956"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb956-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-1"></a>k &lt;-<span class="st"> </span><span class="kw">PSIS</span>( m12<span class="fl">.2</span>, <span class="dt">pointwise =</span> <span class="ot">TRUE</span>)<span class="op">$</span>k</span>
+<span id="cb956-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-2"></a></span>
+<span id="cb956-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-3"></a><span class="kw">plot</span>( d<span class="op">$</span>population, d<span class="op">$</span>total_tools, </span>
+<span id="cb956-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-4"></a>            <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb956-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-5"></a>      <span class="dt">xlab =</span> <span class="st">&quot;population&quot;</span>, </span>
+<span id="cb956-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-6"></a>      <span class="dt">ylab =</span> <span class="st">&quot;total tools&quot;</span>, </span>
+<span id="cb956-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-7"></a>      <span class="dt">col =</span> rangi2, <span class="dt">pch =</span> <span class="kw">ifelse</span>( d<span class="op">$</span>cid <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">16</span>), <span class="dt">lwd =</span> <span class="dv">2</span>, </span>
+<span id="cb956-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-8"></a>      <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">75</span>), <span class="dt">cex =</span> <span class="dv">1</span> <span class="op">+</span><span class="st"> </span><span class="kw">normalize</span>(k))</span>
+<span id="cb956-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-9"></a></span>
+<span id="cb956-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-10"></a></span>
+<span id="cb956-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-11"></a>ns &lt;-<span class="st"> </span><span class="dv">100</span></span>
+<span id="cb956-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-12"></a></span>
+<span id="cb956-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-13"></a>P_seq &lt;-<span class="st"> </span><span class="kw">seq</span>( <span class="dt">from =</span> <span class="dv">-5</span>, <span class="dt">to =</span> <span class="dv">3</span>, <span class="dt">length.out =</span> ns )</span>
+<span id="cb956-14"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-14"></a><span class="co"># 1.53 is sd of log(population)</span></span>
+<span id="cb956-15"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-15"></a><span class="co"># 9 is mean of log(population)</span></span>
+<span id="cb956-16"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-16"></a></span>
+<span id="cb956-17"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-17"></a>pop_seq &lt;-<span class="st"> </span><span class="kw">exp</span>( P_seq<span class="op">*</span><span class="fl">1.53</span> <span class="op">+</span><span class="st"> </span><span class="dv">9</span> )</span>
+<span id="cb956-18"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-18"></a></span>
+<span id="cb956-19"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-19"></a></span>
+<span id="cb956-20"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-20"></a>lambda &lt;-<span class="st"> </span><span class="kw">link</span>( m12<span class="fl">.2</span>, <span class="dt">data =</span> <span class="kw">data.frame</span>( <span class="dt">P =</span> pop_seq, <span class="dt">cid =</span> <span class="dv">1</span>))</span>
+<span id="cb956-21"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-21"></a>lmu &lt;-<span class="st"> </span><span class="kw">apply</span>( lambda, <span class="dv">2</span>, mean)</span>
+<span id="cb956-22"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-22"></a>lci &lt;-<span class="st"> </span><span class="kw">apply</span>( lambda, <span class="dv">2</span>, PI)</span>
+<span id="cb956-23"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-23"></a><span class="kw">text</span>(<span class="dv">150000</span>, <span class="dv">57</span>, <span class="st">&quot;low contact&quot;</span>)</span>
+<span id="cb956-24"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-24"></a></span>
+<span id="cb956-25"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-25"></a><span class="kw">lines</span>( pop_seq, lmu, <span class="dt">lty =</span> <span class="dv">2</span>, <span class="dt">lwd =</span> <span class="fl">1.5</span> )</span>
+<span id="cb956-26"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-26"></a><span class="kw">shade</span>( lci, pop_seq, <span class="dt">xpd =</span> <span class="ot">FALSE</span> )</span>
+<span id="cb956-27"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-27"></a></span>
+<span id="cb956-28"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-28"></a>lambda &lt;-<span class="st"> </span><span class="kw">link</span>( m12<span class="fl">.2</span>, <span class="dt">data =</span>  <span class="kw">data.frame</span>( <span class="dt">P =</span> pop_seq, <span class="dt">cid =</span> <span class="dv">2</span>))</span>
+<span id="cb956-29"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-29"></a>lmu &lt;-<span class="st"> </span><span class="kw">apply</span>( lambda, <span class="dv">2</span>, mean )</span>
+<span id="cb956-30"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-30"></a>lci &lt;-<span class="st"> </span><span class="kw">apply</span>( lambda, <span class="dv">2</span>, PI )</span>
+<span id="cb956-31"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-31"></a><span class="kw">lines</span>( pop_seq, lmu, <span class="dt">lty =</span> <span class="dv">1</span>, <span class="dt">lwd =</span> <span class="fl">1.5</span> )</span>
+<span id="cb956-32"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-32"></a><span class="kw">shade</span>( lci, pop_seq, <span class="dt">xpd =</span> <span class="ot">FALSE</span> )</span>
+<span id="cb956-33"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb956-33"></a><span class="kw">text</span>(<span class="dv">110000</span>, <span class="dv">69</span>, <span class="st">&quot;high contact&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes14-fig04"></span>
+<img src="bookdown_files/figure-html/introBayes14-fig04-1.png" alt="The gamma-Poisson model is much less influenced by Hawaii, because the model expects more variation. The increased variation in the size of the shaded regions are much larger than in the pure Poisson model. (Figure 53.16)" width="576" />
+<p class="caption">
+圖 54.4: The gamma-Poisson model is much less influenced by Hawaii, because the model expects more variation. The increased variation in the size of the shaded regions are much larger than in the pure Poisson model. (Figure 53.16)
+</p>
+</div>
+</div>
+<div id="零膨脹模型-zero-inflated-models" class="section level2">
+<h2><span class="header-section-number">54.3</span> 零膨脹模型 zero-inflated models</h2>
+<p>很多時候，觀察事件發生的數量種，含有很多零的數值。產生這些零觀察值的原因可能不只一個。可能是因爲多種不同的原因導致的這樣的數據的產生。假設你去森林裏打算數一種知更鳥。那你觀察不到知更鳥的原因很可能是，森林裏真的沒有知更鳥；另一種可能的原因是，你的腳步聲嚇跑了這些本來生活在樹林裏的知更鳥。所以當產生零的機制有多種時，我們可能可以通過一種叫做零膨脹模型 (zero-inflated models) 的方法來建立回歸模型，分析數據。</p>
+<div id="零膨脹泊松回歸模型-zero-inflated-poisson" class="section level3">
+<h3><span class="header-section-number">54.3.1</span> 零膨脹泊松回歸模型 zero-inflated Poisson</h3>
 
+</div>
 </div>
 </div>
 
