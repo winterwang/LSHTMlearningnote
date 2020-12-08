@@ -1655,6 +1655,17 @@ y_i \sim \text{Gamma-Poisson}(\lambda_i, \phi)
 \]</span></p>
 <p>其中，<span class="math inline">\(\lambda_i\)</span> 可以被視爲和普通的泊松分佈的發生率參數相似，但是分散程度 dispersion 參數 <span class="math inline">\(\phi\)</span> 是必須大於零的，它控制着方差的大小。伽馬泊松分佈的方差是 <span class="math inline">\(\lambda + \lambda^2/\phi\)</span>。所以，當 <span class="math inline">\(\phi\)</span> 越大，該方差約接近 <span class="math inline">\(\lambda\)</span>，也就是越接近一般的泊松回歸模型。</p>
 <p>我們用之前用過的太平洋島國生產工具數據來演示該模型的使用和分析過程。之前使用簡單泊松回歸模型時，我們發現夏威夷島的工具種類數據是一個非常有影響力的觀測值。當我們把模型改成伽馬泊松回歸分佈時，夏威夷數據對模型結果的影響應該會小很多。因爲伽馬泊松回歸模型本身就預計數據本身的均值有較大的差異。</p>
+<p>該模型的數學表達式是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{tools_i} &amp; \sim \text{Gamma-Poisson}(\mu_i, \phi) \\ 
+\mu_i          &amp; = \exp(\alpha_{\text{cid}[i]})\text{population}_i^{\beta_{\text{cid}[i]}} / \gamma \\ 
+\alpha_j       &amp; \sim \text{Normal}(1,1)\\ 
+\beta_j        &amp; \sim \text{Exponential}(1) \\ 
+\gamma         &amp; \sim \text{Exponential}(1) \\ 
+\phi           &amp; \sim \text{Exponential}(1)
+\end{aligned}
+\]</span></p>
 <div class="sourceCode" id="cb953"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb953-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-1"></a><span class="kw">data</span>(Kline)</span>
 <span id="cb953-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-2"></a>d &lt;-<span class="st"> </span>Kline</span>
 <span id="cb953-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb953-3"></a>d<span class="op">$</span>P &lt;-<span class="st"> </span><span class="kw">standardize</span>( <span class="kw">log</span>(d<span class="op">$</span>population) )</span>
@@ -1729,6 +1740,40 @@ y_i \sim \text{Gamma-Poisson}(\lambda_i, \phi)
 <p>很多時候，觀察事件發生的數量種，含有很多零的數值。產生這些零觀察值的原因可能不只一個。可能是因爲多種不同的原因導致的這樣的數據的產生。假設你去森林裏打算數一種知更鳥。那你觀察不到知更鳥的原因很可能是，森林裏真的沒有知更鳥；另一種可能的原因是，你的腳步聲嚇跑了這些本來生活在樹林裏的知更鳥。所以當產生零的機制有多種時，我們可能可以通過一種叫做零膨脹模型 (zero-inflated models) 的方法來建立回歸模型，分析數據。</p>
 <div id="零膨脹泊松回歸模型-zero-inflated-poisson" class="section level3">
 <h3><span class="header-section-number">54.3.1</span> 零膨脹泊松回歸模型 zero-inflated Poisson</h3>
+<p>假設有一羣人在生產某種文件，每天有一定，但是很低的概率成功產生一份文件。所以當該試驗單獨存在時，就只是簡單的二項分佈數據，當觀察的天數特別多的時候，因爲成功概率很低，其過程近似成爲一個泊松分佈的數據。假設，有些日子確實不能產生文件，但是有些日子這羣人其實並沒有工作，而是偷懶休息了，這樣的日子裏，產生文件的概率也是零。假如你想知道這羣人有多少天其實是沒有在工作，而不是工作了無法產生文件的話，就需要用到零膨脹泊松回歸模型。這個產生觀察值是 0 的過程其實是一個混合體，它包括兩種可能性：</p>
+<ol style="list-style-type: decimal">
+<li>沒人上班，偷懶</li>
+<li>上班了，但是文件生成失敗</li>
+</ol>
+<p>於是我們需要重新定義該數據產生零的似然函數，令</p>
+<ul>
+<li><span class="math inline">\(p\)</span> 表示偷懶不上班的概率</li>
+<li><span class="math inline">\(\lambda\)</span> 表示上班時，成功產生文件的件數的平均值（期望）</li>
+</ul>
+<p>那麼產生 0 數據的過程其實可以表達爲：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{Pr}(0 | p, \lambda) &amp; = \text{Pr}(\text{drink} | p) + \text{Pr}(\text{work} | p) \times \text{Pr}(0 | \lambda) \\
+                          &amp; = p + (1 - p)\frac{\lambda^y\exp(-\lambda)}{y !} \\ 
+                          &amp; = p + (1 - p)\exp(-\lambda)
+\end{aligned}
+\]</span></p>
+<p>同理，產生非零觀察值的過程可以表達爲：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{Pr}(y | y &gt; 0, p, \lambda) &amp; = \text{Pr}(\text{drink} | p)(0) + \text{Pr}(\text{work} | p) \text{Pr}(y | \lambda) \\
+                                 &amp; = (1 - p)\frac{\lambda^y\exp(-\lambda)}{y !} 
+\end{aligned}
+\]</span></p>
+<p>所以，如果我們定義 <span class="math inline">\(\text{ZIPoisson}\)</span> 爲上述兩個過程的混合體，也就是零膨脹泊松分佈數據。那麼，該模型的數學表達式可以簡化爲;</p>
+<p><span class="math display">\[
+\begin{aligned}
+y_i &amp; \sim \text{ZIPoisson}(p_i, \lambda_i) \\
+\text{logit}(p_i) &amp; = \alpha_p + \beta_p x_i \\ 
+\log(\lambda_i)   &amp; = \alpha_\lambda + \beta_\lambda x_i
+\end{aligned}
+\]</span></p>
+<p>事實上，這裏的兩個函數本身的預測變量並不需要完全相同，甚至可以根據你已有的理論和背景判斷，以至於完全不同的預測變量對兩個混合過程的影響都可以被靈活地考慮進來。</p>
 
 </div>
 </div>
