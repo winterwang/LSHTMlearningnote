@@ -263,7 +263,69 @@ y_i & \sim \text{ZIPoisson}(p_i, \lambda_i) \\
 \end{aligned}
 $$
 
-事實上，這裏的兩個函數本身的預測變量並不需要完全相同，甚至可以根據你已有的理論和背景判斷，以至於完全不同的預測變量對兩個混合過程的影響都可以被靈活地考慮進來。
+事實上，這裏的兩個鏈接函數本身的預測變量並不需要完全相同，甚至可以根據你已有的理論和背景判斷，以至於完全不同的預測變量對兩個混合過程的影響都可以被靈活地考慮進來。
+
+接下來我們使用計算機模擬數據來實地分析運行一下該模型。
+
+```{r introBayes14-05, cache=TRUE}
+# define parameters
+prob_drink <- 0.2 # 20% of days are drinking/not working
+rate_work <- 1    # average 1 manuscript per day
+
+# sample one year of production 
+N <- 365
+
+# simulate days drinking/not working
+set.seed(365)
+drink <- rbinom( N, 1, prob_drink )
+
+# simulate manuscripts completed
+y <- (1 - drink) * rpois( N, rate_work )
+```
+
+我們順利獲得了觀察值 $y$，也就是觀察到的365天中每天成功生成的文件數量。看看它的分佈是怎樣的：
+
+```{r introBayes14-fig05, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Frequency distribution of zero-inflated observations. The blue lines sement over zero shows the y = 0 observations that arose from drinking. In real data, we typically cannot see which zeros come from which process.", fig.align='center'}
+simplehist( y, xlab = "manuscripts completed", lwd = 4, bty = "n")
+zeros_drink <- sum(drink)
+zeros_work <- sum( y == 0 & drink == 0 )
+zeros_total <- sum(y == 0 )
+lines(c(0, 0), c(zeros_work, zeros_total), lwd = 4, col = rangi2)
+```
+
+圖 \@ref(fig:introBayes14-fig05) 就用藍色的部分展示了偷懶沒上班造成的觀察值爲零的部分，辛苦工作但是不幸沒有產出的是黑色的觀察值。所以你就能理解了爲什麼說這樣的分佈被叫做零膨脹 (Zero-inflated)。在 `rethinking` 包裏提供了便捷的零膨脹泊松分佈，可以直接調用：
 
 
+```{r introBayes14-06, cache=TRUE, results="hide"}
+m12.3 <- ulam(
+  alist(
+    y ~ dzipois( p, lambda ), 
+    logit(p) <- ap, 
+    log(lambda) <- al, 
+    ap ~ dnorm( -1.5, 1 ), 
+    al ~ dnorm( 1, 0.5 )
+  ), data = list(y = y), chains = 4
+)
+```
+
+```{r introBayes14-07, cache=TRUE}
+precis( m12.3 )
+```
+
+可以計算模型中估計的這些工人偷懶的日子所佔的比例是多少：
+
+```{r introBayes14-08, cache=TRUE}
+post <- extract.samples( m12.3 )
+mean( inv_logit( post$ap )) # probability of drink/not working days
+mean( exp( post$al )) # rate finish manuscripts, when working
+```
+
+看，我們的模型給出了十分近似的結果，儘管不知道這些工人究竟在哪些天偷懶了，但是推算出大約有20%的工作日，他們是沒有在工作的。這是沒有預測變量的最基礎的截距模型，在真實情況下，會有更多的變量放在混合的兩行鏈接函數對應的預測模型中。
+
+## 帶順序含義的多類別結果變量 ordered categorical outcomes
+
+在某些心理學甚至普通的自然科學研究裏，我們非常容易碰見的一種結果變量是帶有順序的多類別結果，例如你可能被問過「如果從1-7中選擇一個數字來表達你的喜愛程度，數字越高表示越喜愛的話，你對壽司類食物的嗜好程度是多少數值？」，那麼這樣的問題的答案就是一系列從1-7的數值。這樣的結果變量之間是存在順序的區別的，被叫做順序類別 ordered categories。它和計數型變量不同，不同順序之間的跨度，可以是不一樣的。也就是1-2 之間的喜好程度之差，很可能不同於 6-7 之間的喜好程度之差。我們無法把這樣的結果簡單地視爲連續型的變量。
+
+
+處理這樣結果的最佳解決方案是使用一種該叫做累積鏈接函數 (cumulative link function)。很容易理解我們設定數值爲3的累積概率，它**等於比三小的數值 1， 2，以及它本身**的概率之和。
 

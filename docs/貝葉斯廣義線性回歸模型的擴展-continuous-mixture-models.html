@@ -764,6 +764,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="54.3" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#零膨脹模型-zero-inflated-models"><i class="fa fa-check"></i><b>54.3</b> 零膨脹模型 zero-inflated models</a><ul>
 <li class="chapter" data-level="54.3.1" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#零膨脹泊松回歸模型-zero-inflated-poisson"><i class="fa fa-check"></i><b>54.3.1</b> 零膨脹泊松回歸模型 zero-inflated Poisson</a></li>
 </ul></li>
+<li class="chapter" data-level="54.4" data-path="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#帶順序含義的多類別結果變量-ordered-categorical-outcomes"><i class="fa fa-check"></i><b>54.4</b> 帶順序含義的多類別結果變量 ordered categorical outcomes</a></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="55" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>55</b> 重要概念複習</a><ul>
@@ -1773,9 +1774,61 @@ y_i &amp; \sim \text{ZIPoisson}(p_i, \lambda_i) \\
 \log(\lambda_i)   &amp; = \alpha_\lambda + \beta_\lambda x_i
 \end{aligned}
 \]</span></p>
-<p>事實上，這裏的兩個函數本身的預測變量並不需要完全相同，甚至可以根據你已有的理論和背景判斷，以至於完全不同的預測變量對兩個混合過程的影響都可以被靈活地考慮進來。</p>
-
+<p>事實上，這裏的兩個鏈接函數本身的預測變量並不需要完全相同，甚至可以根據你已有的理論和背景判斷，以至於完全不同的預測變量對兩個混合過程的影響都可以被靈活地考慮進來。</p>
+<p>接下來我們使用計算機模擬數據來實地分析運行一下該模型。</p>
+<div class="sourceCode" id="cb957"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb957-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-1"></a><span class="co"># define parameters</span></span>
+<span id="cb957-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-2"></a>prob_drink &lt;-<span class="st"> </span><span class="fl">0.2</span> <span class="co"># 20% of days are drinking/not working</span></span>
+<span id="cb957-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-3"></a>rate_work &lt;-<span class="st"> </span><span class="dv">1</span>    <span class="co"># average 1 manuscript per day</span></span>
+<span id="cb957-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-4"></a></span>
+<span id="cb957-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-5"></a><span class="co"># sample one year of production </span></span>
+<span id="cb957-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-6"></a>N &lt;-<span class="st"> </span><span class="dv">365</span></span>
+<span id="cb957-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-7"></a></span>
+<span id="cb957-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-8"></a><span class="co"># simulate days drinking/not working</span></span>
+<span id="cb957-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-9"></a><span class="kw">set.seed</span>(<span class="dv">365</span>)</span>
+<span id="cb957-10"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-10"></a>drink &lt;-<span class="st"> </span><span class="kw">rbinom</span>( N, <span class="dv">1</span>, prob_drink )</span>
+<span id="cb957-11"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-11"></a></span>
+<span id="cb957-12"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-12"></a><span class="co"># simulate manuscripts completed</span></span>
+<span id="cb957-13"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb957-13"></a>y &lt;-<span class="st"> </span>(<span class="dv">1</span> <span class="op">-</span><span class="st"> </span>drink) <span class="op">*</span><span class="st"> </span><span class="kw">rpois</span>( N, rate_work )</span></code></pre></div>
+<p>我們順利獲得了觀察值 <span class="math inline">\(y\)</span>，也就是觀察到的365天中每天成功生成的文件數量。看看它的分佈是怎樣的：</p>
+<div class="sourceCode" id="cb958"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb958-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb958-1"></a><span class="kw">simplehist</span>( y, <span class="dt">xlab =</span> <span class="st">&quot;manuscripts completed&quot;</span>, <span class="dt">lwd =</span> <span class="dv">4</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb958-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb958-2"></a>zeros_drink &lt;-<span class="st"> </span><span class="kw">sum</span>(drink)</span>
+<span id="cb958-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb958-3"></a>zeros_work &lt;-<span class="st"> </span><span class="kw">sum</span>( y <span class="op">==</span><span class="st"> </span><span class="dv">0</span> <span class="op">&amp;</span><span class="st"> </span>drink <span class="op">==</span><span class="st"> </span><span class="dv">0</span> )</span>
+<span id="cb958-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb958-4"></a>zeros_total &lt;-<span class="st"> </span><span class="kw">sum</span>(y <span class="op">==</span><span class="st"> </span><span class="dv">0</span> )</span>
+<span id="cb958-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb958-5"></a><span class="kw">lines</span>(<span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">0</span>), <span class="kw">c</span>(zeros_work, zeros_total), <span class="dt">lwd =</span> <span class="dv">4</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes14-fig05"></span>
+<img src="bookdown_files/figure-html/introBayes14-fig05-1.png" alt="Frequency distribution of zero-inflated observations. The blue lines sement over zero shows the y = 0 observations that arose from drinking. In real data, we typically cannot see which zeros come from which process." width="576" />
+<p class="caption">
+圖 54.5: Frequency distribution of zero-inflated observations. The blue lines sement over zero shows the y = 0 observations that arose from drinking. In real data, we typically cannot see which zeros come from which process.
+</p>
 </div>
+<p>圖 <a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#fig:introBayes14-fig05">54.5</a> 就用藍色的部分展示了偷懶沒上班造成的觀察值爲零的部分，辛苦工作但是不幸沒有產出的是黑色的觀察值。所以你就能理解了爲什麼說這樣的分佈被叫做零膨脹 (Zero-inflated)。在 <code>rethinking</code> 包裏提供了便捷的零膨脹泊松分佈，可以直接調用：</p>
+<div class="sourceCode" id="cb959"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb959-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-1"></a>m12<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb959-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb959-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-3"></a>    y <span class="op">~</span><span class="st"> </span><span class="kw">dzipois</span>( p, lambda ), </span>
+<span id="cb959-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-4"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>ap, </span>
+<span id="cb959-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-5"></a>    <span class="kw">log</span>(lambda) &lt;-<span class="st"> </span>al, </span>
+<span id="cb959-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-6"></a>    ap <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="fl">-1.5</span>, <span class="dv">1</span> ), </span>
+<span id="cb959-7"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-7"></a>    al <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">1</span>, <span class="fl">0.5</span> )</span>
+<span id="cb959-8"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-8"></a>  ), <span class="dt">data =</span> <span class="kw">list</span>(<span class="dt">y =</span> y), <span class="dt">chains =</span> <span class="dv">4</span></span>
+<span id="cb959-9"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb959-9"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb960"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb960-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb960-1"></a><span class="kw">precis</span>( m12<span class="fl">.3</span> )</span></code></pre></div>
+<pre><code>##            mean          sd        5.5%       94.5%     n_eff     Rhat4
+## ap -1.259301364 0.336442978 -1.83536975 -0.79168319 628.78968 1.0018858
+## al  0.013632648 0.088799086 -0.12836396  0.15680242 577.03011 1.0049398</code></pre>
+<p>可以計算模型中估計的這些工人偷懶的日子所佔的比例是多少：</p>
+<div class="sourceCode" id="cb962"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb962-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb962-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m12<span class="fl">.3</span> )</span>
+<span id="cb962-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb962-2"></a><span class="kw">mean</span>( <span class="kw">inv_logit</span>( post<span class="op">$</span>ap )) <span class="co"># probability of drink/not working days</span></span></code></pre></div>
+<pre><code>## [1] 0.22637209</code></pre>
+<div class="sourceCode" id="cb964"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb964-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb964-1"></a><span class="kw">mean</span>( <span class="kw">exp</span>( post<span class="op">$</span>al )) <span class="co"># rate finish manuscripts, when working</span></span></code></pre></div>
+<pre><code>## [1] 1.0177327</code></pre>
+<p>看，我們的模型給出了十分近似的結果，儘管不知道這些工人究竟在哪些天偷懶了，但是推算出大約有20%的工作日，他們是沒有在工作的。這是沒有預測變量的最基礎的截距模型，在真實情況下，會有更多的變量放在混合的兩行鏈接函數對應的預測模型中。</p>
+</div>
+</div>
+<div id="帶順序含義的多類別結果變量-ordered-categorical-outcomes" class="section level2">
+<h2><span class="header-section-number">54.4</span> 帶順序含義的多類別結果變量 ordered categorical outcomes</h2>
+<p>在某些心理學甚至普通的自然科學研究裏，我們非常容易碰見的一種結果變量是帶有順序的多類別結果，例如你可能被問過「如果從1-7中選擇一個數字來表達你的喜愛程度，數字越高表示越喜愛的話，你對壽司類食物的嗜好程度是多少數值？」，那麼這樣的問題的答案就是一系列從1-7的數值。這樣的結果變量之間是存在順序的區別的，被叫做順序類別 ordered categories。它和計數型變量不同，不同順序之間的跨度，可以是不一樣的。也就是1-2 之間的喜好程度之差，很可能不同於 6-7 之間的喜好程度之差。我們無法把這樣的結果簡單地視爲連續型的變量。</p>
+<p>處理這樣結果的最佳解決方案是使用一種該叫做累積鏈接函數 (cumulative link function)。很容易理解我們設定數值爲3的累積概率，它<strong>等於比三小的數值 1， 2，以及它本身</strong>的概率之和。</p>
+
 </div>
 </div>
 
