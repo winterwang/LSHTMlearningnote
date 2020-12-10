@@ -388,6 +388,7 @@ p_k = \text{Pr}(y_i = k) = \text{Pr}(y_i \leqslant k) - \text{Pr}(y_i \leqslant 
 $$
 
 
+
 ```{r  introBayes14-fig09, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Cumulative probability and ordered likelihood. The horizontal axis displays possible observable outcomes, from 1 through 7. The vertical axis displays cumulative probability. The gray bars over each outcome show cumulative probability. These keep growing with each successive outcome value. The darker line segments show the discrete probability of each individual outcome. These are the likelihoods that go into Bayes' theorem.", fig.align='center'}
 # primary data
 d_plot <-
@@ -432,6 +433,61 @@ d_plot %>%
 ```
 
 
+
+
+上圖 \@ref(fig:introBayes14-fig09) 中黑色的部分，也就是每個選項對應的概率減去前面所有選項概率之和的部分，就是我們需要的每個選項本身的似然函數。這個模型可以用下面的表達式來描述：
+
+$$
+\begin{aligned}
+R_i & \sim \text{Ordered-logit}(\phi_i, \kappa) & [\text{Probability of data}] \\ 
+\phi_i & = 0 & [\text{linear model}] \\ 
+\kappa_k & \sim \text{Normal}(0, 1.5) & [\text{common prior for each intercept}]
+\end{aligned}
+$$
+
+當然我們可以把上面的描述擴展得更加仔細一些：
+
+
+$$
+\begin{aligned}
+R_i & \sim \text{Catergorical}(\mathbf{p})  & [\text{Probability of data}] \\
+p_1 & = q_1                                 & [\text{Probabilities of each value }k] \\
+p_k & = q_k - q_{k-1}\text{ for }K > k > 1 \\
+p_K & = 1 - q_{K-1}  \\
+\text{logit}(p_k) & = \kappa_k - \phi_i  & [\text{cumulative logit link}] \\ 
+\phi_i & = \text{terms of linear model}  & [\text{linear model}] \\ 
+\kappa_k & \sim \text{Normal}(0, 1.5)    & [\text{common prior for each intercept}]
+\end{aligned} 
+$$
+
+
+所以 Ordered-logit 分佈其實講的就是一個多項式分佈，每個選項的概率各自是 $\mathbf{p} = \{ p_1, p_2, \dots, p_{K-1} \}$。
+
+於是我們來實際運行一下上述模型，先設計一個沒有預測變量的模型：
+
+
+```{r introBayes14-0601, cache=TRUE, results="hide"}
+m12.4 <- ulam(
+  alist(
+    R ~ dordlogit(0, cutpoints), 
+    cutpoints ~ dnorm(0, 1.5)
+  ), data = list( R = d$response ), chains = 4, cores = 8
+)
+```
+
+
+```{r introBayes14-0701, cache=TRUE}
+precis(m12.4, depth = 2)
+```
+
+可以看見每個截距的事後估計量都被計算得十分精確。我們可以使用邏輯函數的逆函數把累積概率簡單地計算回來：
+
+```{r introBayes14-0801, cache=TRUE}
+round( inv_logit(coef(m12.4)), 3)
+```
+
+
+這與我們之前計算過的各截距結果完全一致，而且此時我們還擁有了這些截距的事後概率分佈。
 
 
 

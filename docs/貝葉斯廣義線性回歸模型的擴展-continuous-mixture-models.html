@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-09" />
+<meta name="date" content="2020-12-10" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1935,6 +1935,47 @@ p_k = \text{Pr}(y_i = k) = \text{Pr}(y_i \leqslant k) - \text{Pr}(y_i \leqslant 
 圖 54.9: Cumulative probability and ordered likelihood. The horizontal axis displays possible observable outcomes, from 1 through 7. The vertical axis displays cumulative probability. The gray bars over each outcome show cumulative probability. These keep growing with each successive outcome value. The darker line segments show the discrete probability of each individual outcome. These are the likelihoods that go into Bayes’ theorem.
 </p>
 </div>
+<p>上圖 <a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#fig:introBayes14-fig09">54.9</a> 中黑色的部分，也就是每個選項對應的概率減去前面所有選項概率之和的部分，就是我們需要的每個選項本身的似然函數。這個模型可以用下面的表達式來描述：</p>
+<p><span class="math display">\[
+\begin{aligned}
+R_i &amp; \sim \text{Ordered-logit}(\phi_i, \kappa) &amp; [\text{Probability of data}] \\ 
+\phi_i &amp; = 0 &amp; [\text{linear model}] \\ 
+\kappa_k &amp; \sim \text{Normal}(0, 1.5) &amp; [\text{common prior for each intercept}]
+\end{aligned}
+\]</span></p>
+<p>當然我們可以把上面的描述擴展得更加仔細一些：</p>
+<p><span class="math display">\[
+\begin{aligned}
+R_i &amp; \sim \text{Catergorical}(\mathbf{p})  &amp; [\text{Probability of data}] \\
+p_1 &amp; = q_1                                 &amp; [\text{Probabilities of each value }k] \\
+p_k &amp; = q_k - q_{k-1}\text{ for }K &gt; k &gt; 1 \\
+p_K &amp; = 1 - q_{K-1}  \\
+\text{logit}(p_k) &amp; = \kappa_k - \phi_i  &amp; [\text{cumulative logit link}] \\ 
+\phi_i &amp; = \text{terms of linear model}  &amp; [\text{linear model}] \\ 
+\kappa_k &amp; \sim \text{Normal}(0, 1.5)    &amp; [\text{common prior for each intercept}]
+\end{aligned} 
+\]</span></p>
+<p>所以 Ordered-logit 分佈其實講的就是一個多項式分佈，每個選項的概率各自是 <span class="math inline">\(\mathbf{p} = \{ p_1, p_2, \dots, p_{K-1} \}\)</span>。</p>
+<p>於是我們來實際運行一下上述模型，先設計一個沒有預測變量的模型：</p>
+<div class="sourceCode" id="cb972"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb972-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb972-1"></a>m12<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb972-2"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb972-2"></a>  <span class="kw">alist</span>(</span>
+<span id="cb972-3"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb972-3"></a>    R <span class="op">~</span><span class="st"> </span><span class="kw">dordlogit</span>(<span class="dv">0</span>, cutpoints), </span>
+<span id="cb972-4"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb972-4"></a>    cutpoints <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>(<span class="dv">0</span>, <span class="fl">1.5</span>)</span>
+<span id="cb972-5"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb972-5"></a>  ), <span class="dt">data =</span> <span class="kw">list</span>( <span class="dt">R =</span> d<span class="op">$</span>response ), <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cores =</span> <span class="dv">8</span></span>
+<span id="cb972-6"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb972-6"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb973"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb973-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb973-1"></a><span class="kw">precis</span>(m12<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##                     mean          sd        5.5%       94.5%     n_eff      Rhat4
+## cutpoints[1] -1.91678230 0.029873016 -1.96435328 -1.86815144 1536.6192 0.99988673
+## cutpoints[2] -1.26628663 0.024561407 -1.30473298 -1.22740417 1960.5819 1.00020793
+## cutpoints[3] -0.71766280 0.021505791 -0.75210444 -0.68223850 2356.1402 1.00019074
+## cutpoints[4]  0.24837136 0.020430963  0.21562548  0.28063474 2386.1227 0.99933494
+## cutpoints[5]  0.89025135 0.022674222  0.85454882  0.92644273 2317.3247 0.99871785
+## cutpoints[6]  1.76939855 0.029379883  1.72170994  1.81607297 2446.5506 0.99928946</code></pre>
+<p>可以看見每個截距的事後估計量都被計算得十分精確。我們可以使用邏輯函數的逆函數把累積概率簡單地計算回來：</p>
+<div class="sourceCode" id="cb975"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb975-1"><a href="貝葉斯廣義線性回歸模型的擴展-continuous-mixture-models.html#cb975-1"></a><span class="kw">round</span>( <span class="kw">inv_logit</span>(<span class="kw">coef</span>(m12<span class="fl">.4</span>)), <span class="dv">3</span>)</span></code></pre></div>
+<pre><code>## cutpoints[1] cutpoints[2] cutpoints[3] cutpoints[4] cutpoints[5] cutpoints[6] 
+##        0.128        0.220        0.328        0.562        0.709        0.854</code></pre>
+<p>這與我們之前計算過的各截距結果完全一致，而且此時我們還擁有了這些截距的事後概率分佈。</p>
 
 </div>
 </div>
