@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-11" />
+<meta name="date" content="2020-12-13" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -899,6 +899,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="54.4" data-path="-continuous-mixture-models.html"><a href="-continuous-mixture-models.html#帶順序含義的多類別結果變量-ordered-categorical-outcomes"><i class="fa fa-check"></i><b>54.4</b> 帶順序含義的多類別結果變量 ordered categorical outcomes</a>
 <ul>
 <li class="chapter" data-level="54.4.1" data-path="-continuous-mixture-models.html"><a href="-continuous-mixture-models.html#用不同的截距來描述一個有順序的分佈-describing-an-ordered-distribution-with-intercepts"><i class="fa fa-check"></i><b>54.4.1</b> 用不同的截距來描述一個有順序的分佈 describing an ordered distribution with intercepts</a></li>
+<li class="chapter" data-level="54.4.2" data-path="-continuous-mixture-models.html"><a href="-continuous-mixture-models.html#增加預測變量"><i class="fa fa-check"></i><b>54.4.2</b> 增加預測變量</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -2254,6 +2255,29 @@ p_K &amp; = 1 - q_{K-1}  \\
 <pre><code>## cutpoints[1] cutpoints[2] cutpoints[3] cutpoints[4] cutpoints[5] cutpoints[6] 
 ##        0.128        0.220        0.328        0.562        0.709        0.854</code></pre>
 <p>這與我們之前計算過的各截距結果完全一致，而且此時我們還擁有了這些截距的事後概率分佈。</p>
+</div>
+<div id="增加預測變量" class="section level3" number="54.4.2">
+<h3><span class="header-section-number">54.4.2</span> 增加預測變量</h3>
+<p>爲了給模型中增加預測變量，我們需要設計一個函數，使之成爲和截距相加或相減的模型。例如我們有一個連續型的預測變量 <span class="math inline">\(x_i\)</span>，那麼可以定義 <span class="math inline">\(\phi_i = \beta x_i\)</span> 作爲預測變量可以給模型施加的影響。這裏我們給累積邏輯回歸模型設計的函數是：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\log \frac{\text{Pr}(y_i \leqslant k)}{1 - \text{Pr}(y_i \leqslant k)}  &amp; = \alpha_k - \phi_i \\
+                                                                \phi_i  &amp; = \beta x_i
+\end{aligned}
+\]</span></p>
+<p>之所以這裏選擇用減法，是因爲如果降低累積對數比值 (log-cumulative-odds)，就需要把部分的概率質量 (probability mass) 往右側較高的結果選項處平移。這樣如果 <span class="math inline">\(\beta\)</span> 大於零，就意味着如果 <span class="math inline">\(x_i\)</span> 變大，<span class="math inline">\(y_i\)</span> 變大。如果你對此感到困惑，我們簡單計算一下，我們把 <code>m12.4</code> 的事後概率分佈的各個均值結果提取出來，然後統一減去0.5看會得到怎樣的結果：</p>
+<div class="sourceCode" id="cb979"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb979-1"><a href="-continuous-mixture-models.html#cb979-1" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>( pk <span class="ot">&lt;-</span> <span class="fu">dordlogit</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>, <span class="dv">0</span>, <span class="fu">coef</span>(m12<span class="fl">.4</span>)), <span class="dv">2</span> )</span></code></pre></div>
+<pre><code>## [1] 0.13 0.09 0.11 0.23 0.15 0.15 0.15</code></pre>
+<p>上述的這些概率其實意味着平均的結果選擇會是：</p>
+<div class="sourceCode" id="cb981"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb981-1"><a href="-continuous-mixture-models.html#cb981-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>( pk<span class="sc">*</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>) )</span></code></pre></div>
+<pre><code>## [1] 4.1988773</code></pre>
+<p>現在把每個選項對應的截距減去 0.5：</p>
+<div class="sourceCode" id="cb983"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb983-1"><a href="-continuous-mixture-models.html#cb983-1" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>( pk <span class="ot">&lt;-</span> <span class="fu">dordlogit</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>, <span class="dv">0</span>, <span class="fu">coef</span>(m12<span class="fl">.4</span>) <span class="sc">-</span> <span class="fl">0.5</span> ), <span class="dv">2</span> )</span></code></pre></div>
+<pre><code>## [1] 0.08 0.06 0.08 0.21 0.16 0.18 0.22</code></pre>
+<p>你會發現概率質量整體往右邊平移了，選擇數值低選項的概率變得比之前小了，也就是傾向於選擇高數值的選項。此時的平均選擇結果是：</p>
+<div class="sourceCode" id="cb985"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb985-1"><a href="-continuous-mixture-models.html#cb985-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>( pk<span class="sc">*</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>) )</span></code></pre></div>
+<pre><code>## [1] 4.7293397</code></pre>
+<p>這就是爲什麼我們在這個模型中的線性回歸部分使用減法而不是用加法的原因。這樣的話一個是正的 <span class="math inline">\(\beta\)</span> 也就意味着該預測變量傾向於使得結果選擇更大的選項，也就是使得平均結果變大。</p>
 
 </div>
 </div>
