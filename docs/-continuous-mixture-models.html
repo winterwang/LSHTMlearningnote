@@ -2258,7 +2258,7 @@ p_K &amp; = 1 - q_{K-1}  \\
 </div>
 <div id="增加預測變量" class="section level3" number="54.4.2">
 <h3><span class="header-section-number">54.4.2</span> 增加預測變量</h3>
-<p>爲了給模型中增加預測變量，我們需要設計一個函數，使之成爲和截距相加或相減的模型。例如我們有一個連續型的預測變量 <span class="math inline">\(x_i\)</span>，那麼可以定義 <span class="math inline">\(\phi_i = \beta x_i\)</span> 作爲預測變量可以給模型施加的影響。這裏我們給累積邏輯回歸模型設計的函數是：</p>
+<p>爲了給模型中增加預測變量，我們需要設計一個函數，使之成爲和截距相加或相減形式的模型。例如我們有一個連續型的預測變量 <span class="math inline">\(x_i\)</span>，那麼可以定義 <span class="math inline">\(\phi_i = \beta x_i\)</span> 作爲預測變量可以給模型施加的影響。這裏我們給累積邏輯回歸模型設計的函數是：</p>
 <p><span class="math display">\[
 \begin{aligned}
 \log \frac{\text{Pr}(y_i \leqslant k)}{1 - \text{Pr}(y_i \leqslant k)}  &amp; = \alpha_k - \phi_i \\
@@ -2278,6 +2278,64 @@ p_K &amp; = 1 - q_{K-1}  \\
 <div class="sourceCode" id="cb985"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb985-1"><a href="-continuous-mixture-models.html#cb985-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>( pk<span class="sc">*</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>) )</span></code></pre></div>
 <pre><code>## [1] 4.7293397</code></pre>
 <p>這就是爲什麼我們在這個模型中的線性回歸部分使用減法而不是用加法的原因。這樣的話一個是正的 <span class="math inline">\(\beta\)</span> 也就意味着該預測變量傾向於使得結果選擇更大的選項，也就是使得平均結果變大。</p>
+<p>接下來我們就可以實現在模型中添加預測變量這個願望了，回到 <code>Trolley</code> 數據上來，期望添加的預測變量其實包含了下面幾個： <code>action, intention, contact</code>。</p>
+<ul>
+<li><code>action</code> 是行動原則。該原則認爲，和無視不作爲造成的同等程度的傷害相比，由於自己的行爲造成的傷害在道德上更無法接受。</li>
+<li><code>intention</code> 是意圖原則。該原則認爲，和預見到爲了達成目標可能造成的同等程度傷害相比，爲了達成該目標而故意造成他人傷害在道德上更無法接受。</li>
+<li><code>contact</code> 是接觸原則。該原則認爲，和沒有通過物理上的接觸對他人造成的同等程度傷害相比，通過物理上的接觸對他人造成了傷害在道德上更無法接受。</li>
+</ul>
+<p>上述三個原則的解釋告訴我們，<code>contact</code> 和 <code>action</code> 應該是互斥的關係，二者不會有交集。但是這兩個原則又可能和 <code>intention</code> 有交集。於是這三個預測變量之間組成的可能的預測變量關係有如下六種：</p>
+<ol style="list-style-type: decimal">
+<li>三者皆無，不認同全部三個原則。</li>
+<li>只認同行動原則。</li>
+<li>只認同意圖原則。</li>
+<li>只認同接觸原則。</li>
+<li>認同行爲和意圖原則。</li>
+<li>認同接觸和意圖原則。</li>
+</ol>
+<p>其中 5.6. 兩個預測變量關係意味着意圖原則和行爲，及接觸原則之間有交互作用 (interaction)。這裏我們利用一個小技巧把這個交互作用表達出來：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\log \frac{\text{Pr}(y_i \leqslant k)}{1 - \text{Pr}(y_i \leqslant k)} &amp; = \alpha_k - \phi_i \\ 
+                                                                \phi_i &amp; = \beta_A A_i + \beta_C C_i + B_{I,i} I_i \\
+                                                                B_{I,i}&amp; = \beta_I + \beta_{IA} A_i + \beta_{IC} C_i
+\end{aligned}
+\]</span></p>
+<p>其中，<span class="math inline">\(A_i, C_i, I_i\)</span> 分別表示 <code>action, contact, intention</code> 三個變量。我們接下來把上述數學模型放到 Stan 模型中去運行：</p>
+<div class="sourceCode" id="cb987"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb987-1"><a href="-continuous-mixture-models.html#cb987-1" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb987-2"><a href="-continuous-mixture-models.html#cb987-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">R =</span> d<span class="sc">$</span>response, </span>
+<span id="cb987-3"><a href="-continuous-mixture-models.html#cb987-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">A =</span> d<span class="sc">$</span>action, </span>
+<span id="cb987-4"><a href="-continuous-mixture-models.html#cb987-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">I =</span> d<span class="sc">$</span>intention, </span>
+<span id="cb987-5"><a href="-continuous-mixture-models.html#cb987-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">C =</span> d<span class="sc">$</span>contact</span>
+<span id="cb987-6"><a href="-continuous-mixture-models.html#cb987-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb987-7"><a href="-continuous-mixture-models.html#cb987-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb987-8"><a href="-continuous-mixture-models.html#cb987-8" aria-hidden="true" tabindex="-1"></a>m12<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb987-9"><a href="-continuous-mixture-models.html#cb987-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb987-10"><a href="-continuous-mixture-models.html#cb987-10" aria-hidden="true" tabindex="-1"></a>    R <span class="sc">~</span> <span class="fu">dordlogit</span>( phi, cutpoints ), </span>
+<span id="cb987-11"><a href="-continuous-mixture-models.html#cb987-11" aria-hidden="true" tabindex="-1"></a>    phi <span class="ot">&lt;-</span> bA <span class="sc">*</span> A <span class="sc">+</span> bC <span class="sc">*</span> C <span class="sc">+</span> BI <span class="sc">*</span> I, </span>
+<span id="cb987-12"><a href="-continuous-mixture-models.html#cb987-12" aria-hidden="true" tabindex="-1"></a>    BI <span class="ot">&lt;-</span> bI <span class="sc">+</span> bIA <span class="sc">*</span> A <span class="sc">+</span> bIC <span class="sc">*</span> C, </span>
+<span id="cb987-13"><a href="-continuous-mixture-models.html#cb987-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(bA, bI, bC, bIA, bIC) <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb987-14"><a href="-continuous-mixture-models.html#cb987-14" aria-hidden="true" tabindex="-1"></a>    cutpoints <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> )</span>
+<span id="cb987-15"><a href="-continuous-mixture-models.html#cb987-15" aria-hidden="true" tabindex="-1"></a>  ), <span class="at">data =</span> dat, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span></span>
+<span id="cb987-16"><a href="-continuous-mixture-models.html#cb987-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb988"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb988-1"><a href="-continuous-mixture-models.html#cb988-1" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>( m12<span class="fl">.5</span> )</span></code></pre></div>
+<pre><code>## 6 vector or matrix parameters hidden. Use depth=2 to show them.</code></pre>
+<pre><code>##            mean          sd        5.5%       94.5%     n_eff     Rhat4
+## bIC -1.23763749 0.095329453 -1.39530728 -1.08968439 1224.1521 1.0001406
+## bIA -0.43548382 0.081010342 -0.56323943 -0.30528822 1375.0285 1.0000502
+## bC  -0.34391402 0.066118801 -0.45062777 -0.23813803 1359.9269 1.0011532
+## bI  -0.29018140 0.056192605 -0.37856739 -0.20127982 1091.0233 1.0011916
+## bA  -0.47195871 0.054117908 -0.55896778 -0.38493597 1259.3679 1.0000589</code></pre>
+<p>這裏我們暫時對每個選項本身的概率不感興趣，而是對影響結果的預測變量的回歸係數們更加感興趣。看這些回歸係數的事後概率分佈，他們每一個都很穩定地小於0。也就是每個原則都會降低選擇結果的平均值。</p>
+<div class="sourceCode" id="cb991"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb991-1"><a href="-continuous-mixture-models.html#cb991-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( <span class="fu">precis</span>(m12<span class="fl">.5</span>), <span class="at">xlim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">1.4</span>, <span class="dv">0</span>))</span></code></pre></div>
+<pre><code>## 6 vector or matrix parameters hidden. Use depth=2 to show them.</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:introBayes14-fig10"></span>
+<img src="bookdown_files/figure-html/introBayes14-fig10-1.png" alt="The marginal posterior distributions of the slopes in m12.5." width="576" />
+<p class="caption">
+圖 54.10: The marginal posterior distributions of the slopes in m12.5.
+</p>
+</div>
+<p>可以觀察到，意圖原則和接觸原則的交互作用項的回歸係數對結果的影響最大，但是我麼看到他們單獨的影響都不是很大。</p>
 
 </div>
 </div>
