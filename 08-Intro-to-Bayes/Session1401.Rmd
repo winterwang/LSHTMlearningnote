@@ -492,7 +492,7 @@ round( inv_logit(coef(m12.4)), 3)
 ### 增加預測變量
 
 
-爲了給模型中增加預測變量，我們需要設計一個函數，使之成爲和截距相加或相減的模型。例如我們有一個連續型的預測變量 $x_i$，那麼可以定義 $\phi_i = \beta x_i$ 作爲預測變量可以給模型施加的影響。這裏我們給累積邏輯回歸模型設計的函數是：
+爲了給模型中增加預測變量，我們需要設計一個函數，使之成爲和截距相加或相減形式的模型。例如我們有一個連續型的預測變量 $x_i$，那麼可以定義 $\phi_i = \beta x_i$ 作爲預測變量可以給模型施加的影響。這裏我們給累積邏輯回歸模型設計的函數是：
 
 
 $$
@@ -528,4 +528,67 @@ sum( pk*(1:7) )
 ```
 
 這就是爲什麼我們在這個模型中的線性回歸部分使用減法而不是用加法的原因。這樣的話一個是正的 $\beta$ 也就意味着該預測變量傾向於使得結果選擇更大的選項，也就是使得平均結果變大。
+
+接下來我們就可以實現在模型中添加預測變量這個願望了，回到 `Trolley` 數據上來，期望添加的預測變量其實包含了下面幾個： `action, intention, contact`。
+
+- `action` 是行動原則。該原則認爲，和無視不作爲造成的同等程度的傷害相比，由於自己的行爲造成的傷害在道德上更無法接受。
+- `intention` 是意圖原則。該原則認爲，和預見到爲了達成目標可能造成的同等程度傷害相比，爲了達成該目標而故意造成他人傷害在道德上更無法接受。
+- `contact` 是接觸原則。該原則認爲，和沒有通過物理上的接觸對他人造成的同等程度傷害相比，通過物理上的接觸對他人造成了傷害在道德上更無法接受。
+
+上述三個原則的解釋告訴我們，`contact` 和 `action` 應該是互斥的關係，二者不會有交集。但是這兩個原則又可能和 `intention` 有交集。於是這三個預測變量之間組成的可能的預測變量關係有如下六種：
+
+1. 三者皆無，不認同全部三個原則。
+2. 只認同行動原則。
+3. 只認同意圖原則。
+4. 只認同接觸原則。
+5. 認同行爲和意圖原則。
+6. 認同接觸和意圖原則。
+
+其中 5.6. 兩個預測變量關係意味着意圖原則和行爲，及接觸原則之間有交互作用 (interaction)。這裏我們利用一個小技巧把這個交互作用表達出來：
+
+$$
+\begin{aligned}
+\log \frac{\text{Pr}(y_i \leqslant k)}{1 - \text{Pr}(y_i \leqslant k)} & = \alpha_k - \phi_i \\ 
+                                                                \phi_i & = \beta_A A_i + \beta_C C_i + B_{I,i} I_i \\
+                                                                B_{I,i}& = \beta_I + \beta_{IA} A_i + \beta_{IC} C_i
+\end{aligned}
+$$
+
+
+其中，$A_i, C_i, I_i$ 分別表示 `action, contact, intention` 三個變量。我們接下來把上述數學模型放到 Stan 模型中去運行：
+
+
+```{r  introBayes14-13, cache=TRUE, results="hide"}
+dat <- list(
+  R = d$response, 
+  A = d$action, 
+  I = d$intention, 
+  C = d$contact
+)
+
+m12.5 <- ulam(
+  alist(
+    R ~ dordlogit( phi, cutpoints ), 
+    phi <- bA * A + bC * C + BI * I, 
+    BI <- bI + bIA * A + bIC * C, 
+    c(bA, bI, bC, bIA, bIC) ~ dnorm( 0, 0.5 ), 
+    cutpoints ~ dnorm( 0, 1.5 )
+  ), data = dat, chains = 4, cores = 4
+)
+```
+
+
+```{r  introBayes14-13, cache=TRUE}
+precis( m12.5 )
+```
+
+
+這裏我們暫時對每個選項本身的概率不感興趣，而是對影響結果的預測變量的回歸係數們更加感興趣。看這些回歸係數的事後概率分佈，他們每一個都很穩定地小於0。也就是每個原則都會降低選擇結果的平均值。
+
+```{r introBayes14-fig10, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The marginal posterior distributions of the slopes in m12.5.", fig.align='center'}
+plot( precis(m12.5), xlim = c(-1.4, 0))
+```
+
+可以觀察到，意圖原則和接觸原則的交互作用項的回歸係數對結果的影響最大，但是我麼看到他們單獨的影響都不是很大。
+
 
