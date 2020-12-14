@@ -324,7 +324,7 @@ mean( exp( post$al )) # rate finish manuscripts, when working
 
 ## 帶順序含義的多類別結果變量 ordered categorical outcomes
 
-在某些心理學甚至普通的自然科學研究裏，我們非常容易碰見的一種結果變量是帶有順序的多類別結果，例如你可能被問過「如果從1-7中選擇一個數字來表達你的喜愛程度，數字越高表示越喜愛的話，你對壽司類食物的嗜好程度是多少數值？」，那麼這樣的問題的答案就是一系列從1-7的數值。這樣的結果變量之間是存在順序的區別的，被叫做順序類別 ordered categories。它和計數型變量不同，不同順序之間的跨度，可以是不一樣的。也就是1-2 之間的喜好程度之差，很可能不同於 6-7 之間的喜好程度之差。我們無法把這樣的結果簡單地視爲連續型的變量。
+在某些心理學甚至普通的自然科學研究裏，我們非常容易碰見的一種結果變量是帶有順序的多類別結果，例如你可能被問過「如果從1-7中選擇一個數字來表達你的喜愛程度，數字越高表示越喜愛的話，你對壽司類食物的嗜好程度是多少數值？」這樣的問題。那麼這樣的問題的答案就是一系列1-7的數值。這樣的結果變量之間是存在順序的區別的，被叫做順序類別 ordered categories。它和計數型變量不同，不同順序之間的跨度，可以是不一樣的。也就是 1-2 之間的喜好程度之差，很可能不同於 6-7 之間的喜好程度之差。我們無法把這樣的結果簡單地視爲連續型的變量。
 
 
 處理這樣結果的最佳解決方案是使用一種該叫做累積鏈接函數 (cumulative link function)。很容易理解我們設定數值爲3的累積概率，它**等於比三小的數值 1， 2，以及它本身**的概率之和。
@@ -748,7 +748,74 @@ simplehist(s, xlab = "response",
 
 
 
-## 到順序含義的多類別預測型變量 ordered categorical predictors
+## 帶順序含義的多類別預測型變量 ordered categorical predictors
+
+
+前一個小結討論了怎樣使用累積對數比值函數來分析結果變量是有順序的多類別變量的情況。實際分析中我們還經常會碰見相似類型的預測變量。也就是帶有順序涵義的多類別預測型變量。多數人可能選擇把它轉化成連續型變量，但是這其實是有問題的。因爲我們並不想增加假設說不同類別之間的差距，或者叫類別之間的距離相等或者是不等的可以量化測量的距離。我們其實可以巧妙地避免這樣的不必要假設。
+
+在前一節使用的 `Trolley` 有軌電車的道德悖論問題數據中，有關於受試者的教育程度的一個可以用作預測變量的數據：
+
+
+```{r introBayes14-15, cache=TRUE}
+data(Trolley)
+d <- Trolley
+
+levels(d$edu)
+# reorder 
+
+d <- d %>% 
+  mutate(edu = fct_relevel(edu,
+                           "Elementary School",
+                           "Middle School",
+                           "Some High School", 
+                           "High School Graduate", 
+                           "Some College", 
+                           "Bachelor's Degree", 
+                           "Master's Degree", 
+                           "Graduate Degree"))
+levels(d$edu)
+
+```
+
+
+接下來的思考過程將會很有趣。我們發現教育程度的不同類別之間是存在順序關係的，但是我們不確定不同的受教育程度之間的差別會是成等比的，也就是說小學和中學之間的差別，相比高中和大學之間的差別，應該允許它們不同。但是我們又認爲這個隨着學歷增加，對結果的選擇影響應該是遞增的關係才符合常理。那麼我們需要的是能夠測量這個能夠隨着學歷增加而遞增的影響。上面的數據中，教育程度有八個類別，那麼衡量它們八個之間差異的變量，應該有 $8-1 = 7$ 個。因此第一步我們思考得出的結論是，第一個學歷增量是從小學畢業到中學畢業的部分 $\delta_1$：
+
+$$
+\phi_i = \delta_1 + \text{Other stuff}
+$$
+
+其中，$\text{Other stuff}$ 的部分是你希望加的其餘的預測變量的部分。
+
+那如果從第二低教育程度（中學）升高到高中但是未完成之間的影響也用相似的方法，一個 $\delta_2$ 加入到模型中去，：
+
+
+$$
+\phi_i = \delta_1 + \delta_2 + \text{Other stuff}
+$$
+
+以此類推，八個學歷層級之間有七個增量，也就是從 $\delta_1,\dots,\delta_7$ 都放進模型之後會獲得：
+
+$$
+\phi_i = \sum_{j = 1}^7 \delta_j + \text{Other stuff}
+$$
+
+而且我們也同意說，這個等式的第一個部分 $\sum_{j = 1}^7 \delta_j$ 其實是完成到最高學歷之後，對結果變量的終極影響。但是這樣的表達依然不太便利，最簡單的方式其實是，把這整個學歷對結果的影響認爲是一個係數 $\beta_E$，然後每個不同學歷之間的增量，其實是佔這個 $\beta_E$ 的一個百分比。同時我們使用啞變量令 $\delta_0 = 0$，改寫後的模型就變成了：
+
+$$
+\phi_i = \beta_E \sum_{j = 0}^{E_i - 1} \delta_j + \text{Other stuff}
+$$
+
+那麼如果我們要把這個教育程度也作爲一個預測變量加入前一節中使用的順序邏輯回歸模型中時，我們的模型可以變化成爲：
+
+$$
+\begin{aligned}
+R_i & \sim \text{Ordered-logit}(\phi_i, \kappa)   & [\text{Probability of data}] \\
+\phi_i & = \beta_E \sum_{j = 0}^{E_i - 1}\delta_j + \beta_A A_i + \beta_CC_i + \beta_I I_i & [\text{Linear model}] \\
+\kappa_K & \sim \text{Normal}(0, 1.5)  & [\text{Priors}]  \\
+\beta_A, \beta_I, \beta_C, \beta_E & \sim \text{Normal}(0, 1) \\
+\delta & \sim \text{Dirichlet}(\alpha)
+\end{aligned}
+$$
 
 
 
