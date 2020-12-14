@@ -589,6 +589,167 @@ precis( m12.5 )
 plot( precis(m12.5), xlim = c(-1.4, 0))
 ```
 
-可以觀察到，意圖原則和接觸原則的交互作用項的回歸係數對結果的影響最大，但是我麼看到他們單獨的影響都不是很大。
+可以觀察到，意圖原則和接觸原則的交互作用項的回歸係數對結果的影響最大，但是我們也發現他們單獨對結果的影響都不是很大。
+
+其中一個常見且十分有用的表達方式是使用橫軸表示預測變量，縱軸作爲所有選項的累積概率。這樣我們就可以繪製一系列的不同預測變量和結果曲線之間的示意圖。下面就來嘗試一下這樣的展示結果的方法。
+
+```{r introBayes14-fig11, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, m12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 0, and contact = 0.", fig.align='center'}
+plot( NULL, type = "n", 
+      bty = "n",
+      xlab = "intention", 
+      ylab = "probability", 
+      xlim = c(0, 1), 
+      ylim = c(0, 1), 
+      xaxp = c(0, 1, 1), 
+      yaxp = c(0, 1, 2), 
+      main = "action = 0, contact = 0")
+
+# set up a data list that contains the different combinations of predictor values. 
+
+kA <- 0       # value for action
+kC <- 0       # value for contact
+kI <- 0:1     # values of intention to calculate over
+pdat <- data.frame(A = kA, 
+                   C = kC,
+                   I = kI)
+phi <- link(m12.5, data = pdat )$phi
+
+# loop over the first 50 samples in and plot their predictions across values of intention
+# use  pordlogit to compute the cumulative probability for each possible value
+
+post <- extract.samples(m12.5)
+
+for( s in 1:50 ) {
+  pk <- pordlogit( 1:6, phi[s, ], post$cutpoints[s, ])
+  for( i in 1:6 ) lines(kI, pk[,i], col = grau(0.1))
+}
+
+
+```
+
+
+
+```{r introBayes14-fig12, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, m12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 1, and contact = 0.", fig.align='center', echo=FALSE}
+plot( NULL, type = "n", 
+      bty = "n",
+      xlab = "intention", 
+      ylab = "probability", 
+      xlim = c(0, 1), 
+      ylim = c(0, 1), 
+      xaxp = c(0, 1, 1), 
+      yaxp = c(0, 1, 2), 
+      main = "action = 1, contact = 0")
+
+# set up a data list that contains the different combinations of predictor values. 
+
+kA <- 1       # value for action
+kC <- 0       # value for contact
+kI <- 0:1     # values of intention to calculate over
+pdat <- data.frame(A = kA, 
+                   C = kC,
+                   I = kI)
+phi <- link(m12.5, data = pdat )$phi
+
+# loop over the first 50 samples in and plot their predictions across values of intention
+# use  pordlogit to compute the cumulative probability for each possible value
+
+
+for( s in 1:50 ) {
+  pk <- pordlogit( 1:6, phi[s, ], post$cutpoints[s, ])
+  for( i in 1:6 ) lines(kI, pk[,i], col = grau(0.1))
+}
+
+
+```
+
+
+
+
+```{r introBayes14-fig13, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, m12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 0, and contact = 1.", fig.align='center', echo=FALSE}
+plot( NULL, type = "n", 
+      bty = "n",
+      xlab = "intention", 
+      ylab = "probability", 
+      xlim = c(0, 1), 
+      ylim = c(0, 1), 
+      xaxp = c(0, 1, 1), 
+      yaxp = c(0, 1, 2), 
+      main = "action = 1, contact = 0")
+
+# set up a data list that contains the different combinations of predictor values. 
+
+kA <- 0       # value for action
+kC <- 1     # value for contact
+kI <- 0:1     # values of intention to calculate over
+pdat <- data.frame(A = kA, 
+                   C = kC,
+                   I = kI)
+phi <- link(m12.5, data = pdat )$phi
+
+# loop over the first 50 samples in and plot their predictions across values of intention
+# use  pordlogit to compute the cumulative probability for each possible value
+
+
+for( s in 1:50 ) {
+  pk <- pordlogit( 1:6, phi[s, ], post$cutpoints[s, ])
+  for( i in 1:6 ) lines(kI, pk[,i], col = grau(0.1))
+}
+
+
+```
+
+
+我們繪製了三個連續的圖\@ref(fig:introBayes14-fig11), \@ref(fig:introBayes14-fig12), \@ref(fig:introBayes14-fig13) 展示了不同的預測變量取值時，對結果選擇的預測。橫軸的 `intention` 分別取 0, 1 時，且當不同條件的 `action, contact` 固定不變時，對結果變量的影響。所以第一個圖\@ref(fig:introBayes14-fig11)，其實展示的就是不認同行動原則 (no action)，不認同接觸原則 (no contact)，也不認同意圖原則 (no intention) 人，如果變成了認同意圖原則的話，他們選擇的7個結果的變化。同理可以解釋其餘兩個圖的涵義。值得注意的是，第三張圖 \@ref(fig:introBayes14-fig13) 中其實展示的就是我們觀察到的 `contact` 和 `intention` 之間存在的交互作用。該圖也展示了不認同行動原則 (no action)，但是同時認同接觸原則 (contact = 1) 和意圖原則 (intention = 1) 的話，更多的人會傾向於選擇數值更低的結果，也就意味着這樣的受試對象其實更有可能在該試驗中選擇無視火車軋死更多的5人，也不會扣動變軌機制讓火車轉向去軋死一個另一条鐵軌上的人。另外一種直觀的方法是繪製不同預測變量情況下的結果概率柱狀圖。
+
+
+```{r  introBayes14-fig14, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
+kA <- 0         # value of action
+kC <- 0         # value for contact
+kI <- 0:1       # values for intention to calculate over
+
+pdat <- data.frame(A = kA, 
+                   C = kC, 
+                   I = kI)
+s <- sim( m12.5, data = pdat )
+simplehist(s, xlab = "response", 
+           bty = "n", 
+      main = "action = 0, contact = 0")
+```
+
+```{r  introBayes14-fig15, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
+kA <- 1         # value of action
+kC <- 0         # value for contact
+kI <- 0:1       # values for intention to calculate over
+
+pdat <- data.frame(A = kA, 
+                   C = kC, 
+                   I = kI)
+s <- sim( m12.5, data = pdat )
+simplehist(s, xlab = "response", 
+           bty = "n", 
+      main = "action = 1, contact = 0")
+```
+
+
+
+```{r  introBayes14-fig16, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
+kA <- 0         # value of action
+kC <- 1         # value for contact
+kI <- 0:1       # values for intention to calculate over
+
+pdat <- data.frame(A = kA, 
+                   C = kC, 
+                   I = kI)
+s <- sim( m12.5, data = pdat )
+simplehist(s, xlab = "response", 
+           bty = "n", 
+      main = "action = 0, contact = 1")
+```
+
+
+
+## 到順序含義的多類別預測型變量 ordered categorical predictors
+
+
 
 
