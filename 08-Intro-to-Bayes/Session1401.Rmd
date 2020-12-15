@@ -1,3 +1,7 @@
+> It is important to get comfortable with waiting or a good approximation of the posterior, instead of using some terrible-but-fast approximation.
+> ~ Richard McElreath
+
+
 ## Beta 二項分佈模型 beta-binomial model 
 
 Beta 二項分佈模型其實是一系列的二項分佈模型的混合體 (a mixture of binomial distributions)。它假定的是每個二進制觀測值，都有自己的實際成功概率。該模型的目的是估計這些成功概率所構成的概率分佈 (estimate the distribution of probabilities of success)，而不是某一個特定的試驗的成功概率。
@@ -702,7 +706,7 @@ for( s in 1:50 ) {
 我們繪製了三個連續的圖\@ref(fig:introBayes14-fig11), \@ref(fig:introBayes14-fig12), \@ref(fig:introBayes14-fig13) 展示了不同的預測變量取值時，對結果選擇的預測。橫軸的 `intention` 分別取 0, 1 時，且當不同條件的 `action, contact` 固定不變時，對結果變量的影響。所以第一個圖\@ref(fig:introBayes14-fig11)，其實展示的就是不認同行動原則 (no action)，不認同接觸原則 (no contact)，也不認同意圖原則 (no intention) 人，如果變成了認同意圖原則的話，他們選擇的7個結果的變化。同理可以解釋其餘兩個圖的涵義。值得注意的是，第三張圖 \@ref(fig:introBayes14-fig13) 中其實展示的就是我們觀察到的 `contact` 和 `intention` 之間存在的交互作用。該圖也展示了不認同行動原則 (no action)，但是同時認同接觸原則 (contact = 1) 和意圖原則 (intention = 1) 的話，更多的人會傾向於選擇數值更低的結果，也就意味着這樣的受試對象其實更有可能在該試驗中選擇無視火車軋死更多的5人，也不會扣動變軌機制讓火車轉向去軋死一個另一条鐵軌上的人。另外一種直觀的方法是繪製不同預測變量情況下的結果概率柱狀圖。
 
 
-```{r  introBayes14-fig14, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
+```{r  introBayes14-fig14, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center'}
 kA <- 0         # value of action
 kC <- 0         # value for contact
 kI <- 0:1       # values for intention to calculate over
@@ -819,4 +823,99 @@ $$
 
 
 
+最後一行的先驗概率分佈設置使用的是狄雷克雷分佈 (Dirichlet Distribution)。狄雷克雷分佈其實是beta分佈的多項式版本，它其實就是應對多個選項的分佈問題，所有選項的選擇概率之和爲1。beta分佈的話，只有兩個選項，0和1。狄雷克雷分佈，就沒有選項的限制了，可以是無數多的可能性，但是所有可能性之和是1。我們用計算機模擬來展示一下先驗概率分佈是 $\text{Dirichlet}(2)$ 的採樣結果是怎樣的：
+
+
+```{r  introBayes14-fig17, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Simulated draws from a Dirichlet prior with alpha = {2,2,2,2,2,2,2}.  The highlighted vector is not special but just to show how much variation can exist in a single vector. This prior does not expect all the probabilities to be equal. Instead it expects that any of the probabilities could be bigger or smaller than the others.", fig.align='center'}
+library(gtools)
+set.seed(2020) # <- I never trust this can generate reliable results anymore
+delta <- rdirichlet(10, alpha = rep(2, 7))
+
+# we now have 10 vectors with 7 probabilities, each summing to 1.
+str(delta)
+
+plot(NULL, 
+     xlim = c(1, 7), 
+     ylim = c(0, 0.4), 
+     xlab = "index", 
+     bty = "n",
+     ylab = "probabilities"
+    )
+
+h <- 3
+for ( i in 1:nrow(delta) ) lines( 1:7, delta[i, ], 
+                                  type = "b", 
+                                  pch = ifelse(i == h, 16, 1), 
+                                  lwd = ifelse(i == h, 5, 1.5), 
+                                  col = ifelse(i == h, "black", 
+                                               col.alpha("black", 0.7)))
+```
+
+接下來我們就可以寫下模型代碼並運行了：
+
+
+```{r introBayes14-16, cache=TRUE, results="hide"}
+dat <- list(
+  R = d$response, 
+  action = d$action,
+  intention = d$intention, 
+  contact = d$contact,
+  E = as.integer(d$edu),  # turn education levels into index
+  alpha = rep(2, 7)       # prior for delta
+)
+
+m12.6 <- ulam(
+  alist(
+    R ~ ordered_logistic( phi, kappa ),
+    phi <- bE * sum( delta_j[1:E] ) + bA * action + bI * intention + bC * contact, 
+    kappa ~ normal( 0 , 1.5 ), 
+    c(bA, bI, bC, bE) ~ normal(0, 1), 
+    vector[8]: delta_j <<- append_row(0, delta), 
+    simplex[7]: delta ~ dirichlet( alpha )
+  ), data = dat, chains = 4, cores = 4
+)
+```
+
+
+其中，
+
+- `bE * sum( delta_j[1:E] )` 就是我們新加入的關於受教育程度的部分。但是由於向量 `delta_j` 有八個元素，第一個我們需要使之設定成爲 0，即 $\delta_0 =０$，其餘的 7 個元素則是需要模型運算的。
+- `vector[8]: delta_j <<- append_row(0, delta)` 的部分，其實是 Stan 代碼，它的涵義是告訴 Stan 要創建一個含有八個元素的向量 `vector[8]`，使之命名爲 `delta_j`，然後這個 `delta_j` 本身則是由 `append_row(0, delta)` 構成，它的第一個元素是 0, 之後的元素則是另外的 7 個服從狄雷克雷分佈的數據 `simplex[7]: delta ~ dirichlet( alpha )`。
+
+這個模型運行的時間會比較長，但是使用貝葉斯模型的你我都知道，有些事情是值得等待的。這就來看看模型運行的結果，先忽略掉 `kappa` 的估計結果：
+
+```{r introBayes14-17, cache=TRUE}
+precis( m12.6, depth = 2, omit = "kappa")
+```
+
+受教育程度這個變量對結果的選擇的影響整體來說是負的 `bE = 0.32`。也就是說，受教育程度最高的受試者，會傾向於不去拉動變軌的機制。然後我們來看這一系列的 `delta` 變量的運算結果。圖 \@ref(fig:introBayes14-fig18) 顯示，每個學歷的增加都多多少少地增加了學歷對結果的影響，但是其中第五層級的學歷 `SCol = Some college` 比起從高中畢業 `HSG = high school graduate` 的增加可以說微不足道。
+
+```{r  introBayes14-fig18, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="", fig.align='center'}
+delta_labels <- c("Elem", "MidSch", "SHS", "HSG", 
+                  "SCol", "Bach", "Mast", "Grad")
+pairs( m12.6, pars = "delta", labels = delta_labels)
+```
+
+最後我們再來跟傳統的方法比較一下這個改進之後的模型建立方法和傳統的把不同的類別做簡單的啞變量甚至是改成連續形變量的方法的結果。爲了能讓二者之間直接比較，我們需要把受教育程度這個變量改成連續型變量之後，把它標準化，使之成爲 0-1 之間的數字：
+
+```{r introBayes14-18, cache=TRUE, results="hide"}
+dat$edu_norm <- normalize( as.integer(d$edu) )
+epiDisplay::summ(dat$edu_norm, graph = FALSE)
+
+m12.7 <- ulam(
+  alist(
+    R ~ ordered_logistic(mu, cutpoints), 
+    mu <- bE * edu_norm + bA * action + bI * intention + bC * contact,
+    c(bA, bI, bC, bE) ~ normal(0, 1), 
+    cutpoints ~ normal(0, 1.5)
+  ), data = dat, chains = 4, cores = 4
+)
+```
+
+```{r  introBayes14-19, cache=TRUE}
+precis(m12.7)
+```
+
+
+你會看見，這時候給出的運算結果提示教育程度並不影響結果的選擇，或者影響幾乎可以忽略不計 `bE = -0.10, 89% CrI: -0.25, 0.04` 。但是很顯然這不是事實，因爲不同教育程度之間的跨度，不能認爲是一個線性的變化過程，不同的教育程度的提升之間對結果的影響並不是簡單的一成不變的 different levels have different incremental associations。
 
