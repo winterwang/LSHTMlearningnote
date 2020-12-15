@@ -826,7 +826,7 @@ $$
 最後一行的先驗概率分佈設置使用的是狄雷克雷分佈 (Dirichlet Distribution)。狄雷克雷分佈其實是beta分佈的多項式版本，它其實就是應對多個選項的分佈問題，所有選項的選擇概率之和爲1。beta分佈的話，只有兩個選項，0和1。狄雷克雷分佈，就沒有選項的限制了，可以是無數多的可能性，但是所有可能性之和是1。我們用計算機模擬來展示一下先驗概率分佈是 $\text{Dirichlet}(2)$ 的採樣結果是怎樣的：
 
 
-```{r  introBayes14-fig17, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Simulated draws from a Dirichlet prior with alpha = {2,2,2,2,2,2,2}.  The highlighted vector is not special but just to show how much variation can exist in a single vector. This prior does not expect all the probabilities to be equal. Instead it expects that any of the probabilities could be bigger or smaller than the others.", fig.align='center'}
+```{r  introBayes14-fig17, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Simulated draws from a Dirichlet prior with alpha = {2,2,2,2,2,2,2}.  The highlighted vector is not special but just to show how much variation can exist in a single vector. This prior does not expect all the probabilities to be equal. Instead it expects that any of the probabilities could be bigger or smaller than the others.", fig.align='center', message=FALSE}
 library(gtools)
 set.seed(2020) # <- I never trust this can generate reliable results anymore
 delta <- rdirichlet(10, alpha = rep(2, 7))
@@ -836,7 +836,7 @@ str(delta)
 
 plot(NULL, 
      xlim = c(1, 7), 
-     ylim = c(0, 0.4), 
+     ylim = c(0, 0.5), 
      xlab = "index", 
      bty = "n",
      ylab = "probabilities"
@@ -854,7 +854,7 @@ for ( i in 1:nrow(delta) ) lines( 1:7, delta[i, ],
 接下來我們就可以寫下模型代碼並運行了：
 
 
-```{r introBayes14-16, cache=TRUE, results="hide"}
+```{r introBayes14-16, cache=TRUE, results="hide", eval=FALSE}
 dat <- list(
   R = d$response, 
   action = d$action,
@@ -874,6 +874,8 @@ m12.6 <- ulam(
     simplex[7]: delta ~ dirichlet( alpha )
   ), data = dat, chains = 4, cores = 4
 )
+
+saveRDS(m12.6, "../Stanfits/m12_6.rds")
 ```
 
 
@@ -885,6 +887,7 @@ m12.6 <- ulam(
 這個模型運行的時間會比較長，但是使用貝葉斯模型的你我都知道，有些事情是值得等待的。這就來看看模型運行的結果，先忽略掉 `kappa` 的估計結果：
 
 ```{r introBayes14-17, cache=TRUE}
+m12.6 <- readRDS("../Stanfits/m12_6.rds")
 precis( m12.6, depth = 2, omit = "kappa")
 ```
 
@@ -898,7 +901,7 @@ pairs( m12.6, pars = "delta", labels = delta_labels)
 
 最後我們再來跟傳統的方法比較一下這個改進之後的模型建立方法和傳統的把不同的類別做簡單的啞變量甚至是改成連續形變量的方法的結果。爲了能讓二者之間直接比較，我們需要把受教育程度這個變量改成連續型變量之後，把它標準化，使之成爲 0-1 之間的數字：
 
-```{r introBayes14-18, cache=TRUE, results="hide"}
+```{r introBayes14-18, cache=TRUE, results="hide", eval=FALSE}
 dat$edu_norm <- normalize( as.integer(d$edu) )
 epiDisplay::summ(dat$edu_norm, graph = FALSE)
 
@@ -910,12 +913,16 @@ m12.7 <- ulam(
     cutpoints ~ normal(0, 1.5)
   ), data = dat, chains = 4, cores = 4
 )
+
+# saveRDS(m12.7, "Stanfits/m12_7.rds")
+
 ```
 
 ```{r  introBayes14-19, cache=TRUE}
+m12.7 <- readRDS("../Stanfits/m12_7.rds")
 precis(m12.7)
 ```
 
 
-你會看見，這時候給出的運算結果提示教育程度並不影響結果的選擇，或者影響幾乎可以忽略不計 `bE = -0.10, 89% CrI: -0.25, 0.04` 。但是很顯然這不是事實，因爲不同教育程度之間的跨度，不能認爲是一個線性的變化過程，不同的教育程度的提升之間對結果的影響並不是簡單的一成不變的 different levels have different incremental associations。
+你會看見，這時候給出的運算結果提示教育程度並不影響結果的選擇，或者影響幾乎可以忽略不計 `bE = -0.10, 89% CrI: -0.26, 0.04` 。但是很顯然這不是事實，因爲不同教育程度之間的跨度，不能認爲是一個線性的變化過程，不同的教育程度的提升之間對結果的影響並不是簡單的一成不變的 different levels have different incremental associations。
 
