@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-16" />
+<meta name="date" content="2020-12-17" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1845,7 +1845,116 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##  $ surv    : int  9 10 7 10 9 9 10 9 4 9 ...
 ##  $ propsurv: num  0.9 1 0.7 1 0.9 0.9 1 0.9 0.4 0.9 ...</code></pre>
 <p>現在我們只關心上述數據中生存下來的蝌蚪數量 <code>surv</code>，和開始時的蝌蚪數量 <code>density</code>。該數據包涵了很多的方差 variance。這些方差可能來自不同的實驗條件，或者未知的原因。所以，假設每一行數據中的10只蝌蚪，被放在了不同的水池裏，也就是說，上面的數據中我們有48個水池做重複的實驗。於是該數據就可以被理解爲是重複相似的實驗，但是每次的實驗又有一些微妙的不同。每一個水池，就是一個數據的層級 ‘cluster’。如果我們忽略這個層級的概念，我們可能就忽略掉了他們本身在實驗開始之時的基線生存狀況 (baseline survival) 本身可能存在的不確定性 (variation)。這個不確定性，或者叫基線生存狀況的方差可能掩蓋住一些重要的發現。如果我們允許每個水池擁有自己單獨的其實狀態，也就是函數的截距，但是假如僅僅使用啞變量的方法 dummy variable，那其實我們就掉進了進行性健忘症的陷阱裏。因爲雖然他們是不同的水池做的實驗，但是一個水池的結果其實是能提示或者告訴我們其他水池的實驗結果的一些信息的，而不是完全地相互獨立毫無關聯性。</p>
-<p>所以我們需要的其實是一個同時能夠允許每個水池的蝌蚪生存擁有自己的起始狀態，也就是函數的截距，且同時考慮到他們之間是有關聯性的，也就是這些截距之間是有一定的方差的。這樣的模型就被叫做隨機截距模型 (varing intercepts models)，這樣的模型是最簡單的多層回歸模型。</p>
+<p>所以我們需要的其實是一個同時能夠允許每個水池的蝌蚪生存擁有自己的起始狀態，也就是函數的截距，且同時考慮到他們之間是有關聯性的，也就是這些截距之間是有一定的方差的。這樣的模型就被叫做隨機截距模型 (varing intercepts models)，這樣的模型是最簡單的多層回歸模型。下面的模型用於預測每個不同的水池中實驗過後蝌蚪的生存狀況 (mortality) ：</p>
+<p><span class="math display">\[
+\begin{aligned}
+S_i  &amp; \sim \text{Binomial}(N_i, p_i) \\ 
+\text{logit}(p_i) &amp; = \alpha_{\text{TANK}[i]}  &amp; [\text{unique log-odds for each tank}] \\ 
+\alpha_j &amp; = \text{Normal}(0, 1.5)  &amp; \text{for } j = 1, \dots, 48
+\end{aligned}
+\]</span></p>
+<p>這個模型很容易可以編碼成爲 Stan 模型：</p>
+<div class="sourceCode" id="cb1012"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1012-1"><a href="-multilevel-models.html#cb1012-1" aria-hidden="true" tabindex="-1"></a><span class="co"># make the tank cluster variable</span></span>
+<span id="cb1012-2"><a href="-multilevel-models.html#cb1012-2" aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>tank <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(d)</span>
+<span id="cb1012-3"><a href="-multilevel-models.html#cb1012-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1012-4"><a href="-multilevel-models.html#cb1012-4" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb1012-5"><a href="-multilevel-models.html#cb1012-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">S =</span> d<span class="sc">$</span>surv, </span>
+<span id="cb1012-6"><a href="-multilevel-models.html#cb1012-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">N =</span> d<span class="sc">$</span>density, </span>
+<span id="cb1012-7"><a href="-multilevel-models.html#cb1012-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">tank =</span> d<span class="sc">$</span>tank</span>
+<span id="cb1012-8"><a href="-multilevel-models.html#cb1012-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1013"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1013-1"><a href="-multilevel-models.html#cb1013-1" aria-hidden="true" tabindex="-1"></a><span class="co"># approximate posterior</span></span>
+<span id="cb1013-2"><a href="-multilevel-models.html#cb1013-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1013-3"><a href="-multilevel-models.html#cb1013-3" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.1</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1013-4"><a href="-multilevel-models.html#cb1013-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1013-5"><a href="-multilevel-models.html#cb1013-5" aria-hidden="true" tabindex="-1"></a>    S <span class="sc">~</span> <span class="fu">dbinom</span>( N, p ), </span>
+<span id="cb1013-6"><a href="-multilevel-models.html#cb1013-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">logit</span>(p) <span class="ot">&lt;-</span> a[tank], </span>
+<span id="cb1013-7"><a href="-multilevel-models.html#cb1013-7" aria-hidden="true" tabindex="-1"></a>    a[tank] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">0</span>, <span class="fl">1.5</span>)</span>
+<span id="cb1013-8"><a href="-multilevel-models.html#cb1013-8" aria-hidden="true" tabindex="-1"></a>  ), <span class="at">data =</span> dat, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">log_lik =</span> <span class="cn">TRUE</span></span>
+<span id="cb1013-9"><a href="-multilevel-models.html#cb1013-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1013-10"><a href="-multilevel-models.html#cb1013-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1013-11"><a href="-multilevel-models.html#cb1013-11" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(m13<span class="fl">.1</span>, <span class="st">&quot;../Stanfits/m13_1.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1014"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1014-1"><a href="-multilevel-models.html#cb1014-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.1</span> <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../Stanfits/m13_1.rds&quot;</span>)</span>
+<span id="cb1014-2"><a href="-multilevel-models.html#cb1014-2" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(m13<span class="fl">.1</span>, <span class="at">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##                mean         sd         5.5%        94.5%     n_eff      Rhat4
+## a[1]   1.7134633692 0.74892687  0.560627663  2.961654150 4248.9329 0.99885035
+## a[2]   2.3944039810 0.89593239  1.075881990  3.903271047 3700.8344 0.99955760
+## a[3]   0.7689313847 0.62226017 -0.205059134  1.777157834 4525.1955 0.99871612
+## a[4]   2.3976578520 0.92100333  0.996634956  3.983790752 4679.0074 0.99863209
+## a[5]   1.7077989530 0.79483460  0.538710581  3.012241027 4472.0171 0.99912122
+## a[6]   1.7219331554 0.76706554  0.578246301  2.950066871 4249.3129 0.99882729
+## a[7]   2.3882541135 0.87199144  1.089572846  3.882254852 3952.9369 0.99835144
+## a[8]   1.7137428839 0.73686199  0.598680176  2.930063443 3441.8016 0.99834250
+## a[9]  -0.3961265379 0.62010734 -1.387618145  0.589550258 4291.9316 0.99843554
+## a[10]  1.7173952249 0.76722168  0.609356866  2.983317128 4194.7305 0.99869594
+## a[11]  0.7626594417 0.62759317 -0.206055367  1.827762973 5227.2942 0.99841655
+## a[12]  0.3826377864 0.62186658 -0.577989008  1.360512169 4819.8783 0.99879390
+## a[13]  0.7614422647 0.65876957 -0.249140526  1.796626518 4494.3447 0.99869166
+## a[14]  0.0090953025 0.63102269 -0.987531919  1.014331057 5082.4484 0.99841259
+## a[15]  1.7221612106 0.78615921  0.566436203  2.998470489 3393.1676 0.99903299
+## a[16]  1.7143407353 0.76244099  0.551287996  3.033067679 4206.2155 0.99887946
+## a[17]  2.5820017531 0.71532612  1.556789306  3.836580247 2900.0467 0.99917653
+## a[18]  2.1453231767 0.60034211  1.246145399  3.164072516 3566.0448 0.99953432
+## a[19]  1.8154783205 0.51553891  1.038858731  2.680703730 3790.1624 0.99880958
+## a[20]  3.1033886094 0.83120510  1.898061836  4.536845755 4497.2610 0.99846665
+## a[21]  2.1344191833 0.61633008  1.211694425  3.176042643 3955.3755 0.99882719
+## a[22]  2.1323231895 0.59717813  1.204521368  3.156283370 3615.6034 1.00085973
+## a[23]  2.1432578085 0.60705352  1.253622734  3.169681109 3449.7863 1.00013121
+## a[24]  1.5365128415 0.50834426  0.754760743  2.370502901 5233.8962 0.99924556
+## a[25] -1.0957197967 0.43980260 -1.820795666 -0.413491359 5004.5949 0.99844542
+## a[26]  0.0745473493 0.37792411 -0.524963252  0.692264277 5601.5518 0.99860977
+## a[27] -1.5490518709 0.49656169 -2.378520022 -0.780551008 3637.7231 0.99908472
+## a[28] -0.5447916417 0.41012171 -1.188921081  0.108118442 4822.2544 0.99865570
+## a[29]  0.0793028740 0.39116736 -0.545068621  0.684874742 5109.0966 0.99845044
+## a[30]  1.2974847331 0.46262122  0.591899662  2.041839991 3032.7252 0.99898527
+## a[31] -0.7267011091 0.42984975 -1.435621395 -0.047964732 4649.7958 0.99877632
+## a[32] -0.3995742432 0.41098353 -1.057587115  0.254062759 4239.4932 0.99900222
+## a[33]  2.8768533894 0.70250807  1.840011420  4.091018958 3335.3444 0.99886421
+## a[34]  2.4509882144 0.56887459  1.595732782  3.422514110 4947.1516 0.99881121
+## a[35]  2.4640081990 0.56506001  1.615298717  3.419912833 3789.9083 0.99837498
+## a[36]  1.9071857528 0.48093641  1.176911161  2.703150133 4358.4329 0.99837613
+## a[37]  1.9067901303 0.48187915  1.187580249  2.673374573 4373.5316 0.99873019
+## a[38]  3.3508832330 0.75246789  2.245169137  4.600420858 3748.3508 0.99823150
+## a[39]  2.4561060422 0.57695628  1.615158140  3.420256001 3906.0600 0.99900340
+## a[40]  2.1581925280 0.52451723  1.365525905  3.026339232 4764.8573 0.99917745
+## a[41] -1.8975577888 0.48459115 -2.719607478 -1.167186280 4764.2627 0.99955898
+## a[42] -0.6329319400 0.34500048 -1.196828433 -0.090756323 3728.3138 1.00001514
+## a[43] -0.5054571492 0.33372475 -1.045621859  0.025434395 5373.4795 0.99837831
+## a[44] -0.3939863905 0.34250616 -0.930824890  0.145303815 4038.2013 0.99899235
+## a[45]  0.5152088510 0.34441709 -0.027775256  1.056014633 5910.2922 0.99864514
+## a[46] -0.6352478341 0.36662442 -1.233123015 -0.049547233 6214.4489 0.99849324
+## a[47]  1.9034158216 0.47701468  1.178093699  2.663334756 4587.1963 0.99832333
+## a[48] -0.0571087193 0.33545714 -0.590231051  0.483863162 4516.9705 0.99919322</code></pre>
+<p>你會看見模型的運算結果是告訴我們 48 個池塘本身的基線生存狀況，也就是有 48 個截距。但是 <code>m13.1</code> 並不是一個多層回歸模型，下面的模型中關鍵部分的加入才使得這個模型變得更加有意義：</p>
+<p><span class="math display">\[
+\begin{aligned}
+S_i &amp; \sim \text{Binomial}(N_i, p_i)  \\ 
+\text{logit}(p_i) &amp; = \alpha_{\text{TANK}[i]} \\ 
+\alpha_j          &amp; \sim \text{Normal}(\color{blue}{\bar{\alpha}, \sigma}) &amp; [\text{adaptive prior}] \\ 
+\color{blue}{\bar{\alpha}} &amp; \color{blue}{\sim \text{Normal}(0, 1.5)}      &amp; [\text{prior for average tank}] \\
+\color{blue}{\sigma}       &amp; \color{blue}{\sim \text{Exponential}(1)}      &amp; [\text{prior for standard deviation of tanks}]
+\end{aligned}
+\]</span></p>
+<p>上述模型中值得注意的是，除了允許不同水池的基線生存狀況，也就是截距可以各不相同，我們還允許這些截距之間存在聯繫。也就是這些截距本身是服從正（常）態分佈的，該正（常）態分佈的均值是 <span class="math inline">\(\bar{\alpha}\)</span>，標準差是 <span class="math inline">\(\sigma\)</span>。這個截距服從的正（常）態分佈的參數，也有自己的先驗概率分佈。我們把這樣的參數叫做超參數 hyperparameters，他們是參數的參數，他們的先驗概率分佈被叫做超先驗 hyperpriors。我們可以用下面的代碼來運行這個模型：</p>
+<div class="sourceCode" id="cb1016"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1016-1"><a href="-multilevel-models.html#cb1016-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1016-2"><a href="-multilevel-models.html#cb1016-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">alist</span>(S <span class="sc">~</span> <span class="fu">dbinom</span>( N, p ), </span>
+<span id="cb1016-3"><a href="-multilevel-models.html#cb1016-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">logit</span>(p) <span class="ot">&lt;-</span> a[tank], </span>
+<span id="cb1016-4"><a href="-multilevel-models.html#cb1016-4" aria-hidden="true" tabindex="-1"></a>  a[tank] <span class="sc">~</span> <span class="fu">dnorm</span>(a_bar, sigma), </span>
+<span id="cb1016-5"><a href="-multilevel-models.html#cb1016-5" aria-hidden="true" tabindex="-1"></a>  a_bar <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb1016-6"><a href="-multilevel-models.html#cb1016-6" aria-hidden="true" tabindex="-1"></a>  sigma <span class="sc">~</span> <span class="fu">dexp</span>( <span class="dv">1</span> )</span>
+<span id="cb1016-7"><a href="-multilevel-models.html#cb1016-7" aria-hidden="true" tabindex="-1"></a>  ), <span class="at">data =</span> dat, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">log_lik =</span> <span class="cn">TRUE</span></span>
+<span id="cb1016-8"><a href="-multilevel-models.html#cb1016-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1016-9"><a href="-multilevel-models.html#cb1016-9" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(m13<span class="fl">.2</span>, <span class="st">&quot;../Stanfits/m13_2.rds&quot;</span>)</span></code></pre></div>
+<p>先比較一下這兩個模型之間的模型信息差別：</p>
+<div class="sourceCode" id="cb1017"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1017-1"><a href="-multilevel-models.html#cb1017-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../Stanfits/m13_2.rds&quot;</span>)</span>
+<span id="cb1017-2"><a href="-multilevel-models.html#cb1017-2" aria-hidden="true" tabindex="-1"></a><span class="fu">compare</span>( m13<span class="fl">.1</span>, m13<span class="fl">.2</span> )</span></code></pre></div>
+<pre><code>##            WAIC        SE     dWAIC       dSE     pWAIC        weight
+## m13.2 200.76725 7.2922107  0.000000        NA 21.160189 0.99908470718
+## m13.1 214.75795 4.5593900 13.990702 3.9198967 25.628152 0.00091529282</code></pre>
+<p>從兩個模型之間的比較結果來看，首先，<code>m13.2</code> 只有 21 個有效的參數，比起實際的參數個數 50 個少了很多。這是因爲對這些截距增加了超參數的限制之後，他們受到了更多的約束，更加趨近於彼此。我們可以看看這個模型給出的截距分佈的超參數的事後概率分佈估計：</p>
+<div class="sourceCode" id="cb1019"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1019-1"><a href="-multilevel-models.html#cb1019-1" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(m13<span class="fl">.2</span>, <span class="at">depth =</span> <span class="dv">2</span>, <span class="at">pars =</span> <span class="fu">c</span>(<span class="st">&quot;a_bar&quot;</span>, <span class="st">&quot;sigma&quot;</span>))</span></code></pre></div>
+<pre><code>##            mean         sd       5.5%     94.5%     n_eff     Rhat4
+## a_bar 1.3410146 0.25608124 0.93011433 1.7607384 3112.3448 0.9997583
+## sigma 1.6178319 0.21940895 1.29798859 1.9903347 1444.2642 1.0012222</code></pre>
 
 </div>
 </div>

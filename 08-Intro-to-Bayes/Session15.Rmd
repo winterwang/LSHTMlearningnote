@@ -14,5 +14,93 @@ str(d)
 
 現在我們只關心上述數據中生存下來的蝌蚪數量 `surv`，和開始時的蝌蚪數量 `density`。該數據包涵了很多的方差 variance。這些方差可能來自不同的實驗條件，或者未知的原因。所以，假設每一行數據中的10只蝌蚪，被放在了不同的水池裏，也就是說，上面的數據中我們有48個水池做重複的實驗。於是該數據就可以被理解爲是重複相似的實驗，但是每次的實驗又有一些微妙的不同。每一個水池，就是一個數據的層級 'cluster'。如果我們忽略這個層級的概念，我們可能就忽略掉了他們本身在實驗開始之時的基線生存狀況 (baseline survival) 本身可能存在的不確定性 (variation)。這個不確定性，或者叫基線生存狀況的方差可能掩蓋住一些重要的發現。如果我們允許每個水池擁有自己單獨的其實狀態，也就是函數的截距，但是假如僅僅使用啞變量的方法 dummy variable，那其實我們就掉進了進行性健忘症的陷阱裏。因爲雖然他們是不同的水池做的實驗，但是一個水池的結果其實是能提示或者告訴我們其他水池的實驗結果的一些信息的，而不是完全地相互獨立毫無關聯性。
 
-所以我們需要的其實是一個同時能夠允許每個水池的蝌蚪生存擁有自己的起始狀態，也就是函數的截距，且同時考慮到他們之間是有關聯性的，也就是這些截距之間是有一定的方差的。這樣的模型就被叫做隨機截距模型 (varing intercepts models)，這樣的模型是最簡單的多層回歸模型。
+所以我們需要的其實是一個同時能夠允許每個水池的蝌蚪生存擁有自己的起始狀態，也就是函數的截距，且同時考慮到他們之間是有關聯性的，也就是這些截距之間是有一定的方差的。這樣的模型就被叫做隨機截距模型 (varing intercepts models)，這樣的模型是最簡單的多層回歸模型。下面的模型用於預測每個不同的水池中實驗過後蝌蚪的生存狀況 (mortality) ：
+
+$$
+\begin{aligned}
+S_i  & \sim \text{Binomial}(N_i, p_i) \\ 
+\text{logit}(p_i) & = \alpha_{\text{TANK}[i]}  & [\text{unique log-odds for each tank}] \\ 
+\alpha_j & = \text{Normal}(0, 1.5)  & \text{for } j = 1, \dots, 48
+\end{aligned}
+$$
+
+這個模型很容易可以編碼成爲 Stan 模型：
+
+
+```{r introBayes15-02, cache=TRUE}
+# make the tank cluster variable
+d$tank <- 1:nrow(d)
+
+dat <- list(
+  S = d$surv, 
+  N = d$density, 
+  tank = d$tank
+)
+```
+
+```{r introBayes15-0201, cache=TRUE, results="hide", eval=FALSE}
+# approximate posterior
+
+m13.1 <- ulam(
+  alist(
+    S ~ dbinom( N, p ), 
+    logit(p) <- a[tank], 
+    a[tank] ~ dnorm(0, 1.5)
+  ), data = dat, chains = 4, log_lik = TRUE
+)
+
+saveRDS(m13.1, "../Stanfits/m13_1.rds")
+```
+
+
+
+```{r introBayes15-03, cache=TRUE}
+m13.1 <- readRDS("../Stanfits/m13_1.rds")
+precis(m13.1, depth = 2)
+```
+
+
+你會看見模型的運算結果是告訴我們 48 個池塘本身的基線生存狀況，也就是有 48 個截距。但是 `m13.1` 並不是一個多層回歸模型，下面的模型中關鍵部分的加入才使得這個模型變得更加有意義：
+
+
+$$
+\begin{aligned}
+S_i & \sim \text{Binomial}(N_i, p_i)  \\ 
+\text{logit}(p_i) & = \alpha_{\text{TANK}[i]} \\ 
+\alpha_j          & \sim \text{Normal}(\color{blue}{\bar{\alpha}, \sigma}) & [\text{adaptive prior}] \\ 
+\color{blue}{\bar{\alpha}} & \color{blue}{\sim \text{Normal}(0, 1.5)}      & [\text{prior for average tank}] \\
+\color{blue}{\sigma}       & \color{blue}{\sim \text{Exponential}(1)}      & [\text{prior for standard deviation of tanks}]
+\end{aligned}
+$$
+
+上述模型中值得注意的是，除了允許不同水池的基線生存狀況，也就是截距可以各不相同，我們還允許這些截距之間存在聯繫。也就是這些截距本身是服從正（常）態分佈的，該正（常）態分佈的均值是 $\bar{\alpha}$，標準差是 $\sigma$。這個截距服從的正（常）態分佈的參數，也有自己的先驗概率分佈。我們把這樣的參數叫做超參數 hyperparameters，他們是參數的參數，他們的先驗概率分佈被叫做超先驗 hyperpriors。我們可以用下面的代碼來運行這個模型：
+
+
+```{r introBayes15-04, cache=TRUE, results="hide", eval=FALSE}
+m13.2 <- ulam(
+  alist(S ~ dbinom( N, p ), 
+  logit(p) <- a[tank], 
+  a[tank] ~ dnorm(a_bar, sigma), 
+  a_bar ~ dnorm( 0, 1.5 ), 
+  sigma ~ dexp( 1 )
+  ), data = dat, chains = 4, log_lik = TRUE
+)
+saveRDS(m13.2, "../Stanfits/m13_2.rds")
+```
+
+
+先比較一下這兩個模型之間的模型信息差別：
+
+```{r introBayes15-05, cache=TRUE}
+m13.2 <- readRDS("../Stanfits/m13_2.rds")
+compare( m13.1, m13.2 )
+```
+
+從兩個模型之間的比較結果來看，首先，`m13.2` 只有 21 個有效的參數，比起實際的參數個數 50 個少了很多。這是因爲對這些截距增加了超參數的限制之後，他們受到了更多的約束，更加趨近於彼此。我們可以看看這個模型給出的截距分佈的超參數的事後概率分佈估計：
+
+
+```{r  introBayes15-06, cache=TRUE}
+precis(m13.2, depth = 2, pars = c("a_bar", "sigma"))
+```
+
 
