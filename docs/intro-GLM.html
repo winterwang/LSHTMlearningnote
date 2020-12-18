@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-17" />
+<meta name="date" content="2020-12-18" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1938,15 +1938,15 @@ Y \sim \text{exp}(\lambda) &amp; \rightarrow f(y) = \lambda \text{exp}(-y\lambda
 <h2><span class="header-section-number">57.4</span> 如何在 R 裏擬合 “GLM”</h2>
 <p>這裏討論用極大似然法擬合 “GLM” 模型的方法。前面一章節的複習也是在告訴我們，利用極大似然法簡單說就是找到模型參數，使得似然函數能夠取到極大值。對於線性迴歸來說， <span class="math inline">\(\text{MLE}\)</span> 可以用一個封閉式函數來計算；但是廣義線性迴歸模型則必須使用<a href="https://www.youtube.com/watch?v=JZIeX3eVyf4">迭代法計算 (iterative methods)</a>。</p>
 <p>在 R 裏面擬合廣義線性模型的命令及其格式是：</p>
-<div class="sourceCode" id="cb1023"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1023-1"><a href="intro-GLM.html#cb1023-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glm</span>(response variable <span class="sc">~</span> explanatory variables to form linear predictor, <span class="at">family=</span>name of <span class="fu">distribution</span>(<span class="at">link=</span>link <span class="cf">function</span>), <span class="at">data=</span>dataset)</span></code></pre></div>
+<div class="sourceCode" id="cb1024"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1024-1"><a href="intro-GLM.html#cb1024-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glm</span>(response variable <span class="sc">~</span> explanatory variables to form linear predictor, <span class="at">family=</span>name of <span class="fu">distribution</span>(<span class="at">link=</span>link <span class="cf">function</span>), <span class="at">data=</span>dataset)</span></code></pre></div>
 <p>Tips: See <code>help(glm)</code> for other modeling options. See <code>help(family)</code> for other allowable link functions for each family.</p>
 <p>下面的數據來自一個心理學臨牀實驗，比較的是和安慰劑組相比，注射嗎啡組，注射海洛因組對象的精神病檢測指數的前後變化。</p>
-<div class="sourceCode" id="cb1024"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1024-1"><a href="intro-GLM.html#cb1024-1" aria-hidden="true" tabindex="-1"></a>Mental <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;../backupfiles/MENTAL.DAT&quot;</span>, <span class="at">header =</span>  <span class="cn">FALSE</span>, <span class="at">sep =</span><span class="st">&quot;&quot;</span>, <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;Before&quot;</span>, <span class="st">&quot;After&quot;</span>))</span>
-<span id="cb1024-2"><a href="intro-GLM.html#cb1024-2" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">&quot;placebo&quot;</span></span>
-<span id="cb1024-3"><a href="intro-GLM.html#cb1024-3" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="st">&quot;morphine&quot;</span></span>
-<span id="cb1024-4"><a href="intro-GLM.html#cb1024-4" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="st">&quot;heroin&quot;</span></span>
-<span id="cb1024-5"><a href="intro-GLM.html#cb1024-5" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(Mental<span class="sc">$</span>treatment, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;placebo&quot;</span>, <span class="st">&quot;morphine&quot;</span>, <span class="st">&quot;heroin&quot;</span>))</span>
-<span id="cb1024-6"><a href="intro-GLM.html#cb1024-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(Mental)</span></code></pre></div>
+<div class="sourceCode" id="cb1025"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1025-1"><a href="intro-GLM.html#cb1025-1" aria-hidden="true" tabindex="-1"></a>Mental <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;../backupfiles/MENTAL.DAT&quot;</span>, <span class="at">header =</span>  <span class="cn">FALSE</span>, <span class="at">sep =</span><span class="st">&quot;&quot;</span>, <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;Before&quot;</span>, <span class="st">&quot;After&quot;</span>))</span>
+<span id="cb1025-2"><a href="intro-GLM.html#cb1025-2" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">&quot;placebo&quot;</span></span>
+<span id="cb1025-3"><a href="intro-GLM.html#cb1025-3" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="st">&quot;morphine&quot;</span></span>
+<span id="cb1025-4"><a href="intro-GLM.html#cb1025-4" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="st">&quot;heroin&quot;</span></span>
+<span id="cb1025-5"><a href="intro-GLM.html#cb1025-5" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(Mental<span class="sc">$</span>treatment, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;placebo&quot;</span>, <span class="st">&quot;morphine&quot;</span>, <span class="st">&quot;heroin&quot;</span>))</span>
+<span id="cb1025-6"><a href="intro-GLM.html#cb1025-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(Mental)</span></code></pre></div>
 <pre><code>##   treatment Before After
 ## 1   placebo      0     7
 ## 2   placebo      2     1
@@ -1956,8 +1956,8 @@ Y \sim \text{exp}(\lambda) &amp; \rightarrow f(y) = \lambda \text{exp}(-y\lambda
 ## 6   placebo      4     2</code></pre>
 <p>我們來比較一下簡單線性迴歸的代碼輸出結果和廣義線性迴歸代碼輸出結果是否一致：</p>
 <p>用 <code>lm</code> 命令，擬合因變量爲注射後精神病檢測指數，預測變量爲治療方式和注射錢精神病檢測指數，及兩者的交互作用項：</p>
-<div class="sourceCode" id="cb1026"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1026-1"><a href="intro-GLM.html#cb1026-1" aria-hidden="true" tabindex="-1"></a>Model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(After <span class="sc">~</span> treatment<span class="sc">*</span>Before, <span class="at">data =</span> Mental)</span>
-<span id="cb1026-2"><a href="intro-GLM.html#cb1026-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model1)</span></code></pre></div>
+<div class="sourceCode" id="cb1027"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1027-1"><a href="intro-GLM.html#cb1027-1" aria-hidden="true" tabindex="-1"></a>Model1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(After <span class="sc">~</span> treatment<span class="sc">*</span>Before, <span class="at">data =</span> Mental)</span>
+<span id="cb1027-2"><a href="intro-GLM.html#cb1027-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model1)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = After ~ treatment * Before, data = Mental)
@@ -1981,8 +1981,8 @@ Y \sim \text{exp}(\lambda) &amp; \rightarrow f(y) = \lambda \text{exp}(-y\lambda
 ## Multiple R-squared:  0.34418,    Adjusted R-squared:  0.29449 
 ## F-statistic: 6.9274 on 5 and 66 DF,  p-value: 0.000029744</code></pre>
 <p>同樣的模型也可以用 <code>glm</code> 命令擬合：</p>
-<div class="sourceCode" id="cb1028"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1028-1"><a href="intro-GLM.html#cb1028-1" aria-hidden="true" tabindex="-1"></a>Model2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(After <span class="sc">~</span> treatment<span class="sc">*</span>Before, <span class="at">family =</span> <span class="fu">gaussian</span>(<span class="at">link =</span> <span class="st">&quot;identity&quot;</span>), <span class="at">data =</span> Mental)</span>
-<span id="cb1028-2"><a href="intro-GLM.html#cb1028-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model2)</span></code></pre></div>
+<div class="sourceCode" id="cb1029"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1029-1"><a href="intro-GLM.html#cb1029-1" aria-hidden="true" tabindex="-1"></a>Model2 <span class="ot">&lt;-</span> <span class="fu">glm</span>(After <span class="sc">~</span> treatment<span class="sc">*</span>Before, <span class="at">family =</span> <span class="fu">gaussian</span>(<span class="at">link =</span> <span class="st">&quot;identity&quot;</span>), <span class="at">data =</span> Mental)</span>
+<span id="cb1029-2"><a href="intro-GLM.html#cb1029-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model2)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## glm(formula = After ~ treatment * Before, family = gaussian(link = &quot;identity&quot;), 
@@ -2044,7 +2044,7 @@ Log likelihood   =  -185.707106                   BIC             =   450.8676
        _cons |    1.97803   1.294069     1.53   0.126    -.5582981    4.514359
 ------------------------------------------------------------------------------</code></pre>
 <p>回到 R 來， 當儲存了一個 <code>Model2</code> 向量在 R 裏之後，你可以用下面的各種命令獲取你想要的各種有用的信息。</p>
-<div class="sourceCode" id="cb1031"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1031-1"><a href="intro-GLM.html#cb1031-1" aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(Model2) <span class="co"># 95% CI for the coefficients</span></span></code></pre></div>
+<div class="sourceCode" id="cb1032"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1032-1"><a href="intro-GLM.html#cb1032-1" aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(Model2) <span class="co"># 95% CI for the coefficients</span></span></code></pre></div>
 <pre><code>##                                2.5 %     97.5 %
 ## (Intercept)              -0.55829809 4.51435869
 ## treatmentmorphine        -4.64234925 2.21886536
@@ -2052,12 +2052,12 @@ Log likelihood   =  -185.707106                   BIC             =   450.8676
 ## Before                    0.23434829 0.95353050
 ## treatmentmorphine:Before -0.57627487 0.39722332
 ## treatmentheroin:Before   -0.80372697 0.17775605</code></pre>
-<div class="sourceCode" id="cb1033"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1033-1"><a href="intro-GLM.html#cb1033-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(<span class="fu">coef</span>(Model2)) <span class="co"># exponentiated coefficients</span></span></code></pre></div>
+<div class="sourceCode" id="cb1034"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1034-1"><a href="intro-GLM.html#cb1034-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(<span class="fu">coef</span>(Model2)) <span class="co"># exponentiated coefficients</span></span></code></pre></div>
 <pre><code>##              (Intercept)        treatmentmorphine          treatmentheroin                   Before 
 ##               7.22849102               0.29767829               0.23177968               1.81110905 
 ## treatmentmorphine:Before   treatmentheroin:Before 
 ##               0.91436470               0.73126055</code></pre>
-<div class="sourceCode" id="cb1035"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1035-1"><a href="intro-GLM.html#cb1035-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(<span class="fu">confint</span>(Model2)) <span class="co"># 95% CI for exponentiated coefficients</span></span></code></pre></div>
+<div class="sourceCode" id="cb1036"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1036-1"><a href="intro-GLM.html#cb1036-1" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(<span class="fu">confint</span>(Model2)) <span class="co"># 95% CI for exponentiated coefficients</span></span></code></pre></div>
 <pre><code>##                                 2.5 %     97.5 %
 ## (Intercept)              0.5721820406 91.3189836
 ## treatmentmorphine        0.0096350359  9.1968898
@@ -2065,17 +2065,17 @@ Log likelihood   =  -185.707106                   BIC             =   450.8676
 ## Before                   1.2640846824  2.5948546
 ## treatmentmorphine:Before 0.5619879499  1.4876881
 ## treatmentheroin:Before   0.4476574460  1.1945339</code></pre>
-<div class="sourceCode" id="cb1037"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1037-1"><a href="intro-GLM.html#cb1037-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">predict</span>(Model2, <span class="at">type=</span><span class="st">&quot;response&quot;</span>)) <span class="co"># predicted values</span></span></code></pre></div>
+<div class="sourceCode" id="cb1038"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1038-1"><a href="intro-GLM.html#cb1038-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">predict</span>(Model2, <span class="at">type=</span><span class="st">&quot;response&quot;</span>)) <span class="co"># predicted values</span></span></code></pre></div>
 <pre><code>##          1          2          3          4          5          6 
 ##  1.9780303  3.1659091 10.2931818  4.9477273  4.9477273  4.3537879</code></pre>
-<div class="sourceCode" id="cb1039"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1039-1"><a href="intro-GLM.html#cb1039-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">residuals</span>(Model2, <span class="at">type=</span><span class="st">&quot;deviance&quot;</span>)) <span class="co"># residuals</span></span></code></pre></div>
+<div class="sourceCode" id="cb1040"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1040-1"><a href="intro-GLM.html#cb1040-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">residuals</span>(Model2, <span class="at">type=</span><span class="st">&quot;deviance&quot;</span>)) <span class="co"># residuals</span></span></code></pre></div>
 <pre><code>##           1           2           3           4           5           6 
 ##  5.02196970 -2.16590909 -0.29318182  5.05227273  1.05227273 -2.35378788</code></pre>
 <div id="margins-命令" class="section level3" number="57.4.1">
 <h3><span class="header-section-number">57.4.1</span> <code>margins</code> 命令</h3>
 <p>一個在 STATA 裏面十分有用的用於<strong>預測</strong>的命令 <code>margins</code>，在 R 裏，下載了 <code>margins</code> 包以後就可以調用和 STATA 的 <code>margins</code> 類似的命令。</p>
 <p>假如我們用擬合的模型預測當注射前精神病檢測值分別是 0，6，12 分時三組之間的注射後精神病檢測值差，可以這樣求：</p>
-<div class="sourceCode" id="cb1041"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1041-1"><a href="intro-GLM.html#cb1041-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(<span class="fu">margins</span>(Model2, <span class="at">at =</span> <span class="fu">list</span>(<span class="at">Before=</span><span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">6</span>,<span class="dv">12</span>))))</span></code></pre></div>
+<div class="sourceCode" id="cb1042"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1042-1"><a href="intro-GLM.html#cb1042-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(<span class="fu">margins</span>(Model2, <span class="at">at =</span> <span class="fu">list</span>(<span class="at">Before=</span><span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">6</span>,<span class="dv">12</span>))))</span></code></pre></div>
 <pre><code>##             factor  Before     AME     SE       z      p   lower   upper
 ##             Before  0.0000  0.4598 0.1004  4.5797 0.0000  0.2630  0.6565
 ##             Before  6.0000  0.4598 0.1004  4.5797 0.0000  0.2630  0.6565
@@ -2124,9 +2124,9 @@ Note: dy/dx for factor levels is the discrete change from the base level.</code>
 <div id="ggplot2geom_smoothmethod-loess-命令" class="section level3" number="57.4.2">
 <h3><span class="header-section-number">57.4.2</span> <code>ggplot2::geom_smooth(method = "loess")</code> 命令</h3>
 <p>類似 STATA 作散點圖時的 <code>lowess</code> 命令，在 R 裏，你可以用 <code>ggplot2</code> 包裏自帶的 <code>geom_smooth(method = "loess")</code> 選項命令，給散點圖添加平滑曲線。把觀測數據中變量之間的關係視覺化，用於輔助判斷一個模型是否可以被擬合爲線性關係。全稱是 “locally weighted scatterplot smoothing”，縮寫成 “lowess/loess”。<a href="https://en.wikipedia.org/wiki/Local_regression">LOWESS 的原理</a>簡略說是，通過把預測變量分成幾個部分，分別在各個小區間內擬合迴歸各自的迴歸曲線，如此便可以將<strong>每個觀測值都以各自不同的加權值放入整個模型</strong>中，然而正如我們在簡單線性模型中提到過的，這樣的曲線更加擬合觀測數據，而不能說明觀測值來自的人羣中，兩個變量之間的關係。此方法的靈活性在於，你可以選擇平滑的程度，該平滑程度用 <code>bandwith</code>(STATA) 或者 <code>span</code>(R) 表示，取值範圍是 <span class="math inline">\(0 \sim 1\)</span> 之間的任意值，越靠近 <span class="math inline">\(1\)</span>，Lowess 曲線越接近簡單線性直線，越靠近 <span class="math inline">\(0\)</span>，那麼每個觀測點本身的權重越大，擬合的 Lowess 曲線越接近觀測數據本身。下圖 <a href="intro-GLM.html#fig:loess-smoother1">57.1</a> 提示，選用的平滑程度 <span class="math inline">\(= 0.8\)</span> 時，精神病測量分數在 (安慰劑組中) 實驗前後的關係接近線性關係。當我們降低平滑程度，Lowess 曲線接近觀測數據本身，其實是太接近觀測數據本身，反而無法提供太多的信息。</p>
-<div class="sourceCode" id="cb1044"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1044-1"><a href="intro-GLM.html#cb1044-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(Before, After)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb1044-2"><a href="intro-GLM.html#cb1044-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;loess&quot;</span>,  <span class="at">span =</span> <span class="fl">0.8</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb1044-3"><a href="intro-GLM.html#cb1044-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(treatment <span class="sc">~</span> .) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1045"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1045-1"><a href="intro-GLM.html#cb1045-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(Before, After)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb1045-2"><a href="intro-GLM.html#cb1045-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;loess&quot;</span>,  <span class="at">span =</span> <span class="fl">0.8</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb1045-3"><a href="intro-GLM.html#cb1045-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(treatment <span class="sc">~</span> .) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code></pre></div>
 <pre><code>## `geom_smooth()` using formula &#39;y ~ x&#39;</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:loess-smoother1"></span>
 <img src="bookdown_files/figure-html/loess-smoother1-1.png" alt="Lowess smoother, with bandwith/span set to 0.8, for the mental data" width="100%" />
@@ -2134,9 +2134,9 @@ Note: dy/dx for factor levels is the discrete change from the base level.</code>
 圖 57.1: Lowess smoother, with bandwith/span set to 0.8, for the mental data
 </p>
 </div>
-<div class="sourceCode" id="cb1046"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1046-1"><a href="intro-GLM.html#cb1046-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(Before, After)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb1046-2"><a href="intro-GLM.html#cb1046-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;loess&quot;</span>,  <span class="at">span =</span> <span class="fl">0.4</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb1046-3"><a href="intro-GLM.html#cb1046-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(treatment <span class="sc">~</span> .) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1047"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1047-1"><a href="intro-GLM.html#cb1047-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(Before, After)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb1047-2"><a href="intro-GLM.html#cb1047-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;loess&quot;</span>,  <span class="at">span =</span> <span class="fl">0.4</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb1047-3"><a href="intro-GLM.html#cb1047-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(treatment <span class="sc">~</span> .) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:loess-smoother2"></span>
 <img src="bookdown_files/figure-html/loess-smoother2-1.png" alt="Lowess smoother, with bandwith/span set to 0.4, for the mental data" width="100%" />
 <p class="caption">
@@ -2190,12 +2190,12 @@ S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}
 </ol>
 <div id="數據讀入-r作初步分析" class="section level4" number="57.5.2.1">
 <h4><span class="header-section-number">57.5.2.1</span> 數據讀入 R，作初步分析</h4>
-<div class="sourceCode" id="cb1047"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1047-1"><a href="intro-GLM.html#cb1047-1" aria-hidden="true" tabindex="-1"></a>Mental <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;../backupfiles/MENTAL.DAT&quot;</span>, <span class="at">header =</span>  <span class="cn">FALSE</span>, <span class="at">sep =</span><span class="st">&quot;&quot;</span>, <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;prement&quot;</span>, <span class="st">&quot;mentact&quot;</span>))</span>
-<span id="cb1047-2"><a href="intro-GLM.html#cb1047-2" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">&quot;placebo&quot;</span></span>
-<span id="cb1047-3"><a href="intro-GLM.html#cb1047-3" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="st">&quot;morphine&quot;</span></span>
-<span id="cb1047-4"><a href="intro-GLM.html#cb1047-4" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="st">&quot;heroin&quot;</span></span>
-<span id="cb1047-5"><a href="intro-GLM.html#cb1047-5" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(Mental<span class="sc">$</span>treatment, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;placebo&quot;</span>, <span class="st">&quot;morphine&quot;</span>, <span class="st">&quot;heroin&quot;</span>))</span>
-<span id="cb1047-6"><a href="intro-GLM.html#cb1047-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(Mental)</span></code></pre></div>
+<div class="sourceCode" id="cb1048"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1048-1"><a href="intro-GLM.html#cb1048-1" aria-hidden="true" tabindex="-1"></a>Mental <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;../backupfiles/MENTAL.DAT&quot;</span>, <span class="at">header =</span>  <span class="cn">FALSE</span>, <span class="at">sep =</span><span class="st">&quot;&quot;</span>, <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;prement&quot;</span>, <span class="st">&quot;mentact&quot;</span>))</span>
+<span id="cb1048-2"><a href="intro-GLM.html#cb1048-2" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">&quot;placebo&quot;</span></span>
+<span id="cb1048-3"><a href="intro-GLM.html#cb1048-3" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="st">&quot;morphine&quot;</span></span>
+<span id="cb1048-4"><a href="intro-GLM.html#cb1048-4" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment[Mental<span class="sc">$</span>treatment <span class="sc">==</span> <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="st">&quot;heroin&quot;</span></span>
+<span id="cb1048-5"><a href="intro-GLM.html#cb1048-5" aria-hidden="true" tabindex="-1"></a>Mental<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(Mental<span class="sc">$</span>treatment, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;placebo&quot;</span>, <span class="st">&quot;morphine&quot;</span>, <span class="st">&quot;heroin&quot;</span>))</span>
+<span id="cb1048-6"><a href="intro-GLM.html#cb1048-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(Mental)</span></code></pre></div>
 <pre><code>##   treatment prement mentact
 ## 1   placebo       0       7
 ## 2   placebo       2       1
@@ -2203,13 +2203,13 @@ S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}
 ## 4   placebo       5      10
 ## 5   placebo       5       6
 ## 6   placebo       4       2</code></pre>
-<div class="sourceCode" id="cb1049"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1049-1"><a href="intro-GLM.html#cb1049-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use hsitograms and plots to look at the distributions of the pre- and post- injection scores.</span></span>
-<span id="cb1049-2"><a href="intro-GLM.html#cb1049-2" aria-hidden="true" tabindex="-1"></a><span class="co"># with(Mental, hist(prement, breaks = 14, freq = F))</span></span>
-<span id="cb1049-3"><a href="intro-GLM.html#cb1049-3" aria-hidden="true" tabindex="-1"></a><span class="co"># qplot(prement, data = Mental, binwidth = 1)</span></span>
-<span id="cb1049-4"><a href="intro-GLM.html#cb1049-4" aria-hidden="true" tabindex="-1"></a>hist1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(<span class="at">x =</span> prement, <span class="at">y =</span> ..density..)) <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
-<span id="cb1049-5"><a href="intro-GLM.html#cb1049-5" aria-hidden="true" tabindex="-1"></a>hist2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(<span class="at">x =</span> mentact, <span class="at">y =</span> ..density..)) <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
-<span id="cb1049-6"><a href="intro-GLM.html#cb1049-6" aria-hidden="true" tabindex="-1"></a>Scatter <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(<span class="at">x =</span> prement, <span class="at">y =</span> mentact)) <span class="sc">+</span> <span class="fu">geom_point</span>()<span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
-<span id="cb1049-7"><a href="intro-GLM.html#cb1049-7" aria-hidden="true" tabindex="-1"></a><span class="fu">grid.arrange</span>(hist1, hist2, Scatter, <span class="at">ncol=</span><span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1050"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1050-1"><a href="intro-GLM.html#cb1050-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use hsitograms and plots to look at the distributions of the pre- and post- injection scores.</span></span>
+<span id="cb1050-2"><a href="intro-GLM.html#cb1050-2" aria-hidden="true" tabindex="-1"></a><span class="co"># with(Mental, hist(prement, breaks = 14, freq = F))</span></span>
+<span id="cb1050-3"><a href="intro-GLM.html#cb1050-3" aria-hidden="true" tabindex="-1"></a><span class="co"># qplot(prement, data = Mental, binwidth = 1)</span></span>
+<span id="cb1050-4"><a href="intro-GLM.html#cb1050-4" aria-hidden="true" tabindex="-1"></a>hist1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(<span class="at">x =</span> prement, <span class="at">y =</span> ..density..)) <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
+<span id="cb1050-5"><a href="intro-GLM.html#cb1050-5" aria-hidden="true" tabindex="-1"></a>hist2 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(<span class="at">x =</span> mentact, <span class="at">y =</span> ..density..)) <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
+<span id="cb1050-6"><a href="intro-GLM.html#cb1050-6" aria-hidden="true" tabindex="-1"></a>Scatter <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(<span class="at">x =</span> prement, <span class="at">y =</span> mentact)) <span class="sc">+</span> <span class="fu">geom_point</span>()<span class="sc">+</span> <span class="fu">theme_bw</span>()</span>
+<span id="cb1050-7"><a href="intro-GLM.html#cb1050-7" aria-hidden="true" tabindex="-1"></a><span class="fu">grid.arrange</span>(hist1, hist2, Scatter, <span class="at">ncol=</span><span class="dv">2</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:pre-score"></span>
 <img src="bookdown_files/figure-html/pre-score-1.png" alt="Histogram and plots " width="90%" />
 <p class="caption">
@@ -2217,9 +2217,9 @@ S^2=\left.-\frac{1}{\ell^{\prime\prime}(\theta)}\right\vert_{\theta=\hat{\theta}
 </p>
 </div>
 <p>可以看到柱狀圖暗示我們實驗前後的得分本身都不服從正態分布。但是這並不妨礙我們使用回歸模型來做推斷。畢竟，<strong>線性回歸模型只要求殘差服從正態分布</strong>。另外，散點圖提示實驗前後的得分之間可能呈正相關。</p>
-<div class="sourceCode" id="cb1050"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1050-1"><a href="intro-GLM.html#cb1050-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(prement, mentact)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb1050-2"><a href="intro-GLM.html#cb1050-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;loess&quot;</span>,  <span class="at">span =</span> <span class="fl">0.8</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb1050-3"><a href="intro-GLM.html#cb1050-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(treatment <span class="sc">~</span> .) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1051"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1051-1"><a href="intro-GLM.html#cb1051-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(Mental, <span class="fu">aes</span>(prement, mentact)) <span class="sc">+</span> <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb1051-2"><a href="intro-GLM.html#cb1051-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;loess&quot;</span>,  <span class="at">span =</span> <span class="fl">0.8</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb1051-3"><a href="intro-GLM.html#cb1051-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(treatment <span class="sc">~</span> .) <span class="sc">+</span> <span class="fu">theme_bw</span>()</span></code></pre></div>
 <pre><code>## `geom_smooth()` using formula &#39;y ~ x&#39;</code></pre>
 <div class="figure" style="text-align: center"><span id="fig:loess1"></span>
 <img src="bookdown_files/figure-html/loess1-1.png" alt="Lowess smoother, with bandwith/span set to 0.8, for the mental data" width="100%" />
@@ -2326,9 +2326,9 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 <li>Overall mean model</li>
 </ol>
 <p>鏈接方程部分: <span class="math inline">\(\eta_i = \beta_0\)</span></p>
-<div class="sourceCode" id="cb1052"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1052-1"><a href="intro-GLM.html#cb1052-1" aria-hidden="true" tabindex="-1"></a><span class="co">#1.  Overall mean model</span></span>
-<span id="cb1052-2"><a href="intro-GLM.html#cb1052-2" aria-hidden="true" tabindex="-1"></a>Overall <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> Mental)</span>
-<span id="cb1052-3"><a href="intro-GLM.html#cb1052-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Overall)</span></code></pre></div>
+<div class="sourceCode" id="cb1053"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1053-1"><a href="intro-GLM.html#cb1053-1" aria-hidden="true" tabindex="-1"></a><span class="co">#1.  Overall mean model</span></span>
+<span id="cb1053-2"><a href="intro-GLM.html#cb1053-2" aria-hidden="true" tabindex="-1"></a>Overall <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> Mental)</span>
+<span id="cb1053-3"><a href="intro-GLM.html#cb1053-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Overall)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = mentact ~ 1, data = Mental)
@@ -2344,7 +2344,7 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
 ## 
 ## Residual standard error: 3.968 on 71 degrees of freedom</code></pre>
-<div class="sourceCode" id="cb1054"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1054-1"><a href="intro-GLM.html#cb1054-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Overall)</span></code></pre></div>
+<div class="sourceCode" id="cb1055"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1055-1"><a href="intro-GLM.html#cb1055-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Overall)</span></code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Response: mentact
@@ -2354,9 +2354,9 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 <li>Drugs model</li>
 </ol>
 <p>鏈接方程部分: <span class="math inline">\(\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i}\)</span></p>
-<div class="sourceCode" id="cb1056"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1056-1"><a href="intro-GLM.html#cb1056-1" aria-hidden="true" tabindex="-1"></a><span class="co">#2.  Drugs model</span></span>
-<span id="cb1056-2"><a href="intro-GLM.html#cb1056-2" aria-hidden="true" tabindex="-1"></a>Drugs <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> treatment, <span class="at">data =</span> Mental)</span>
-<span id="cb1056-3"><a href="intro-GLM.html#cb1056-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Drugs)</span></code></pre></div>
+<div class="sourceCode" id="cb1057"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1057-1"><a href="intro-GLM.html#cb1057-1" aria-hidden="true" tabindex="-1"></a><span class="co">#2.  Drugs model</span></span>
+<span id="cb1057-2"><a href="intro-GLM.html#cb1057-2" aria-hidden="true" tabindex="-1"></a>Drugs <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> treatment, <span class="at">data =</span> Mental)</span>
+<span id="cb1057-3"><a href="intro-GLM.html#cb1057-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Drugs)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = mentact ~ treatment, data = Mental)
@@ -2376,7 +2376,7 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 ## Residual standard error: 3.7699 on 69 degrees of freedom
 ## Multiple R-squared:  0.12278,    Adjusted R-squared:  0.097351 
 ## F-statistic: 4.8287 on 2 and 69 DF,  p-value: 0.010896</code></pre>
-<div class="sourceCode" id="cb1058"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1058-1"><a href="intro-GLM.html#cb1058-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Drugs)</span></code></pre></div>
+<div class="sourceCode" id="cb1059"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1059-1"><a href="intro-GLM.html#cb1059-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Drugs)</span></code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Response: mentact
@@ -2389,9 +2389,9 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 <li>Pre-inj model</li>
 </ol>
 <p>鏈接方程部分 <span class="math inline">\(\eta_i = \beta_0 + \beta_3 z_i\)</span></p>
-<div class="sourceCode" id="cb1060"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1060-1"><a href="intro-GLM.html#cb1060-1" aria-hidden="true" tabindex="-1"></a><span class="co">#3.  Pre-inj model</span></span>
-<span id="cb1060-2"><a href="intro-GLM.html#cb1060-2" aria-hidden="true" tabindex="-1"></a>Pre_inj <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> prement, <span class="at">data =</span> Mental)</span>
-<span id="cb1060-3"><a href="intro-GLM.html#cb1060-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Pre_inj)</span></code></pre></div>
+<div class="sourceCode" id="cb1061"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1061-1"><a href="intro-GLM.html#cb1061-1" aria-hidden="true" tabindex="-1"></a><span class="co">#3.  Pre-inj model</span></span>
+<span id="cb1061-2"><a href="intro-GLM.html#cb1061-2" aria-hidden="true" tabindex="-1"></a>Pre_inj <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> prement, <span class="at">data =</span> Mental)</span>
+<span id="cb1061-3"><a href="intro-GLM.html#cb1061-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Pre_inj)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = mentact ~ prement, data = Mental)
@@ -2410,7 +2410,7 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 ## Residual standard error: 3.5543 on 70 degrees of freedom
 ## Multiple R-squared:  0.20892,    Adjusted R-squared:  0.19762 
 ## F-statistic: 18.487 on 1 and 70 DF,  p-value: 0.000054335</code></pre>
-<div class="sourceCode" id="cb1062"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1062-1"><a href="intro-GLM.html#cb1062-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Pre_inj)</span></code></pre></div>
+<div class="sourceCode" id="cb1063"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1063-1"><a href="intro-GLM.html#cb1063-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Pre_inj)</span></code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Response: mentact
@@ -2423,9 +2423,9 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 <li>Drugs + pre-inj model</li>
 </ol>
 <p>鏈接方程部分: <span class="math inline">\(\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3z_i\)</span></p>
-<div class="sourceCode" id="cb1064"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1064-1"><a href="intro-GLM.html#cb1064-1" aria-hidden="true" tabindex="-1"></a><span class="co">#4.  Drugs + Pre-inj model</span></span>
-<span id="cb1064-2"><a href="intro-GLM.html#cb1064-2" aria-hidden="true" tabindex="-1"></a>Drug_Pre_inj <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> treatment <span class="sc">+</span> prement, <span class="at">data =</span> Mental)</span>
-<span id="cb1064-3"><a href="intro-GLM.html#cb1064-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Drug_Pre_inj)</span></code></pre></div>
+<div class="sourceCode" id="cb1065"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1065-1"><a href="intro-GLM.html#cb1065-1" aria-hidden="true" tabindex="-1"></a><span class="co">#4.  Drugs + Pre-inj model</span></span>
+<span id="cb1065-2"><a href="intro-GLM.html#cb1065-2" aria-hidden="true" tabindex="-1"></a>Drug_Pre_inj <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> treatment <span class="sc">+</span> prement, <span class="at">data =</span> Mental)</span>
+<span id="cb1065-3"><a href="intro-GLM.html#cb1065-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Drug_Pre_inj)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = mentact ~ treatment + prement, data = Mental)
@@ -2446,7 +2446,7 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 ## Residual standard error: 3.3256 on 68 degrees of freedom
 ## Multiple R-squared:  0.32725,    Adjusted R-squared:  0.29757 
 ## F-statistic: 11.026 on 3 and 68 DF,  p-value: 5.4921e-06</code></pre>
-<div class="sourceCode" id="cb1066"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1066-1"><a href="intro-GLM.html#cb1066-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Drug_Pre_inj)</span></code></pre></div>
+<div class="sourceCode" id="cb1067"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1067-1"><a href="intro-GLM.html#cb1067-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Drug_Pre_inj)</span></code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Response: mentact
@@ -2460,9 +2460,9 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 <li>Drug + Pre-inj + Drug×Pre-inj</li>
 </ol>
 <p>鏈接方程部分: <span class="math inline">\(\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3 z_i + \beta_{13}x_{1i}z_i + \beta_{23}x_{2i}z_i\)</span></p>
-<div class="sourceCode" id="cb1068"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1068-1"><a href="intro-GLM.html#cb1068-1" aria-hidden="true" tabindex="-1"></a><span class="co">#5.  Drugs + Pre-inj + Drug×Pre-inj model</span></span>
-<span id="cb1068-2"><a href="intro-GLM.html#cb1068-2" aria-hidden="true" tabindex="-1"></a>Model5 <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> treatment<span class="sc">*</span>prement, <span class="at">data =</span> Mental)</span>
-<span id="cb1068-3"><a href="intro-GLM.html#cb1068-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model5)</span></code></pre></div>
+<div class="sourceCode" id="cb1069"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1069-1"><a href="intro-GLM.html#cb1069-1" aria-hidden="true" tabindex="-1"></a><span class="co">#5.  Drugs + Pre-inj + Drug×Pre-inj model</span></span>
+<span id="cb1069-2"><a href="intro-GLM.html#cb1069-2" aria-hidden="true" tabindex="-1"></a>Model5 <span class="ot">&lt;-</span> <span class="fu">lm</span>(mentact <span class="sc">~</span> treatment<span class="sc">*</span>prement, <span class="at">data =</span> Mental)</span>
+<span id="cb1069-3"><a href="intro-GLM.html#cb1069-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model5)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = mentact ~ treatment * prement, data = Mental)
@@ -2485,7 +2485,7 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 ## Residual standard error: 3.3329 on 66 degrees of freedom
 ## Multiple R-squared:  0.34418,    Adjusted R-squared:  0.29449 
 ## F-statistic: 6.9274 on 5 and 66 DF,  p-value: 0.000029744</code></pre>
-<div class="sourceCode" id="cb1070"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1070-1"><a href="intro-GLM.html#cb1070-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Model5)</span></code></pre></div>
+<div class="sourceCode" id="cb1071"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1071-1"><a href="intro-GLM.html#cb1071-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Model5)</span></code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Response: mentact
@@ -2501,10 +2501,10 @@ x_{2i} = \left\{ \begin{array}{ll}  0 \text{ placebo or morphine }\\  1 \text{ h
 F=\frac{(844.328 - 752.055)/(70-68)}{752.055/68} = 5.98
 \]</span></p>
 <p>自由度爲 (2,68) 時 F 統計量爲 5.98 的概率是:</p>
-<div class="sourceCode" id="cb1072"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1072-1"><a href="intro-GLM.html#cb1072-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span><span class="sc">-</span><span class="fu">pf</span>(<span class="fl">5.98</span>, <span class="dv">2</span>, <span class="dv">68</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1073"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1073-1"><a href="intro-GLM.html#cb1073-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span><span class="sc">-</span><span class="fu">pf</span>(<span class="fl">5.98</span>, <span class="dv">2</span>, <span class="dv">68</span>)</span></code></pre></div>
 <pre><code>## [1] 0.0040516165</code></pre>
 <p>所以我們有極強的證據證明這兩個模型顯著不同，且模型 4 擬合數據更好，且該證據也證明了注射藥物後三組之間的精神醫學指徵的分顯著不同。用 R 進行偏 F 檢驗如下，可見我們的計算是完全正確的:</p>
-<div class="sourceCode" id="cb1074"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1074-1"><a href="intro-GLM.html#cb1074-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Pre_inj, Drug_Pre_inj)</span></code></pre></div>
+<div class="sourceCode" id="cb1075"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1075-1"><a href="intro-GLM.html#cb1075-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Pre_inj, Drug_Pre_inj)</span></code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Model 1: mentact ~ prement
@@ -2515,7 +2515,7 @@ F=\frac{(844.328 - 752.055)/(70-68)}{752.055/68} = 5.98
 ## ---
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 <p>比較模型 4 和 5:</p>
-<div class="sourceCode" id="cb1076"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1076-1"><a href="intro-GLM.html#cb1076-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Drug_Pre_inj, Model5)</span></code></pre></div>
+<div class="sourceCode" id="cb1077"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1077-1"><a href="intro-GLM.html#cb1077-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(Drug_Pre_inj, Model5)</span></code></pre></div>
 <pre><code>## Analysis of Variance Table
 ## 
 ## Model 1: mentact ~ treatment + prement
@@ -2527,8 +2527,8 @@ F=\frac{(844.328 - 752.055)/(70-68)}{752.055/68} = 5.98
 </div>
 <div id="用-glm-命令擬合模型-4試比較其輸出結果和-lm-之間的異同" class="section level4" number="57.5.2.3">
 <h4><span class="header-section-number">57.5.2.3</span> 用 <code>glm</code> 命令擬合模型 4，試比較其輸出結果和 <code>lm</code> 之間的異同:</h4>
-<div class="sourceCode" id="cb1078"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1078-1"><a href="intro-GLM.html#cb1078-1" aria-hidden="true" tabindex="-1"></a>Model4 <span class="ot">&lt;-</span> <span class="fu">glm</span>(mentact <span class="sc">~</span> treatment <span class="sc">+</span> prement, <span class="at">family =</span> <span class="fu">gaussian</span>(<span class="at">link =</span> <span class="st">&quot;identity&quot;</span>), <span class="at">data =</span> Mental)</span>
-<span id="cb1078-2"><a href="intro-GLM.html#cb1078-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model4)</span></code></pre></div>
+<div class="sourceCode" id="cb1079"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1079-1"><a href="intro-GLM.html#cb1079-1" aria-hidden="true" tabindex="-1"></a>Model4 <span class="ot">&lt;-</span> <span class="fu">glm</span>(mentact <span class="sc">~</span> treatment <span class="sc">+</span> prement, <span class="at">family =</span> <span class="fu">gaussian</span>(<span class="at">link =</span> <span class="st">&quot;identity&quot;</span>), <span class="at">data =</span> Mental)</span>
+<span id="cb1079-2"><a href="intro-GLM.html#cb1079-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(Model4)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## glm(formula = mentact ~ treatment + prement, family = gaussian(link = &quot;identity&quot;), 
