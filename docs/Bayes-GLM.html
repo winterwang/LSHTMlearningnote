@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-18" />
+<meta name="date" content="2020-12-19" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2116,9 +2116,9 @@ model {
    PP.untreated &lt;- step(1 - OR.bednet[2]) # probability that using untreated bed net vs. no bed net reduces odds of malaria
    PP.treated &lt;- step(1- OR.bednet[4]) # probability that using treated vs. untreated bednet reduces odds of malaria
 }</code></pre>
-<div class="sourceCode" id="cb2317"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2317-1"><a href="Bayes-GLM.html#cb2317-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in the data: </span></span>
-<span id="cb2317-2"><a href="Bayes-GLM.html#cb2317-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2317-3"><a href="Bayes-GLM.html#cb2317-3" aria-hidden="true" tabindex="-1"></a>Data <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">paste</span>(bugpath, <span class="st">&quot;/backupfiles/malaria-data.txt&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;&quot;</span>), <span class="at">delim =</span> <span class="st">&quot; &quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2319"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2319-1"><a href="Bayes-GLM.html#cb2319-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in the data: </span></span>
+<span id="cb2319-2"><a href="Bayes-GLM.html#cb2319-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2319-3"><a href="Bayes-GLM.html#cb2319-3" aria-hidden="true" tabindex="-1"></a>Data <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">paste</span>(bugpath, <span class="st">&quot;/backupfiles/malaria-data.txt&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;&quot;</span>), <span class="at">delim =</span> <span class="st">&quot; &quot;</span>)</span></code></pre></div>
 <pre><code>## Parsed with column specification:
 ## cols(
 ##   POP = col_double(),
@@ -2129,51 +2129,51 @@ model {
 ##   PHC = col_character(),
 ##   VILLAGE = col_character()
 ## )</code></pre>
-<div class="sourceCode" id="cb2319"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2319-1"><a href="Bayes-GLM.html#cb2319-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data file for the model</span></span>
-<span id="cb2319-2"><a href="Bayes-GLM.html#cb2319-2" aria-hidden="true" tabindex="-1"></a>Dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2319-3"><a href="Bayes-GLM.html#cb2319-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">POP =</span> Data<span class="sc">$</span>POP, </span>
-<span id="cb2319-4"><a href="Bayes-GLM.html#cb2319-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">MALARIA =</span> Data<span class="sc">$</span>MALARIA, </span>
-<span id="cb2319-5"><a href="Bayes-GLM.html#cb2319-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">AGE =</span> Data<span class="sc">$</span>AGE, </span>
-<span id="cb2319-6"><a href="Bayes-GLM.html#cb2319-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">BEDNET =</span> Data<span class="sc">$</span>BEDNET,</span>
-<span id="cb2319-7"><a href="Bayes-GLM.html#cb2319-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">GREEN =</span> Data<span class="sc">$</span>GREEN,</span>
-<span id="cb2319-8"><a href="Bayes-GLM.html#cb2319-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">PHC =</span> Data<span class="sc">$</span>PHC</span>
-<span id="cb2319-9"><a href="Bayes-GLM.html#cb2319-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2319-10"><a href="Bayes-GLM.html#cb2319-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-11"><a href="Bayes-GLM.html#cb2319-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-12"><a href="Bayes-GLM.html#cb2319-12" aria-hidden="true" tabindex="-1"></a><span class="co"># initial values for the model</span></span>
-<span id="cb2319-13"><a href="Bayes-GLM.html#cb2319-13" aria-hidden="true" tabindex="-1"></a><span class="co"># the choice is arbitrary</span></span>
-<span id="cb2319-14"><a href="Bayes-GLM.html#cb2319-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-15"><a href="Bayes-GLM.html#cb2319-15" aria-hidden="true" tabindex="-1"></a>inits <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2319-16"><a href="Bayes-GLM.html#cb2319-16" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="sc">-</span><span class="fl">0.51</span>, </span>
-<span id="cb2319-17"><a href="Bayes-GLM.html#cb2319-17" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="sc">-</span><span class="fl">1.68</span>), </span>
-<span id="cb2319-18"><a href="Bayes-GLM.html#cb2319-18" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="sc">-</span><span class="fl">2.41</span>,  <span class="fl">0.68</span>), </span>
-<span id="cb2319-19"><a href="Bayes-GLM.html#cb2319-19" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.green =</span> <span class="sc">-</span><span class="fl">0.23</span>, </span>
-<span id="cb2319-20"><a href="Bayes-GLM.html#cb2319-20" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.phc =</span> <span class="fl">1.82</span>),</span>
-<span id="cb2319-21"><a href="Bayes-GLM.html#cb2319-21" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">1.29</span>, </span>
-<span id="cb2319-22"><a href="Bayes-GLM.html#cb2319-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.49</span>, <span class="sc">-</span><span class="fl">0.38</span>, <span class="sc">-</span><span class="fl">0.04</span>),  </span>
-<span id="cb2319-23"><a href="Bayes-GLM.html#cb2319-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">6.85</span>,  <span class="fl">0.09</span>), </span>
-<span id="cb2319-24"><a href="Bayes-GLM.html#cb2319-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.green =</span> <span class="fl">2.66</span>, </span>
-<span id="cb2319-25"><a href="Bayes-GLM.html#cb2319-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.phc =</span> <span class="sc">-</span><span class="fl">0.31</span>)</span>
-<span id="cb2319-26"><a href="Bayes-GLM.html#cb2319-26" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2319-27"><a href="Bayes-GLM.html#cb2319-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-28"><a href="Bayes-GLM.html#cb2319-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-29"><a href="Bayes-GLM.html#cb2319-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-30"><a href="Bayes-GLM.html#cb2319-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Set monitors on nodes of interest</span></span>
-<span id="cb2319-31"><a href="Bayes-GLM.html#cb2319-31" aria-hidden="true" tabindex="-1"></a>parameters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.bednet&quot;</span>, <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;PP.treated&quot;</span>, <span class="st">&quot;PP.untreated&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)</span>
-<span id="cb2319-32"><a href="Bayes-GLM.html#cb2319-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-33"><a href="Bayes-GLM.html#cb2319-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2319-34"><a href="Bayes-GLM.html#cb2319-34" aria-hidden="true" tabindex="-1"></a><span class="co"># fit the model in jags</span></span>
-<span id="cb2319-35"><a href="Bayes-GLM.html#cb2319-35" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
-<span id="cb2319-36"><a href="Bayes-GLM.html#cb2319-36" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
-<span id="cb2319-37"><a href="Bayes-GLM.html#cb2319-37" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-editted.txt&quot;</span>,</span>
-<span id="cb2319-38"><a href="Bayes-GLM.html#cb2319-38" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2319-39"><a href="Bayes-GLM.html#cb2319-39" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
-<span id="cb2319-40"><a href="Bayes-GLM.html#cb2319-40" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">1000</span>,</span>
-<span id="cb2319-41"><a href="Bayes-GLM.html#cb2319-41" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2319-42"><a href="Bayes-GLM.html#cb2319-42" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
-<span id="cb2319-43"><a href="Bayes-GLM.html#cb2319-43" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">0</span>,</span>
-<span id="cb2319-44"><a href="Bayes-GLM.html#cb2319-44" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2319-45"><a href="Bayes-GLM.html#cb2319-45" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2321"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2321-1"><a href="Bayes-GLM.html#cb2321-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data file for the model</span></span>
+<span id="cb2321-2"><a href="Bayes-GLM.html#cb2321-2" aria-hidden="true" tabindex="-1"></a>Dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2321-3"><a href="Bayes-GLM.html#cb2321-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">POP =</span> Data<span class="sc">$</span>POP, </span>
+<span id="cb2321-4"><a href="Bayes-GLM.html#cb2321-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">MALARIA =</span> Data<span class="sc">$</span>MALARIA, </span>
+<span id="cb2321-5"><a href="Bayes-GLM.html#cb2321-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">AGE =</span> Data<span class="sc">$</span>AGE, </span>
+<span id="cb2321-6"><a href="Bayes-GLM.html#cb2321-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">BEDNET =</span> Data<span class="sc">$</span>BEDNET,</span>
+<span id="cb2321-7"><a href="Bayes-GLM.html#cb2321-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">GREEN =</span> Data<span class="sc">$</span>GREEN,</span>
+<span id="cb2321-8"><a href="Bayes-GLM.html#cb2321-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">PHC =</span> Data<span class="sc">$</span>PHC</span>
+<span id="cb2321-9"><a href="Bayes-GLM.html#cb2321-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2321-10"><a href="Bayes-GLM.html#cb2321-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-11"><a href="Bayes-GLM.html#cb2321-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-12"><a href="Bayes-GLM.html#cb2321-12" aria-hidden="true" tabindex="-1"></a><span class="co"># initial values for the model</span></span>
+<span id="cb2321-13"><a href="Bayes-GLM.html#cb2321-13" aria-hidden="true" tabindex="-1"></a><span class="co"># the choice is arbitrary</span></span>
+<span id="cb2321-14"><a href="Bayes-GLM.html#cb2321-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-15"><a href="Bayes-GLM.html#cb2321-15" aria-hidden="true" tabindex="-1"></a>inits <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2321-16"><a href="Bayes-GLM.html#cb2321-16" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="sc">-</span><span class="fl">0.51</span>, </span>
+<span id="cb2321-17"><a href="Bayes-GLM.html#cb2321-17" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="sc">-</span><span class="fl">1.68</span>), </span>
+<span id="cb2321-18"><a href="Bayes-GLM.html#cb2321-18" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="sc">-</span><span class="fl">2.41</span>,  <span class="fl">0.68</span>), </span>
+<span id="cb2321-19"><a href="Bayes-GLM.html#cb2321-19" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.green =</span> <span class="sc">-</span><span class="fl">0.23</span>, </span>
+<span id="cb2321-20"><a href="Bayes-GLM.html#cb2321-20" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.phc =</span> <span class="fl">1.82</span>),</span>
+<span id="cb2321-21"><a href="Bayes-GLM.html#cb2321-21" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">1.29</span>, </span>
+<span id="cb2321-22"><a href="Bayes-GLM.html#cb2321-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.49</span>, <span class="sc">-</span><span class="fl">0.38</span>, <span class="sc">-</span><span class="fl">0.04</span>),  </span>
+<span id="cb2321-23"><a href="Bayes-GLM.html#cb2321-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">6.85</span>,  <span class="fl">0.09</span>), </span>
+<span id="cb2321-24"><a href="Bayes-GLM.html#cb2321-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.green =</span> <span class="fl">2.66</span>, </span>
+<span id="cb2321-25"><a href="Bayes-GLM.html#cb2321-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.phc =</span> <span class="sc">-</span><span class="fl">0.31</span>)</span>
+<span id="cb2321-26"><a href="Bayes-GLM.html#cb2321-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2321-27"><a href="Bayes-GLM.html#cb2321-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-28"><a href="Bayes-GLM.html#cb2321-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-29"><a href="Bayes-GLM.html#cb2321-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-30"><a href="Bayes-GLM.html#cb2321-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Set monitors on nodes of interest</span></span>
+<span id="cb2321-31"><a href="Bayes-GLM.html#cb2321-31" aria-hidden="true" tabindex="-1"></a>parameters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.bednet&quot;</span>, <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;PP.treated&quot;</span>, <span class="st">&quot;PP.untreated&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)</span>
+<span id="cb2321-32"><a href="Bayes-GLM.html#cb2321-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-33"><a href="Bayes-GLM.html#cb2321-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2321-34"><a href="Bayes-GLM.html#cb2321-34" aria-hidden="true" tabindex="-1"></a><span class="co"># fit the model in jags</span></span>
+<span id="cb2321-35"><a href="Bayes-GLM.html#cb2321-35" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
+<span id="cb2321-36"><a href="Bayes-GLM.html#cb2321-36" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
+<span id="cb2321-37"><a href="Bayes-GLM.html#cb2321-37" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-editted.txt&quot;</span>,</span>
+<span id="cb2321-38"><a href="Bayes-GLM.html#cb2321-38" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2321-39"><a href="Bayes-GLM.html#cb2321-39" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
+<span id="cb2321-40"><a href="Bayes-GLM.html#cb2321-40" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">1000</span>,</span>
+<span id="cb2321-41"><a href="Bayes-GLM.html#cb2321-41" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2321-42"><a href="Bayes-GLM.html#cb2321-42" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
+<span id="cb2321-43"><a href="Bayes-GLM.html#cb2321-43" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">0</span>,</span>
+<span id="cb2321-44"><a href="Bayes-GLM.html#cb2321-44" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2321-45"><a href="Bayes-GLM.html#cb2321-45" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2183,14 +2183,14 @@ model {
 ##    Total graph size: 1037
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2321"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2321-1"><a href="Bayes-GLM.html#cb2321-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the trace plot</span></span>
-<span id="cb2321-2"><a href="Bayes-GLM.html#cb2321-2" aria-hidden="true" tabindex="-1"></a>Simulated <span class="ot">&lt;-</span> coda<span class="sc">::</span><span class="fu">as.mcmc</span>(jagsModel)</span>
-<span id="cb2321-3"><a href="Bayes-GLM.html#cb2321-3" aria-hidden="true" tabindex="-1"></a>ggSample <span class="ot">&lt;-</span> <span class="fu">ggs</span>(Simulated)</span>
-<span id="cb2321-4"><a href="Bayes-GLM.html#cb2321-4" aria-hidden="true" tabindex="-1"></a>ggSample <span class="sc">%&gt;%</span> </span>
-<span id="cb2321-5"><a href="Bayes-GLM.html#cb2321-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Parameter <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
-<span id="cb2321-6"><a href="Bayes-GLM.html#cb2321-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.bednet[2]&quot;</span>, <span class="st">&quot;OR.bednet[3]&quot;</span>, <span class="st">&quot;OR.bednet[4]&quot;</span>,</span>
-<span id="cb2321-7"><a href="Bayes-GLM.html#cb2321-7" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb2321-8"><a href="Bayes-GLM.html#cb2321-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggs_traceplot</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb2323"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2323-1"><a href="Bayes-GLM.html#cb2323-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the trace plot</span></span>
+<span id="cb2323-2"><a href="Bayes-GLM.html#cb2323-2" aria-hidden="true" tabindex="-1"></a>Simulated <span class="ot">&lt;-</span> coda<span class="sc">::</span><span class="fu">as.mcmc</span>(jagsModel)</span>
+<span id="cb2323-3"><a href="Bayes-GLM.html#cb2323-3" aria-hidden="true" tabindex="-1"></a>ggSample <span class="ot">&lt;-</span> <span class="fu">ggs</span>(Simulated)</span>
+<span id="cb2323-4"><a href="Bayes-GLM.html#cb2323-4" aria-hidden="true" tabindex="-1"></a>ggSample <span class="sc">%&gt;%</span> </span>
+<span id="cb2323-5"><a href="Bayes-GLM.html#cb2323-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Parameter <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
+<span id="cb2323-6"><a href="Bayes-GLM.html#cb2323-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.bednet[2]&quot;</span>, <span class="st">&quot;OR.bednet[3]&quot;</span>, <span class="st">&quot;OR.bednet[4]&quot;</span>,</span>
+<span id="cb2323-7"><a href="Bayes-GLM.html#cb2323-7" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb2323-8"><a href="Bayes-GLM.html#cb2323-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggs_traceplot</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianPractical0701"></span>
 <img src="bookdown_files/figure-html/BayesianPractical0701-1.png" alt="Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
 <p class="caption">
@@ -2229,17 +2229,17 @@ model {
 </p>
 </div>
 <p>基本可以認爲刨除前1000次取樣 (burn-in) 可以達到收斂。</p>
-<div class="sourceCode" id="cb2323"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2323-1"><a href="Bayes-GLM.html#cb2323-1" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
-<span id="cb2323-2"><a href="Bayes-GLM.html#cb2323-2" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
-<span id="cb2323-3"><a href="Bayes-GLM.html#cb2323-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-editted.txt&quot;</span>,</span>
-<span id="cb2323-4"><a href="Bayes-GLM.html#cb2323-4" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2323-5"><a href="Bayes-GLM.html#cb2323-5" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
-<span id="cb2323-6"><a href="Bayes-GLM.html#cb2323-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">26000</span>,</span>
-<span id="cb2323-7"><a href="Bayes-GLM.html#cb2323-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2323-8"><a href="Bayes-GLM.html#cb2323-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
-<span id="cb2323-9"><a href="Bayes-GLM.html#cb2323-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">1000</span>,</span>
-<span id="cb2323-10"><a href="Bayes-GLM.html#cb2323-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2323-11"><a href="Bayes-GLM.html#cb2323-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2325"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2325-1"><a href="Bayes-GLM.html#cb2325-1" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
+<span id="cb2325-2"><a href="Bayes-GLM.html#cb2325-2" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
+<span id="cb2325-3"><a href="Bayes-GLM.html#cb2325-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-editted.txt&quot;</span>,</span>
+<span id="cb2325-4"><a href="Bayes-GLM.html#cb2325-4" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2325-5"><a href="Bayes-GLM.html#cb2325-5" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
+<span id="cb2325-6"><a href="Bayes-GLM.html#cb2325-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">26000</span>,</span>
+<span id="cb2325-7"><a href="Bayes-GLM.html#cb2325-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2325-8"><a href="Bayes-GLM.html#cb2325-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
+<span id="cb2325-9"><a href="Bayes-GLM.html#cb2325-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">1000</span>,</span>
+<span id="cb2325-10"><a href="Bayes-GLM.html#cb2325-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2325-11"><a href="Bayes-GLM.html#cb2325-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2249,7 +2249,7 @@ model {
 ##    Total graph size: 1037
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2325"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2325-1"><a href="Bayes-GLM.html#cb2325-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(jagsModel)</span></code></pre></div>
+<div class="sourceCode" id="cb2327"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2327-1"><a href="Bayes-GLM.html#cb2327-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(jagsModel)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/wangcc.me/Downloads/LSHTMlearningnote/backupfiles/malaria-model-editted.txt&quot;, fit using jags,
 ##  2 chains, each with 26000 iterations (first 1000 discarded)
 ##  n.sims = 50000 iterations saved
@@ -2300,44 +2300,44 @@ model {
    OR.phc &lt;- exp(beta.phc)      # OR of malaria sfor children living in villages belonging to the primary health care system versus children living in villages not in the health care system 
    logit(baseline.prev) &lt;- alpha # baseline prevalence of malaria in baseline group (i.e. child in age group 1, sleeps without bednet, and lives in a village with average greenness index and not in the health care system) 
 }</code></pre>
-<div class="sourceCode" id="cb2328"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2328-1"><a href="Bayes-GLM.html#cb2328-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data file for the model</span></span>
-<span id="cb2328-2"><a href="Bayes-GLM.html#cb2328-2" aria-hidden="true" tabindex="-1"></a>Dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2328-3"><a href="Bayes-GLM.html#cb2328-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">POP =</span> Data<span class="sc">$</span>POP, </span>
-<span id="cb2328-4"><a href="Bayes-GLM.html#cb2328-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">MALARIA =</span> Data<span class="sc">$</span>MALARIA, </span>
-<span id="cb2328-5"><a href="Bayes-GLM.html#cb2328-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">AGE =</span> Data<span class="sc">$</span>AGE, </span>
-<span id="cb2328-6"><a href="Bayes-GLM.html#cb2328-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">PHC =</span> Data<span class="sc">$</span>PHC</span>
-<span id="cb2328-7"><a href="Bayes-GLM.html#cb2328-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2328-8"><a href="Bayes-GLM.html#cb2328-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2328-9"><a href="Bayes-GLM.html#cb2328-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2328-10"><a href="Bayes-GLM.html#cb2328-10" aria-hidden="true" tabindex="-1"></a><span class="co"># initial values for the model</span></span>
-<span id="cb2328-11"><a href="Bayes-GLM.html#cb2328-11" aria-hidden="true" tabindex="-1"></a><span class="co"># the choice is arbitrary</span></span>
-<span id="cb2328-12"><a href="Bayes-GLM.html#cb2328-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2328-13"><a href="Bayes-GLM.html#cb2328-13" aria-hidden="true" tabindex="-1"></a>inits <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2328-14"><a href="Bayes-GLM.html#cb2328-14" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="sc">-</span><span class="fl">0.51</span>, </span>
-<span id="cb2328-15"><a href="Bayes-GLM.html#cb2328-15" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="sc">-</span><span class="fl">1.68</span>), </span>
-<span id="cb2328-16"><a href="Bayes-GLM.html#cb2328-16" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.phc =</span> <span class="fl">1.82</span>),</span>
-<span id="cb2328-17"><a href="Bayes-GLM.html#cb2328-17" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">1.29</span>, </span>
-<span id="cb2328-18"><a href="Bayes-GLM.html#cb2328-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.49</span>, <span class="sc">-</span><span class="fl">0.38</span>, <span class="sc">-</span><span class="fl">0.04</span>),  </span>
-<span id="cb2328-19"><a href="Bayes-GLM.html#cb2328-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.phc =</span> <span class="sc">-</span><span class="fl">0.31</span>)</span>
-<span id="cb2328-20"><a href="Bayes-GLM.html#cb2328-20" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2328-21"><a href="Bayes-GLM.html#cb2328-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2328-22"><a href="Bayes-GLM.html#cb2328-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2328-23"><a href="Bayes-GLM.html#cb2328-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2328-24"><a href="Bayes-GLM.html#cb2328-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Set monitors on nodes of interest</span></span>
-<span id="cb2328-25"><a href="Bayes-GLM.html#cb2328-25" aria-hidden="true" tabindex="-1"></a>parameters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)</span>
-<span id="cb2328-26"><a href="Bayes-GLM.html#cb2328-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2328-27"><a href="Bayes-GLM.html#cb2328-27" aria-hidden="true" tabindex="-1"></a><span class="co"># fit the model in jags</span></span>
-<span id="cb2328-28"><a href="Bayes-GLM.html#cb2328-28" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
-<span id="cb2328-29"><a href="Bayes-GLM.html#cb2328-29" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
-<span id="cb2328-30"><a href="Bayes-GLM.html#cb2328-30" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-dropped.txt&quot;</span>,</span>
-<span id="cb2328-31"><a href="Bayes-GLM.html#cb2328-31" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2328-32"><a href="Bayes-GLM.html#cb2328-32" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
-<span id="cb2328-33"><a href="Bayes-GLM.html#cb2328-33" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">1000</span>,</span>
-<span id="cb2328-34"><a href="Bayes-GLM.html#cb2328-34" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2328-35"><a href="Bayes-GLM.html#cb2328-35" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
-<span id="cb2328-36"><a href="Bayes-GLM.html#cb2328-36" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">0</span>,</span>
-<span id="cb2328-37"><a href="Bayes-GLM.html#cb2328-37" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2328-38"><a href="Bayes-GLM.html#cb2328-38" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2330"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2330-1"><a href="Bayes-GLM.html#cb2330-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data file for the model</span></span>
+<span id="cb2330-2"><a href="Bayes-GLM.html#cb2330-2" aria-hidden="true" tabindex="-1"></a>Dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2330-3"><a href="Bayes-GLM.html#cb2330-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">POP =</span> Data<span class="sc">$</span>POP, </span>
+<span id="cb2330-4"><a href="Bayes-GLM.html#cb2330-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">MALARIA =</span> Data<span class="sc">$</span>MALARIA, </span>
+<span id="cb2330-5"><a href="Bayes-GLM.html#cb2330-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">AGE =</span> Data<span class="sc">$</span>AGE, </span>
+<span id="cb2330-6"><a href="Bayes-GLM.html#cb2330-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">PHC =</span> Data<span class="sc">$</span>PHC</span>
+<span id="cb2330-7"><a href="Bayes-GLM.html#cb2330-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2330-8"><a href="Bayes-GLM.html#cb2330-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2330-9"><a href="Bayes-GLM.html#cb2330-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2330-10"><a href="Bayes-GLM.html#cb2330-10" aria-hidden="true" tabindex="-1"></a><span class="co"># initial values for the model</span></span>
+<span id="cb2330-11"><a href="Bayes-GLM.html#cb2330-11" aria-hidden="true" tabindex="-1"></a><span class="co"># the choice is arbitrary</span></span>
+<span id="cb2330-12"><a href="Bayes-GLM.html#cb2330-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2330-13"><a href="Bayes-GLM.html#cb2330-13" aria-hidden="true" tabindex="-1"></a>inits <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2330-14"><a href="Bayes-GLM.html#cb2330-14" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="sc">-</span><span class="fl">0.51</span>, </span>
+<span id="cb2330-15"><a href="Bayes-GLM.html#cb2330-15" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="sc">-</span><span class="fl">1.68</span>), </span>
+<span id="cb2330-16"><a href="Bayes-GLM.html#cb2330-16" aria-hidden="true" tabindex="-1"></a>     <span class="at">beta.phc =</span> <span class="fl">1.82</span>),</span>
+<span id="cb2330-17"><a href="Bayes-GLM.html#cb2330-17" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">1.29</span>, </span>
+<span id="cb2330-18"><a href="Bayes-GLM.html#cb2330-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.49</span>, <span class="sc">-</span><span class="fl">0.38</span>, <span class="sc">-</span><span class="fl">0.04</span>),  </span>
+<span id="cb2330-19"><a href="Bayes-GLM.html#cb2330-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.phc =</span> <span class="sc">-</span><span class="fl">0.31</span>)</span>
+<span id="cb2330-20"><a href="Bayes-GLM.html#cb2330-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2330-21"><a href="Bayes-GLM.html#cb2330-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2330-22"><a href="Bayes-GLM.html#cb2330-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2330-23"><a href="Bayes-GLM.html#cb2330-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2330-24"><a href="Bayes-GLM.html#cb2330-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Set monitors on nodes of interest</span></span>
+<span id="cb2330-25"><a href="Bayes-GLM.html#cb2330-25" aria-hidden="true" tabindex="-1"></a>parameters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>)</span>
+<span id="cb2330-26"><a href="Bayes-GLM.html#cb2330-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2330-27"><a href="Bayes-GLM.html#cb2330-27" aria-hidden="true" tabindex="-1"></a><span class="co"># fit the model in jags</span></span>
+<span id="cb2330-28"><a href="Bayes-GLM.html#cb2330-28" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
+<span id="cb2330-29"><a href="Bayes-GLM.html#cb2330-29" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
+<span id="cb2330-30"><a href="Bayes-GLM.html#cb2330-30" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-dropped.txt&quot;</span>,</span>
+<span id="cb2330-31"><a href="Bayes-GLM.html#cb2330-31" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2330-32"><a href="Bayes-GLM.html#cb2330-32" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
+<span id="cb2330-33"><a href="Bayes-GLM.html#cb2330-33" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">1000</span>,</span>
+<span id="cb2330-34"><a href="Bayes-GLM.html#cb2330-34" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2330-35"><a href="Bayes-GLM.html#cb2330-35" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
+<span id="cb2330-36"><a href="Bayes-GLM.html#cb2330-36" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">0</span>,</span>
+<span id="cb2330-37"><a href="Bayes-GLM.html#cb2330-37" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2330-38"><a href="Bayes-GLM.html#cb2330-38" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2347,13 +2347,13 @@ model {
 ##    Total graph size: 626
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2330"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2330-1"><a href="Bayes-GLM.html#cb2330-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the trace plot</span></span>
-<span id="cb2330-2"><a href="Bayes-GLM.html#cb2330-2" aria-hidden="true" tabindex="-1"></a>Simulated <span class="ot">&lt;-</span> coda<span class="sc">::</span><span class="fu">as.mcmc</span>(jagsModel)</span>
-<span id="cb2330-3"><a href="Bayes-GLM.html#cb2330-3" aria-hidden="true" tabindex="-1"></a>ggSample <span class="ot">&lt;-</span> <span class="fu">ggs</span>(Simulated)</span>
-<span id="cb2330-4"><a href="Bayes-GLM.html#cb2330-4" aria-hidden="true" tabindex="-1"></a>ggSample <span class="sc">%&gt;%</span> </span>
-<span id="cb2330-5"><a href="Bayes-GLM.html#cb2330-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Parameter <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
-<span id="cb2330-6"><a href="Bayes-GLM.html#cb2330-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;baseline.prev&quot;</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb2330-7"><a href="Bayes-GLM.html#cb2330-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggs_traceplot</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb2332"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2332-1"><a href="Bayes-GLM.html#cb2332-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the trace plot</span></span>
+<span id="cb2332-2"><a href="Bayes-GLM.html#cb2332-2" aria-hidden="true" tabindex="-1"></a>Simulated <span class="ot">&lt;-</span> coda<span class="sc">::</span><span class="fu">as.mcmc</span>(jagsModel)</span>
+<span id="cb2332-3"><a href="Bayes-GLM.html#cb2332-3" aria-hidden="true" tabindex="-1"></a>ggSample <span class="ot">&lt;-</span> <span class="fu">ggs</span>(Simulated)</span>
+<span id="cb2332-4"><a href="Bayes-GLM.html#cb2332-4" aria-hidden="true" tabindex="-1"></a>ggSample <span class="sc">%&gt;%</span> </span>
+<span id="cb2332-5"><a href="Bayes-GLM.html#cb2332-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Parameter <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
+<span id="cb2332-6"><a href="Bayes-GLM.html#cb2332-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;baseline.prev&quot;</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb2332-7"><a href="Bayes-GLM.html#cb2332-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggs_traceplot</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianPractical0704"></span>
 <img src="bookdown_files/figure-html/BayesianPractical0704-1.png" alt="Density plots for parameters for GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
 <p class="caption">
@@ -2379,17 +2379,17 @@ model {
 圖 100.5: Gelman-Rubin convergence statistic of parameters for GLM about the odds of malaria regarding netbeds use in Gambia children.
 </p>
 </div>
-<div class="sourceCode" id="cb2332"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2332-1"><a href="Bayes-GLM.html#cb2332-1" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
-<span id="cb2332-2"><a href="Bayes-GLM.html#cb2332-2" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
-<span id="cb2332-3"><a href="Bayes-GLM.html#cb2332-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-dropped.txt&quot;</span>,</span>
-<span id="cb2332-4"><a href="Bayes-GLM.html#cb2332-4" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2332-5"><a href="Bayes-GLM.html#cb2332-5" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
-<span id="cb2332-6"><a href="Bayes-GLM.html#cb2332-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">26000</span>,</span>
-<span id="cb2332-7"><a href="Bayes-GLM.html#cb2332-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2332-8"><a href="Bayes-GLM.html#cb2332-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
-<span id="cb2332-9"><a href="Bayes-GLM.html#cb2332-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">1000</span>,</span>
-<span id="cb2332-10"><a href="Bayes-GLM.html#cb2332-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2332-11"><a href="Bayes-GLM.html#cb2332-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2334"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2334-1"><a href="Bayes-GLM.html#cb2334-1" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
+<span id="cb2334-2"><a href="Bayes-GLM.html#cb2334-2" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
+<span id="cb2334-3"><a href="Bayes-GLM.html#cb2334-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-dropped.txt&quot;</span>,</span>
+<span id="cb2334-4"><a href="Bayes-GLM.html#cb2334-4" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2334-5"><a href="Bayes-GLM.html#cb2334-5" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
+<span id="cb2334-6"><a href="Bayes-GLM.html#cb2334-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">26000</span>,</span>
+<span id="cb2334-7"><a href="Bayes-GLM.html#cb2334-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2334-8"><a href="Bayes-GLM.html#cb2334-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
+<span id="cb2334-9"><a href="Bayes-GLM.html#cb2334-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">1000</span>,</span>
+<span id="cb2334-10"><a href="Bayes-GLM.html#cb2334-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2334-11"><a href="Bayes-GLM.html#cb2334-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2399,7 +2399,7 @@ model {
 ##    Total graph size: 626
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2334"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2334-1"><a href="Bayes-GLM.html#cb2334-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(jagsModel)</span></code></pre></div>
+<div class="sourceCode" id="cb2336"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2336-1"><a href="Bayes-GLM.html#cb2336-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(jagsModel)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/wangcc.me/Downloads/LSHTMlearningnote/backupfiles/malaria-model-dropped.txt&quot;, fit using jags,
 ##  2 chains, each with 26000 iterations (first 1000 discarded)
 ##  n.sims = 50000 iterations saved

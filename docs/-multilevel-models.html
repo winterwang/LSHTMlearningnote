@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-18" />
+<meta name="date" content="2020-12-19" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1991,7 +1991,35 @@ S_i &amp; \sim \text{Binomial}(N_i, p_i)  \\
 </p>
 </div>
 <p>圖 <a href="-multilevel-models.html#fig:introBayes15-fig01">55.1</a> 中，橫軸是水池的編號，從左往右依次是從 1 到 48 號水池；縱軸是水池中蝌蚪生存下來的比例。圖中藍色的點是原始數據點，也就是實際觀察值 <code>propsurv</code>。黑色的鏤空點則是模型估計的每個水池的截距。水平的橫虛線是估計的所有水池的蝌蚪存活概率的平均值 <span class="math inline">\(\alpha\)</span>。而圖中的縱向的實線是把水池按照實驗開始時的蝌蚪密度計算的不同類型的池子，從小，中，到大三種類型的池子，各16個。不難注意到我們能看見多層回歸模型給出的推測值都相對觀察值更靠近總體平均生存概率。看起來似乎是黑色鏤空的圓點都更加靠近數據分佈的中心，平均值附近。這種現象又被叫做縮水現象 shrinkage，這是由於增加了超參數之後的多層回歸模型的參數估計受到的限制性的調整 regularization。其次，我們也發現在圖左側，也就是起始蝌蚪密度較小的水池裏，多層回歸模型估計的生存概率值更加靠近總體平均值，也就是縮水得更加明顯，距離觀察數據比密度大的水池要遠。也就是說，在小的水池裏，我們更加容易發現模型估計值和觀察值之間的差別，但是在其實密度大的水池中，觀察值和模型估計值更加接近。最後，如果藍色的點離虛線的總體均值越遠，它和黑色點，多層回歸模型估計值之間的差別越大。</p>
-<p>上述三種現象其實是在告訴我們一件很重要的事，也就是把信息綜合起來的話，每一個層級的參數估計都受益得到提升 (pooling information across clusters to improve estimates) 。這裏的綜合信息 pooling information 的意義是，每一個水池的數據，每一個層級的數據，都含有能提高和改善其他層級參數估計信息 each tank provides information that can be used to improve the estimates for all of the other tanks。這是因爲我們假設了每個水池的截距 log-odds 雖有變化但不獨立而是服從某個正（常）態分佈。有了這個分佈的假設，貝葉斯估計就能幫助我們共享信息給不同的數據層級。</p>
+<p>上述三種現象其實是在告訴我們一件很重要的事，也就是把信息綜合起來的話，每一個層級的參數估計都會受益得到提升和改善 (pooling information across clusters to improve estimates) 。這裏的綜合信息 pooling information 的意義是，每一個水池的數據，每一個層級的數據，都含有能提高和改善其他層級參數估計信息 each tank provides information that can be used to improve the estimates for all of the other tanks。這是因爲我們假設了每個水池的截距 log-odds 雖有變化但不獨立而是服從某個正（常）態分佈。有了這個分佈的假設，貝葉斯估計就能幫助我們共享信息給不同的數據層級。</p>
+<p>那麼，模型估計的這些青蛙的總體生存概率的分佈是怎樣的呢？我們可以從它對應的模型事後概率分佈中獲得結果繪製成圖。我們先繪製事後概率分佈中前100個 <span class="math inline">\(\alpha, \sigma\)</span> 組合的平均存活率的分佈：</p>
+<div class="sourceCode" id="cb1022"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1022-1"><a href="-multilevel-models.html#cb1022-1" aria-hidden="true" tabindex="-1"></a><span class="co"># show first 100 populations in the posterior </span></span>
+<span id="cb1022-2"><a href="-multilevel-models.html#cb1022-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( <span class="cn">NULL</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">4</span>), <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.35</span>), </span>
+<span id="cb1022-3"><a href="-multilevel-models.html#cb1022-3" aria-hidden="true" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;log-odds survive&quot;</span>, </span>
+<span id="cb1022-4"><a href="-multilevel-models.html#cb1022-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">ylab =</span> <span class="st">&quot;Density&quot;</span>)</span>
+<span id="cb1022-5"><a href="-multilevel-models.html#cb1022-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1022-6"><a href="-multilevel-models.html#cb1022-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span> ) </span>
+<span id="cb1022-7"><a href="-multilevel-models.html#cb1022-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">curve</span>( <span class="fu">dnorm</span>(x, post<span class="sc">$</span>a_bar[i], post<span class="sc">$</span>sigma[i]), <span class="at">add =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb1022-8"><a href="-multilevel-models.html#cb1022-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">col =</span> <span class="fu">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.2</span>))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig02"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig02-1.png" alt="The inferred population of survival across tanks. 100 Gaussian distributions of the log-odds of survival, sampled from the posteriro of m13.2." width="576" />
+<p class="caption">
+圖 55.2: The inferred population of survival across tanks. 100 Gaussian distributions of the log-odds of survival, sampled from the posteriro of m13.2.
+</p>
+</div>
+<p>圖 <a href="-multilevel-models.html#fig:introBayes15-fig02">55.2</a> 告訴我們，均值 <span class="math inline">\(\alpha\)</span> 和它對應的標準差 <span class="math inline">\(\sigma\)</span> 都是有相當程度不確定性的 (uncertainty)。</p>
+<div class="sourceCode" id="cb1023"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1023-1"><a href="-multilevel-models.html#cb1023-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sample 8000 imaginary tanks from the posterior distribution </span></span>
+<span id="cb1023-2"><a href="-multilevel-models.html#cb1023-2" aria-hidden="true" tabindex="-1"></a>sim_tanks <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">80000</span>, post<span class="sc">$</span>a_bar, post<span class="sc">$</span>sigma)</span>
+<span id="cb1023-3"><a href="-multilevel-models.html#cb1023-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1023-4"><a href="-multilevel-models.html#cb1023-4" aria-hidden="true" tabindex="-1"></a><span class="co"># transform to probability and visualize</span></span>
+<span id="cb1023-5"><a href="-multilevel-models.html#cb1023-5" aria-hidden="true" tabindex="-1"></a><span class="fu">dens</span>( <span class="fu">inv_logit</span>(sim_tanks), <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">adj =</span> <span class="fl">0.1</span>, </span>
+<span id="cb1023-6"><a href="-multilevel-models.html#cb1023-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;probability survive&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig03"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig03-1.png" alt="Survival probabilities for 8000 new simulated tanks, averaging over the posterior distribution in previous figure." width="576" />
+<p class="caption">
+圖 55.3: Survival probabilities for 8000 new simulated tanks, averaging over the posterior distribution in previous figure.
+</p>
+</div>
 
 </div>
 </div>

@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-18" />
+<meta name="date" content="2020-12-19" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2200,9 +2200,9 @@ model {
    PP.untreated &lt;- step(1 - OR.bednet[2]) # probability that using untreated bed net vs. no bed net reduces odds of malaria
    PP.treated &lt;- step(1- OR.bednet[4]) # probability that using treated vs. untreated bednet reduces odds of malaria
 }</code></pre>
-<div class="sourceCode" id="cb2342"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2342-1"><a href="Bayes-Hier.html#cb2342-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in the data: </span></span>
-<span id="cb2342-2"><a href="Bayes-Hier.html#cb2342-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2342-3"><a href="Bayes-Hier.html#cb2342-3" aria-hidden="true" tabindex="-1"></a>Data <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">paste</span>(bugpath, <span class="st">&quot;/backupfiles/malaria-data.txt&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;&quot;</span>), <span class="at">delim =</span> <span class="st">&quot; &quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2344"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2344-1"><a href="Bayes-Hier.html#cb2344-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in the data: </span></span>
+<span id="cb2344-2"><a href="Bayes-Hier.html#cb2344-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2344-3"><a href="Bayes-Hier.html#cb2344-3" aria-hidden="true" tabindex="-1"></a>Data <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">paste</span>(bugpath, <span class="st">&quot;/backupfiles/malaria-data.txt&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;&quot;</span>), <span class="at">delim =</span> <span class="st">&quot; &quot;</span>)</span></code></pre></div>
 <pre><code>## Parsed with column specification:
 ## cols(
 ##   POP = col_double(),
@@ -2213,53 +2213,53 @@ model {
 ##   PHC = col_character(),
 ##   VILLAGE = col_character()
 ## )</code></pre>
-<div class="sourceCode" id="cb2344"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2344-1"><a href="Bayes-Hier.html#cb2344-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data file for the model</span></span>
-<span id="cb2344-2"><a href="Bayes-Hier.html#cb2344-2" aria-hidden="true" tabindex="-1"></a>Dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2344-3"><a href="Bayes-Hier.html#cb2344-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">POP =</span> Data<span class="sc">$</span>POP, </span>
-<span id="cb2344-4"><a href="Bayes-Hier.html#cb2344-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">MALARIA =</span> Data<span class="sc">$</span>MALARIA, </span>
-<span id="cb2344-5"><a href="Bayes-Hier.html#cb2344-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">AGE =</span> Data<span class="sc">$</span>AGE, </span>
-<span id="cb2344-6"><a href="Bayes-Hier.html#cb2344-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">BEDNET =</span> Data<span class="sc">$</span>BEDNET,</span>
-<span id="cb2344-7"><a href="Bayes-Hier.html#cb2344-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">GREEN =</span> Data<span class="sc">$</span>GREEN,</span>
-<span id="cb2344-8"><a href="Bayes-Hier.html#cb2344-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">PHC =</span> Data<span class="sc">$</span>PHC,</span>
-<span id="cb2344-9"><a href="Bayes-Hier.html#cb2344-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">VILLAGE =</span> Data<span class="sc">$</span>VILLAGE</span>
-<span id="cb2344-10"><a href="Bayes-Hier.html#cb2344-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2344-11"><a href="Bayes-Hier.html#cb2344-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2344-12"><a href="Bayes-Hier.html#cb2344-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2344-13"><a href="Bayes-Hier.html#cb2344-13" aria-hidden="true" tabindex="-1"></a><span class="co"># initial values for the model</span></span>
-<span id="cb2344-14"><a href="Bayes-Hier.html#cb2344-14" aria-hidden="true" tabindex="-1"></a><span class="co"># the choice is arbitrary</span></span>
-<span id="cb2344-15"><a href="Bayes-Hier.html#cb2344-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2344-16"><a href="Bayes-Hier.html#cb2344-16" aria-hidden="true" tabindex="-1"></a>inits <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2344-17"><a href="Bayes-Hier.html#cb2344-17" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="sc">-</span><span class="fl">0.51</span>, </span>
-<span id="cb2344-18"><a href="Bayes-Hier.html#cb2344-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="sc">-</span><span class="fl">1.68</span>), </span>
-<span id="cb2344-19"><a href="Bayes-Hier.html#cb2344-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="sc">-</span><span class="fl">2.41</span>,  <span class="fl">0.68</span>), </span>
-<span id="cb2344-20"><a href="Bayes-Hier.html#cb2344-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.green =</span> <span class="sc">-</span><span class="fl">0.23</span>, </span>
-<span id="cb2344-21"><a href="Bayes-Hier.html#cb2344-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.phc =</span> <span class="fl">1.82</span>,</span>
-<span id="cb2344-22"><a href="Bayes-Hier.html#cb2344-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">sigma =</span> <span class="dv">3</span>), </span>
-<span id="cb2344-23"><a href="Bayes-Hier.html#cb2344-23" aria-hidden="true" tabindex="-1"></a>initlist1 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">1.29</span>, </span>
-<span id="cb2344-24"><a href="Bayes-Hier.html#cb2344-24" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.49</span>, <span class="sc">-</span><span class="fl">0.38</span>, <span class="sc">-</span><span class="fl">0.04</span>),  </span>
-<span id="cb2344-25"><a href="Bayes-Hier.html#cb2344-25" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">6.85</span>,  <span class="fl">0.09</span>), </span>
-<span id="cb2344-26"><a href="Bayes-Hier.html#cb2344-26" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.green =</span> <span class="fl">2.66</span>, </span>
-<span id="cb2344-27"><a href="Bayes-Hier.html#cb2344-27" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.phc =</span> <span class="sc">-</span><span class="fl">0.31</span>,</span>
-<span id="cb2344-28"><a href="Bayes-Hier.html#cb2344-28" aria-hidden="true" tabindex="-1"></a>                  <span class="at">sigma =</span> <span class="dv">1</span>)</span>
-<span id="cb2344-29"><a href="Bayes-Hier.html#cb2344-29" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2344-30"><a href="Bayes-Hier.html#cb2344-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2344-31"><a href="Bayes-Hier.html#cb2344-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2344-32"><a href="Bayes-Hier.html#cb2344-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2344-33"><a href="Bayes-Hier.html#cb2344-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Set monitors on nodes of interest</span></span>
-<span id="cb2344-34"><a href="Bayes-Hier.html#cb2344-34" aria-hidden="true" tabindex="-1"></a>parameters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.bednet&quot;</span>, <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;PP.treated&quot;</span>, <span class="st">&quot;PP.untreated&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>, <span class="st">&quot;sigma&quot;</span>, <span class="st">&quot;OR.village&quot;</span>)</span>
-<span id="cb2344-35"><a href="Bayes-Hier.html#cb2344-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2344-36"><a href="Bayes-Hier.html#cb2344-36" aria-hidden="true" tabindex="-1"></a><span class="co"># fit the model in jags</span></span>
-<span id="cb2344-37"><a href="Bayes-Hier.html#cb2344-37" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
-<span id="cb2344-38"><a href="Bayes-Hier.html#cb2344-38" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
-<span id="cb2344-39"><a href="Bayes-Hier.html#cb2344-39" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-hierarchical.txt&quot;</span>,</span>
-<span id="cb2344-40"><a href="Bayes-Hier.html#cb2344-40" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2344-41"><a href="Bayes-Hier.html#cb2344-41" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
-<span id="cb2344-42"><a href="Bayes-Hier.html#cb2344-42" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">1000</span>,</span>
-<span id="cb2344-43"><a href="Bayes-Hier.html#cb2344-43" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2344-44"><a href="Bayes-Hier.html#cb2344-44" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
-<span id="cb2344-45"><a href="Bayes-Hier.html#cb2344-45" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">0</span>,</span>
-<span id="cb2344-46"><a href="Bayes-Hier.html#cb2344-46" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2344-47"><a href="Bayes-Hier.html#cb2344-47" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2346"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2346-1"><a href="Bayes-Hier.html#cb2346-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data file for the model</span></span>
+<span id="cb2346-2"><a href="Bayes-Hier.html#cb2346-2" aria-hidden="true" tabindex="-1"></a>Dat <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2346-3"><a href="Bayes-Hier.html#cb2346-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">POP =</span> Data<span class="sc">$</span>POP, </span>
+<span id="cb2346-4"><a href="Bayes-Hier.html#cb2346-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">MALARIA =</span> Data<span class="sc">$</span>MALARIA, </span>
+<span id="cb2346-5"><a href="Bayes-Hier.html#cb2346-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">AGE =</span> Data<span class="sc">$</span>AGE, </span>
+<span id="cb2346-6"><a href="Bayes-Hier.html#cb2346-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">BEDNET =</span> Data<span class="sc">$</span>BEDNET,</span>
+<span id="cb2346-7"><a href="Bayes-Hier.html#cb2346-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">GREEN =</span> Data<span class="sc">$</span>GREEN,</span>
+<span id="cb2346-8"><a href="Bayes-Hier.html#cb2346-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">PHC =</span> Data<span class="sc">$</span>PHC,</span>
+<span id="cb2346-9"><a href="Bayes-Hier.html#cb2346-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">VILLAGE =</span> Data<span class="sc">$</span>VILLAGE</span>
+<span id="cb2346-10"><a href="Bayes-Hier.html#cb2346-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2346-11"><a href="Bayes-Hier.html#cb2346-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2346-12"><a href="Bayes-Hier.html#cb2346-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2346-13"><a href="Bayes-Hier.html#cb2346-13" aria-hidden="true" tabindex="-1"></a><span class="co"># initial values for the model</span></span>
+<span id="cb2346-14"><a href="Bayes-Hier.html#cb2346-14" aria-hidden="true" tabindex="-1"></a><span class="co"># the choice is arbitrary</span></span>
+<span id="cb2346-15"><a href="Bayes-Hier.html#cb2346-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2346-16"><a href="Bayes-Hier.html#cb2346-16" aria-hidden="true" tabindex="-1"></a>inits <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2346-17"><a href="Bayes-Hier.html#cb2346-17" aria-hidden="true" tabindex="-1"></a> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="sc">-</span><span class="fl">0.51</span>, </span>
+<span id="cb2346-18"><a href="Bayes-Hier.html#cb2346-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.83</span>,  <span class="fl">0.28</span>, <span class="sc">-</span><span class="fl">1.68</span>), </span>
+<span id="cb2346-19"><a href="Bayes-Hier.html#cb2346-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="sc">-</span><span class="fl">2.41</span>,  <span class="fl">0.68</span>), </span>
+<span id="cb2346-20"><a href="Bayes-Hier.html#cb2346-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.green =</span> <span class="sc">-</span><span class="fl">0.23</span>, </span>
+<span id="cb2346-21"><a href="Bayes-Hier.html#cb2346-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">beta.phc =</span> <span class="fl">1.82</span>,</span>
+<span id="cb2346-22"><a href="Bayes-Hier.html#cb2346-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">sigma =</span> <span class="dv">3</span>), </span>
+<span id="cb2346-23"><a href="Bayes-Hier.html#cb2346-23" aria-hidden="true" tabindex="-1"></a>initlist1 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">alpha =</span> <span class="fl">1.29</span>, </span>
+<span id="cb2346-24"><a href="Bayes-Hier.html#cb2346-24" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.age =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">0.49</span>, <span class="sc">-</span><span class="fl">0.38</span>, <span class="sc">-</span><span class="fl">0.04</span>),  </span>
+<span id="cb2346-25"><a href="Bayes-Hier.html#cb2346-25" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.bednet =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="fl">6.85</span>,  <span class="fl">0.09</span>), </span>
+<span id="cb2346-26"><a href="Bayes-Hier.html#cb2346-26" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.green =</span> <span class="fl">2.66</span>, </span>
+<span id="cb2346-27"><a href="Bayes-Hier.html#cb2346-27" aria-hidden="true" tabindex="-1"></a>                  <span class="at">beta.phc =</span> <span class="sc">-</span><span class="fl">0.31</span>,</span>
+<span id="cb2346-28"><a href="Bayes-Hier.html#cb2346-28" aria-hidden="true" tabindex="-1"></a>                  <span class="at">sigma =</span> <span class="dv">1</span>)</span>
+<span id="cb2346-29"><a href="Bayes-Hier.html#cb2346-29" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2346-30"><a href="Bayes-Hier.html#cb2346-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2346-31"><a href="Bayes-Hier.html#cb2346-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2346-32"><a href="Bayes-Hier.html#cb2346-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2346-33"><a href="Bayes-Hier.html#cb2346-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Set monitors on nodes of interest</span></span>
+<span id="cb2346-34"><a href="Bayes-Hier.html#cb2346-34" aria-hidden="true" tabindex="-1"></a>parameters <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;OR.age&quot;</span>, <span class="st">&quot;OR.bednet&quot;</span>, <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;PP.treated&quot;</span>, <span class="st">&quot;PP.untreated&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>, <span class="st">&quot;sigma&quot;</span>, <span class="st">&quot;OR.village&quot;</span>)</span>
+<span id="cb2346-35"><a href="Bayes-Hier.html#cb2346-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2346-36"><a href="Bayes-Hier.html#cb2346-36" aria-hidden="true" tabindex="-1"></a><span class="co"># fit the model in jags</span></span>
+<span id="cb2346-37"><a href="Bayes-Hier.html#cb2346-37" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
+<span id="cb2346-38"><a href="Bayes-Hier.html#cb2346-38" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
+<span id="cb2346-39"><a href="Bayes-Hier.html#cb2346-39" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-hierarchical.txt&quot;</span>,</span>
+<span id="cb2346-40"><a href="Bayes-Hier.html#cb2346-40" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2346-41"><a href="Bayes-Hier.html#cb2346-41" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
+<span id="cb2346-42"><a href="Bayes-Hier.html#cb2346-42" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">1000</span>,</span>
+<span id="cb2346-43"><a href="Bayes-Hier.html#cb2346-43" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2346-44"><a href="Bayes-Hier.html#cb2346-44" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
+<span id="cb2346-45"><a href="Bayes-Hier.html#cb2346-45" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">0</span>,</span>
+<span id="cb2346-46"><a href="Bayes-Hier.html#cb2346-46" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2346-47"><a href="Bayes-Hier.html#cb2346-47" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2269,14 +2269,14 @@ model {
 ##    Total graph size: 1435
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2346"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2346-1"><a href="Bayes-Hier.html#cb2346-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the trace plot</span></span>
-<span id="cb2346-2"><a href="Bayes-Hier.html#cb2346-2" aria-hidden="true" tabindex="-1"></a>Simulated <span class="ot">&lt;-</span> coda<span class="sc">::</span><span class="fu">as.mcmc</span>(jagsModel)</span>
-<span id="cb2346-3"><a href="Bayes-Hier.html#cb2346-3" aria-hidden="true" tabindex="-1"></a>ggSample <span class="ot">&lt;-</span> <span class="fu">ggs</span>(Simulated)</span>
-<span id="cb2346-4"><a href="Bayes-Hier.html#cb2346-4" aria-hidden="true" tabindex="-1"></a>ggSample <span class="sc">%&gt;%</span> </span>
-<span id="cb2346-5"><a href="Bayes-Hier.html#cb2346-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Parameter <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
-<span id="cb2346-6"><a href="Bayes-Hier.html#cb2346-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.bednet[2]&quot;</span>, <span class="st">&quot;OR.bednet[3]&quot;</span>, <span class="st">&quot;OR.bednet[4]&quot;</span>,</span>
-<span id="cb2346-7"><a href="Bayes-Hier.html#cb2346-7" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;OR.village[1]&quot;</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb2346-8"><a href="Bayes-Hier.html#cb2346-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggs_traceplot</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb2348"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2348-1"><a href="Bayes-Hier.html#cb2348-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the trace plot</span></span>
+<span id="cb2348-2"><a href="Bayes-Hier.html#cb2348-2" aria-hidden="true" tabindex="-1"></a>Simulated <span class="ot">&lt;-</span> coda<span class="sc">::</span><span class="fu">as.mcmc</span>(jagsModel)</span>
+<span id="cb2348-3"><a href="Bayes-Hier.html#cb2348-3" aria-hidden="true" tabindex="-1"></a>ggSample <span class="ot">&lt;-</span> <span class="fu">ggs</span>(Simulated)</span>
+<span id="cb2348-4"><a href="Bayes-Hier.html#cb2348-4" aria-hidden="true" tabindex="-1"></a>ggSample <span class="sc">%&gt;%</span> </span>
+<span id="cb2348-5"><a href="Bayes-Hier.html#cb2348-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(Parameter <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;OR.age[2]&quot;</span>, <span class="st">&quot;OR.age[3]&quot;</span>, <span class="st">&quot;OR.age[4]&quot;</span>, </span>
+<span id="cb2348-6"><a href="Bayes-Hier.html#cb2348-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.bednet[2]&quot;</span>, <span class="st">&quot;OR.bednet[3]&quot;</span>, <span class="st">&quot;OR.bednet[4]&quot;</span>,</span>
+<span id="cb2348-7"><a href="Bayes-Hier.html#cb2348-7" aria-hidden="true" tabindex="-1"></a>                          <span class="st">&quot;OR.green&quot;</span>, <span class="st">&quot;baseline.prev&quot;</span>, <span class="st">&quot;OR.phc&quot;</span>, <span class="st">&quot;OR.village[1]&quot;</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb2348-8"><a href="Bayes-Hier.html#cb2348-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggs_traceplot</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianPractical0801"></span>
 <img src="bookdown_files/figure-html/BayesianPractical0801-1.png" alt="Density plots for parameters for hierarchical GLM about the odds of malaria regarding netbeds use in Gambia children." width="80%" />
 <p class="caption">
@@ -2359,17 +2359,17 @@ model {
 </p>
 </div>
 <p>基本可以認爲刨除前1000次取樣 (burn-in) 可以達到收斂。</p>
-<div class="sourceCode" id="cb2348"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2348-1"><a href="Bayes-Hier.html#cb2348-1" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
-<span id="cb2348-2"><a href="Bayes-Hier.html#cb2348-2" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
-<span id="cb2348-3"><a href="Bayes-Hier.html#cb2348-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-hierarchical.txt&quot;</span>,</span>
-<span id="cb2348-4"><a href="Bayes-Hier.html#cb2348-4" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2348-5"><a href="Bayes-Hier.html#cb2348-5" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
-<span id="cb2348-6"><a href="Bayes-Hier.html#cb2348-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">26000</span>,</span>
-<span id="cb2348-7"><a href="Bayes-Hier.html#cb2348-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2348-8"><a href="Bayes-Hier.html#cb2348-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
-<span id="cb2348-9"><a href="Bayes-Hier.html#cb2348-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">1000</span>,</span>
-<span id="cb2348-10"><a href="Bayes-Hier.html#cb2348-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2348-11"><a href="Bayes-Hier.html#cb2348-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2350"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2350-1"><a href="Bayes-Hier.html#cb2350-1" aria-hidden="true" tabindex="-1"></a>jagsModel <span class="ot">&lt;-</span> <span class="fu">jags</span>(<span class="at">data =</span> Dat,</span>
+<span id="cb2350-2"><a href="Bayes-Hier.html#cb2350-2" aria-hidden="true" tabindex="-1"></a>                  <span class="at">model.file =</span> <span class="fu">paste</span>(bugpath, </span>
+<span id="cb2350-3"><a href="Bayes-Hier.html#cb2350-3" aria-hidden="true" tabindex="-1"></a>                                  <span class="st">&quot;/backupfiles/malaria-model-hierarchical.txt&quot;</span>,</span>
+<span id="cb2350-4"><a href="Bayes-Hier.html#cb2350-4" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2350-5"><a href="Bayes-Hier.html#cb2350-5" aria-hidden="true" tabindex="-1"></a>                    <span class="at">parameters.to.save =</span> parameters,</span>
+<span id="cb2350-6"><a href="Bayes-Hier.html#cb2350-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.iter =</span> <span class="dv">26000</span>,</span>
+<span id="cb2350-7"><a href="Bayes-Hier.html#cb2350-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2350-8"><a href="Bayes-Hier.html#cb2350-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">inits =</span> inits,</span>
+<span id="cb2350-9"><a href="Bayes-Hier.html#cb2350-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.burnin =</span> <span class="dv">1000</span>,</span>
+<span id="cb2350-10"><a href="Bayes-Hier.html#cb2350-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2350-11"><a href="Bayes-Hier.html#cb2350-11" aria-hidden="true" tabindex="-1"></a>                    <span class="at">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2379,7 +2379,7 @@ model {
 ##    Total graph size: 1435
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2350"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2350-1"><a href="Bayes-Hier.html#cb2350-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(jagsModel)</span></code></pre></div>
+<div class="sourceCode" id="cb2352"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2352-1"><a href="Bayes-Hier.html#cb2352-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(jagsModel)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/wangcc.me/Downloads/LSHTMlearningnote/backupfiles/malaria-model-hierarchical.txt&quot;, fit using jags,
 ##  2 chains, each with 26000 iterations (first 1000 discarded)
 ##  n.sims = 50000 iterations saved
