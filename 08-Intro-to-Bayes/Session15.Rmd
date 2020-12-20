@@ -206,10 +206,57 @@ S_i & \sim \text{Binomial}(N_i, p_i) \\
 \end{aligned}
 $$
 
+為了能順利從這個模型中產生模擬數據，我們需要給模型中賦予真實值的參數有：
+
+1. $\bar{\alpha}$ 是總體池塘蝌蚪存活概率的平均值的對數比值 average log-odds of survival in the entire population of ponds。
+2. $\sigma$ 總體池塘蝌蚪存活概率平均值的對數比值的標準差 the standard deviation of the distribution of log-odds of survival among ponds。
+3. $\alpha$ 一系列水池的蝌蚪存過概率的對數比值的真實值，作為模型的變動截距 a vector of individual pond intercepts, one for each pond。
 
 
+此外，我們還需要設定每個水池的蝌蚪起始樣本量 $N_i$，這些都設定完畢之後，就只剩下每個水池可能存活的蝌蚪數量了，這個可以使用二項分佈的隨機值來設定。
 
 
+```{r introBayes15-07, cache=TRUE}
+a_bar <- 1.5
+sigma <- 1.5
+nponds <- 60
+Ni <- as.integer( rep(c(5, 10, 25, 35), each = 15 ))
+```
+
+
+我們設定了60個水池，起始蝌蚪的數量分別是 5，10，25，35 的池子各有15個。另外 $\bar{\alpha}, \sigma$ 定義了我們設計下的總體存活率的對數比值 log-odds 的分佈特徵。接下來就是讓計算機生成符合這個分佈條件 $\text{Normal}(\bar{\alpha}, \sigma)$ 的 60 個水池的存活率的對數比值作為各自的截距。
+
+
+```{r introBayes15-08, cache=TRUE}
+set.seed(2020) # <- I never trust this can generate reliable results anymore
+a_pond <- rnorm( nponds, mean = a_bar, sd = sigma)
+```
+
+
+上面的代碼生成了60個符合設定的均值和標準差的數據，作為每個水池的蝌蚪存活率的對數比值。最後，把這些數據合併成為一個數據框：
+
+
+```{r introBayes15-09, cache=TRUE}
+dsim <- data.frame( pond = 1:nponds, Ni = Ni, true_a = a_pond)
+str(dsim)
+```
+生成的數據框 `dsim` 有三個變量，一個是水池編號，一個是水池起始蝌蚪數量，一個是真實的存活概率的對數比值 (log-odds)。
+
+
+### 模擬存活概率結果 simulate survivors 
+
+根據我們設定的每個水池的"真實"存活概率的對數比值，我們不難計算每個水池的"真實"存活概率：
+
+$$
+p_i = \frac{\exp(\alpha_i)}{1 +\exp(\alpha_i)}
+$$
+
+使用 `logistic` 函數可以方便的計算並且讓計算機模擬一系列該水池的蝌蚪存活數量：
+
+```{r introBayes15-10, cache=TRUE}
+dsim$Si <- rbinom( nponds, prob = logistic(dsim$true_a), size = dsim$Ni)
+str(dsim)
+```
 
 
 
