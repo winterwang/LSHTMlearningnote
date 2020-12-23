@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-21" />
+<meta name="date" content="2020-12-23" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -908,6 +908,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li class="chapter" data-level="55.2.1" data-path="-multilevel-models.html"><a href="-multilevel-models.html#用於產生模擬數據的模型-the-model"><i class="fa fa-check"></i><b>55.2.1</b> 用於產生模擬數據的模型 the model</a></li>
 <li class="chapter" data-level="55.2.2" data-path="-multilevel-models.html"><a href="-multilevel-models.html#模擬存活概率結果-simulate-survivors"><i class="fa fa-check"></i><b>55.2.2</b> 模擬存活概率結果 simulate survivors</a></li>
+<li class="chapter" data-level="55.2.3" data-path="-multilevel-models.html"><a href="-multilevel-models.html#計算完全不合併策略-no-pooling-estimates"><i class="fa fa-check"></i><b>55.2.3</b> 計算完全不合併策略 no-pooling estimates</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -1849,21 +1850,21 @@ Y(x) \perp \!\!\! \perp X|\mathbf{C}, \forall x
 \end{aligned}
 \]</span></p>
 <p>那麼這些變量之間關系對應的 DAG 圖就是這樣子:</p>
-<div class="sourceCode" id="cb2369"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2369-1"><a href="graphical-models.html#cb2369-1" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">dagitty</span>(<span class="st">&#39;dag {</span></span>
-<span id="cb2369-2"><a href="graphical-models.html#cb2369-2" aria-hidden="true" tabindex="-1"></a><span class="st">    V6 [pos=&quot;2,0&quot;]</span></span>
-<span id="cb2369-3"><a href="graphical-models.html#cb2369-3" aria-hidden="true" tabindex="-1"></a><span class="st">    V4 [pos=&quot;1,-1&quot;]</span></span>
-<span id="cb2369-4"><a href="graphical-models.html#cb2369-4" aria-hidden="true" tabindex="-1"></a><span class="st">    V5 [pos=&quot;1,1&quot;]</span></span>
-<span id="cb2369-5"><a href="graphical-models.html#cb2369-5" aria-hidden="true" tabindex="-1"></a><span class="st">    V2 [pos=&quot;-1,-1&quot;]</span></span>
-<span id="cb2369-6"><a href="graphical-models.html#cb2369-6" aria-hidden="true" tabindex="-1"></a><span class="st">    V3 [pos=&quot;-1,1&quot;]   </span></span>
-<span id="cb2369-7"><a href="graphical-models.html#cb2369-7" aria-hidden="true" tabindex="-1"></a><span class="st">    V1 [pos=&quot;-2,0&quot;]   </span></span>
-<span id="cb2369-8"><a href="graphical-models.html#cb2369-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2369-9"><a href="graphical-models.html#cb2369-9" aria-hidden="true" tabindex="-1"></a><span class="st">   V1 -&gt; V4</span></span>
-<span id="cb2369-10"><a href="graphical-models.html#cb2369-10" aria-hidden="true" tabindex="-1"></a><span class="st">   V1 -&gt; V5 -&gt; V6 </span></span>
-<span id="cb2369-11"><a href="graphical-models.html#cb2369-11" aria-hidden="true" tabindex="-1"></a><span class="st">   V1 -&gt; V3 -&gt; V4 </span></span>
-<span id="cb2369-12"><a href="graphical-models.html#cb2369-12" aria-hidden="true" tabindex="-1"></a><span class="st">   V2 -&gt; V3 -&gt; V4 </span></span>
-<span id="cb2369-13"><a href="graphical-models.html#cb2369-13" aria-hidden="true" tabindex="-1"></a><span class="st">   V2 -&gt; V5 -&gt; V6</span></span>
-<span id="cb2369-14"><a href="graphical-models.html#cb2369-14" aria-hidden="true" tabindex="-1"></a><span class="st">}&#39;</span>)</span>
-<span id="cb2369-15"><a href="graphical-models.html#cb2369-15" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(g)</span></code></pre></div>
+<div class="sourceCode" id="cb2371"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2371-1"><a href="graphical-models.html#cb2371-1" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">dagitty</span>(<span class="st">&#39;dag {</span></span>
+<span id="cb2371-2"><a href="graphical-models.html#cb2371-2" aria-hidden="true" tabindex="-1"></a><span class="st">    V6 [pos=&quot;2,0&quot;]</span></span>
+<span id="cb2371-3"><a href="graphical-models.html#cb2371-3" aria-hidden="true" tabindex="-1"></a><span class="st">    V4 [pos=&quot;1,-1&quot;]</span></span>
+<span id="cb2371-4"><a href="graphical-models.html#cb2371-4" aria-hidden="true" tabindex="-1"></a><span class="st">    V5 [pos=&quot;1,1&quot;]</span></span>
+<span id="cb2371-5"><a href="graphical-models.html#cb2371-5" aria-hidden="true" tabindex="-1"></a><span class="st">    V2 [pos=&quot;-1,-1&quot;]</span></span>
+<span id="cb2371-6"><a href="graphical-models.html#cb2371-6" aria-hidden="true" tabindex="-1"></a><span class="st">    V3 [pos=&quot;-1,1&quot;]   </span></span>
+<span id="cb2371-7"><a href="graphical-models.html#cb2371-7" aria-hidden="true" tabindex="-1"></a><span class="st">    V1 [pos=&quot;-2,0&quot;]   </span></span>
+<span id="cb2371-8"><a href="graphical-models.html#cb2371-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2371-9"><a href="graphical-models.html#cb2371-9" aria-hidden="true" tabindex="-1"></a><span class="st">   V1 -&gt; V4</span></span>
+<span id="cb2371-10"><a href="graphical-models.html#cb2371-10" aria-hidden="true" tabindex="-1"></a><span class="st">   V1 -&gt; V5 -&gt; V6 </span></span>
+<span id="cb2371-11"><a href="graphical-models.html#cb2371-11" aria-hidden="true" tabindex="-1"></a><span class="st">   V1 -&gt; V3 -&gt; V4 </span></span>
+<span id="cb2371-12"><a href="graphical-models.html#cb2371-12" aria-hidden="true" tabindex="-1"></a><span class="st">   V2 -&gt; V3 -&gt; V4 </span></span>
+<span id="cb2371-13"><a href="graphical-models.html#cb2371-13" aria-hidden="true" tabindex="-1"></a><span class="st">   V2 -&gt; V5 -&gt; V6</span></span>
+<span id="cb2371-14"><a href="graphical-models.html#cb2371-14" aria-hidden="true" tabindex="-1"></a><span class="st">}&#39;</span>)</span>
+<span id="cb2371-15"><a href="graphical-models.html#cb2371-15" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(g)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:DAG01"></span>
 <img src="bookdown_files/figure-html/DAG01-1.png" alt="Example of a DAG" width="50%" />
 <p class="caption">
