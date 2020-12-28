@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-24" />
+<meta name="date" content="2020-12-28" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -774,6 +774,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="55.2.1" data-path="-multilevel-models.html"><a href="-multilevel-models.html#用於產生模擬數據的模型-the-model"><i class="fa fa-check"></i><b>55.2.1</b> 用於產生模擬數據的模型 the model</a></li>
 <li class="chapter" data-level="55.2.2" data-path="-multilevel-models.html"><a href="-multilevel-models.html#模擬存活概率結果-simulate-survivors"><i class="fa fa-check"></i><b>55.2.2</b> 模擬存活概率結果 simulate survivors</a></li>
 <li class="chapter" data-level="55.2.3" data-path="-multilevel-models.html"><a href="-multilevel-models.html#計算完全不合併策略-no-pooling-estimates"><i class="fa fa-check"></i><b>55.2.3</b> 計算完全不合併策略 no-pooling estimates</a></li>
+<li class="chapter" data-level="55.2.4" data-path="-multilevel-models.html"><a href="-multilevel-models.html#計算部分合併策略的結果-partial-pooling-estimates"><i class="fa fa-check"></i><b>55.2.4</b> 計算部分合併策略的結果 partial-pooling estimates</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -1714,36 +1715,36 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 <div id="給岡比亞兒童體重數據的貝葉斯模型檢查收斂-mcmc-check-1" class="section level3">
 <h3><span class="header-section-number">98.2.5</span> 給岡比亞兒童體重數據的貝葉斯模型檢查收斂 (MCMC check 1)</h3>
 <p>一開始我們先採集1000個事後概率分布樣本。模型中的四個未知參數<span class="math inline">\(\alpha, \beta, \gamma, \sigma^2\)</span>的1000次事後MCMC採樣的歷史痕跡圖繪制如圖 <a href="Bayes-check.html#fig:BayesianChapter0505">98.4</a>。我們可以看到模型收斂的速度很快。刨除前50次採樣的圖 (Fig. <a href="Bayes-check.html#fig:BayesianChapter0506">98.5</a>)，可以對採樣過程看得更加清楚。像圖 <a href="Bayes-check.html#fig:BayesianChapter0506">98.5</a> 這樣粗粗的有點像毛毛蟲一樣的歷史痕跡圖通常象徵已經達到理想的收斂。</p>
-<div class="sourceCode" id="cb2207"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2207-1"><a href="Bayes-check.html#cb2207-1"></a><span class="co"># Read in the data: </span></span>
-<span id="cb2207-2"><a href="Bayes-check.html#cb2207-2"></a></span>
-<span id="cb2207-3"><a href="Bayes-check.html#cb2207-3"></a>Data &lt;-<span class="st"> </span><span class="kw">read_tsv</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/gambia-data.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>))</span>
-<span id="cb2207-4"><a href="Bayes-check.html#cb2207-4"></a></span>
-<span id="cb2207-5"><a href="Bayes-check.html#cb2207-5"></a><span class="co"># Data file for the model</span></span>
-<span id="cb2207-6"><a href="Bayes-check.html#cb2207-6"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2207-7"><a href="Bayes-check.html#cb2207-7"></a>  <span class="dt">N =</span> <span class="kw">nrow</span>(Data), </span>
-<span id="cb2207-8"><a href="Bayes-check.html#cb2207-8"></a> <span class="dt">wt =</span> Data<span class="op">$</span>wt, </span>
-<span id="cb2207-9"><a href="Bayes-check.html#cb2207-9"></a><span class="dt">age =</span> Data<span class="op">$</span>age, </span>
-<span id="cb2207-10"><a href="Bayes-check.html#cb2207-10"></a><span class="dt">sex =</span> Data<span class="op">$</span>sex</span>
-<span id="cb2207-11"><a href="Bayes-check.html#cb2207-11"></a>)</span>
-<span id="cb2207-12"><a href="Bayes-check.html#cb2207-12"></a></span>
-<span id="cb2207-13"><a href="Bayes-check.html#cb2207-13"></a><span class="co"># initial values for the model</span></span>
-<span id="cb2207-14"><a href="Bayes-check.html#cb2207-14"></a><span class="co"># the choice is arbitrary</span></span>
-<span id="cb2207-15"><a href="Bayes-check.html#cb2207-15"></a></span>
-<span id="cb2207-16"><a href="Bayes-check.html#cb2207-16"></a>inits &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2207-17"><a href="Bayes-check.html#cb2207-17"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>),</span>
-<span id="cb2207-18"><a href="Bayes-check.html#cb2207-18"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="dv">-5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)</span>
-<span id="cb2207-19"><a href="Bayes-check.html#cb2207-19"></a>)</span>
-<span id="cb2207-20"><a href="Bayes-check.html#cb2207-20"></a></span>
-<span id="cb2207-21"><a href="Bayes-check.html#cb2207-21"></a><span class="co"># fit the model in jags</span></span>
-<span id="cb2207-22"><a href="Bayes-check.html#cb2207-22"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
-<span id="cb2207-23"><a href="Bayes-check.html#cb2207-23"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2207-24"><a href="Bayes-check.html#cb2207-24"></a>                                  <span class="st">&quot;/backupfiles/gambia-model.txt&quot;</span>,</span>
-<span id="cb2207-25"><a href="Bayes-check.html#cb2207-25"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2207-26"><a href="Bayes-check.html#cb2207-26"></a>                    <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>),</span>
-<span id="cb2207-27"><a href="Bayes-check.html#cb2207-27"></a>                     <span class="dt">n.iter =</span> <span class="dv">2000</span>,</span>
-<span id="cb2207-28"><a href="Bayes-check.html#cb2207-28"></a>                     <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2207-29"><a href="Bayes-check.html#cb2207-29"></a>                     <span class="dt">inits =</span> inits,</span>
-<span id="cb2207-30"><a href="Bayes-check.html#cb2207-30"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2214"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2214-1"><a href="Bayes-check.html#cb2214-1"></a><span class="co"># Read in the data: </span></span>
+<span id="cb2214-2"><a href="Bayes-check.html#cb2214-2"></a></span>
+<span id="cb2214-3"><a href="Bayes-check.html#cb2214-3"></a>Data &lt;-<span class="st"> </span><span class="kw">read_tsv</span>(<span class="kw">paste</span>(bugpath, <span class="st">&quot;/backupfiles/gambia-data.txt&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>))</span>
+<span id="cb2214-4"><a href="Bayes-check.html#cb2214-4"></a></span>
+<span id="cb2214-5"><a href="Bayes-check.html#cb2214-5"></a><span class="co"># Data file for the model</span></span>
+<span id="cb2214-6"><a href="Bayes-check.html#cb2214-6"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2214-7"><a href="Bayes-check.html#cb2214-7"></a>  <span class="dt">N =</span> <span class="kw">nrow</span>(Data), </span>
+<span id="cb2214-8"><a href="Bayes-check.html#cb2214-8"></a> <span class="dt">wt =</span> Data<span class="op">$</span>wt, </span>
+<span id="cb2214-9"><a href="Bayes-check.html#cb2214-9"></a><span class="dt">age =</span> Data<span class="op">$</span>age, </span>
+<span id="cb2214-10"><a href="Bayes-check.html#cb2214-10"></a><span class="dt">sex =</span> Data<span class="op">$</span>sex</span>
+<span id="cb2214-11"><a href="Bayes-check.html#cb2214-11"></a>)</span>
+<span id="cb2214-12"><a href="Bayes-check.html#cb2214-12"></a></span>
+<span id="cb2214-13"><a href="Bayes-check.html#cb2214-13"></a><span class="co"># initial values for the model</span></span>
+<span id="cb2214-14"><a href="Bayes-check.html#cb2214-14"></a><span class="co"># the choice is arbitrary</span></span>
+<span id="cb2214-15"><a href="Bayes-check.html#cb2214-15"></a></span>
+<span id="cb2214-16"><a href="Bayes-check.html#cb2214-16"></a>inits &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2214-17"><a href="Bayes-check.html#cb2214-17"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">0</span>, <span class="dt">beta =</span> <span class="dv">1</span>, <span class="dt">gamma =</span> <span class="dv">5</span>, <span class="dt">logsigma2 =</span> <span class="dv">1</span>),</span>
+<span id="cb2214-18"><a href="Bayes-check.html#cb2214-18"></a> <span class="kw">list</span>(<span class="dt">alpha =</span> <span class="dv">10</span>, <span class="dt">beta =</span> <span class="dv">0</span>, <span class="dt">gamma =</span> <span class="dv">-5</span>, <span class="dt">logsigma2 =</span> <span class="dv">5</span>)</span>
+<span id="cb2214-19"><a href="Bayes-check.html#cb2214-19"></a>)</span>
+<span id="cb2214-20"><a href="Bayes-check.html#cb2214-20"></a></span>
+<span id="cb2214-21"><a href="Bayes-check.html#cb2214-21"></a><span class="co"># fit the model in jags</span></span>
+<span id="cb2214-22"><a href="Bayes-check.html#cb2214-22"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
+<span id="cb2214-23"><a href="Bayes-check.html#cb2214-23"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2214-24"><a href="Bayes-check.html#cb2214-24"></a>                                  <span class="st">&quot;/backupfiles/gambia-model.txt&quot;</span>,</span>
+<span id="cb2214-25"><a href="Bayes-check.html#cb2214-25"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2214-26"><a href="Bayes-check.html#cb2214-26"></a>                    <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>),</span>
+<span id="cb2214-27"><a href="Bayes-check.html#cb2214-27"></a>                     <span class="dt">n.iter =</span> <span class="dv">2000</span>,</span>
+<span id="cb2214-28"><a href="Bayes-check.html#cb2214-28"></a>                     <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2214-29"><a href="Bayes-check.html#cb2214-29"></a>                     <span class="dt">inits =</span> inits,</span>
+<span id="cb2214-30"><a href="Bayes-check.html#cb2214-30"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -1753,21 +1754,21 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ##    Total graph size: 672
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2209"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2209-1"><a href="Bayes-check.html#cb2209-1"></a><span class="co"># Show the trace plot</span></span>
-<span id="cb2209-2"><a href="Bayes-check.html#cb2209-2"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(jagsModel)</span>
-<span id="cb2209-3"><a href="Bayes-check.html#cb2209-3"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(Simulated)</span>
-<span id="cb2209-4"><a href="Bayes-check.html#cb2209-4"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2209-5"><a href="Bayes-check.html#cb2209-5"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2209-6"><a href="Bayes-check.html#cb2209-6"></a><span class="st">  </span><span class="kw">ggs_traceplot</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb2216"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2216-1"><a href="Bayes-check.html#cb2216-1"></a><span class="co"># Show the trace plot</span></span>
+<span id="cb2216-2"><a href="Bayes-check.html#cb2216-2"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(jagsModel)</span>
+<span id="cb2216-3"><a href="Bayes-check.html#cb2216-3"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(Simulated)</span>
+<span id="cb2216-4"><a href="Bayes-check.html#cb2216-4"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2216-5"><a href="Bayes-check.html#cb2216-5"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2216-6"><a href="Bayes-check.html#cb2216-6"></a><span class="st">  </span><span class="kw">ggs_traceplot</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0505"></span>
 <img src="bookdown_files/figure-html/BayesianChapter0505-1.png" alt="History plots for iterations 1-1000 for the Gambia example." width="80%" />
 <p class="caption">
 圖 98.4: History plots for iterations 1-1000 for the Gambia example.
 </p>
 </div>
-<div class="sourceCode" id="cb2210"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2210-1"><a href="Bayes-check.html#cb2210-1"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2210-2"><a href="Bayes-check.html#cb2210-2"></a><span class="st">  </span><span class="kw">filter</span>(Iteration <span class="op">&gt;=</span><span class="st"> </span><span class="dv">51</span> <span class="op">&amp;</span><span class="st"> </span>Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2210-3"><a href="Bayes-check.html#cb2210-3"></a><span class="st">  </span><span class="kw">ggs_traceplot</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb2217"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2217-1"><a href="Bayes-check.html#cb2217-1"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2217-2"><a href="Bayes-check.html#cb2217-2"></a><span class="st">  </span><span class="kw">filter</span>(Iteration <span class="op">&gt;=</span><span class="st"> </span><span class="dv">51</span> <span class="op">&amp;</span><span class="st"> </span>Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2217-3"><a href="Bayes-check.html#cb2217-3"></a><span class="st">  </span><span class="kw">ggs_traceplot</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0506"></span>
 <img src="bookdown_files/figure-html/BayesianChapter0506-1.png" alt="History plots for iterations 51-1000 for the Gambia example." width="80%" />
 <p class="caption">
@@ -1775,7 +1776,7 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 </p>
 </div>
 <p>再看這1000次MCMC抽樣獲得的 Gelman-Rubin 統計量，差不多鏈內鏈間差異的比值在1000次左右可以認爲等於1，所以我們把這前1000次MCMC採樣作爲 burn-in 從事後樣本中刨除。確定了 burn-in 之後我們再對每一條MCMC鏈重復採樣25000次。</p>
-<div class="sourceCode" id="cb2211"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2211-1"><a href="Bayes-check.html#cb2211-1"></a><span class="kw">gelman.diag</span>(Simulated)</span></code></pre></div>
+<div class="sourceCode" id="cb2218"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2218-1"><a href="Bayes-check.html#cb2218-1"></a><span class="kw">gelman.diag</span>(Simulated)</span></code></pre></div>
 <pre><code>## Potential scale reduction factors:
 ## 
 ##          Point est. Upper C.I.
@@ -1788,7 +1789,7 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ## Multivariate psrf
 ## 
 ## 1.13</code></pre>
-<div class="sourceCode" id="cb2213"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2213-1"><a href="Bayes-check.html#cb2213-1"></a><span class="kw">gelman.plot</span>(Simulated)</span></code></pre></div>
+<div class="sourceCode" id="cb2220"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2220-1"><a href="Bayes-check.html#cb2220-1"></a><span class="kw">gelman.plot</span>(Simulated)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0507"></span>
 <img src="bookdown_files/figure-html/BayesianChapter0507-1.png" alt="Gelman-Rubin convergence statistic for the Gambia example." width="80%" />
 <p class="caption">
@@ -1798,18 +1799,18 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 </div>
 <div id="岡比亞兒童體重數據的貝葉斯統計學推斷結果" class="section level3">
 <h3><span class="header-section-number">98.2.6</span> 岡比亞兒童體重數據的貝葉斯統計學推斷結果</h3>
-<div class="sourceCode" id="cb2214"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2214-1"><a href="Bayes-check.html#cb2214-1"></a><span class="co"># Generate 52000 iterations</span></span>
-<span id="cb2214-2"><a href="Bayes-check.html#cb2214-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
-<span id="cb2214-3"><a href="Bayes-check.html#cb2214-3"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2214-4"><a href="Bayes-check.html#cb2214-4"></a>                                  <span class="st">&quot;/backupfiles/gambia-model.txt&quot;</span>,</span>
-<span id="cb2214-5"><a href="Bayes-check.html#cb2214-5"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2214-6"><a href="Bayes-check.html#cb2214-6"></a>                    <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>),</span>
-<span id="cb2214-7"><a href="Bayes-check.html#cb2214-7"></a>                    <span class="dt">n.iter =</span> <span class="dv">26000</span>,</span>
-<span id="cb2214-8"><a href="Bayes-check.html#cb2214-8"></a>                    <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2214-9"><a href="Bayes-check.html#cb2214-9"></a>                    <span class="dt">n.burnin =</span> <span class="dv">1000</span>,</span>
-<span id="cb2214-10"><a href="Bayes-check.html#cb2214-10"></a>                     <span class="dt">inits =</span> inits,</span>
-<span id="cb2214-11"><a href="Bayes-check.html#cb2214-11"></a>                    <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2214-12"><a href="Bayes-check.html#cb2214-12"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2221"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2221-1"><a href="Bayes-check.html#cb2221-1"></a><span class="co"># Generate 52000 iterations</span></span>
+<span id="cb2221-2"><a href="Bayes-check.html#cb2221-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
+<span id="cb2221-3"><a href="Bayes-check.html#cb2221-3"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2221-4"><a href="Bayes-check.html#cb2221-4"></a>                                  <span class="st">&quot;/backupfiles/gambia-model.txt&quot;</span>,</span>
+<span id="cb2221-5"><a href="Bayes-check.html#cb2221-5"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2221-6"><a href="Bayes-check.html#cb2221-6"></a>                    <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>),</span>
+<span id="cb2221-7"><a href="Bayes-check.html#cb2221-7"></a>                    <span class="dt">n.iter =</span> <span class="dv">26000</span>,</span>
+<span id="cb2221-8"><a href="Bayes-check.html#cb2221-8"></a>                    <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2221-9"><a href="Bayes-check.html#cb2221-9"></a>                    <span class="dt">n.burnin =</span> <span class="dv">1000</span>,</span>
+<span id="cb2221-10"><a href="Bayes-check.html#cb2221-10"></a>                     <span class="dt">inits =</span> inits,</span>
+<span id="cb2221-11"><a href="Bayes-check.html#cb2221-11"></a>                    <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2221-12"><a href="Bayes-check.html#cb2221-12"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -1819,7 +1820,7 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ##    Total graph size: 672
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2216"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2216-1"><a href="Bayes-check.html#cb2216-1"></a><span class="kw">summary</span>(<span class="kw">as.mcmc</span>(jagsModel))</span></code></pre></div>
+<div class="sourceCode" id="cb2223"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2223-1"><a href="Bayes-check.html#cb2223-1"></a><span class="kw">summary</span>(<span class="kw">as.mcmc</span>(jagsModel))</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 1:25000
 ## Thinning interval = 1 
@@ -1845,8 +1846,8 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ## gamma     -0.87733  -0.64432  -0.52330  -0.39966  -0.16461
 ## sigma2     1.28949   1.46379   1.56995   1.68620   1.93971</code></pre>
 <p>由於我們給每個未知參數的先驗概率分布都是沒有實際信息的，因此，預期貝葉斯模型給出的結果將會十分接近概率論模型給出的分析結果，事實也證明的確是如此：</p>
-<div class="sourceCode" id="cb2218"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2218-1"><a href="Bayes-check.html#cb2218-1"></a>Gambia.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(sex), <span class="dt">data =</span> growgam1)</span>
-<span id="cb2218-2"><a href="Bayes-check.html#cb2218-2"></a><span class="kw">summary</span>(Gambia.lm)</span></code></pre></div>
+<div class="sourceCode" id="cb2225"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2225-1"><a href="Bayes-check.html#cb2225-1"></a>Gambia.lm &lt;-<span class="st"> </span><span class="kw">lm</span>(wt <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span><span class="kw">factor</span>(sex), <span class="dt">data =</span> growgam1)</span>
+<span id="cb2225-2"><a href="Bayes-check.html#cb2225-2"></a><span class="kw">summary</span>(Gambia.lm)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = wt ~ age + factor(sex), data = growgam1)
@@ -1866,7 +1867,7 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ## Residual standard error: 1.2503 on 187 degrees of freedom
 ## Multiple R-squared:  0.5597, Adjusted R-squared:  0.55499 
 ## F-statistic: 118.85 on 2 and 187 DF,  p-value: &lt; 2.22e-16</code></pre>
-<div class="sourceCode" id="cb2220"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2220-1"><a href="Bayes-check.html#cb2220-1"></a><span class="kw">regress.display</span>(Gambia.lm)</span></code></pre></div>
+<div class="sourceCode" id="cb2227"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2227-1"><a href="Bayes-check.html#cb2227-1"></a><span class="kw">regress.display</span>(Gambia.lm)</span></code></pre></div>
 <pre><code>##  
 ##                    Coeff  lower095ci  upper095ci        Pr&gt;|t|
 ## (Intercept)   7.15241353  6.69029297  7.61453409 1.4039052e-74
@@ -1907,18 +1908,18 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 <p>這些 MCMC 樣本的自相關程度之所以如此之高，其最主要的原因是我們沒有把連續變量年齡給中心化。解決這個問題的辦法是把原先模型中的線性回歸模型的年齡變量給中心化：</p>
 <pre><code>mu[i] &lt;- alpha + beta*(age[i] - mean(age[])) + gamma*sex[i]</code></pre>
 <p>這一次我們獲得的50000個MCMC事後樣本的參數估計結果如下：</p>
-<div class="sourceCode" id="cb2224"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2224-1"><a href="Bayes-check.html#cb2224-1"></a><span class="co"># Generate 51000 iterations</span></span>
-<span id="cb2224-2"><a href="Bayes-check.html#cb2224-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
-<span id="cb2224-3"><a href="Bayes-check.html#cb2224-3"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2224-4"><a href="Bayes-check.html#cb2224-4"></a>                                  <span class="st">&quot;/backupfiles/gambia-model-agecen.txt&quot;</span>,</span>
-<span id="cb2224-5"><a href="Bayes-check.html#cb2224-5"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2224-6"><a href="Bayes-check.html#cb2224-6"></a>                    <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>),</span>
-<span id="cb2224-7"><a href="Bayes-check.html#cb2224-7"></a>                    <span class="dt">n.iter =</span> <span class="dv">26000</span>,</span>
-<span id="cb2224-8"><a href="Bayes-check.html#cb2224-8"></a>                  <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
-<span id="cb2224-9"><a href="Bayes-check.html#cb2224-9"></a>                  <span class="dt">n.burnin =</span> <span class="dv">1000</span>,</span>
-<span id="cb2224-10"><a href="Bayes-check.html#cb2224-10"></a>                     <span class="dt">inits =</span> inits,</span>
-<span id="cb2224-11"><a href="Bayes-check.html#cb2224-11"></a>                  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2224-12"><a href="Bayes-check.html#cb2224-12"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2231"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2231-1"><a href="Bayes-check.html#cb2231-1"></a><span class="co"># Generate 51000 iterations</span></span>
+<span id="cb2231-2"><a href="Bayes-check.html#cb2231-2"></a>jagsModel &lt;-<span class="st"> </span><span class="kw">jags</span>(<span class="dt">data =</span> Dat,</span>
+<span id="cb2231-3"><a href="Bayes-check.html#cb2231-3"></a>                  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2231-4"><a href="Bayes-check.html#cb2231-4"></a>                                  <span class="st">&quot;/backupfiles/gambia-model-agecen.txt&quot;</span>,</span>
+<span id="cb2231-5"><a href="Bayes-check.html#cb2231-5"></a>                                  <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2231-6"><a href="Bayes-check.html#cb2231-6"></a>                    <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>),</span>
+<span id="cb2231-7"><a href="Bayes-check.html#cb2231-7"></a>                    <span class="dt">n.iter =</span> <span class="dv">26000</span>,</span>
+<span id="cb2231-8"><a href="Bayes-check.html#cb2231-8"></a>                  <span class="dt">n.chains =</span> <span class="dv">2</span>, </span>
+<span id="cb2231-9"><a href="Bayes-check.html#cb2231-9"></a>                  <span class="dt">n.burnin =</span> <span class="dv">1000</span>,</span>
+<span id="cb2231-10"><a href="Bayes-check.html#cb2231-10"></a>                     <span class="dt">inits =</span> inits,</span>
+<span id="cb2231-11"><a href="Bayes-check.html#cb2231-11"></a>                  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2231-12"><a href="Bayes-check.html#cb2231-12"></a>                    <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -1928,7 +1929,7 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ##    Total graph size: 706
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2226"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2226-1"><a href="Bayes-check.html#cb2226-1"></a><span class="kw">summary</span>(<span class="kw">as.mcmc</span>(jagsModel))</span></code></pre></div>
+<div class="sourceCode" id="cb2233"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2233-1"><a href="Bayes-check.html#cb2233-1"></a><span class="kw">summary</span>(<span class="kw">as.mcmc</span>(jagsModel))</span></code></pre></div>
 <pre><code>## 
 ## Iterations = 1:25000
 ## Thinning interval = 1 
@@ -1953,7 +1954,7 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ## deviance 621.55475 623.01372 624.45440 626.49557 632.23272
 ## gamma     -0.88228  -0.64542  -0.52029  -0.39739  -0.16387
 ## sigma2     1.28719   1.46425   1.56795   1.68480   1.93702</code></pre>
-<div class="sourceCode" id="cb2228"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2228-1"><a href="Bayes-check.html#cb2228-1"></a><span class="kw">print</span>(jagsModel)</span></code></pre></div>
+<div class="sourceCode" id="cb2235"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2235-1"><a href="Bayes-check.html#cb2235-1"></a><span class="kw">print</span>(jagsModel)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/gambia-model-agecen.txt&quot;, fit using jags,
 ##  2 chains, each with 26000 iterations (first 1000 discarded)
 ##  n.sims = 50000 iterations saved
@@ -1971,12 +1972,12 @@ sex = c(2, 2, 2, 1, 1, 2, 2, ..., 1)
 ## pD = 4.0 and DIC = 629.1
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
 <p>注意到這時候事後參數估計給出的 <code>alpha</code> 結果發生了微妙的變化，然而其他的幾個變量的事後估計結果幾乎沒有改變。且此時 <code>MC_error</code> 也變得小了很多，達到了我們的經驗法則所要求的。這時候的事後MCMC採樣鏈的自相關圖也提供較爲了理想的結果：</p>
-<div class="sourceCode" id="cb2230"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2230-1"><a href="Bayes-check.html#cb2230-1"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(jagsModel)</span>
-<span id="cb2230-2"><a href="Bayes-check.html#cb2230-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(Simulated)</span>
-<span id="cb2230-3"><a href="Bayes-check.html#cb2230-3"></a></span>
-<span id="cb2230-4"><a href="Bayes-check.html#cb2230-4"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2230-5"><a href="Bayes-check.html#cb2230-5"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2230-6"><a href="Bayes-check.html#cb2230-6"></a><span class="st">  </span><span class="kw">ggs_autocorrelation</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb2237"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2237-1"><a href="Bayes-check.html#cb2237-1"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(jagsModel)</span>
+<span id="cb2237-2"><a href="Bayes-check.html#cb2237-2"></a>ggSample &lt;-<span class="st"> </span><span class="kw">ggs</span>(Simulated)</span>
+<span id="cb2237-3"><a href="Bayes-check.html#cb2237-3"></a></span>
+<span id="cb2237-4"><a href="Bayes-check.html#cb2237-4"></a>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2237-5"><a href="Bayes-check.html#cb2237-5"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;alpha&quot;</span>, <span class="st">&quot;beta&quot;</span>, <span class="st">&quot;gamma&quot;</span>, <span class="st">&quot;sigma2&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2237-6"><a href="Bayes-check.html#cb2237-6"></a><span class="st">  </span><span class="kw">ggs_autocorrelation</span>()</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:BayesianChapter0513"></span>
 <img src="bookdown_files/figure-html/BayesianChapter0513-1.png" alt="Autocorrelation plot for the Gambia example (centered model, chain 1)" width="80%" />
 <p class="caption">

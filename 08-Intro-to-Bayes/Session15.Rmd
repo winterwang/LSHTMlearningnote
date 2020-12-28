@@ -12,7 +12,7 @@ str(d)
 ```
 
 
-現在我們只關心上述數據中生存下來的蝌蚪數量 `surv`，和開始時的蝌蚪數量 `density`。該數據包涵了很多的方差 variance。這些方差可能來自不同的實驗條件，或者未知的原因。所以，假設每一行數據中的10只蝌蚪，被放在了不同的水池裏，也就是說，上面的數據中我們有48個水池做重複的實驗。於是該數據就可以被理解爲是重複相似的實驗，但是每次的實驗又有一些微妙的不同。每一個水池，就是一個數據的層級 'cluster'。如果我們忽略這個層級的概念，我們可能就忽略掉了他們本身在實驗開始之時的基線生存狀況 (baseline survival) 本身可能存在的不確定性 (variation)。這個不確定性，或者叫基線生存狀況的方差可能掩蓋住一些重要的發現。如果我們允許每個水池擁有自己單獨的其實狀態，也就是函數的截距，但是假如僅僅使用啞變量的方法 dummy variable，那其實我們就掉進了進行性健忘症的陷阱裏。因爲雖然他們是不同的水池做的實驗，但是一個水池的結果其實是能提示或者告訴我們其他水池的實驗結果的一些信息的，而不是完全地相互獨立毫無關聯性。
+現在我們只關心上述數據中生存下來的蝌蚪數量 `surv`，和開始時的蝌蚪數量 `density`。該數據包涵了很多的變化和不確定性，或者叫做方差 variance。這些變化和不確定性可能來自不同的實驗條件，或者未知的原因。所以，假設每一行數據中的10只蝌蚪，被放在了不同的水池裏，也就是說，上面的數據中我們有48個水池做重複的實驗。於是該數據就可以被理解爲是重複相似的實驗，但是每次的實驗又有一些微妙的不同。每一個水池，就是一個數據的層級 'cluster'。如果我們忽略這個層級的概念，我們可能就忽略掉了他們本身在實驗開始之時的基線生存狀況 (baseline survival) 本身可能存在的不確定性 (variation)。這個不確定性，或者叫基線生存狀況的方差可能掩蓋住一些重要的發現。如果我們允許每個水池擁有自己單獨的其實狀態，也就是函數的截距，但是假如僅僅使用啞變量的方法 dummy variable，那其實我們就掉進了進行性健忘症的陷阱裏。因爲雖然他們是不同的水池做的實驗，但是一個水池的結果其實是能提示或者告訴我們其他水池的實驗結果的一些信息的，而不是完全地相互獨立毫無關聯性。
 
 所以我們需要的其實是一個同時能夠允許每個水池的蝌蚪生存擁有自己的起始狀態，也就是函數的截距，且同時考慮到他們之間是有關聯性的，也就是這些截距之間是有一定的方差的。這樣的模型就被叫做隨機截距模型 (varing intercepts models)，這樣的模型是最簡單的多層回歸模型。下面的模型用於預測每個不同的水池中實驗過後蝌蚪的生存狀況 (mortality) ：
 
@@ -156,7 +156,7 @@ text( 32 + 8, 0, 'large tanks')
 # show first 100 populations in the posterior 
 plot( NULL, xlim = c(-3, 4), ylim = c(0, 0.35), 
       xlab = "log-odds survive", 
-      ylab = "Density")
+      ylab = "Density", bty = "n")
 
 for( i in 1:100 ) 
   curve( dnorm(x, post$a_bar[i], post$sigma[i]), add = TRUE, 
@@ -173,7 +173,7 @@ sim_tanks <- rnorm(80000, post$a_bar, post$sigma)
 
 # transform to probability and visualize
 dens( inv_logit(sim_tanks), lwd = 2, adj = 0.1, 
-      xlab = "probability survive")
+      xlab = "probability survive", bty = "n")
 ```
 
 
@@ -276,12 +276,112 @@ head(dsim)
 
 
 
-### 計算部分合併策略的結果
+### 計算部分合併策略的結果 partial-pooling estimates
+
+我們來使用 Stan 運行這個部分合併結果的模型
 
 
+```{r  introBayes15-12, cache=TRUE, results="hide", eval=FALSE}
+dat <- list(
+  Si = dsim$Si, 
+  Ni = dsim$Ni, 
+  pond = dsim$pond
+)
+m13.3 <- ulam(
+  alist(
+    Si ~ dbinom( Ni, p ), 
+    logit(p) <- a_pond[pond], 
+    a_pond[pond] ~ dnorm( a_bar, sigma ), 
+    a_bar ~ dnorm( 0, 1.5 ), 
+    sigma ~ dexp( 1 )
+  ), data = dat, chains = 4
+)
+saveRDS(m13.3, "../Stanfits/m13_3.rds")
+```
 
 
+上面的模型運行計算的就是最基礎版本的隨機截距模型。我們來看一下它給出的 $\bar{\alpha}, \sigma$ 的事後分佈情況，下面的結果包含了六十個水池的截距，會很長：
 
+```{r introBayes15-13, cache=TRUE}
+m13.3 <- readRDS("../Stanfits/m13_3.rds")
+precis( m13.3, depth = 2 )
+```
+
+
+很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去：
+
+```{r introBayes15-14, cache=TRUE}
+post <- extract.samples( m13.3 )
+dsim$p_partpool <- apply( inv_logit(post$a_pond), 2, mean)
+```
+
+爲了便於比較，我們把真實的水池中蝌蚪的存活概率也計算一下
+
+```{r introBayes15-15, cache=TRUE}
+dsim$p_true <- inv_logit( dsim$true_a )
+```
+
+最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差：
+
+```{r introBayes15-16, cache=TRUE}
+dsim <- dsim %>% 
+  mutate(nopool_error = abs(p_nopool - p_true), 
+         partpool_erro = abs(p_partpool - p_true))
+
+# or similarly you can use basic R command
+nopool_error <- abs( dsim$p_nopool - dsim$p_true )
+partpool_erro <- abs( dsim$p_partpool - dsim$p_true )
+```
+
+
+然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：
+
+```{r introBayes15-fig04, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds. ", fig.align='center', message=FALSE}
+plot( 1:60, nopool_error, xlab = "Pond", 
+      ylab = "absolute error", bty = "n",
+      col = rangi2, pch = 16, 
+      ylim = c(0, 0.6))
+points( 1:60, partpool_erro)
+
+# mark posterior mean probability across tanks 
+error_avg <- dsim %>%
+  group_by(Ni) %>% 
+  summarise(nopool_avg = mean(nopool_error), 
+            partpool_avg = mean(partpool_erro))
+segments(1, error_avg$nopool_avg[1], 
+         16, error_avg$nopool_avg[1], 
+         col = rangi2, lwd = 2)
+segments(1, error_avg$partpool_avg[1], 
+         16, error_avg$partpool_avg[1], 
+         col = "black", lwd = 2, lty = 2)
+segments(17, error_avg$nopool_avg[2], 
+         32, error_avg$nopool_avg[2], 
+         col = rangi2, lwd = 2)
+segments(17, error_avg$partpool_avg[2], 
+         32, error_avg$partpool_avg[2], 
+         col = "black", lwd = 2, lty = 2)
+segments(33, error_avg$nopool_avg[3], 
+         46, error_avg$nopool_avg[3], 
+         col = rangi2, lwd = 2)
+segments(33, error_avg$partpool_avg[3], 
+         46, error_avg$partpool_avg[3], 
+         col = "black", lwd = 2, lty = 2)
+segments(47, error_avg$nopool_avg[4], 
+         60, error_avg$nopool_avg[4], 
+         col = rangi2, lwd = 2)
+segments(47, error_avg$partpool_avg[4], 
+         60, error_avg$partpool_avg[4], 
+         col = "black", lwd = 2, lty = 2)
+
+# draw vertical dividers between tank densities
+abline( v = 16.5, lwd = 0.5 )
+abline( v = 32.5, lwd = 0.5 )
+abline( v = 46.5, lwd = 0.5 )
+text( 8, 0.6, 'tiny ponds (5)')
+text( 16 + 8, 0.6, 'small ponds (10)')
+text( 32 + 8, 0.6, 'medium ponds (25)')
+text( 48 + 8, 0.6, 'large ponds (35)')
+```
 
 
 

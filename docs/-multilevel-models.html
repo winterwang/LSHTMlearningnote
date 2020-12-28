@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-24" />
+<meta name="date" content="2020-12-28" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -774,6 +774,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="55.2.1" data-path="-multilevel-models.html"><a href="-multilevel-models.html#用於產生模擬數據的模型-the-model"><i class="fa fa-check"></i><b>55.2.1</b> 用於產生模擬數據的模型 the model</a></li>
 <li class="chapter" data-level="55.2.2" data-path="-multilevel-models.html"><a href="-multilevel-models.html#模擬存活概率結果-simulate-survivors"><i class="fa fa-check"></i><b>55.2.2</b> 模擬存活概率結果 simulate survivors</a></li>
 <li class="chapter" data-level="55.2.3" data-path="-multilevel-models.html"><a href="-multilevel-models.html#計算完全不合併策略-no-pooling-estimates"><i class="fa fa-check"></i><b>55.2.3</b> 計算完全不合併策略 no-pooling estimates</a></li>
+<li class="chapter" data-level="55.2.4" data-path="-multilevel-models.html"><a href="-multilevel-models.html#計算部分合併策略的結果-partial-pooling-estimates"><i class="fa fa-check"></i><b>55.2.4</b> 計算部分合併策略的結果 partial-pooling estimates</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -1570,7 +1571,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##  $ size    : Factor w/ 2 levels &quot;big&quot;,&quot;small&quot;: 1 1 1 1 2 2 2 2 1 1 ...
 ##  $ surv    : int  9 10 7 10 9 9 10 9 4 9 ...
 ##  $ propsurv: num  0.9 1 0.7 1 0.9 0.9 1 0.9 0.4 0.9 ...</code></pre>
-<p>現在我們只關心上述數據中生存下來的蝌蚪數量 <code>surv</code>，和開始時的蝌蚪數量 <code>density</code>。該數據包涵了很多的方差 variance。這些方差可能來自不同的實驗條件，或者未知的原因。所以，假設每一行數據中的10只蝌蚪，被放在了不同的水池裏，也就是說，上面的數據中我們有48個水池做重複的實驗。於是該數據就可以被理解爲是重複相似的實驗，但是每次的實驗又有一些微妙的不同。每一個水池，就是一個數據的層級 ‘cluster’。如果我們忽略這個層級的概念，我們可能就忽略掉了他們本身在實驗開始之時的基線生存狀況 (baseline survival) 本身可能存在的不確定性 (variation)。這個不確定性，或者叫基線生存狀況的方差可能掩蓋住一些重要的發現。如果我們允許每個水池擁有自己單獨的其實狀態，也就是函數的截距，但是假如僅僅使用啞變量的方法 dummy variable，那其實我們就掉進了進行性健忘症的陷阱裏。因爲雖然他們是不同的水池做的實驗，但是一個水池的結果其實是能提示或者告訴我們其他水池的實驗結果的一些信息的，而不是完全地相互獨立毫無關聯性。</p>
+<p>現在我們只關心上述數據中生存下來的蝌蚪數量 <code>surv</code>，和開始時的蝌蚪數量 <code>density</code>。該數據包涵了很多的變化和不確定性，或者叫做方差 variance。這些變化和不確定性可能來自不同的實驗條件，或者未知的原因。所以，假設每一行數據中的10只蝌蚪，被放在了不同的水池裏，也就是說，上面的數據中我們有48個水池做重複的實驗。於是該數據就可以被理解爲是重複相似的實驗，但是每次的實驗又有一些微妙的不同。每一個水池，就是一個數據的層級 ‘cluster’。如果我們忽略這個層級的概念，我們可能就忽略掉了他們本身在實驗開始之時的基線生存狀況 (baseline survival) 本身可能存在的不確定性 (variation)。這個不確定性，或者叫基線生存狀況的方差可能掩蓋住一些重要的發現。如果我們允許每個水池擁有自己單獨的其實狀態，也就是函數的截距，但是假如僅僅使用啞變量的方法 dummy variable，那其實我們就掉進了進行性健忘症的陷阱裏。因爲雖然他們是不同的水池做的實驗，但是一個水池的結果其實是能提示或者告訴我們其他水池的實驗結果的一些信息的，而不是完全地相互獨立毫無關聯性。</p>
 <p>所以我們需要的其實是一個同時能夠允許每個水池的蝌蚪生存擁有自己的起始狀態，也就是函數的截距，且同時考慮到他們之間是有關聯性的，也就是這些截距之間是有一定的方差的。這樣的模型就被叫做隨機截距模型 (varing intercepts models)，這樣的模型是最簡單的多層回歸模型。下面的模型用於預測每個不同的水池中實驗過後蝌蚪的生存狀況 (mortality) ：</p>
 <p><span class="math display">\[
 \begin{aligned}
@@ -1722,7 +1723,7 @@ S_i &amp; \sim \text{Binomial}(N_i, p_i)  \\
 <div class="sourceCode" id="cb1024"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1024-1"><a href="-multilevel-models.html#cb1024-1"></a><span class="co"># show first 100 populations in the posterior </span></span>
 <span id="cb1024-2"><a href="-multilevel-models.html#cb1024-2"></a><span class="kw">plot</span>( <span class="ot">NULL</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">3</span>, <span class="dv">4</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.35</span>), </span>
 <span id="cb1024-3"><a href="-multilevel-models.html#cb1024-3"></a>      <span class="dt">xlab =</span> <span class="st">&quot;log-odds survive&quot;</span>, </span>
-<span id="cb1024-4"><a href="-multilevel-models.html#cb1024-4"></a>      <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>)</span>
+<span id="cb1024-4"><a href="-multilevel-models.html#cb1024-4"></a>      <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span>
 <span id="cb1024-5"><a href="-multilevel-models.html#cb1024-5"></a></span>
 <span id="cb1024-6"><a href="-multilevel-models.html#cb1024-6"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">100</span> ) </span>
 <span id="cb1024-7"><a href="-multilevel-models.html#cb1024-7"></a>  <span class="kw">curve</span>( <span class="kw">dnorm</span>(x, post<span class="op">$</span>a_bar[i], post<span class="op">$</span>sigma[i]), <span class="dt">add =</span> <span class="ot">TRUE</span>, </span>
@@ -1739,7 +1740,7 @@ S_i &amp; \sim \text{Binomial}(N_i, p_i)  \\
 <span id="cb1025-3"><a href="-multilevel-models.html#cb1025-3"></a></span>
 <span id="cb1025-4"><a href="-multilevel-models.html#cb1025-4"></a><span class="co"># transform to probability and visualize</span></span>
 <span id="cb1025-5"><a href="-multilevel-models.html#cb1025-5"></a><span class="kw">dens</span>( <span class="kw">inv_logit</span>(sim_tanks), <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">adj =</span> <span class="fl">0.1</span>, </span>
-<span id="cb1025-6"><a href="-multilevel-models.html#cb1025-6"></a>      <span class="dt">xlab =</span> <span class="st">&quot;probability survive&quot;</span>)</span></code></pre></div>
+<span id="cb1025-6"><a href="-multilevel-models.html#cb1025-6"></a>      <span class="dt">xlab =</span> <span class="st">&quot;probability survive&quot;</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:introBayes15-fig03"></span>
 <img src="bookdown_files/figure-html/introBayes15-fig03-1.png" alt="Survival probabilities for 8000 new simulated tanks, averaging over the posterior distribution in previous figure." width="576" />
 <p class="caption">
@@ -1772,7 +1773,7 @@ S_i &amp; \sim \text{Binomial}(N_i, p_i) \\
 <p>為了能順利從這個模型中產生模擬數據，我們需要給模型中賦予真實值的參數有：</p>
 <ol style="list-style-type: decimal">
 <li><span class="math inline">\(\bar{\alpha}\)</span> 是總體池塘蝌蚪存活概率的平均值的對數比值 average log-odds of survival in the entire population of ponds。</li>
-<li><span class="math inline">\(\sigma\)</span> 總體池塘蝌蚪存活概率平均值的對數比值的標準差 the standard deviation of the distribution of log-odds of survival among ponds。</li>
+<li><span class="math inline">\(\sigma\)</span> 是總體池塘蝌蚪存活概率平均值的對數比值的標準差 the standard deviation of the distribution of log-odds of survival among ponds。</li>
 <li><span class="math inline">\(\alpha\)</span> 一系列水池的蝌蚪存過概率的對數比值的真實值，作為模型的變動截距 a vector of individual pond intercepts, one for each pond。</li>
 </ol>
 <p>此外，我們還需要設定每個水池的蝌蚪起始樣本量 <span class="math inline">\(N_i\)</span>，這些都設定完畢之後，就只剩下每個水池可能存活的蝌蚪數量了，這個可以使用二項分佈的隨機值來設定。</p>
@@ -1820,6 +1821,155 @@ p_i = \frac{\exp(\alpha_i)}{1 +\exp(\alpha_i)}
 ## 5    5  5 -2.69480148  0      0.0
 ## 6    6  5  2.58086025  4      0.8</code></pre>
 <p>數據 <code>dsim</code> 的新增一列 <code>p_nopool</code> 就是每個水池實際觀察到的蝌蚪存活概率。這個計算結果等同於我們把每個水池當作一個啞變量互無關聯時給出的模型估計結果。</p>
+</div>
+<div id="計算部分合併策略的結果-partial-pooling-estimates" class="section level3">
+<h3><span class="header-section-number">55.2.4</span> 計算部分合併策略的結果 partial-pooling estimates</h3>
+<p>我們來使用 Stan 運行這個部分合併結果的模型</p>
+<div class="sourceCode" id="cb1034"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1034-1"><a href="-multilevel-models.html#cb1034-1"></a>dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb1034-2"><a href="-multilevel-models.html#cb1034-2"></a>  <span class="dt">Si =</span> dsim<span class="op">$</span>Si, </span>
+<span id="cb1034-3"><a href="-multilevel-models.html#cb1034-3"></a>  <span class="dt">Ni =</span> dsim<span class="op">$</span>Ni, </span>
+<span id="cb1034-4"><a href="-multilevel-models.html#cb1034-4"></a>  <span class="dt">pond =</span> dsim<span class="op">$</span>pond</span>
+<span id="cb1034-5"><a href="-multilevel-models.html#cb1034-5"></a>)</span>
+<span id="cb1034-6"><a href="-multilevel-models.html#cb1034-6"></a>m13<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb1034-7"><a href="-multilevel-models.html#cb1034-7"></a>  <span class="kw">alist</span>(</span>
+<span id="cb1034-8"><a href="-multilevel-models.html#cb1034-8"></a>    Si <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( Ni, p ), </span>
+<span id="cb1034-9"><a href="-multilevel-models.html#cb1034-9"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a_pond[pond], </span>
+<span id="cb1034-10"><a href="-multilevel-models.html#cb1034-10"></a>    a_pond[pond] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( a_bar, sigma ), </span>
+<span id="cb1034-11"><a href="-multilevel-models.html#cb1034-11"></a>    a_bar <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb1034-12"><a href="-multilevel-models.html#cb1034-12"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>( <span class="dv">1</span> )</span>
+<span id="cb1034-13"><a href="-multilevel-models.html#cb1034-13"></a>  ), <span class="dt">data =</span> dat, <span class="dt">chains =</span> <span class="dv">4</span></span>
+<span id="cb1034-14"><a href="-multilevel-models.html#cb1034-14"></a>)</span>
+<span id="cb1034-15"><a href="-multilevel-models.html#cb1034-15"></a><span class="kw">saveRDS</span>(m13<span class="fl">.3</span>, <span class="st">&quot;../Stanfits/m13_3.rds&quot;</span>)</span></code></pre></div>
+<p>上面的模型運行計算的就是最基礎版本的隨機截距模型。我們來看一下它給出的 <span class="math inline">\(\bar{\alpha}, \sigma\)</span> 的事後分佈情況，下面的結果包含了六十個水池的截距，會很長：</p>
+<div class="sourceCode" id="cb1035"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1035-1"><a href="-multilevel-models.html#cb1035-1"></a>m13<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&quot;../Stanfits/m13_3.rds&quot;</span>)</span>
+<span id="cb1035-2"><a href="-multilevel-models.html#cb1035-2"></a><span class="kw">precis</span>( m13<span class="fl">.3</span>, <span class="dt">depth =</span> <span class="dv">2</span> )</span></code></pre></div>
+<pre><code>##                   mean         sd          5.5%       94.5%      n_eff      Rhat4
+## a_pond[1]   0.82416253 0.80311683 -0.4355248204  2.12636310 3501.41411 0.99870213
+## a_pond[2]   2.44310445 1.01589071  0.9962992289  4.12804343 2256.72339 0.99934422
+## a_pond[3]   0.84934013 0.85080942 -0.5356171501  2.21584925 3221.31723 0.99967963
+## a_pond[4]   0.85641981 0.81096756 -0.3722394201  2.18546800 3656.92965 0.99950975
+## a_pond[5]  -1.02219241 0.89424658 -2.5024823116  0.29945628 2612.84967 0.99871647
+## a_pond[6]   1.56301531 0.89186824  0.2596436839  3.09942068 2786.72572 0.99999448
+## a_pond[7]   0.19740894 0.82029349 -1.0810975581  1.42507677 3504.53830 0.99934860
+## a_pond[8]   0.83677074 0.80830756 -0.4321761440  2.18560143 3294.94716 0.99944289
+## a_pond[9]   2.44545004 0.99082422  0.9601444459  4.12078638 2453.15945 0.99888381
+## a_pond[10]  1.56374707 0.85412502  0.2909303483  3.00291417 2571.98094 0.99984741
+## a_pond[11]  0.22514307 0.77541970 -1.0149485555  1.44199669 3924.13990 0.99823770
+## a_pond[12]  2.43157197 1.00067839  0.9310338894  4.10459346 2075.71777 1.00021804
+## a_pond[13]  2.44818765 1.05622891  0.8972243419  4.25891835 2356.12869 0.99923608
+## a_pond[14]  1.55223317 0.87350446  0.2258478628  3.00823849 3095.98014 0.99837448
+## a_pond[15]  1.54550462 0.87501798  0.2315549307  3.01553211 3729.76828 1.00000621
+## a_pond[16]  2.81823312 0.95209204  1.4968009183  4.46055210 1975.68400 0.99903364
+## a_pond[17]  2.82203117 0.96685592  1.4517515107  4.43416396 2098.06075 1.00020378
+## a_pond[18] -1.64412412 0.80209326 -3.0318915826 -0.44636193 2160.25977 0.99975265
+## a_pond[19] -1.15408509 0.68721193 -2.3033532718 -0.13736479 3638.15514 0.99931642
+## a_pond[20]  2.81686884 0.96486221  1.4383662861  4.51936383 2382.45345 0.99942557
+## a_pond[21]  2.79797857 0.96274703  1.3937447322  4.44076133 2218.54799 0.99981134
+## a_pond[22]  2.81020822 0.94880669  1.4098982454  4.41558822 2530.72335 0.99967261
+## a_pond[23]  1.06423156 0.63788422  0.0776865766  2.07290470 4819.21709 0.99963572
+## a_pond[24]  0.67873441 0.58091083 -0.2282783301  1.65112542 3565.09684 0.99902410
+## a_pond[25]  2.80822206 0.92634111  1.4536822570  4.40868988 2522.58665 0.99997121
+## a_pond[26]  1.53049521 0.73413530  0.4321793750  2.72739857 3536.40346 0.99973063
+## a_pond[27]  2.81299530 0.97964813  1.4247643996  4.51547978 2118.29503 0.99912623
+## a_pond[28]  2.08010522 0.80045424  0.8889693623  3.46876690 2558.19512 0.99916979
+## a_pond[29]  2.08051670 0.83120485  0.8335533153  3.42621811 2887.14231 0.99865236
+## a_pond[30]  2.80028027 0.93390972  1.3890905625  4.39246569 2393.60052 0.99889771
+## a_pond[31]  0.67901893 0.41781035  0.0074804659  1.33955072 4199.94985 0.99883428
+## a_pond[32]  0.37334852 0.39905119 -0.2348161967  1.02182977 4645.78343 0.99835276
+## a_pond[33]  3.38674949 0.89444859  2.0915222938  4.95433323 1924.69655 0.99963864
+## a_pond[34]  2.79351951 0.72369659  1.7456631652  4.04274946 2309.04807 1.00000906
+## a_pond[35]  2.33013009 0.62752507  1.4055996158  3.38852303 2825.82854 1.00018519
+## a_pond[36]  2.32407662 0.60491023  1.4137201210  3.36134258 2537.08429 0.99853654
+## a_pond[37]  1.24344991 0.46212225  0.5050492395  2.00156592 3618.18872 0.99900977
+## a_pond[38]  1.23964533 0.43607229  0.5856081758  1.94905424 3435.30615 0.99961389
+## a_pond[39]  0.68642253 0.40810490  0.0536025822  1.35261243 4499.73328 0.99887981
+## a_pond[40]  1.97649413 0.55072378  1.1583755598  2.91120622 3748.70789 0.99916420
+## a_pond[41]  2.33827182 0.64459239  1.3839149415  3.44216401 2885.63757 0.99866756
+## a_pond[42]  1.45986616 0.47149444  0.7353066317  2.24764092 4846.89129 0.99913601
+## a_pond[43]  1.25455026 0.45409954  0.5684845973  2.01528699 3612.29946 0.99885546
+## a_pond[44]  0.52362014 0.39787708 -0.0960207055  1.19804737 3675.76615 0.99878807
+## a_pond[45]  0.85348135 0.41843178  0.1969023498  1.53482069 3550.03645 0.99931313
+## a_pond[46]  1.44877092 0.40577223  0.8234332637  2.12314840 3354.16683 1.00013392
+## a_pond[47]  0.98734149 0.36677472  0.4038058164  1.60503987 3850.95334 0.99811245
+## a_pond[48]  1.61721757 0.43352115  0.9373549048  2.32446765 3881.24054 0.99877588
+## a_pond[49]  3.03229701 0.68325651  2.0410615276  4.22698847 2666.47769 1.00006975
+## a_pond[50]  2.03456212 0.49701554  1.2483239151  2.86374695 3293.52137 0.99861919
+## a_pond[51]  0.48330340 0.35369076 -0.0641107481  1.03487969 2889.45207 0.99974328
+## a_pond[52]  2.29989928 0.50970749  1.5331145711  3.15467033 3554.64255 1.00020132
+## a_pond[53]  1.27903575 0.40201003  0.6656285867  1.94537557 4502.45120 0.99877477
+## a_pond[54]  2.62791884 0.62255143  1.7053918543  3.66772908 3183.85090 0.99952670
+## a_pond[55]  1.28424412 0.38697422  0.6727893423  1.93451991 3058.17385 0.99935670
+## a_pond[56]  2.31716263 0.56957703  1.4947001534  3.27550058 2699.42880 0.99945726
+## a_pond[57]  0.60085027 0.35288028  0.0315992944  1.15423564 3533.52999 1.00008645
+## a_pond[58] -0.75187037 0.35975997 -1.3537025605 -0.21777511 3122.76961 1.00033821
+## a_pond[59]  0.60773515 0.35823527  0.0559971198  1.18488768 3884.45713 0.99904886
+## a_pond[60]  2.05150401 0.51353049  1.2770084481  2.90029514 3987.36522 0.99964178
+## a_bar       1.50654335 0.19886250  1.2049521455  1.83010922 1641.26095 1.00354003
+## sigma       1.32129875 0.20942270  1.0181960428  1.67708374  802.86359 1.00177457</code></pre>
+<p>很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去：</p>
+<div class="sourceCode" id="cb1037"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1037-1"><a href="-multilevel-models.html#cb1037-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m13<span class="fl">.3</span> )</span>
+<span id="cb1037-2"><a href="-multilevel-models.html#cb1037-2"></a>dsim<span class="op">$</span>p_partpool &lt;-<span class="st"> </span><span class="kw">apply</span>( <span class="kw">inv_logit</span>(post<span class="op">$</span>a_pond), <span class="dv">2</span>, mean)</span></code></pre></div>
+<p>爲了便於比較，我們把真實的水池中蝌蚪的存活概率也計算一下</p>
+<div class="sourceCode" id="cb1038"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1038-1"><a href="-multilevel-models.html#cb1038-1"></a>dsim<span class="op">$</span>p_true &lt;-<span class="st"> </span><span class="kw">inv_logit</span>( dsim<span class="op">$</span>true_a )</span></code></pre></div>
+<p>最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差：</p>
+<div class="sourceCode" id="cb1039"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1039-1"><a href="-multilevel-models.html#cb1039-1"></a>dsim &lt;-<span class="st"> </span>dsim <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1039-2"><a href="-multilevel-models.html#cb1039-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">nopool_error =</span> <span class="kw">abs</span>(p_nopool <span class="op">-</span><span class="st"> </span>p_true), </span>
+<span id="cb1039-3"><a href="-multilevel-models.html#cb1039-3"></a>         <span class="dt">partpool_erro =</span> <span class="kw">abs</span>(p_partpool <span class="op">-</span><span class="st"> </span>p_true))</span>
+<span id="cb1039-4"><a href="-multilevel-models.html#cb1039-4"></a></span>
+<span id="cb1039-5"><a href="-multilevel-models.html#cb1039-5"></a><span class="co"># or similarly you can use basic R command</span></span>
+<span id="cb1039-6"><a href="-multilevel-models.html#cb1039-6"></a>nopool_error &lt;-<span class="st"> </span><span class="kw">abs</span>( dsim<span class="op">$</span>p_nopool <span class="op">-</span><span class="st"> </span>dsim<span class="op">$</span>p_true )</span>
+<span id="cb1039-7"><a href="-multilevel-models.html#cb1039-7"></a>partpool_erro &lt;-<span class="st"> </span><span class="kw">abs</span>( dsim<span class="op">$</span>p_partpool <span class="op">-</span><span class="st"> </span>dsim<span class="op">$</span>p_true )</span></code></pre></div>
+<p>然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：</p>
+<div class="sourceCode" id="cb1040"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1040-1"><a href="-multilevel-models.html#cb1040-1"></a><span class="kw">plot</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">60</span>, nopool_error, <span class="dt">xlab =</span> <span class="st">&quot;Pond&quot;</span>, </span>
+<span id="cb1040-2"><a href="-multilevel-models.html#cb1040-2"></a>      <span class="dt">ylab =</span> <span class="st">&quot;absolute error&quot;</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb1040-3"><a href="-multilevel-models.html#cb1040-3"></a>      <span class="dt">col =</span> rangi2, <span class="dt">pch =</span> <span class="dv">16</span>, </span>
+<span id="cb1040-4"><a href="-multilevel-models.html#cb1040-4"></a>      <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.6</span>))</span>
+<span id="cb1040-5"><a href="-multilevel-models.html#cb1040-5"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">60</span>, partpool_erro)</span>
+<span id="cb1040-6"><a href="-multilevel-models.html#cb1040-6"></a></span>
+<span id="cb1040-7"><a href="-multilevel-models.html#cb1040-7"></a><span class="co"># mark posterior mean probability across tanks </span></span>
+<span id="cb1040-8"><a href="-multilevel-models.html#cb1040-8"></a>error_avg &lt;-<span class="st"> </span>dsim <span class="op">%&gt;%</span></span>
+<span id="cb1040-9"><a href="-multilevel-models.html#cb1040-9"></a><span class="st">  </span><span class="kw">group_by</span>(Ni) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1040-10"><a href="-multilevel-models.html#cb1040-10"></a><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">nopool_avg =</span> <span class="kw">mean</span>(nopool_error), </span>
+<span id="cb1040-11"><a href="-multilevel-models.html#cb1040-11"></a>            <span class="dt">partpool_avg =</span> <span class="kw">mean</span>(partpool_erro))</span>
+<span id="cb1040-12"><a href="-multilevel-models.html#cb1040-12"></a><span class="kw">segments</span>(<span class="dv">1</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-13"><a href="-multilevel-models.html#cb1040-13"></a>         <span class="dv">16</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-14"><a href="-multilevel-models.html#cb1040-14"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-15"><a href="-multilevel-models.html#cb1040-15"></a><span class="kw">segments</span>(<span class="dv">1</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-16"><a href="-multilevel-models.html#cb1040-16"></a>         <span class="dv">16</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-17"><a href="-multilevel-models.html#cb1040-17"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-18"><a href="-multilevel-models.html#cb1040-18"></a><span class="kw">segments</span>(<span class="dv">17</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-19"><a href="-multilevel-models.html#cb1040-19"></a>         <span class="dv">32</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-20"><a href="-multilevel-models.html#cb1040-20"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-21"><a href="-multilevel-models.html#cb1040-21"></a><span class="kw">segments</span>(<span class="dv">17</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-22"><a href="-multilevel-models.html#cb1040-22"></a>         <span class="dv">32</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-23"><a href="-multilevel-models.html#cb1040-23"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-24"><a href="-multilevel-models.html#cb1040-24"></a><span class="kw">segments</span>(<span class="dv">33</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-25"><a href="-multilevel-models.html#cb1040-25"></a>         <span class="dv">46</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-26"><a href="-multilevel-models.html#cb1040-26"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-27"><a href="-multilevel-models.html#cb1040-27"></a><span class="kw">segments</span>(<span class="dv">33</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-28"><a href="-multilevel-models.html#cb1040-28"></a>         <span class="dv">46</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-29"><a href="-multilevel-models.html#cb1040-29"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-30"><a href="-multilevel-models.html#cb1040-30"></a><span class="kw">segments</span>(<span class="dv">47</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-31"><a href="-multilevel-models.html#cb1040-31"></a>         <span class="dv">60</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-32"><a href="-multilevel-models.html#cb1040-32"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-33"><a href="-multilevel-models.html#cb1040-33"></a><span class="kw">segments</span>(<span class="dv">47</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-34"><a href="-multilevel-models.html#cb1040-34"></a>         <span class="dv">60</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-35"><a href="-multilevel-models.html#cb1040-35"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-36"><a href="-multilevel-models.html#cb1040-36"></a></span>
+<span id="cb1040-37"><a href="-multilevel-models.html#cb1040-37"></a><span class="co"># draw vertical dividers between tank densities</span></span>
+<span id="cb1040-38"><a href="-multilevel-models.html#cb1040-38"></a><span class="kw">abline</span>( <span class="dt">v =</span> <span class="fl">16.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb1040-39"><a href="-multilevel-models.html#cb1040-39"></a><span class="kw">abline</span>( <span class="dt">v =</span> <span class="fl">32.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb1040-40"><a href="-multilevel-models.html#cb1040-40"></a><span class="kw">abline</span>( <span class="dt">v =</span> <span class="fl">46.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb1040-41"><a href="-multilevel-models.html#cb1040-41"></a><span class="kw">text</span>( <span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;tiny ponds (5)&#39;</span>)</span>
+<span id="cb1040-42"><a href="-multilevel-models.html#cb1040-42"></a><span class="kw">text</span>( <span class="dv">16</span> <span class="op">+</span><span class="st"> </span><span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;small ponds (10)&#39;</span>)</span>
+<span id="cb1040-43"><a href="-multilevel-models.html#cb1040-43"></a><span class="kw">text</span>( <span class="dv">32</span> <span class="op">+</span><span class="st"> </span><span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;large ponds (25)&#39;</span>)</span>
+<span id="cb1040-44"><a href="-multilevel-models.html#cb1040-44"></a><span class="kw">text</span>( <span class="dv">48</span> <span class="op">+</span><span class="st"> </span><span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;large ponds (35)&#39;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig04"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig04-1.png" alt="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds. " width="768" />
+<p class="caption">
+圖 55.4: Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds.
+</p>
+</div>
 
 </div>
 </div>

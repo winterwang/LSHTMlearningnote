@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-24" />
+<meta name="date" content="2020-12-28" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -774,6 +774,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="55.2.1" data-path="-multilevel-models.html"><a href="-multilevel-models.html#用於產生模擬數據的模型-the-model"><i class="fa fa-check"></i><b>55.2.1</b> 用於產生模擬數據的模型 the model</a></li>
 <li class="chapter" data-level="55.2.2" data-path="-multilevel-models.html"><a href="-multilevel-models.html#模擬存活概率結果-simulate-survivors"><i class="fa fa-check"></i><b>55.2.2</b> 模擬存活概率結果 simulate survivors</a></li>
 <li class="chapter" data-level="55.2.3" data-path="-multilevel-models.html"><a href="-multilevel-models.html#計算完全不合併策略-no-pooling-estimates"><i class="fa fa-check"></i><b>55.2.3</b> 計算完全不合併策略 no-pooling estimates</a></li>
+<li class="chapter" data-level="55.2.4" data-path="-multilevel-models.html"><a href="-multilevel-models.html#計算部分合併策略的結果-partial-pooling-estimates"><i class="fa fa-check"></i><b>55.2.4</b> 計算部分合併策略的結果 partial-pooling estimates</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -1636,39 +1637,39 @@ p(\theta | y, n) &amp; \propto p(y|\theta, n)p(\theta) \\
 p(\theta | y,n) = \text{Beta}(a + y, b + n -y)
 \]</span></p>
 <p>像這樣，先驗概率和事後概率兩個概率分布都來自相同分佈家族的情況，先驗概率又被叫做和似然成共軛關系的先驗概率(共軛先驗概率, conjugate prior)。</p>
-<div class="sourceCode" id="cb2092"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2092-1"><a href="conjugate-priors.html#cb2092-1"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">1</span>))</span>
-<span id="cb2092-2"><a href="conjugate-priors.html#cb2092-2"></a><span class="co"># Plot exact prior probability density </span></span>
-<span id="cb2092-3"><a href="conjugate-priors.html#cb2092-3"></a><span class="co"># values of the hyperparameters</span></span>
-<span id="cb2092-4"><a href="conjugate-priors.html#cb2092-4"></a>a &lt;-<span class="st"> </span><span class="fl">9.2</span> </span>
-<span id="cb2092-5"><a href="conjugate-priors.html#cb2092-5"></a>b &lt;-<span class="st"> </span><span class="fl">13.8</span></span>
-<span id="cb2092-6"><a href="conjugate-priors.html#cb2092-6"></a></span>
-<span id="cb2092-7"><a href="conjugate-priors.html#cb2092-7"></a><span class="co"># prior function</span></span>
-<span id="cb2092-8"><a href="conjugate-priors.html#cb2092-8"></a>prior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a, b))</span>
-<span id="cb2092-9"><a href="conjugate-priors.html#cb2092-9"></a><span class="co"># Plot </span></span>
-<span id="cb2092-10"><a href="conjugate-priors.html#cb2092-10"></a><span class="kw">curve</span>(prior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Prior for &quot;</span><span class="op">~</span>theta, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">4.5</span>), <span class="dt">frame =</span> F,</span>
-<span id="cb2092-11"><a href="conjugate-priors.html#cb2092-11"></a>      <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</span>
-<span id="cb2092-12"><a href="conjugate-priors.html#cb2092-12"></a></span>
-<span id="cb2092-13"><a href="conjugate-priors.html#cb2092-13"></a><span class="co"># binomial likelihood function (likelihood)</span></span>
-<span id="cb2092-14"><a href="conjugate-priors.html#cb2092-14"></a></span>
-<span id="cb2092-15"><a href="conjugate-priors.html#cb2092-15"></a>Likelihood &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbinom</span>(<span class="dv">15</span>, <span class="dv">20</span>, theta))</span>
-<span id="cb2092-16"><a href="conjugate-priors.html#cb2092-16"></a></span>
-<span id="cb2092-17"><a href="conjugate-priors.html#cb2092-17"></a><span class="co"># Plot</span></span>
-<span id="cb2092-18"><a href="conjugate-priors.html#cb2092-18"></a><span class="kw">curve</span>(Likelihood, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Likelihood for the data&quot;</span>, </span>
-<span id="cb2092-19"><a href="conjugate-priors.html#cb2092-19"></a>      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, </span>
-<span id="cb2092-20"><a href="conjugate-priors.html#cb2092-20"></a>      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span>  <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</span>
-<span id="cb2092-21"><a href="conjugate-priors.html#cb2092-21"></a><span class="co"># n &lt;- 0; r &lt;- 0; a &lt;- 9.2; b &lt;- 13.8; np &lt;- 20</span></span>
-<span id="cb2092-22"><a href="conjugate-priors.html#cb2092-22"></a><span class="co"># plot(0:20, BetaBinom(0:20), type = &quot;b&quot;, xlab = &quot;r*&quot;, ylab = &quot;P(R = r*)&quot;, </span></span>
-<span id="cb2092-23"><a href="conjugate-priors.html#cb2092-23"></a><span class="co">#      main = &quot;Prior predictive: a = 9.2, b = 13.8&quot;)</span></span>
-<span id="cb2092-24"><a href="conjugate-priors.html#cb2092-24"></a></span>
-<span id="cb2092-25"><a href="conjugate-priors.html#cb2092-25"></a><span class="co"># Posterior function </span></span>
-<span id="cb2092-26"><a href="conjugate-priors.html#cb2092-26"></a></span>
-<span id="cb2092-27"><a href="conjugate-priors.html#cb2092-27"></a>posterior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a<span class="op">+</span><span class="dv">15</span>, b<span class="op">+</span><span class="dv">20-15</span>))</span>
-<span id="cb2092-28"><a href="conjugate-priors.html#cb2092-28"></a></span>
-<span id="cb2092-29"><a href="conjugate-priors.html#cb2092-29"></a><span class="co"># Plot</span></span>
-<span id="cb2092-30"><a href="conjugate-priors.html#cb2092-30"></a></span>
-<span id="cb2092-31"><a href="conjugate-priors.html#cb2092-31"></a><span class="kw">curve</span>(posterior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Posterior for &quot;</span><span class="op">~</span>theta, </span>
-<span id="cb2092-32"><a href="conjugate-priors.html#cb2092-32"></a>      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, </span>
-<span id="cb2092-33"><a href="conjugate-priors.html#cb2092-33"></a>      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2099"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2099-1"><a href="conjugate-priors.html#cb2099-1"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">1</span>))</span>
+<span id="cb2099-2"><a href="conjugate-priors.html#cb2099-2"></a><span class="co"># Plot exact prior probability density </span></span>
+<span id="cb2099-3"><a href="conjugate-priors.html#cb2099-3"></a><span class="co"># values of the hyperparameters</span></span>
+<span id="cb2099-4"><a href="conjugate-priors.html#cb2099-4"></a>a &lt;-<span class="st"> </span><span class="fl">9.2</span> </span>
+<span id="cb2099-5"><a href="conjugate-priors.html#cb2099-5"></a>b &lt;-<span class="st"> </span><span class="fl">13.8</span></span>
+<span id="cb2099-6"><a href="conjugate-priors.html#cb2099-6"></a></span>
+<span id="cb2099-7"><a href="conjugate-priors.html#cb2099-7"></a><span class="co"># prior function</span></span>
+<span id="cb2099-8"><a href="conjugate-priors.html#cb2099-8"></a>prior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a, b))</span>
+<span id="cb2099-9"><a href="conjugate-priors.html#cb2099-9"></a><span class="co"># Plot </span></span>
+<span id="cb2099-10"><a href="conjugate-priors.html#cb2099-10"></a><span class="kw">curve</span>(prior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Prior for &quot;</span><span class="op">~</span>theta, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">4.5</span>), <span class="dt">frame =</span> F,</span>
+<span id="cb2099-11"><a href="conjugate-priors.html#cb2099-11"></a>      <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</span>
+<span id="cb2099-12"><a href="conjugate-priors.html#cb2099-12"></a></span>
+<span id="cb2099-13"><a href="conjugate-priors.html#cb2099-13"></a><span class="co"># binomial likelihood function (likelihood)</span></span>
+<span id="cb2099-14"><a href="conjugate-priors.html#cb2099-14"></a></span>
+<span id="cb2099-15"><a href="conjugate-priors.html#cb2099-15"></a>Likelihood &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbinom</span>(<span class="dv">15</span>, <span class="dv">20</span>, theta))</span>
+<span id="cb2099-16"><a href="conjugate-priors.html#cb2099-16"></a></span>
+<span id="cb2099-17"><a href="conjugate-priors.html#cb2099-17"></a><span class="co"># Plot</span></span>
+<span id="cb2099-18"><a href="conjugate-priors.html#cb2099-18"></a><span class="kw">curve</span>(Likelihood, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Likelihood for the data&quot;</span>, </span>
+<span id="cb2099-19"><a href="conjugate-priors.html#cb2099-19"></a>      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, </span>
+<span id="cb2099-20"><a href="conjugate-priors.html#cb2099-20"></a>      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span>  <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</span>
+<span id="cb2099-21"><a href="conjugate-priors.html#cb2099-21"></a><span class="co"># n &lt;- 0; r &lt;- 0; a &lt;- 9.2; b &lt;- 13.8; np &lt;- 20</span></span>
+<span id="cb2099-22"><a href="conjugate-priors.html#cb2099-22"></a><span class="co"># plot(0:20, BetaBinom(0:20), type = &quot;b&quot;, xlab = &quot;r*&quot;, ylab = &quot;P(R = r*)&quot;, </span></span>
+<span id="cb2099-23"><a href="conjugate-priors.html#cb2099-23"></a><span class="co">#      main = &quot;Prior predictive: a = 9.2, b = 13.8&quot;)</span></span>
+<span id="cb2099-24"><a href="conjugate-priors.html#cb2099-24"></a></span>
+<span id="cb2099-25"><a href="conjugate-priors.html#cb2099-25"></a><span class="co"># Posterior function </span></span>
+<span id="cb2099-26"><a href="conjugate-priors.html#cb2099-26"></a></span>
+<span id="cb2099-27"><a href="conjugate-priors.html#cb2099-27"></a>posterior &lt;-<span class="st"> </span><span class="kw">Vectorize</span>(<span class="cf">function</span>(theta) <span class="kw">dbeta</span>(theta, a<span class="op">+</span><span class="dv">15</span>, b<span class="op">+</span><span class="dv">20-15</span>))</span>
+<span id="cb2099-28"><a href="conjugate-priors.html#cb2099-28"></a></span>
+<span id="cb2099-29"><a href="conjugate-priors.html#cb2099-29"></a><span class="co"># Plot</span></span>
+<span id="cb2099-30"><a href="conjugate-priors.html#cb2099-30"></a></span>
+<span id="cb2099-31"><a href="conjugate-priors.html#cb2099-31"></a><span class="kw">curve</span>(posterior, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;l&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Posterior for &quot;</span><span class="op">~</span>theta, </span>
+<span id="cb2099-32"><a href="conjugate-priors.html#cb2099-32"></a>      <span class="dt">frame =</span> <span class="ot">FALSE</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of positive response&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>, </span>
+<span id="cb2099-33"><a href="conjugate-priors.html#cb2099-33"></a>      <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">cex.axis =</span> <span class="fl">1.5</span>, <span class="dt">cex.lab =</span> <span class="fl">1.5</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS07"></span>
 <img src="bookdown_files/figure-html/R-OpenBUGS07-1.png" alt="Prior, likelihood, and posterior for Drug example" width="80%" />
 <p class="caption">
@@ -1717,26 +1718,26 @@ P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \t
   P.crit   &lt;- step(y.pred - 24.5)               # = 1 if y.pred &gt;= mcrit, 0 otherwise
   y        &lt;- 15
 }</code></pre>
-<div class="sourceCode" id="cb2097"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2097-1"><a href="conjugate-priors.html#cb2097-1"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">a =</span> <span class="fl">9.2</span>,             <span class="co"># parameters of prior distribution </span></span>
-<span id="cb2097-2"><a href="conjugate-priors.html#cb2097-2"></a>            <span class="dt">b =</span> <span class="fl">13.8</span>, </span>
-<span id="cb2097-3"><a href="conjugate-priors.html#cb2097-3"></a>            <span class="dt">y =</span> <span class="dv">15</span>,              <span class="co"># number of successes in completed trial</span></span>
-<span id="cb2097-4"><a href="conjugate-priors.html#cb2097-4"></a>            <span class="dt">n =</span> <span class="dv">20</span>,              <span class="co"># number of patients in completed trial</span></span>
-<span id="cb2097-5"><a href="conjugate-priors.html#cb2097-5"></a>            <span class="dt">m =</span> <span class="dv">40</span>,              <span class="co"># number of patients in future trial </span></span>
-<span id="cb2097-6"><a href="conjugate-priors.html#cb2097-6"></a>            <span class="dt">mcrit =</span> <span class="dv">25</span>)          <span class="co"># critical value of future successes</span></span>
-<span id="cb2097-7"><a href="conjugate-priors.html#cb2097-7"></a></span>
-<span id="cb2097-8"><a href="conjugate-priors.html#cb2097-8"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2097-9"><a href="conjugate-priors.html#cb2097-9"></a></span>
-<span id="cb2097-10"><a href="conjugate-priors.html#cb2097-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2097-11"><a href="conjugate-priors.html#cb2097-11"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2097-12"><a href="conjugate-priors.html#cb2097-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
-<span id="cb2097-13"><a href="conjugate-priors.html#cb2097-13"></a>  <span class="dt">n.iter =</span> <span class="dv">50100</span>,</span>
-<span id="cb2097-14"><a href="conjugate-priors.html#cb2097-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2097-15"><a href="conjugate-priors.html#cb2097-15"></a>                     <span class="st">&quot;/backupfiles/MCdrugP29.txt&quot;</span>, </span>
-<span id="cb2097-16"><a href="conjugate-priors.html#cb2097-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2097-17"><a href="conjugate-priors.html#cb2097-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2097-18"><a href="conjugate-priors.html#cb2097-18"></a>  <span class="dt">n.thin =</span> <span class="dv">10</span>,</span>
-<span id="cb2097-19"><a href="conjugate-priors.html#cb2097-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2097-20"><a href="conjugate-priors.html#cb2097-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2104"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2104-1"><a href="conjugate-priors.html#cb2104-1"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">a =</span> <span class="fl">9.2</span>,             <span class="co"># parameters of prior distribution </span></span>
+<span id="cb2104-2"><a href="conjugate-priors.html#cb2104-2"></a>            <span class="dt">b =</span> <span class="fl">13.8</span>, </span>
+<span id="cb2104-3"><a href="conjugate-priors.html#cb2104-3"></a>            <span class="dt">y =</span> <span class="dv">15</span>,              <span class="co"># number of successes in completed trial</span></span>
+<span id="cb2104-4"><a href="conjugate-priors.html#cb2104-4"></a>            <span class="dt">n =</span> <span class="dv">20</span>,              <span class="co"># number of patients in completed trial</span></span>
+<span id="cb2104-5"><a href="conjugate-priors.html#cb2104-5"></a>            <span class="dt">m =</span> <span class="dv">40</span>,              <span class="co"># number of patients in future trial </span></span>
+<span id="cb2104-6"><a href="conjugate-priors.html#cb2104-6"></a>            <span class="dt">mcrit =</span> <span class="dv">25</span>)          <span class="co"># critical value of future successes</span></span>
+<span id="cb2104-7"><a href="conjugate-priors.html#cb2104-7"></a></span>
+<span id="cb2104-8"><a href="conjugate-priors.html#cb2104-8"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2104-9"><a href="conjugate-priors.html#cb2104-9"></a></span>
+<span id="cb2104-10"><a href="conjugate-priors.html#cb2104-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2104-11"><a href="conjugate-priors.html#cb2104-11"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2104-12"><a href="conjugate-priors.html#cb2104-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
+<span id="cb2104-13"><a href="conjugate-priors.html#cb2104-13"></a>  <span class="dt">n.iter =</span> <span class="dv">50100</span>,</span>
+<span id="cb2104-14"><a href="conjugate-priors.html#cb2104-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2104-15"><a href="conjugate-priors.html#cb2104-15"></a>                     <span class="st">&quot;/backupfiles/MCdrugP29.txt&quot;</span>, </span>
+<span id="cb2104-16"><a href="conjugate-priors.html#cb2104-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2104-17"><a href="conjugate-priors.html#cb2104-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2104-18"><a href="conjugate-priors.html#cb2104-18"></a>  <span class="dt">n.thin =</span> <span class="dv">10</span>,</span>
+<span id="cb2104-19"><a href="conjugate-priors.html#cb2104-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2104-20"><a href="conjugate-priors.html#cb2104-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## module glm loaded</code></pre>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
@@ -1747,7 +1748,7 @@ P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \t
 ##    Total graph size: 12
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2100"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2100-1"><a href="conjugate-priors.html#cb2100-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2107"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2107-1"><a href="conjugate-priors.html#cb2107-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/MCdrugP29.txt&quot;, fit using jags,
 ##  1 chains, each with 50100 iterations (first 100 discarded), n.thin = 10
 ##  n.sims = 5000 iterations saved
@@ -1760,31 +1761,31 @@ P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \t
 ## DIC info (using the rule, pD = var(deviance)/2)
 ## pD = 2.9 and DIC = 9.5
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<div class="sourceCode" id="cb2102"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2102-1"><a href="conjugate-priors.html#cb2102-1"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(post.jags)</span>
-<span id="cb2102-2"><a href="conjugate-priors.html#cb2102-2"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb2102-3"><a href="conjugate-priors.html#cb2102-3"></a>ggSample &lt;-<span class="st"> </span>ggmcmc<span class="op">::</span><span class="kw">ggs</span>(Simulated)</span>
-<span id="cb2102-4"><a href="conjugate-priors.html#cb2102-4"></a></span>
-<span id="cb2102-5"><a href="conjugate-priors.html#cb2102-5"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb2102-6"><a href="conjugate-priors.html#cb2102-6"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
-<span id="cb2102-7"><a href="conjugate-priors.html#cb2102-7"></a></span>
-<span id="cb2102-8"><a href="conjugate-priors.html#cb2102-8"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2102-9"><a href="conjugate-priors.html#cb2102-9"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
-<span id="cb2102-10"><a href="conjugate-priors.html#cb2102-10"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2102-11"><a href="conjugate-priors.html#cb2102-11"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y.pred&quot;</span>)</span>
-<span id="cb2102-12"><a href="conjugate-priors.html#cb2102-12"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 50000&quot;</span>, </span>
-<span id="cb2102-13"><a href="conjugate-priors.html#cb2102-13"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of response&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
-<span id="cb2102-14"><a href="conjugate-priors.html#cb2102-14"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 50000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, </span>
-<span id="cb2102-15"><a href="conjugate-priors.html#cb2102-15"></a>     <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb2109"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2109-1"><a href="conjugate-priors.html#cb2109-1"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(post.jags)</span>
+<span id="cb2109-2"><a href="conjugate-priors.html#cb2109-2"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb2109-3"><a href="conjugate-priors.html#cb2109-3"></a>ggSample &lt;-<span class="st"> </span>ggmcmc<span class="op">::</span><span class="kw">ggs</span>(Simulated)</span>
+<span id="cb2109-4"><a href="conjugate-priors.html#cb2109-4"></a></span>
+<span id="cb2109-5"><a href="conjugate-priors.html#cb2109-5"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb2109-6"><a href="conjugate-priors.html#cb2109-6"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb2109-7"><a href="conjugate-priors.html#cb2109-7"></a></span>
+<span id="cb2109-8"><a href="conjugate-priors.html#cb2109-8"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2109-9"><a href="conjugate-priors.html#cb2109-9"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
+<span id="cb2109-10"><a href="conjugate-priors.html#cb2109-10"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2109-11"><a href="conjugate-priors.html#cb2109-11"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y.pred&quot;</span>)</span>
+<span id="cb2109-12"><a href="conjugate-priors.html#cb2109-12"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 50000&quot;</span>, </span>
+<span id="cb2109-13"><a href="conjugate-priors.html#cb2109-13"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of response&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb2109-14"><a href="conjugate-priors.html#cb2109-14"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 50000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, </span>
+<span id="cb2109-15"><a href="conjugate-priors.html#cb2109-15"></a>     <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS08"></span>
 <img src="bookdown_files/figure-html/R-OpenBUGS08-1.png" alt="Posterior and predictive distributions for Drug example" width="80%" />
 <p class="caption">
 圖 96.2: Posterior and predictive distributions for Drug example
 </p>
 </div>
-<div class="sourceCode" id="cb2103"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2103-1"><a href="conjugate-priors.html#cb2103-1"></a><span class="co"># # Or simply use the denplot() function from the mcmcplots package</span></span>
-<span id="cb2103-2"><a href="conjugate-priors.html#cb2103-2"></a><span class="co"># mcmcplots::denplot(post.jags, &quot;theta&quot;)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2110"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2110-1"><a href="conjugate-priors.html#cb2110-1"></a><span class="co"># # Or simply use the denplot() function from the mcmcplots package</span></span>
+<span id="cb2110-2"><a href="conjugate-priors.html#cb2110-2"></a><span class="co"># mcmcplots::denplot(post.jags, &quot;theta&quot;)</span></span></code></pre></div>
 <p>圖<a href="conjugate-priors.html#fig:R-OpenBUGS08">96.2</a>左邊的圖，是前一次試驗結果的事後概率分布，20名患者中觀察到15名患者症狀改善。右邊的圖則是對下一次40人的試驗的結果做的預測，平均22.5名患者可能會有症狀改善，這個均值的標準差是4.3。</p>
-<div class="sourceCode" id="cb2104"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2104-1"><a href="conjugate-priors.html#cb2104-1"></a>mcmcplots<span class="op">::</span><span class="kw">traplot</span>(post.jags, <span class="st">&quot;theta&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2111"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2111-1"><a href="conjugate-priors.html#cb2111-1"></a>mcmcplots<span class="op">::</span><span class="kw">traplot</span>(post.jags, <span class="st">&quot;theta&quot;</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:MCMC00"></span>
 <img src="bookdown_files/figure-html/MCMC00-1.png" alt="Plot of the MCMC chain of the parameter, Drug example." width="80%" />
 <p class="caption">
@@ -1834,34 +1835,34 @@ P_{\text{crit}} &amp; \sim P(y_{\text{pred}} \geqslant m_{\text{crit}}) &amp; \t
 <li><p>事後概率分布的方差也是和先前提到的先驗概率樣本量有密切關系。它是觀測數據的方差除以觀測樣本量和先驗概率樣本量之和。</p></li>
 <li><p>當然，當你的觀測數據樣本量趨向於無窮大時 <span class="math inline">\(n \rightarrow \infty\)</span>，事後概率分布本身就接近與觀測數據的似然 <span class="math inline">\(p(\theta | \mathbf{y}) \rightarrow N(\bar y, \sigma^2/n)\)</span>。也就是說觀測數據的信息量佔絕對主導，先驗概率分布，不再能提供太多有價值的信息，可以忽略不計了。</p></li>
 </ul>
-<div class="sourceCode" id="cb2105"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2105-1"><a href="conjugate-priors.html#cb2105-1"></a><span class="co"># prior function</span></span>
-<span id="cb2105-2"><a href="conjugate-priors.html#cb2105-2"></a>xseq&lt;-<span class="kw">seq</span>(<span class="dv">80</span>,<span class="dv">180</span>,.<span class="dv">01</span>)</span>
-<span id="cb2105-3"><a href="conjugate-priors.html#cb2105-3"></a>densities&lt;-<span class="kw">dnorm</span>(xseq, <span class="dv">120</span>,<span class="dv">10</span>)</span>
-<span id="cb2105-4"><a href="conjugate-priors.html#cb2105-4"></a></span>
-<span id="cb2105-5"><a href="conjugate-priors.html#cb2105-5"></a><span class="co"># Plot </span></span>
-<span id="cb2105-6"><a href="conjugate-priors.html#cb2105-6"></a><span class="kw">plot</span>(xseq, densities, <span class="dt">col=</span><span class="st">&quot;darkgreen&quot;</span>,<span class="dt">xlab=</span><span class="st">&quot;mean THM concentration, ug/l (theta)&quot;</span>, </span>
-<span id="cb2105-7"><a href="conjugate-priors.html#cb2105-7"></a>     <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>,<span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">cex=</span><span class="dv">2</span>, </span>
-<span id="cb2105-8"><a href="conjugate-priors.html#cb2105-8"></a>     <span class="co"># main=&quot;PDF of Prior, likelihood, and posterior for THM example.&quot;, </span></span>
-<span id="cb2105-9"><a href="conjugate-priors.html#cb2105-9"></a>     <span class="dt">cex.axis=</span><span class="fl">0.9</span>, <span class="dt">cex.lab =</span> <span class="dv">1</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="fl">0.12</span>))</span>
-<span id="cb2105-10"><a href="conjugate-priors.html#cb2105-10"></a></span>
-<span id="cb2105-11"><a href="conjugate-priors.html#cb2105-11"></a><span class="co"># normal likelihood function (likelihood)</span></span>
-<span id="cb2105-12"><a href="conjugate-priors.html#cb2105-12"></a></span>
-<span id="cb2105-13"><a href="conjugate-priors.html#cb2105-13"></a>Likelihood &lt;-<span class="st"> </span><span class="kw">dnorm</span>(xseq, <span class="dv">130</span>, <span class="dv">5</span>)</span>
-<span id="cb2105-14"><a href="conjugate-priors.html#cb2105-14"></a></span>
-<span id="cb2105-15"><a href="conjugate-priors.html#cb2105-15"></a><span class="co"># Plot</span></span>
-<span id="cb2105-16"><a href="conjugate-priors.html#cb2105-16"></a><span class="kw">points</span>(xseq, Likelihood, <span class="dt">col=</span><span class="st">&quot;darkred&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>,<span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">cex=</span><span class="dv">2</span>)</span>
-<span id="cb2105-17"><a href="conjugate-priors.html#cb2105-17"></a></span>
-<span id="cb2105-18"><a href="conjugate-priors.html#cb2105-18"></a></span>
-<span id="cb2105-19"><a href="conjugate-priors.html#cb2105-19"></a><span class="co"># Posterior function </span></span>
-<span id="cb2105-20"><a href="conjugate-priors.html#cb2105-20"></a></span>
-<span id="cb2105-21"><a href="conjugate-priors.html#cb2105-21"></a>posterior &lt;-<span class="st">  </span><span class="kw">dnorm</span>(xseq, <span class="fl">128.9</span>, <span class="fl">3.33</span>)</span>
-<span id="cb2105-22"><a href="conjugate-priors.html#cb2105-22"></a></span>
-<span id="cb2105-23"><a href="conjugate-priors.html#cb2105-23"></a><span class="co"># Plot</span></span>
-<span id="cb2105-24"><a href="conjugate-priors.html#cb2105-24"></a></span>
-<span id="cb2105-25"><a href="conjugate-priors.html#cb2105-25"></a><span class="kw">points</span>(xseq, posterior, <span class="dt">col=</span><span class="st">&quot;black&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>,<span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">cex=</span><span class="dv">2</span>)</span>
-<span id="cb2105-26"><a href="conjugate-priors.html#cb2105-26"></a></span>
-<span id="cb2105-27"><a href="conjugate-priors.html#cb2105-27"></a><span class="kw">legend</span>(<span class="st">&quot;topright&quot;</span>, <span class="kw">c</span>(<span class="st">&quot;Prior&quot;</span>, <span class="st">&quot;Likelihood&quot;</span>, <span class="st">&quot;Posterior&quot;</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>,</span>
-<span id="cb2105-28"><a href="conjugate-priors.html#cb2105-28"></a>       <span class="dt">lty =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>), <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;darkgreen&quot;</span>, <span class="st">&quot;darkred&quot;</span>, <span class="st">&quot;black&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb2112"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2112-1"><a href="conjugate-priors.html#cb2112-1"></a><span class="co"># prior function</span></span>
+<span id="cb2112-2"><a href="conjugate-priors.html#cb2112-2"></a>xseq&lt;-<span class="kw">seq</span>(<span class="dv">80</span>,<span class="dv">180</span>,.<span class="dv">01</span>)</span>
+<span id="cb2112-3"><a href="conjugate-priors.html#cb2112-3"></a>densities&lt;-<span class="kw">dnorm</span>(xseq, <span class="dv">120</span>,<span class="dv">10</span>)</span>
+<span id="cb2112-4"><a href="conjugate-priors.html#cb2112-4"></a></span>
+<span id="cb2112-5"><a href="conjugate-priors.html#cb2112-5"></a><span class="co"># Plot </span></span>
+<span id="cb2112-6"><a href="conjugate-priors.html#cb2112-6"></a><span class="kw">plot</span>(xseq, densities, <span class="dt">col=</span><span class="st">&quot;darkgreen&quot;</span>,<span class="dt">xlab=</span><span class="st">&quot;mean THM concentration, ug/l (theta)&quot;</span>, </span>
+<span id="cb2112-7"><a href="conjugate-priors.html#cb2112-7"></a>     <span class="dt">ylab=</span><span class="st">&quot;Density&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>,<span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">cex=</span><span class="dv">2</span>, </span>
+<span id="cb2112-8"><a href="conjugate-priors.html#cb2112-8"></a>     <span class="co"># main=&quot;PDF of Prior, likelihood, and posterior for THM example.&quot;, </span></span>
+<span id="cb2112-9"><a href="conjugate-priors.html#cb2112-9"></a>     <span class="dt">cex.axis=</span><span class="fl">0.9</span>, <span class="dt">cex.lab =</span> <span class="dv">1</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="fl">0.12</span>))</span>
+<span id="cb2112-10"><a href="conjugate-priors.html#cb2112-10"></a></span>
+<span id="cb2112-11"><a href="conjugate-priors.html#cb2112-11"></a><span class="co"># normal likelihood function (likelihood)</span></span>
+<span id="cb2112-12"><a href="conjugate-priors.html#cb2112-12"></a></span>
+<span id="cb2112-13"><a href="conjugate-priors.html#cb2112-13"></a>Likelihood &lt;-<span class="st"> </span><span class="kw">dnorm</span>(xseq, <span class="dv">130</span>, <span class="dv">5</span>)</span>
+<span id="cb2112-14"><a href="conjugate-priors.html#cb2112-14"></a></span>
+<span id="cb2112-15"><a href="conjugate-priors.html#cb2112-15"></a><span class="co"># Plot</span></span>
+<span id="cb2112-16"><a href="conjugate-priors.html#cb2112-16"></a><span class="kw">points</span>(xseq, Likelihood, <span class="dt">col=</span><span class="st">&quot;darkred&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>,<span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">cex=</span><span class="dv">2</span>)</span>
+<span id="cb2112-17"><a href="conjugate-priors.html#cb2112-17"></a></span>
+<span id="cb2112-18"><a href="conjugate-priors.html#cb2112-18"></a></span>
+<span id="cb2112-19"><a href="conjugate-priors.html#cb2112-19"></a><span class="co"># Posterior function </span></span>
+<span id="cb2112-20"><a href="conjugate-priors.html#cb2112-20"></a></span>
+<span id="cb2112-21"><a href="conjugate-priors.html#cb2112-21"></a>posterior &lt;-<span class="st">  </span><span class="kw">dnorm</span>(xseq, <span class="fl">128.9</span>, <span class="fl">3.33</span>)</span>
+<span id="cb2112-22"><a href="conjugate-priors.html#cb2112-22"></a></span>
+<span id="cb2112-23"><a href="conjugate-priors.html#cb2112-23"></a><span class="co"># Plot</span></span>
+<span id="cb2112-24"><a href="conjugate-priors.html#cb2112-24"></a></span>
+<span id="cb2112-25"><a href="conjugate-priors.html#cb2112-25"></a><span class="kw">points</span>(xseq, posterior, <span class="dt">col=</span><span class="st">&quot;black&quot;</span>, <span class="dt">type=</span><span class="st">&quot;l&quot;</span>,<span class="dt">lwd=</span><span class="dv">2</span>, <span class="dt">cex=</span><span class="dv">2</span>)</span>
+<span id="cb2112-26"><a href="conjugate-priors.html#cb2112-26"></a></span>
+<span id="cb2112-27"><a href="conjugate-priors.html#cb2112-27"></a><span class="kw">legend</span>(<span class="st">&quot;topright&quot;</span>, <span class="kw">c</span>(<span class="st">&quot;Prior&quot;</span>, <span class="st">&quot;Likelihood&quot;</span>, <span class="st">&quot;Posterior&quot;</span>), <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>,</span>
+<span id="cb2112-28"><a href="conjugate-priors.html#cb2112-28"></a>       <span class="dt">lty =</span> <span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>), <span class="dt">col =</span> <span class="kw">c</span>(<span class="st">&quot;darkgreen&quot;</span>, <span class="st">&quot;darkred&quot;</span>, <span class="st">&quot;black&quot;</span>))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:normalconjugate"></span>
 <img src="bookdown_files/figure-html/normalconjugate-1.png" alt="PDF of Prior, likelihood and posterior for THM example." width="80%" />
 <p class="caption">
@@ -2038,50 +2039,50 @@ n = 20,     # number of trials
 m = 40,     # future number of trials
 ncrit = 25) # critical value of future successes</code></pre>
 <p>把這裏的模型保存稱爲 <code>drug-model.txt</code>文件，把數據保存成 <code>drug-data.txt</code>文件，我們來試着用OpenBUGS/JAGS跑這個模型:</p>
-<div class="sourceCode" id="cb2108"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2108-1"><a href="conjugate-priors.html#cb2108-1"></a><span class="co"># Codes for OpenBUGS</span></span>
-<span id="cb2108-2"><a href="conjugate-priors.html#cb2108-2"></a></span>
-<span id="cb2108-3"><a href="conjugate-priors.html#cb2108-3"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2108-4"><a href="conjugate-priors.html#cb2108-4"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/drug-model.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2108-5"><a href="conjugate-priors.html#cb2108-5"></a><span class="co"># # Load the data </span></span>
-<span id="cb2108-6"><a href="conjugate-priors.html#cb2108-6"></a><span class="co"># modelData(paste(bugpath, &quot;/backupfiles/drug-data.txt&quot;, sep = &quot;&quot;))     </span></span>
-<span id="cb2108-7"><a href="conjugate-priors.html#cb2108-7"></a><span class="co"># # compile the model</span></span>
-<span id="cb2108-8"><a href="conjugate-priors.html#cb2108-8"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2108-9"><a href="conjugate-priors.html#cb2108-9"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2108-10"><a href="conjugate-priors.html#cb2108-10"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2108-11"><a href="conjugate-priors.html#cb2108-11"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2108-12"><a href="conjugate-priors.html#cb2108-12"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2108-13"><a href="conjugate-priors.html#cb2108-13"></a><span class="co"># parameters &lt;- c(&quot;P.crit&quot;, &quot;theta&quot;, &quot;y.pred&quot;)</span></span>
-<span id="cb2108-14"><a href="conjugate-priors.html#cb2108-14"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2108-15"><a href="conjugate-priors.html#cb2108-15"></a></span>
-<span id="cb2108-16"><a href="conjugate-priors.html#cb2108-16"></a><span class="co"># # Generate 10000 iterations</span></span>
-<span id="cb2108-17"><a href="conjugate-priors.html#cb2108-17"></a><span class="co"># modelUpdate(10000)</span></span>
-<span id="cb2108-18"><a href="conjugate-priors.html#cb2108-18"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb2108-19"><a href="conjugate-priors.html#cb2108-19"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
-<span id="cb2108-20"><a href="conjugate-priors.html#cb2108-20"></a><span class="co"># print(sample.statistics)</span></span>
-<span id="cb2108-21"><a href="conjugate-priors.html#cb2108-21"></a></span>
-<span id="cb2108-22"><a href="conjugate-priors.html#cb2108-22"></a><span class="co"># Codes for R2JAGS</span></span>
-<span id="cb2108-23"><a href="conjugate-priors.html#cb2108-23"></a></span>
-<span id="cb2108-24"><a href="conjugate-priors.html#cb2108-24"></a></span>
-<span id="cb2108-25"><a href="conjugate-priors.html#cb2108-25"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">a =</span> <span class="fl">9.2</span>,             <span class="co"># parameters of prior distribution </span></span>
-<span id="cb2108-26"><a href="conjugate-priors.html#cb2108-26"></a>            <span class="dt">b =</span> <span class="fl">13.8</span>, </span>
-<span id="cb2108-27"><a href="conjugate-priors.html#cb2108-27"></a>            <span class="dt">y =</span> <span class="dv">15</span>,              <span class="co"># number of successes in completed trial</span></span>
-<span id="cb2108-28"><a href="conjugate-priors.html#cb2108-28"></a>            <span class="dt">n =</span> <span class="dv">20</span>,              <span class="co"># number of patients in completed trial</span></span>
-<span id="cb2108-29"><a href="conjugate-priors.html#cb2108-29"></a>            <span class="dt">m =</span> <span class="dv">40</span>,              <span class="co"># number of patients in future trial </span></span>
-<span id="cb2108-30"><a href="conjugate-priors.html#cb2108-30"></a>            <span class="dt">ncrit =</span> <span class="dv">25</span>)          <span class="co"># critical value of future successes</span></span>
-<span id="cb2108-31"><a href="conjugate-priors.html#cb2108-31"></a></span>
-<span id="cb2108-32"><a href="conjugate-priors.html#cb2108-32"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2108-33"><a href="conjugate-priors.html#cb2108-33"></a></span>
-<span id="cb2108-34"><a href="conjugate-priors.html#cb2108-34"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2108-35"><a href="conjugate-priors.html#cb2108-35"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2108-36"><a href="conjugate-priors.html#cb2108-36"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
-<span id="cb2108-37"><a href="conjugate-priors.html#cb2108-37"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
-<span id="cb2108-38"><a href="conjugate-priors.html#cb2108-38"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2108-39"><a href="conjugate-priors.html#cb2108-39"></a>                     <span class="st">&quot;/backupfiles/drug-model.txt&quot;</span>, </span>
-<span id="cb2108-40"><a href="conjugate-priors.html#cb2108-40"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2108-41"><a href="conjugate-priors.html#cb2108-41"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2108-42"><a href="conjugate-priors.html#cb2108-42"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2108-43"><a href="conjugate-priors.html#cb2108-43"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2108-44"><a href="conjugate-priors.html#cb2108-44"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2115"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2115-1"><a href="conjugate-priors.html#cb2115-1"></a><span class="co"># Codes for OpenBUGS</span></span>
+<span id="cb2115-2"><a href="conjugate-priors.html#cb2115-2"></a></span>
+<span id="cb2115-3"><a href="conjugate-priors.html#cb2115-3"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2115-4"><a href="conjugate-priors.html#cb2115-4"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/drug-model.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2115-5"><a href="conjugate-priors.html#cb2115-5"></a><span class="co"># # Load the data </span></span>
+<span id="cb2115-6"><a href="conjugate-priors.html#cb2115-6"></a><span class="co"># modelData(paste(bugpath, &quot;/backupfiles/drug-data.txt&quot;, sep = &quot;&quot;))     </span></span>
+<span id="cb2115-7"><a href="conjugate-priors.html#cb2115-7"></a><span class="co"># # compile the model</span></span>
+<span id="cb2115-8"><a href="conjugate-priors.html#cb2115-8"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2115-9"><a href="conjugate-priors.html#cb2115-9"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2115-10"><a href="conjugate-priors.html#cb2115-10"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2115-11"><a href="conjugate-priors.html#cb2115-11"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2115-12"><a href="conjugate-priors.html#cb2115-12"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2115-13"><a href="conjugate-priors.html#cb2115-13"></a><span class="co"># parameters &lt;- c(&quot;P.crit&quot;, &quot;theta&quot;, &quot;y.pred&quot;)</span></span>
+<span id="cb2115-14"><a href="conjugate-priors.html#cb2115-14"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2115-15"><a href="conjugate-priors.html#cb2115-15"></a></span>
+<span id="cb2115-16"><a href="conjugate-priors.html#cb2115-16"></a><span class="co"># # Generate 10000 iterations</span></span>
+<span id="cb2115-17"><a href="conjugate-priors.html#cb2115-17"></a><span class="co"># modelUpdate(10000)</span></span>
+<span id="cb2115-18"><a href="conjugate-priors.html#cb2115-18"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb2115-19"><a href="conjugate-priors.html#cb2115-19"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
+<span id="cb2115-20"><a href="conjugate-priors.html#cb2115-20"></a><span class="co"># print(sample.statistics)</span></span>
+<span id="cb2115-21"><a href="conjugate-priors.html#cb2115-21"></a></span>
+<span id="cb2115-22"><a href="conjugate-priors.html#cb2115-22"></a><span class="co"># Codes for R2JAGS</span></span>
+<span id="cb2115-23"><a href="conjugate-priors.html#cb2115-23"></a></span>
+<span id="cb2115-24"><a href="conjugate-priors.html#cb2115-24"></a></span>
+<span id="cb2115-25"><a href="conjugate-priors.html#cb2115-25"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">a =</span> <span class="fl">9.2</span>,             <span class="co"># parameters of prior distribution </span></span>
+<span id="cb2115-26"><a href="conjugate-priors.html#cb2115-26"></a>            <span class="dt">b =</span> <span class="fl">13.8</span>, </span>
+<span id="cb2115-27"><a href="conjugate-priors.html#cb2115-27"></a>            <span class="dt">y =</span> <span class="dv">15</span>,              <span class="co"># number of successes in completed trial</span></span>
+<span id="cb2115-28"><a href="conjugate-priors.html#cb2115-28"></a>            <span class="dt">n =</span> <span class="dv">20</span>,              <span class="co"># number of patients in completed trial</span></span>
+<span id="cb2115-29"><a href="conjugate-priors.html#cb2115-29"></a>            <span class="dt">m =</span> <span class="dv">40</span>,              <span class="co"># number of patients in future trial </span></span>
+<span id="cb2115-30"><a href="conjugate-priors.html#cb2115-30"></a>            <span class="dt">ncrit =</span> <span class="dv">25</span>)          <span class="co"># critical value of future successes</span></span>
+<span id="cb2115-31"><a href="conjugate-priors.html#cb2115-31"></a></span>
+<span id="cb2115-32"><a href="conjugate-priors.html#cb2115-32"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2115-33"><a href="conjugate-priors.html#cb2115-33"></a></span>
+<span id="cb2115-34"><a href="conjugate-priors.html#cb2115-34"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2115-35"><a href="conjugate-priors.html#cb2115-35"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2115-36"><a href="conjugate-priors.html#cb2115-36"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
+<span id="cb2115-37"><a href="conjugate-priors.html#cb2115-37"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
+<span id="cb2115-38"><a href="conjugate-priors.html#cb2115-38"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2115-39"><a href="conjugate-priors.html#cb2115-39"></a>                     <span class="st">&quot;/backupfiles/drug-model.txt&quot;</span>, </span>
+<span id="cb2115-40"><a href="conjugate-priors.html#cb2115-40"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2115-41"><a href="conjugate-priors.html#cb2115-41"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2115-42"><a href="conjugate-priors.html#cb2115-42"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2115-43"><a href="conjugate-priors.html#cb2115-43"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2115-44"><a href="conjugate-priors.html#cb2115-44"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2091,7 +2092,7 @@ ncrit = 25) # critical value of future successes</code></pre>
 ##    Total graph size: 12
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2110"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2110-1"><a href="conjugate-priors.html#cb2110-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2117"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2117-1"><a href="conjugate-priors.html#cb2117-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/drug-model.txt&quot;, fit using jags,
 ##  1 chains, each with 10100 iterations (first 100 discarded)
 ##  n.sims = 10000 iterations saved
@@ -2106,16 +2107,16 @@ ncrit = 25) # critical value of future successes</code></pre>
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
 <p>此時我們獲得我們關心的各個事後概率分佈描述，其中陽性反應率的點估計是0.563，其95%可信區間是(0.412, 0.707)。40名患者中25人或者以上出現有療效反應的概率是32.4%。</p>
 <p>請繪製<code>theta</code>的事後概率分佈的密度曲線，以及<code>y.pred</code>的預測概率分佈:</p>
-<div class="sourceCode" id="cb2112"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2112-1"><a href="conjugate-priors.html#cb2112-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
-<span id="cb2112-2"><a href="conjugate-priors.html#cb2112-2"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
-<span id="cb2112-3"><a href="conjugate-priors.html#cb2112-3"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2112-4"><a href="conjugate-priors.html#cb2112-4"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
-<span id="cb2112-5"><a href="conjugate-priors.html#cb2112-5"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2112-6"><a href="conjugate-priors.html#cb2112-6"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y.pred&quot;</span>)</span>
-<span id="cb2112-7"><a href="conjugate-priors.html#cb2112-7"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
-<span id="cb2112-8"><a href="conjugate-priors.html#cb2112-8"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of response&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
-<span id="cb2112-9"><a href="conjugate-priors.html#cb2112-9"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, </span>
-<span id="cb2112-10"><a href="conjugate-priors.html#cb2112-10"></a>     <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb2119"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2119-1"><a href="conjugate-priors.html#cb2119-1"></a><span class="co">#### PLOT THE DENSITY and HISTOGRAMS OF THE SAMPLED VALUES</span></span>
+<span id="cb2119-2"><a href="conjugate-priors.html#cb2119-2"></a><span class="kw">par</span>(<span class="dt">mfrow=</span><span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb2119-3"><a href="conjugate-priors.html#cb2119-3"></a>Theta &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2119-4"><a href="conjugate-priors.html#cb2119-4"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;theta&quot;</span>)</span>
+<span id="cb2119-5"><a href="conjugate-priors.html#cb2119-5"></a>Y &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2119-6"><a href="conjugate-priors.html#cb2119-6"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;y.pred&quot;</span>)</span>
+<span id="cb2119-7"><a href="conjugate-priors.html#cb2119-7"></a><span class="kw">plot</span>(<span class="kw">density</span>(Theta<span class="op">$</span>value), <span class="dt">main =</span> <span class="st">&quot;theta sample 10000&quot;</span>, </span>
+<span id="cb2119-8"><a href="conjugate-priors.html#cb2119-8"></a>     <span class="dt">ylab =</span> <span class="st">&quot;P(theta)&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Probability of response&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb2119-9"><a href="conjugate-priors.html#cb2119-9"></a><span class="kw">hist</span>(Y<span class="op">$</span>value, <span class="dt">main =</span> <span class="st">&quot;y.pred sample 10000&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;P(y.pred)&quot;</span>, </span>
+<span id="cb2119-10"><a href="conjugate-priors.html#cb2119-10"></a>     <span class="dt">xlab =</span> <span class="st">&quot;Number of success&quot;</span>, <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">prob =</span> <span class="ot">TRUE</span>,<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">40</span>))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS10"></span>
 <img src="bookdown_files/figure-html/R-OpenBUGS10-1.png" alt="Posterior and predictive distributions for Drug example" width="80%" />
 <p class="caption">
@@ -2163,51 +2164,51 @@ n = 20,                                # number of trials
 m = 40,                                # future number of trials 
 ncrit = 25                             # critical value of future successes
 )</code></pre>
-<div class="sourceCode" id="cb2117"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2117-1"><a href="conjugate-priors.html#cb2117-1"></a><span class="co"># Codes for OpenBUGS</span></span>
-<span id="cb2117-2"><a href="conjugate-priors.html#cb2117-2"></a></span>
-<span id="cb2117-3"><a href="conjugate-priors.html#cb2117-3"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2117-4"><a href="conjugate-priors.html#cb2117-4"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/drug-modeluniform.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2117-5"><a href="conjugate-priors.html#cb2117-5"></a><span class="co"># # Load the data </span></span>
-<span id="cb2117-6"><a href="conjugate-priors.html#cb2117-6"></a><span class="co"># modelData(paste(bugpath, &quot;/backupfiles/drug-datauniform.txt&quot;, sep = &quot;&quot;))     </span></span>
-<span id="cb2117-7"><a href="conjugate-priors.html#cb2117-7"></a><span class="co"># # compile the model</span></span>
-<span id="cb2117-8"><a href="conjugate-priors.html#cb2117-8"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2117-9"><a href="conjugate-priors.html#cb2117-9"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2117-10"><a href="conjugate-priors.html#cb2117-10"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2117-11"><a href="conjugate-priors.html#cb2117-11"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2117-12"><a href="conjugate-priors.html#cb2117-12"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2117-13"><a href="conjugate-priors.html#cb2117-13"></a><span class="co"># parameters &lt;- c(&quot;P.crit&quot;, &quot;theta&quot;, &quot;y.pred&quot;)</span></span>
-<span id="cb2117-14"><a href="conjugate-priors.html#cb2117-14"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2117-15"><a href="conjugate-priors.html#cb2117-15"></a><span class="co"># </span></span>
-<span id="cb2117-16"><a href="conjugate-priors.html#cb2117-16"></a><span class="co"># # Generate 10000 iterations</span></span>
-<span id="cb2117-17"><a href="conjugate-priors.html#cb2117-17"></a><span class="co"># modelUpdate(10000)</span></span>
-<span id="cb2117-18"><a href="conjugate-priors.html#cb2117-18"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb2117-19"><a href="conjugate-priors.html#cb2117-19"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
-<span id="cb2117-20"><a href="conjugate-priors.html#cb2117-20"></a><span class="co"># print(sample.statistics)</span></span>
-<span id="cb2117-21"><a href="conjugate-priors.html#cb2117-21"></a></span>
-<span id="cb2117-22"><a href="conjugate-priors.html#cb2117-22"></a></span>
-<span id="cb2117-23"><a href="conjugate-priors.html#cb2117-23"></a><span class="co"># Codes for R2JAGS</span></span>
-<span id="cb2117-24"><a href="conjugate-priors.html#cb2117-24"></a></span>
-<span id="cb2117-25"><a href="conjugate-priors.html#cb2117-25"></a></span>
-<span id="cb2117-26"><a href="conjugate-priors.html#cb2117-26"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2117-27"><a href="conjugate-priors.html#cb2117-27"></a><span class="dt">y =</span> <span class="dv">15</span>,                                <span class="co"># number of successes</span></span>
-<span id="cb2117-28"><a href="conjugate-priors.html#cb2117-28"></a><span class="dt">n =</span> <span class="dv">20</span>,                                <span class="co"># number of trials </span></span>
-<span id="cb2117-29"><a href="conjugate-priors.html#cb2117-29"></a><span class="dt">m =</span> <span class="dv">40</span>,                                <span class="co"># future number of trials </span></span>
-<span id="cb2117-30"><a href="conjugate-priors.html#cb2117-30"></a><span class="dt">ncrit =</span> <span class="dv">25</span>                             <span class="co"># critical value of future successes</span></span>
-<span id="cb2117-31"><a href="conjugate-priors.html#cb2117-31"></a>)</span>
-<span id="cb2117-32"><a href="conjugate-priors.html#cb2117-32"></a></span>
-<span id="cb2117-33"><a href="conjugate-priors.html#cb2117-33"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2117-34"><a href="conjugate-priors.html#cb2117-34"></a></span>
-<span id="cb2117-35"><a href="conjugate-priors.html#cb2117-35"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2117-36"><a href="conjugate-priors.html#cb2117-36"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2117-37"><a href="conjugate-priors.html#cb2117-37"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
-<span id="cb2117-38"><a href="conjugate-priors.html#cb2117-38"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
-<span id="cb2117-39"><a href="conjugate-priors.html#cb2117-39"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2117-40"><a href="conjugate-priors.html#cb2117-40"></a>                     <span class="st">&quot;/backupfiles/drug-modeluniform.txt&quot;</span>, </span>
-<span id="cb2117-41"><a href="conjugate-priors.html#cb2117-41"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2117-42"><a href="conjugate-priors.html#cb2117-42"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2117-43"><a href="conjugate-priors.html#cb2117-43"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2117-44"><a href="conjugate-priors.html#cb2117-44"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2117-45"><a href="conjugate-priors.html#cb2117-45"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2124"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2124-1"><a href="conjugate-priors.html#cb2124-1"></a><span class="co"># Codes for OpenBUGS</span></span>
+<span id="cb2124-2"><a href="conjugate-priors.html#cb2124-2"></a></span>
+<span id="cb2124-3"><a href="conjugate-priors.html#cb2124-3"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2124-4"><a href="conjugate-priors.html#cb2124-4"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/drug-modeluniform.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2124-5"><a href="conjugate-priors.html#cb2124-5"></a><span class="co"># # Load the data </span></span>
+<span id="cb2124-6"><a href="conjugate-priors.html#cb2124-6"></a><span class="co"># modelData(paste(bugpath, &quot;/backupfiles/drug-datauniform.txt&quot;, sep = &quot;&quot;))     </span></span>
+<span id="cb2124-7"><a href="conjugate-priors.html#cb2124-7"></a><span class="co"># # compile the model</span></span>
+<span id="cb2124-8"><a href="conjugate-priors.html#cb2124-8"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2124-9"><a href="conjugate-priors.html#cb2124-9"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2124-10"><a href="conjugate-priors.html#cb2124-10"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2124-11"><a href="conjugate-priors.html#cb2124-11"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2124-12"><a href="conjugate-priors.html#cb2124-12"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2124-13"><a href="conjugate-priors.html#cb2124-13"></a><span class="co"># parameters &lt;- c(&quot;P.crit&quot;, &quot;theta&quot;, &quot;y.pred&quot;)</span></span>
+<span id="cb2124-14"><a href="conjugate-priors.html#cb2124-14"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2124-15"><a href="conjugate-priors.html#cb2124-15"></a><span class="co"># </span></span>
+<span id="cb2124-16"><a href="conjugate-priors.html#cb2124-16"></a><span class="co"># # Generate 10000 iterations</span></span>
+<span id="cb2124-17"><a href="conjugate-priors.html#cb2124-17"></a><span class="co"># modelUpdate(10000)</span></span>
+<span id="cb2124-18"><a href="conjugate-priors.html#cb2124-18"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb2124-19"><a href="conjugate-priors.html#cb2124-19"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
+<span id="cb2124-20"><a href="conjugate-priors.html#cb2124-20"></a><span class="co"># print(sample.statistics)</span></span>
+<span id="cb2124-21"><a href="conjugate-priors.html#cb2124-21"></a></span>
+<span id="cb2124-22"><a href="conjugate-priors.html#cb2124-22"></a></span>
+<span id="cb2124-23"><a href="conjugate-priors.html#cb2124-23"></a><span class="co"># Codes for R2JAGS</span></span>
+<span id="cb2124-24"><a href="conjugate-priors.html#cb2124-24"></a></span>
+<span id="cb2124-25"><a href="conjugate-priors.html#cb2124-25"></a></span>
+<span id="cb2124-26"><a href="conjugate-priors.html#cb2124-26"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2124-27"><a href="conjugate-priors.html#cb2124-27"></a><span class="dt">y =</span> <span class="dv">15</span>,                                <span class="co"># number of successes</span></span>
+<span id="cb2124-28"><a href="conjugate-priors.html#cb2124-28"></a><span class="dt">n =</span> <span class="dv">20</span>,                                <span class="co"># number of trials </span></span>
+<span id="cb2124-29"><a href="conjugate-priors.html#cb2124-29"></a><span class="dt">m =</span> <span class="dv">40</span>,                                <span class="co"># future number of trials </span></span>
+<span id="cb2124-30"><a href="conjugate-priors.html#cb2124-30"></a><span class="dt">ncrit =</span> <span class="dv">25</span>                             <span class="co"># critical value of future successes</span></span>
+<span id="cb2124-31"><a href="conjugate-priors.html#cb2124-31"></a>)</span>
+<span id="cb2124-32"><a href="conjugate-priors.html#cb2124-32"></a></span>
+<span id="cb2124-33"><a href="conjugate-priors.html#cb2124-33"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2124-34"><a href="conjugate-priors.html#cb2124-34"></a></span>
+<span id="cb2124-35"><a href="conjugate-priors.html#cb2124-35"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2124-36"><a href="conjugate-priors.html#cb2124-36"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2124-37"><a href="conjugate-priors.html#cb2124-37"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.crit&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
+<span id="cb2124-38"><a href="conjugate-priors.html#cb2124-38"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
+<span id="cb2124-39"><a href="conjugate-priors.html#cb2124-39"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2124-40"><a href="conjugate-priors.html#cb2124-40"></a>                     <span class="st">&quot;/backupfiles/drug-modeluniform.txt&quot;</span>, </span>
+<span id="cb2124-41"><a href="conjugate-priors.html#cb2124-41"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2124-42"><a href="conjugate-priors.html#cb2124-42"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2124-43"><a href="conjugate-priors.html#cb2124-43"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2124-44"><a href="conjugate-priors.html#cb2124-44"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2124-45"><a href="conjugate-priors.html#cb2124-45"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2217,7 +2218,7 @@ ncrit = 25                             # critical value of future successes
 ##    Total graph size: 12
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2119"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2119-1"><a href="conjugate-priors.html#cb2119-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2126"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2126-1"><a href="conjugate-priors.html#cb2126-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/drug-modeluniform.txt&quot;, fit using jags,
 ##  1 chains, each with 10100 iterations (first 100 discarded)
 ##  n.sims = 10000 iterations saved
@@ -2261,27 +2262,27 @@ model {
    # theta ~ dunif(-10000, 10000) 
 }</code></pre>
 <p>在BUGS語言中，正態分佈用 <code>dnorm(theta, tau)</code>，其中 <code>theta</code> 爲均值，<code>tau</code> 是精確度(precision = 1/variance)，它是方差的倒數。</p>
-<div class="sourceCode" id="cb2122"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2122-1"><a href="conjugate-priors.html#cb2122-1"></a><span class="co"># Codes for R2JAGS</span></span>
-<span id="cb2122-2"><a href="conjugate-priors.html#cb2122-2"></a></span>
-<span id="cb2122-3"><a href="conjugate-priors.html#cb2122-3"></a></span>
-<span id="cb2122-4"><a href="conjugate-priors.html#cb2122-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2122-5"><a href="conjugate-priors.html#cb2122-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">128</span>, <span class="dv">132</span>),                       <span class="co"># observed </span></span>
-<span id="cb2122-6"><a href="conjugate-priors.html#cb2122-6"></a><span class="dt">tau =</span> <span class="dv">1</span><span class="op">/</span>(<span class="dv">5</span><span class="op">^</span><span class="dv">2</span>)</span>
-<span id="cb2122-7"><a href="conjugate-priors.html#cb2122-7"></a>)</span>
-<span id="cb2122-8"><a href="conjugate-priors.html#cb2122-8"></a></span>
-<span id="cb2122-9"><a href="conjugate-priors.html#cb2122-9"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2122-10"><a href="conjugate-priors.html#cb2122-10"></a></span>
-<span id="cb2122-11"><a href="conjugate-priors.html#cb2122-11"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2122-12"><a href="conjugate-priors.html#cb2122-12"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2122-13"><a href="conjugate-priors.html#cb2122-13"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>),</span>
-<span id="cb2122-14"><a href="conjugate-priors.html#cb2122-14"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
-<span id="cb2122-15"><a href="conjugate-priors.html#cb2122-15"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2122-16"><a href="conjugate-priors.html#cb2122-16"></a>                     <span class="st">&quot;/backupfiles/thm-model.txt&quot;</span>, </span>
-<span id="cb2122-17"><a href="conjugate-priors.html#cb2122-17"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2122-18"><a href="conjugate-priors.html#cb2122-18"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2122-19"><a href="conjugate-priors.html#cb2122-19"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2122-20"><a href="conjugate-priors.html#cb2122-20"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2122-21"><a href="conjugate-priors.html#cb2122-21"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2129"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2129-1"><a href="conjugate-priors.html#cb2129-1"></a><span class="co"># Codes for R2JAGS</span></span>
+<span id="cb2129-2"><a href="conjugate-priors.html#cb2129-2"></a></span>
+<span id="cb2129-3"><a href="conjugate-priors.html#cb2129-3"></a></span>
+<span id="cb2129-4"><a href="conjugate-priors.html#cb2129-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2129-5"><a href="conjugate-priors.html#cb2129-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">128</span>, <span class="dv">132</span>),                       <span class="co"># observed </span></span>
+<span id="cb2129-6"><a href="conjugate-priors.html#cb2129-6"></a><span class="dt">tau =</span> <span class="dv">1</span><span class="op">/</span>(<span class="dv">5</span><span class="op">^</span><span class="dv">2</span>)</span>
+<span id="cb2129-7"><a href="conjugate-priors.html#cb2129-7"></a>)</span>
+<span id="cb2129-8"><a href="conjugate-priors.html#cb2129-8"></a></span>
+<span id="cb2129-9"><a href="conjugate-priors.html#cb2129-9"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2129-10"><a href="conjugate-priors.html#cb2129-10"></a></span>
+<span id="cb2129-11"><a href="conjugate-priors.html#cb2129-11"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2129-12"><a href="conjugate-priors.html#cb2129-12"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2129-13"><a href="conjugate-priors.html#cb2129-13"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>),</span>
+<span id="cb2129-14"><a href="conjugate-priors.html#cb2129-14"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
+<span id="cb2129-15"><a href="conjugate-priors.html#cb2129-15"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2129-16"><a href="conjugate-priors.html#cb2129-16"></a>                     <span class="st">&quot;/backupfiles/thm-model.txt&quot;</span>, </span>
+<span id="cb2129-17"><a href="conjugate-priors.html#cb2129-17"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2129-18"><a href="conjugate-priors.html#cb2129-18"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2129-19"><a href="conjugate-priors.html#cb2129-19"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2129-20"><a href="conjugate-priors.html#cb2129-20"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2129-21"><a href="conjugate-priors.html#cb2129-21"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2291,7 +2292,7 @@ model {
 ##    Total graph size: 8
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2124"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2124-1"><a href="conjugate-priors.html#cb2124-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2131"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2131-1"><a href="conjugate-priors.html#cb2131-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/thm-model.txt&quot;, fit using jags,
 ##  1 chains, each with 10100 iterations (first 100 discarded)
 ##  n.sims = 10000 iterations saved
@@ -2302,47 +2303,47 @@ model {
 ## DIC info (using the rule, pD = var(deviance)/2)
 ## pD = 1.0 and DIC = 12.4
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<div class="sourceCode" id="cb2126"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2126-1"><a href="conjugate-priors.html#cb2126-1"></a><span class="co"># OpenBUGS code:</span></span>
-<span id="cb2126-2"><a href="conjugate-priors.html#cb2126-2"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2126-3"><a href="conjugate-priors.html#cb2126-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/thm-model.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2126-4"><a href="conjugate-priors.html#cb2126-4"></a><span class="co">#   </span></span>
-<span id="cb2126-5"><a href="conjugate-priors.html#cb2126-5"></a><span class="co"># # compile the model</span></span>
-<span id="cb2126-6"><a href="conjugate-priors.html#cb2126-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2126-7"><a href="conjugate-priors.html#cb2126-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2126-8"><a href="conjugate-priors.html#cb2126-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2126-9"><a href="conjugate-priors.html#cb2126-9"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2126-10"><a href="conjugate-priors.html#cb2126-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2126-11"><a href="conjugate-priors.html#cb2126-11"></a><span class="co"># parameters &lt;- c(&quot;theta&quot;)</span></span>
-<span id="cb2126-12"><a href="conjugate-priors.html#cb2126-12"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2126-13"><a href="conjugate-priors.html#cb2126-13"></a></span>
-<span id="cb2126-14"><a href="conjugate-priors.html#cb2126-14"></a><span class="co"># # Generate 10000 iterations</span></span>
-<span id="cb2126-15"><a href="conjugate-priors.html#cb2126-15"></a><span class="co"># modelUpdate(10000)</span></span>
-<span id="cb2126-16"><a href="conjugate-priors.html#cb2126-16"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb2126-17"><a href="conjugate-priors.html#cb2126-17"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
-<span id="cb2126-18"><a href="conjugate-priors.html#cb2126-18"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2133"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2133-1"><a href="conjugate-priors.html#cb2133-1"></a><span class="co"># OpenBUGS code:</span></span>
+<span id="cb2133-2"><a href="conjugate-priors.html#cb2133-2"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2133-3"><a href="conjugate-priors.html#cb2133-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/thm-model.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2133-4"><a href="conjugate-priors.html#cb2133-4"></a><span class="co">#   </span></span>
+<span id="cb2133-5"><a href="conjugate-priors.html#cb2133-5"></a><span class="co"># # compile the model</span></span>
+<span id="cb2133-6"><a href="conjugate-priors.html#cb2133-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2133-7"><a href="conjugate-priors.html#cb2133-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2133-8"><a href="conjugate-priors.html#cb2133-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2133-9"><a href="conjugate-priors.html#cb2133-9"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2133-10"><a href="conjugate-priors.html#cb2133-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2133-11"><a href="conjugate-priors.html#cb2133-11"></a><span class="co"># parameters &lt;- c(&quot;theta&quot;)</span></span>
+<span id="cb2133-12"><a href="conjugate-priors.html#cb2133-12"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2133-13"><a href="conjugate-priors.html#cb2133-13"></a></span>
+<span id="cb2133-14"><a href="conjugate-priors.html#cb2133-14"></a><span class="co"># # Generate 10000 iterations</span></span>
+<span id="cb2133-15"><a href="conjugate-priors.html#cb2133-15"></a><span class="co"># modelUpdate(10000)</span></span>
+<span id="cb2133-16"><a href="conjugate-priors.html#cb2133-16"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb2133-17"><a href="conjugate-priors.html#cb2133-17"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
+<span id="cb2133-18"><a href="conjugate-priors.html#cb2133-18"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
 <p>所以這個區域三氯甲烷的事後均值和95%可信區間分別是 128.9 (122.3, 135.4)。和我們之前用精確計算法給出的結果相同/相近。</p>
 <p>如果在這個模型中，我們嘗試沒有信息的先驗概率分佈，結果會怎樣呢？</p>
-<div class="sourceCode" id="cb2127"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2127-1"><a href="conjugate-priors.html#cb2127-1"></a><span class="co"># Codes for R2JAGS</span></span>
-<span id="cb2127-2"><a href="conjugate-priors.html#cb2127-2"></a></span>
-<span id="cb2127-3"><a href="conjugate-priors.html#cb2127-3"></a></span>
-<span id="cb2127-4"><a href="conjugate-priors.html#cb2127-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2127-5"><a href="conjugate-priors.html#cb2127-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">128</span>, <span class="dv">132</span>),                       <span class="co"># observed </span></span>
-<span id="cb2127-6"><a href="conjugate-priors.html#cb2127-6"></a><span class="dt">tau =</span> <span class="dv">1</span><span class="op">/</span>(<span class="dv">5</span><span class="op">^</span><span class="dv">2</span>)</span>
-<span id="cb2127-7"><a href="conjugate-priors.html#cb2127-7"></a>)</span>
-<span id="cb2127-8"><a href="conjugate-priors.html#cb2127-8"></a></span>
-<span id="cb2127-9"><a href="conjugate-priors.html#cb2127-9"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2127-10"><a href="conjugate-priors.html#cb2127-10"></a></span>
-<span id="cb2127-11"><a href="conjugate-priors.html#cb2127-11"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2127-12"><a href="conjugate-priors.html#cb2127-12"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2127-13"><a href="conjugate-priors.html#cb2127-13"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>),</span>
-<span id="cb2127-14"><a href="conjugate-priors.html#cb2127-14"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
-<span id="cb2127-15"><a href="conjugate-priors.html#cb2127-15"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2127-16"><a href="conjugate-priors.html#cb2127-16"></a>                     <span class="st">&quot;/backupfiles/THM-vaguemodel.txt&quot;</span>, </span>
-<span id="cb2127-17"><a href="conjugate-priors.html#cb2127-17"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2127-18"><a href="conjugate-priors.html#cb2127-18"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2127-19"><a href="conjugate-priors.html#cb2127-19"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2127-20"><a href="conjugate-priors.html#cb2127-20"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2127-21"><a href="conjugate-priors.html#cb2127-21"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2134"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2134-1"><a href="conjugate-priors.html#cb2134-1"></a><span class="co"># Codes for R2JAGS</span></span>
+<span id="cb2134-2"><a href="conjugate-priors.html#cb2134-2"></a></span>
+<span id="cb2134-3"><a href="conjugate-priors.html#cb2134-3"></a></span>
+<span id="cb2134-4"><a href="conjugate-priors.html#cb2134-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2134-5"><a href="conjugate-priors.html#cb2134-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">128</span>, <span class="dv">132</span>),                       <span class="co"># observed </span></span>
+<span id="cb2134-6"><a href="conjugate-priors.html#cb2134-6"></a><span class="dt">tau =</span> <span class="dv">1</span><span class="op">/</span>(<span class="dv">5</span><span class="op">^</span><span class="dv">2</span>)</span>
+<span id="cb2134-7"><a href="conjugate-priors.html#cb2134-7"></a>)</span>
+<span id="cb2134-8"><a href="conjugate-priors.html#cb2134-8"></a></span>
+<span id="cb2134-9"><a href="conjugate-priors.html#cb2134-9"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2134-10"><a href="conjugate-priors.html#cb2134-10"></a></span>
+<span id="cb2134-11"><a href="conjugate-priors.html#cb2134-11"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2134-12"><a href="conjugate-priors.html#cb2134-12"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2134-13"><a href="conjugate-priors.html#cb2134-13"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;theta&quot;</span>),</span>
+<span id="cb2134-14"><a href="conjugate-priors.html#cb2134-14"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
+<span id="cb2134-15"><a href="conjugate-priors.html#cb2134-15"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2134-16"><a href="conjugate-priors.html#cb2134-16"></a>                     <span class="st">&quot;/backupfiles/THM-vaguemodel.txt&quot;</span>, </span>
+<span id="cb2134-17"><a href="conjugate-priors.html#cb2134-17"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2134-18"><a href="conjugate-priors.html#cb2134-18"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2134-19"><a href="conjugate-priors.html#cb2134-19"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2134-20"><a href="conjugate-priors.html#cb2134-20"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2134-21"><a href="conjugate-priors.html#cb2134-21"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2352,7 +2353,7 @@ model {
 ##    Total graph size: 6
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2129"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2129-1"><a href="conjugate-priors.html#cb2129-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2136"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2136-1"><a href="conjugate-priors.html#cb2136-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/THM-vaguemodel.txt&quot;, fit using jags,
 ##  1 chains, each with 10100 iterations (first 100 discarded)
 ##  n.sims = 10000 iterations saved
@@ -2363,24 +2364,24 @@ model {
 ## DIC info (using the rule, pD = var(deviance)/2)
 ## pD = 1.0 and DIC = 12.4
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<div class="sourceCode" id="cb2131"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2131-1"><a href="conjugate-priors.html#cb2131-1"></a><span class="co"># OpenBUGS code:</span></span>
-<span id="cb2131-2"><a href="conjugate-priors.html#cb2131-2"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2131-3"><a href="conjugate-priors.html#cb2131-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/THM-vaguemodel.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2131-4"><a href="conjugate-priors.html#cb2131-4"></a><span class="co"># </span></span>
-<span id="cb2131-5"><a href="conjugate-priors.html#cb2131-5"></a><span class="co"># # compile the model</span></span>
-<span id="cb2131-6"><a href="conjugate-priors.html#cb2131-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2131-7"><a href="conjugate-priors.html#cb2131-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2131-8"><a href="conjugate-priors.html#cb2131-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2131-9"><a href="conjugate-priors.html#cb2131-9"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2131-10"><a href="conjugate-priors.html#cb2131-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2131-11"><a href="conjugate-priors.html#cb2131-11"></a><span class="co"># parameters &lt;- c(&quot;theta&quot;)</span></span>
-<span id="cb2131-12"><a href="conjugate-priors.html#cb2131-12"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2131-13"><a href="conjugate-priors.html#cb2131-13"></a><span class="co"># </span></span>
-<span id="cb2131-14"><a href="conjugate-priors.html#cb2131-14"></a><span class="co"># # Generate 10000 iterations</span></span>
-<span id="cb2131-15"><a href="conjugate-priors.html#cb2131-15"></a><span class="co"># modelUpdate(10000)</span></span>
-<span id="cb2131-16"><a href="conjugate-priors.html#cb2131-16"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb2131-17"><a href="conjugate-priors.html#cb2131-17"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
-<span id="cb2131-18"><a href="conjugate-priors.html#cb2131-18"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2138"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2138-1"><a href="conjugate-priors.html#cb2138-1"></a><span class="co"># OpenBUGS code:</span></span>
+<span id="cb2138-2"><a href="conjugate-priors.html#cb2138-2"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2138-3"><a href="conjugate-priors.html#cb2138-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/THM-vaguemodel.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2138-4"><a href="conjugate-priors.html#cb2138-4"></a><span class="co"># </span></span>
+<span id="cb2138-5"><a href="conjugate-priors.html#cb2138-5"></a><span class="co"># # compile the model</span></span>
+<span id="cb2138-6"><a href="conjugate-priors.html#cb2138-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2138-7"><a href="conjugate-priors.html#cb2138-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2138-8"><a href="conjugate-priors.html#cb2138-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2138-9"><a href="conjugate-priors.html#cb2138-9"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2138-10"><a href="conjugate-priors.html#cb2138-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2138-11"><a href="conjugate-priors.html#cb2138-11"></a><span class="co"># parameters &lt;- c(&quot;theta&quot;)</span></span>
+<span id="cb2138-12"><a href="conjugate-priors.html#cb2138-12"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2138-13"><a href="conjugate-priors.html#cb2138-13"></a><span class="co"># </span></span>
+<span id="cb2138-14"><a href="conjugate-priors.html#cb2138-14"></a><span class="co"># # Generate 10000 iterations</span></span>
+<span id="cb2138-15"><a href="conjugate-priors.html#cb2138-15"></a><span class="co"># modelUpdate(10000)</span></span>
+<span id="cb2138-16"><a href="conjugate-priors.html#cb2138-16"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb2138-17"><a href="conjugate-priors.html#cb2138-17"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
+<span id="cb2138-18"><a href="conjugate-priors.html#cb2138-18"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
 <p>MC試驗10000次給出的事後均值是129.9，它和樣本均值相同，因爲此時我們給模型一個幾乎不含有效信息的先驗概率分佈時，意味着我們讓試驗獲得的數據做完全主導作用，“data speak for themselves”。</p>
 <p>C. Disease risk in a small area</p>
 <p>下面的BUGS/JAGS模型代碼可以用來進行泊淞－伽馬分布似然的MC計算。在這個例子中，在某個區域我們觀察到５例白血病新病例，已知該區域的年齡性別標準化發病期望病例數是<span class="math inline">\(E = 2.8\)</span>。注意看我們在代碼中加入了兩種不同類型的先驗概率分布，一個是沒有太多信息的(vague prior distribution)<code>dgamma(0.1, 0.1)</code>，一個則是有一定信息的(informative prior, stribution) <code>dgamma(48, 40)</code>。我們把兩個先驗概率分布同時加在一個模型裏，這是十分便於進行兩種先驗概率對結果的影響的比較的手段。你當然可以把它寫成兩個不同的模型。注意模型代碼是如何表示事後概率分布和計算相對危險度比(relative risk)大於1的概率的。</p>
@@ -2405,26 +2406,26 @@ model {
     # y[2] &lt;- 5             # replicate data to fit both models together
 
 }</code></pre>
-<div class="sourceCode" id="cb2133"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2133-1"><a href="conjugate-priors.html#cb2133-1"></a><span class="co"># Codes for R2JAGS</span></span>
-<span id="cb2133-2"><a href="conjugate-priors.html#cb2133-2"></a></span>
-<span id="cb2133-3"><a href="conjugate-priors.html#cb2133-3"></a></span>
-<span id="cb2133-4"><a href="conjugate-priors.html#cb2133-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2133-5"><a href="conjugate-priors.html#cb2133-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">5</span>)                      <span class="co"># replicate data to fit both models together</span></span>
-<span id="cb2133-6"><a href="conjugate-priors.html#cb2133-6"></a>)</span>
-<span id="cb2133-7"><a href="conjugate-priors.html#cb2133-7"></a></span>
-<span id="cb2133-8"><a href="conjugate-priors.html#cb2133-8"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2133-9"><a href="conjugate-priors.html#cb2133-9"></a></span>
-<span id="cb2133-10"><a href="conjugate-priors.html#cb2133-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2133-11"><a href="conjugate-priors.html#cb2133-11"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2133-12"><a href="conjugate-priors.html#cb2133-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.excess[1]&quot;</span>, <span class="st">&quot;P.excess[2]&quot;</span>, <span class="st">&quot;lambda[1]&quot;</span>, <span class="st">&quot;lambda[2]&quot;</span>),</span>
-<span id="cb2133-13"><a href="conjugate-priors.html#cb2133-13"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
-<span id="cb2133-14"><a href="conjugate-priors.html#cb2133-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2133-15"><a href="conjugate-priors.html#cb2133-15"></a>                     <span class="st">&quot;/backupfiles/disease-model.txt&quot;</span>, </span>
-<span id="cb2133-16"><a href="conjugate-priors.html#cb2133-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2133-17"><a href="conjugate-priors.html#cb2133-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2133-18"><a href="conjugate-priors.html#cb2133-18"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2133-19"><a href="conjugate-priors.html#cb2133-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2133-20"><a href="conjugate-priors.html#cb2133-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2140"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2140-1"><a href="conjugate-priors.html#cb2140-1"></a><span class="co"># Codes for R2JAGS</span></span>
+<span id="cb2140-2"><a href="conjugate-priors.html#cb2140-2"></a></span>
+<span id="cb2140-3"><a href="conjugate-priors.html#cb2140-3"></a></span>
+<span id="cb2140-4"><a href="conjugate-priors.html#cb2140-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2140-5"><a href="conjugate-priors.html#cb2140-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">5</span>)                      <span class="co"># replicate data to fit both models together</span></span>
+<span id="cb2140-6"><a href="conjugate-priors.html#cb2140-6"></a>)</span>
+<span id="cb2140-7"><a href="conjugate-priors.html#cb2140-7"></a></span>
+<span id="cb2140-8"><a href="conjugate-priors.html#cb2140-8"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2140-9"><a href="conjugate-priors.html#cb2140-9"></a></span>
+<span id="cb2140-10"><a href="conjugate-priors.html#cb2140-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2140-11"><a href="conjugate-priors.html#cb2140-11"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2140-12"><a href="conjugate-priors.html#cb2140-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.excess[1]&quot;</span>, <span class="st">&quot;P.excess[2]&quot;</span>, <span class="st">&quot;lambda[1]&quot;</span>, <span class="st">&quot;lambda[2]&quot;</span>),</span>
+<span id="cb2140-13"><a href="conjugate-priors.html#cb2140-13"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
+<span id="cb2140-14"><a href="conjugate-priors.html#cb2140-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2140-15"><a href="conjugate-priors.html#cb2140-15"></a>                     <span class="st">&quot;/backupfiles/disease-model.txt&quot;</span>, </span>
+<span id="cb2140-16"><a href="conjugate-priors.html#cb2140-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2140-17"><a href="conjugate-priors.html#cb2140-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2140-18"><a href="conjugate-priors.html#cb2140-18"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2140-19"><a href="conjugate-priors.html#cb2140-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2140-20"><a href="conjugate-priors.html#cb2140-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2434,7 +2435,7 @@ model {
 ##    Total graph size: 15
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2135"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2135-1"><a href="conjugate-priors.html#cb2135-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2142"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2142-1"><a href="conjugate-priors.html#cb2142-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/disease-model.txt&quot;, fit using jags,
 ##  1 chains, each with 10100 iterations (first 100 discarded)
 ##  n.sims = 10000 iterations saved
@@ -2448,59 +2449,59 @@ model {
 ## DIC info (using the rule, pD = var(deviance)/2)
 ## pD = 1.2 and DIC = 9.8
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<div class="sourceCode" id="cb2137"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2137-1"><a href="conjugate-priors.html#cb2137-1"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2137-2"><a href="conjugate-priors.html#cb2137-2"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/disease-model.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2137-3"><a href="conjugate-priors.html#cb2137-3"></a><span class="co"># </span></span>
-<span id="cb2137-4"><a href="conjugate-priors.html#cb2137-4"></a><span class="co"># # compile the model</span></span>
-<span id="cb2137-5"><a href="conjugate-priors.html#cb2137-5"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2137-6"><a href="conjugate-priors.html#cb2137-6"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2137-7"><a href="conjugate-priors.html#cb2137-7"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2137-8"><a href="conjugate-priors.html#cb2137-8"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2137-9"><a href="conjugate-priors.html#cb2137-9"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2137-10"><a href="conjugate-priors.html#cb2137-10"></a><span class="co"># parameters &lt;- c(&quot;P.excess[1]&quot;, &quot;P.excess[2]&quot;, &quot;lambda[1]&quot;, &quot;lambda[2]&quot;)</span></span>
-<span id="cb2137-11"><a href="conjugate-priors.html#cb2137-11"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2137-12"><a href="conjugate-priors.html#cb2137-12"></a><span class="co"># </span></span>
-<span id="cb2137-13"><a href="conjugate-priors.html#cb2137-13"></a><span class="co"># # Generate 10000 iterations</span></span>
-<span id="cb2137-14"><a href="conjugate-priors.html#cb2137-14"></a><span class="co"># modelUpdate(10000)</span></span>
-<span id="cb2137-15"><a href="conjugate-priors.html#cb2137-15"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb2137-16"><a href="conjugate-priors.html#cb2137-16"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
-<span id="cb2137-17"><a href="conjugate-priors.html#cb2137-17"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2144"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2144-1"><a href="conjugate-priors.html#cb2144-1"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2144-2"><a href="conjugate-priors.html#cb2144-2"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/disease-model.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2144-3"><a href="conjugate-priors.html#cb2144-3"></a><span class="co"># </span></span>
+<span id="cb2144-4"><a href="conjugate-priors.html#cb2144-4"></a><span class="co"># # compile the model</span></span>
+<span id="cb2144-5"><a href="conjugate-priors.html#cb2144-5"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2144-6"><a href="conjugate-priors.html#cb2144-6"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2144-7"><a href="conjugate-priors.html#cb2144-7"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2144-8"><a href="conjugate-priors.html#cb2144-8"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2144-9"><a href="conjugate-priors.html#cb2144-9"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2144-10"><a href="conjugate-priors.html#cb2144-10"></a><span class="co"># parameters &lt;- c(&quot;P.excess[1]&quot;, &quot;P.excess[2]&quot;, &quot;lambda[1]&quot;, &quot;lambda[2]&quot;)</span></span>
+<span id="cb2144-11"><a href="conjugate-priors.html#cb2144-11"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2144-12"><a href="conjugate-priors.html#cb2144-12"></a><span class="co"># </span></span>
+<span id="cb2144-13"><a href="conjugate-priors.html#cb2144-13"></a><span class="co"># # Generate 10000 iterations</span></span>
+<span id="cb2144-14"><a href="conjugate-priors.html#cb2144-14"></a><span class="co"># modelUpdate(10000)</span></span>
+<span id="cb2144-15"><a href="conjugate-priors.html#cb2144-15"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb2144-16"><a href="conjugate-priors.html#cb2144-16"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
+<span id="cb2144-17"><a href="conjugate-priors.html#cb2144-17"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
 <p>在沒有信息的先驗概率(<code>dgamma(0.1, 0.1)</code>)分布條件下，該地區可能有較高白血病發病率的概率是85%，但是在有參考價值信息的先驗概率分布(<code>dgamma(48, 40)</code>)條件下，該地區可能有較高白血病發病率的概率是93%。所以，盡管相對危險度(relative risk)的事後均值在沒有信息的先驗概率分布條件下比較高(<code>lambda[1] = 1.770 &gt; lambda[2] = 1.238</code>)，但是沒有信息的先驗概率分布條件下，這個相對危險度大於1的概率(85%)要比有信息的先驗概率分布條件下相對危險度大於1的概率要低(93%)。這是因爲在沒有信息的先驗概率分布條件下，相對危險度估計本身有太多的不確定性(uncertainty，圖<a href="conjugate-priors.html#fig:R-OpenBUGS15">96.7</a>)。</p>
-<div class="sourceCode" id="cb2138"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2138-1"><a href="conjugate-priors.html#cb2138-1"></a><span class="co"># </span></span>
-<span id="cb2138-2"><a href="conjugate-priors.html#cb2138-2"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2138-3"><a href="conjugate-priors.html#cb2138-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/disease-model.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2138-4"><a href="conjugate-priors.html#cb2138-4"></a><span class="co"># </span></span>
-<span id="cb2138-5"><a href="conjugate-priors.html#cb2138-5"></a><span class="co"># # compile the model</span></span>
-<span id="cb2138-6"><a href="conjugate-priors.html#cb2138-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2138-7"><a href="conjugate-priors.html#cb2138-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2138-8"><a href="conjugate-priors.html#cb2138-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2138-9"><a href="conjugate-priors.html#cb2138-9"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2138-10"><a href="conjugate-priors.html#cb2138-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2138-11"><a href="conjugate-priors.html#cb2138-11"></a><span class="co"># parameters &lt;- c(&quot;P.excess[1]&quot;, &quot;P.excess[2]&quot;, &quot;lambda[1]&quot;, &quot;lambda[2]&quot;)</span></span>
-<span id="cb2138-12"><a href="conjugate-priors.html#cb2138-12"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2138-13"><a href="conjugate-priors.html#cb2138-13"></a><span class="co"># </span></span>
-<span id="cb2138-14"><a href="conjugate-priors.html#cb2138-14"></a><span class="co"># # Generate 10000 iterations</span></span>
-<span id="cb2138-15"><a href="conjugate-priors.html#cb2138-15"></a><span class="co"># modelUpdate(10000)</span></span>
-<span id="cb2138-16"><a href="conjugate-priors.html#cb2138-16"></a></span>
-<span id="cb2138-17"><a href="conjugate-priors.html#cb2138-17"></a></span>
-<span id="cb2138-18"><a href="conjugate-priors.html#cb2138-18"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb2138-19"><a href="conjugate-priors.html#cb2138-19"></a><span class="co"># chain &lt;- data.frame(P.excess1 = samplesSample(&quot;P.excess[1]&quot;), </span></span>
-<span id="cb2138-20"><a href="conjugate-priors.html#cb2138-20"></a><span class="co">#                     P.excess2 = samplesSample(&quot;P.excess[2]&quot;), </span></span>
-<span id="cb2138-21"><a href="conjugate-priors.html#cb2138-21"></a><span class="co">#                     lambda1 = samplesSample(&quot;lambda[1]&quot;), </span></span>
-<span id="cb2138-22"><a href="conjugate-priors.html#cb2138-22"></a><span class="co">#                     lambda2 = samplesSample(&quot;lambda[2]&quot;))</span></span>
-<span id="cb2138-23"><a href="conjugate-priors.html#cb2138-23"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(post.jags)</span>
-<span id="cb2138-24"><a href="conjugate-priors.html#cb2138-24"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb2138-25"><a href="conjugate-priors.html#cb2138-25"></a>ggSample &lt;-<span class="st"> </span>ggmcmc<span class="op">::</span><span class="kw">ggs</span>(Simulated)</span>
-<span id="cb2138-26"><a href="conjugate-priors.html#cb2138-26"></a></span>
-<span id="cb2138-27"><a href="conjugate-priors.html#cb2138-27"></a>Lambda1 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2138-28"><a href="conjugate-priors.html#cb2138-28"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[1]&quot;</span>)</span>
-<span id="cb2138-29"><a href="conjugate-priors.html#cb2138-29"></a>Lambda2 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2138-30"><a href="conjugate-priors.html#cb2138-30"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[2]&quot;</span>)</span>
-<span id="cb2138-31"><a href="conjugate-priors.html#cb2138-31"></a></span>
-<span id="cb2138-32"><a href="conjugate-priors.html#cb2138-32"></a><span class="kw">boxplot</span>(Lambda1<span class="op">$</span>value,Lambda2<span class="op">$</span>value, <span class="dt">col =</span> <span class="st">&quot;green&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;lambda&quot;</span>, </span>
-<span id="cb2138-33"><a href="conjugate-priors.html#cb2138-33"></a>        <span class="dt">outline=</span><span class="ot">FALSE</span>, <span class="dt">main =</span> <span class="st">&quot;boxplot: lambda&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">4</span>), </span>
-<span id="cb2138-34"><a href="conjugate-priors.html#cb2138-34"></a>        <span class="dt">names =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>)) </span>
-<span id="cb2138-35"><a href="conjugate-priors.html#cb2138-35"></a><span class="kw">abline</span>(<span class="dt">h =</span> <span class="fl">1.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2145"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2145-1"><a href="conjugate-priors.html#cb2145-1"></a><span class="co"># </span></span>
+<span id="cb2145-2"><a href="conjugate-priors.html#cb2145-2"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2145-3"><a href="conjugate-priors.html#cb2145-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/disease-model.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2145-4"><a href="conjugate-priors.html#cb2145-4"></a><span class="co"># </span></span>
+<span id="cb2145-5"><a href="conjugate-priors.html#cb2145-5"></a><span class="co"># # compile the model</span></span>
+<span id="cb2145-6"><a href="conjugate-priors.html#cb2145-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2145-7"><a href="conjugate-priors.html#cb2145-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2145-8"><a href="conjugate-priors.html#cb2145-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2145-9"><a href="conjugate-priors.html#cb2145-9"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2145-10"><a href="conjugate-priors.html#cb2145-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2145-11"><a href="conjugate-priors.html#cb2145-11"></a><span class="co"># parameters &lt;- c(&quot;P.excess[1]&quot;, &quot;P.excess[2]&quot;, &quot;lambda[1]&quot;, &quot;lambda[2]&quot;)</span></span>
+<span id="cb2145-12"><a href="conjugate-priors.html#cb2145-12"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2145-13"><a href="conjugate-priors.html#cb2145-13"></a><span class="co"># </span></span>
+<span id="cb2145-14"><a href="conjugate-priors.html#cb2145-14"></a><span class="co"># # Generate 10000 iterations</span></span>
+<span id="cb2145-15"><a href="conjugate-priors.html#cb2145-15"></a><span class="co"># modelUpdate(10000)</span></span>
+<span id="cb2145-16"><a href="conjugate-priors.html#cb2145-16"></a></span>
+<span id="cb2145-17"><a href="conjugate-priors.html#cb2145-17"></a></span>
+<span id="cb2145-18"><a href="conjugate-priors.html#cb2145-18"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb2145-19"><a href="conjugate-priors.html#cb2145-19"></a><span class="co"># chain &lt;- data.frame(P.excess1 = samplesSample(&quot;P.excess[1]&quot;), </span></span>
+<span id="cb2145-20"><a href="conjugate-priors.html#cb2145-20"></a><span class="co">#                     P.excess2 = samplesSample(&quot;P.excess[2]&quot;), </span></span>
+<span id="cb2145-21"><a href="conjugate-priors.html#cb2145-21"></a><span class="co">#                     lambda1 = samplesSample(&quot;lambda[1]&quot;), </span></span>
+<span id="cb2145-22"><a href="conjugate-priors.html#cb2145-22"></a><span class="co">#                     lambda2 = samplesSample(&quot;lambda[2]&quot;))</span></span>
+<span id="cb2145-23"><a href="conjugate-priors.html#cb2145-23"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(post.jags)</span>
+<span id="cb2145-24"><a href="conjugate-priors.html#cb2145-24"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb2145-25"><a href="conjugate-priors.html#cb2145-25"></a>ggSample &lt;-<span class="st"> </span>ggmcmc<span class="op">::</span><span class="kw">ggs</span>(Simulated)</span>
+<span id="cb2145-26"><a href="conjugate-priors.html#cb2145-26"></a></span>
+<span id="cb2145-27"><a href="conjugate-priors.html#cb2145-27"></a>Lambda1 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2145-28"><a href="conjugate-priors.html#cb2145-28"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[1]&quot;</span>)</span>
+<span id="cb2145-29"><a href="conjugate-priors.html#cb2145-29"></a>Lambda2 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2145-30"><a href="conjugate-priors.html#cb2145-30"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[2]&quot;</span>)</span>
+<span id="cb2145-31"><a href="conjugate-priors.html#cb2145-31"></a></span>
+<span id="cb2145-32"><a href="conjugate-priors.html#cb2145-32"></a><span class="kw">boxplot</span>(Lambda1<span class="op">$</span>value,Lambda2<span class="op">$</span>value, <span class="dt">col =</span> <span class="st">&quot;green&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;lambda&quot;</span>, </span>
+<span id="cb2145-33"><a href="conjugate-priors.html#cb2145-33"></a>        <span class="dt">outline=</span><span class="ot">FALSE</span>, <span class="dt">main =</span> <span class="st">&quot;boxplot: lambda&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">4</span>), </span>
+<span id="cb2145-34"><a href="conjugate-priors.html#cb2145-34"></a>        <span class="dt">names =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>)) </span>
+<span id="cb2145-35"><a href="conjugate-priors.html#cb2145-35"></a><span class="kw">abline</span>(<span class="dt">h =</span> <span class="fl">1.5</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS15"></span>
 <img src="bookdown_files/figure-html/R-OpenBUGS15-1.png" alt="Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2)." width="80%" />
 <p class="caption">
@@ -2530,26 +2531,26 @@ model {
     # y[2] &lt;- 100             # replicate data to fit both models together
 
 }</code></pre>
-<div class="sourceCode" id="cb2140"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2140-1"><a href="conjugate-priors.html#cb2140-1"></a><span class="co"># Codes for R2JAGS</span></span>
-<span id="cb2140-2"><a href="conjugate-priors.html#cb2140-2"></a></span>
-<span id="cb2140-3"><a href="conjugate-priors.html#cb2140-3"></a></span>
-<span id="cb2140-4"><a href="conjugate-priors.html#cb2140-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2140-5"><a href="conjugate-priors.html#cb2140-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>)                    <span class="co"># the observed new cases changed from 5 to 100</span></span>
-<span id="cb2140-6"><a href="conjugate-priors.html#cb2140-6"></a>)</span>
-<span id="cb2140-7"><a href="conjugate-priors.html#cb2140-7"></a></span>
-<span id="cb2140-8"><a href="conjugate-priors.html#cb2140-8"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2140-9"><a href="conjugate-priors.html#cb2140-9"></a></span>
-<span id="cb2140-10"><a href="conjugate-priors.html#cb2140-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2140-11"><a href="conjugate-priors.html#cb2140-11"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2140-12"><a href="conjugate-priors.html#cb2140-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.excess[1]&quot;</span>, <span class="st">&quot;P.excess[2]&quot;</span>, <span class="st">&quot;lambda[1]&quot;</span>, <span class="st">&quot;lambda[2]&quot;</span>),</span>
-<span id="cb2140-13"><a href="conjugate-priors.html#cb2140-13"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
-<span id="cb2140-14"><a href="conjugate-priors.html#cb2140-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2140-15"><a href="conjugate-priors.html#cb2140-15"></a>                     <span class="st">&quot;/backupfiles/disease-modelupdated.txt&quot;</span>, </span>
-<span id="cb2140-16"><a href="conjugate-priors.html#cb2140-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2140-17"><a href="conjugate-priors.html#cb2140-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2140-18"><a href="conjugate-priors.html#cb2140-18"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2140-19"><a href="conjugate-priors.html#cb2140-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2140-20"><a href="conjugate-priors.html#cb2140-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2147"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2147-1"><a href="conjugate-priors.html#cb2147-1"></a><span class="co"># Codes for R2JAGS</span></span>
+<span id="cb2147-2"><a href="conjugate-priors.html#cb2147-2"></a></span>
+<span id="cb2147-3"><a href="conjugate-priors.html#cb2147-3"></a></span>
+<span id="cb2147-4"><a href="conjugate-priors.html#cb2147-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2147-5"><a href="conjugate-priors.html#cb2147-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>)                    <span class="co"># the observed new cases changed from 5 to 100</span></span>
+<span id="cb2147-6"><a href="conjugate-priors.html#cb2147-6"></a>)</span>
+<span id="cb2147-7"><a href="conjugate-priors.html#cb2147-7"></a></span>
+<span id="cb2147-8"><a href="conjugate-priors.html#cb2147-8"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2147-9"><a href="conjugate-priors.html#cb2147-9"></a></span>
+<span id="cb2147-10"><a href="conjugate-priors.html#cb2147-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2147-11"><a href="conjugate-priors.html#cb2147-11"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2147-12"><a href="conjugate-priors.html#cb2147-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.excess[1]&quot;</span>, <span class="st">&quot;P.excess[2]&quot;</span>, <span class="st">&quot;lambda[1]&quot;</span>, <span class="st">&quot;lambda[2]&quot;</span>),</span>
+<span id="cb2147-13"><a href="conjugate-priors.html#cb2147-13"></a>  <span class="dt">n.iter =</span> <span class="dv">10100</span>,</span>
+<span id="cb2147-14"><a href="conjugate-priors.html#cb2147-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2147-15"><a href="conjugate-priors.html#cb2147-15"></a>                     <span class="st">&quot;/backupfiles/disease-modelupdated.txt&quot;</span>, </span>
+<span id="cb2147-16"><a href="conjugate-priors.html#cb2147-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2147-17"><a href="conjugate-priors.html#cb2147-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2147-18"><a href="conjugate-priors.html#cb2147-18"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2147-19"><a href="conjugate-priors.html#cb2147-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2147-20"><a href="conjugate-priors.html#cb2147-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2559,7 +2560,7 @@ model {
 ##    Total graph size: 15
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2142"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2142-1"><a href="conjugate-priors.html#cb2142-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2149"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2149-1"><a href="conjugate-priors.html#cb2149-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/disease-modelupdated.txt&quot;, fit using jags,
 ##  1 chains, each with 10100 iterations (first 100 discarded)
 ##  n.sims = 10000 iterations saved
@@ -2573,24 +2574,24 @@ model {
 ## DIC info (using the rule, pD = var(deviance)/2)
 ## pD = 4.1 and DIC = 20.7
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<div class="sourceCode" id="cb2144"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2144-1"><a href="conjugate-priors.html#cb2144-1"></a><span class="co"># OpenBUGS codes:</span></span>
-<span id="cb2144-2"><a href="conjugate-priors.html#cb2144-2"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2144-3"><a href="conjugate-priors.html#cb2144-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/disease-modelupdated.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2144-4"><a href="conjugate-priors.html#cb2144-4"></a><span class="co"># </span></span>
-<span id="cb2144-5"><a href="conjugate-priors.html#cb2144-5"></a><span class="co"># # compile the model</span></span>
-<span id="cb2144-6"><a href="conjugate-priors.html#cb2144-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2144-7"><a href="conjugate-priors.html#cb2144-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2144-8"><a href="conjugate-priors.html#cb2144-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2144-9"><a href="conjugate-priors.html#cb2144-9"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2144-10"><a href="conjugate-priors.html#cb2144-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2144-11"><a href="conjugate-priors.html#cb2144-11"></a><span class="co"># parameters &lt;- c(&quot;P.excess[1]&quot;, &quot;P.excess[2]&quot;, &quot;lambda[1]&quot;, &quot;lambda[2]&quot;)</span></span>
-<span id="cb2144-12"><a href="conjugate-priors.html#cb2144-12"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2144-13"><a href="conjugate-priors.html#cb2144-13"></a><span class="co"># </span></span>
-<span id="cb2144-14"><a href="conjugate-priors.html#cb2144-14"></a><span class="co"># # Generate 10000 iterations</span></span>
-<span id="cb2144-15"><a href="conjugate-priors.html#cb2144-15"></a><span class="co"># modelUpdate(10000)</span></span>
-<span id="cb2144-16"><a href="conjugate-priors.html#cb2144-16"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb2144-17"><a href="conjugate-priors.html#cb2144-17"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
-<span id="cb2144-18"><a href="conjugate-priors.html#cb2144-18"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2151"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2151-1"><a href="conjugate-priors.html#cb2151-1"></a><span class="co"># OpenBUGS codes:</span></span>
+<span id="cb2151-2"><a href="conjugate-priors.html#cb2151-2"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2151-3"><a href="conjugate-priors.html#cb2151-3"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/disease-modelupdated.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2151-4"><a href="conjugate-priors.html#cb2151-4"></a><span class="co"># </span></span>
+<span id="cb2151-5"><a href="conjugate-priors.html#cb2151-5"></a><span class="co"># # compile the model</span></span>
+<span id="cb2151-6"><a href="conjugate-priors.html#cb2151-6"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2151-7"><a href="conjugate-priors.html#cb2151-7"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2151-8"><a href="conjugate-priors.html#cb2151-8"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2151-9"><a href="conjugate-priors.html#cb2151-9"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2151-10"><a href="conjugate-priors.html#cb2151-10"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2151-11"><a href="conjugate-priors.html#cb2151-11"></a><span class="co"># parameters &lt;- c(&quot;P.excess[1]&quot;, &quot;P.excess[2]&quot;, &quot;lambda[1]&quot;, &quot;lambda[2]&quot;)</span></span>
+<span id="cb2151-12"><a href="conjugate-priors.html#cb2151-12"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2151-13"><a href="conjugate-priors.html#cb2151-13"></a><span class="co"># </span></span>
+<span id="cb2151-14"><a href="conjugate-priors.html#cb2151-14"></a><span class="co"># # Generate 10000 iterations</span></span>
+<span id="cb2151-15"><a href="conjugate-priors.html#cb2151-15"></a><span class="co"># modelUpdate(10000)</span></span>
+<span id="cb2151-16"><a href="conjugate-priors.html#cb2151-16"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb2151-17"><a href="conjugate-priors.html#cb2151-17"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
+<span id="cb2151-18"><a href="conjugate-priors.html#cb2151-18"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
 <p>有了更多的觀察數據的模型，我們看到，相對危險度的事後估計<code>lambda[1], lambda[2]</code>都變得更加精確了，有了更小的標準差。這和我們的預期相同，因爲觀察數據增加自然會提高相對危險度估計的精確度。可是，我們發現在沒有信息的先驗概率分布條件下，相對危險度的事後估計幾乎沒有太大的變化(1.783 v.s. 1.770)。相反地，有信息的先驗概率分布條件下，相對危險度的事後估計比之前增加了不少(1.540 v.s. 1.238)。這主要是因爲，現在我們得到更多的觀察數據，這些數據得到的信息被給予了更多的權重，且觀察數據提示相對危險度應該要比較大(100/56 = 1.786)。</p>
 <p>盡管觀察數據確實給模型提供了較多的有價值的信息，你會發現，我們使用的第二個先驗概率分布（也就是有信息的先驗概率分布）仍然對相對危險度的事後估計起到了相當的影響(the prior variance is 0.03, giving prior sd of 0.17)。這也是因爲這個先驗概率分布給出的信息量，幾乎相當於觀察數據給出的信息量（二者的標準差很接近）。另外一種理解此現象的方法是看事後概率分布推導出的新的伽馬分布的計算式：</p>
 <p><span class="math display">\[
@@ -2602,24 +2603,24 @@ p(\lambda | y, E) &amp; \propto p(\lambda) p (y | \lambda, E) \\
 \end{aligned}
 \]</span></p>
 <p>由於事後伽馬分布的方差（標準差）主要由第二個參數<span class="math inline">\((b + E)\)</span>決定，從上面的公式推導我們可以看見，事後伽馬分布的第二個參數<span class="math inline">\((b + E)\)</span>，分別是先驗概率分布的第二個參數<span class="math inline">\((b = 40)\)</span>，和觀察數據的期望值<span class="math inline">\((E = 56)\)</span>。由於這兩個數值大小接近，所以我們也可以理解此時先驗概率提供的信息和我們觀察數據提供的信息旗鼓相當。另外，在這個新的觀察數據條件下，我們無論使用哪個先驗概率分布做條件，都獲得了100%的結果也就是這個特定區域的白血病發病率大於期望值的概率是100%。也就是我們此時有100%的把握認爲這個特定區域的白血病發病率較高。</p>
-<div class="sourceCode" id="cb2145"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2145-1"><a href="conjugate-priors.html#cb2145-1"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb2145-2"><a href="conjugate-priors.html#cb2145-2"></a><span class="co"># chain &lt;- data.frame(P.excess1 = samplesSample(&quot;P.excess[1]&quot;), </span></span>
-<span id="cb2145-3"><a href="conjugate-priors.html#cb2145-3"></a><span class="co">#                     P.excess2 = samplesSample(&quot;P.excess[2]&quot;), </span></span>
-<span id="cb2145-4"><a href="conjugate-priors.html#cb2145-4"></a><span class="co">#                     lambda1 = samplesSample(&quot;lambda[1]&quot;), </span></span>
-<span id="cb2145-5"><a href="conjugate-priors.html#cb2145-5"></a><span class="co">#                     lambda2 = samplesSample(&quot;lambda[2]&quot;))</span></span>
-<span id="cb2145-6"><a href="conjugate-priors.html#cb2145-6"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(post.jags)</span>
-<span id="cb2145-7"><a href="conjugate-priors.html#cb2145-7"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
-<span id="cb2145-8"><a href="conjugate-priors.html#cb2145-8"></a>ggSample &lt;-<span class="st"> </span>ggmcmc<span class="op">::</span><span class="kw">ggs</span>(Simulated)</span>
-<span id="cb2145-9"><a href="conjugate-priors.html#cb2145-9"></a></span>
-<span id="cb2145-10"><a href="conjugate-priors.html#cb2145-10"></a>Lambda1 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2145-11"><a href="conjugate-priors.html#cb2145-11"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[1]&quot;</span>)</span>
-<span id="cb2145-12"><a href="conjugate-priors.html#cb2145-12"></a>Lambda2 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb2145-13"><a href="conjugate-priors.html#cb2145-13"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[2]&quot;</span>)</span>
-<span id="cb2145-14"><a href="conjugate-priors.html#cb2145-14"></a></span>
-<span id="cb2145-15"><a href="conjugate-priors.html#cb2145-15"></a><span class="kw">boxplot</span>(Lambda1<span class="op">$</span>value,Lambda2<span class="op">$</span>value, <span class="dt">col =</span> <span class="st">&quot;green&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;lambda&quot;</span>, </span>
-<span id="cb2145-16"><a href="conjugate-priors.html#cb2145-16"></a>        <span class="dt">outline=</span><span class="ot">FALSE</span>, <span class="dt">main =</span> <span class="st">&quot;boxplot: lambda&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">4</span>), </span>
-<span id="cb2145-17"><a href="conjugate-priors.html#cb2145-17"></a>        <span class="dt">names =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>)) </span>
-<span id="cb2145-18"><a href="conjugate-priors.html#cb2145-18"></a><span class="kw">abline</span>(<span class="dt">h =</span> <span class="fl">1.66</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2152"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2152-1"><a href="conjugate-priors.html#cb2152-1"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb2152-2"><a href="conjugate-priors.html#cb2152-2"></a><span class="co"># chain &lt;- data.frame(P.excess1 = samplesSample(&quot;P.excess[1]&quot;), </span></span>
+<span id="cb2152-3"><a href="conjugate-priors.html#cb2152-3"></a><span class="co">#                     P.excess2 = samplesSample(&quot;P.excess[2]&quot;), </span></span>
+<span id="cb2152-4"><a href="conjugate-priors.html#cb2152-4"></a><span class="co">#                     lambda1 = samplesSample(&quot;lambda[1]&quot;), </span></span>
+<span id="cb2152-5"><a href="conjugate-priors.html#cb2152-5"></a><span class="co">#                     lambda2 = samplesSample(&quot;lambda[2]&quot;))</span></span>
+<span id="cb2152-6"><a href="conjugate-priors.html#cb2152-6"></a>Simulated &lt;-<span class="st"> </span>coda<span class="op">::</span><span class="kw">as.mcmc</span>(post.jags)</span>
+<span id="cb2152-7"><a href="conjugate-priors.html#cb2152-7"></a><span class="co">#### PUT THE SAMPLED VALUES IN ONE R DATA FRAME:</span></span>
+<span id="cb2152-8"><a href="conjugate-priors.html#cb2152-8"></a>ggSample &lt;-<span class="st"> </span>ggmcmc<span class="op">::</span><span class="kw">ggs</span>(Simulated)</span>
+<span id="cb2152-9"><a href="conjugate-priors.html#cb2152-9"></a></span>
+<span id="cb2152-10"><a href="conjugate-priors.html#cb2152-10"></a>Lambda1 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2152-11"><a href="conjugate-priors.html#cb2152-11"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[1]&quot;</span>)</span>
+<span id="cb2152-12"><a href="conjugate-priors.html#cb2152-12"></a>Lambda2 &lt;-<span class="st"> </span>ggSample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb2152-13"><a href="conjugate-priors.html#cb2152-13"></a><span class="st">  </span><span class="kw">filter</span>(Parameter <span class="op">==</span><span class="st"> &quot;lambda[2]&quot;</span>)</span>
+<span id="cb2152-14"><a href="conjugate-priors.html#cb2152-14"></a></span>
+<span id="cb2152-15"><a href="conjugate-priors.html#cb2152-15"></a><span class="kw">boxplot</span>(Lambda1<span class="op">$</span>value,Lambda2<span class="op">$</span>value, <span class="dt">col =</span> <span class="st">&quot;green&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;lambda&quot;</span>, </span>
+<span id="cb2152-16"><a href="conjugate-priors.html#cb2152-16"></a>        <span class="dt">outline=</span><span class="ot">FALSE</span>, <span class="dt">main =</span> <span class="st">&quot;boxplot: lambda&quot;</span>, <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">4</span>), </span>
+<span id="cb2152-17"><a href="conjugate-priors.html#cb2152-17"></a>        <span class="dt">names =</span> <span class="kw">c</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>)) </span>
+<span id="cb2152-18"><a href="conjugate-priors.html#cb2152-18"></a><span class="kw">abline</span>(<span class="dt">h =</span> <span class="fl">1.66</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span id="fig:R-OpenBUGS17"></span>
 <img src="bookdown_files/figure-html/R-OpenBUGS17-1.png" alt="Box plots of relative risk (lambda) of leukaemia under different priors (vague = 1, informative = 2) with more observations." width="80%" />
 <p class="caption">
@@ -2650,26 +2651,26 @@ model{
 #  y &lt;- 13                               # observed number of correct taste tests in original experiment
   
 }</code></pre>
-<div class="sourceCode" id="cb2147"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2147-1"><a href="conjugate-priors.html#cb2147-1"></a><span class="co"># Codes for R2JAGS</span></span>
-<span id="cb2147-2"><a href="conjugate-priors.html#cb2147-2"></a></span>
-<span id="cb2147-3"><a href="conjugate-priors.html#cb2147-3"></a></span>
-<span id="cb2147-4"><a href="conjugate-priors.html#cb2147-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
-<span id="cb2147-5"><a href="conjugate-priors.html#cb2147-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">13</span>)                    <span class="co"># Bond had 13 correct taste tests</span></span>
-<span id="cb2147-6"><a href="conjugate-priors.html#cb2147-6"></a>)</span>
-<span id="cb2147-7"><a href="conjugate-priors.html#cb2147-7"></a></span>
-<span id="cb2147-8"><a href="conjugate-priors.html#cb2147-8"></a><span class="co"># fit use R2jags package</span></span>
-<span id="cb2147-9"><a href="conjugate-priors.html#cb2147-9"></a></span>
-<span id="cb2147-10"><a href="conjugate-priors.html#cb2147-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
-<span id="cb2147-11"><a href="conjugate-priors.html#cb2147-11"></a>  <span class="dt">data =</span> Dat,</span>
-<span id="cb2147-12"><a href="conjugate-priors.html#cb2147-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.ability&quot;</span>, <span class="st">&quot;P.Moneyback&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
-<span id="cb2147-13"><a href="conjugate-priors.html#cb2147-13"></a>  <span class="dt">n.iter =</span> <span class="dv">100100</span>,</span>
-<span id="cb2147-14"><a href="conjugate-priors.html#cb2147-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
-<span id="cb2147-15"><a href="conjugate-priors.html#cb2147-15"></a>                     <span class="st">&quot;/backupfiles/bondmodel.txt&quot;</span>, </span>
-<span id="cb2147-16"><a href="conjugate-priors.html#cb2147-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
-<span id="cb2147-17"><a href="conjugate-priors.html#cb2147-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
-<span id="cb2147-18"><a href="conjugate-priors.html#cb2147-18"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
-<span id="cb2147-19"><a href="conjugate-priors.html#cb2147-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
-<span id="cb2147-20"><a href="conjugate-priors.html#cb2147-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2154"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2154-1"><a href="conjugate-priors.html#cb2154-1"></a><span class="co"># Codes for R2JAGS</span></span>
+<span id="cb2154-2"><a href="conjugate-priors.html#cb2154-2"></a></span>
+<span id="cb2154-3"><a href="conjugate-priors.html#cb2154-3"></a></span>
+<span id="cb2154-4"><a href="conjugate-priors.html#cb2154-4"></a>Dat &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb2154-5"><a href="conjugate-priors.html#cb2154-5"></a><span class="dt">y =</span> <span class="kw">c</span>(<span class="dv">13</span>)                    <span class="co"># Bond had 13 correct taste tests</span></span>
+<span id="cb2154-6"><a href="conjugate-priors.html#cb2154-6"></a>)</span>
+<span id="cb2154-7"><a href="conjugate-priors.html#cb2154-7"></a></span>
+<span id="cb2154-8"><a href="conjugate-priors.html#cb2154-8"></a><span class="co"># fit use R2jags package</span></span>
+<span id="cb2154-9"><a href="conjugate-priors.html#cb2154-9"></a></span>
+<span id="cb2154-10"><a href="conjugate-priors.html#cb2154-10"></a>post.jags &lt;-<span class="st"> </span><span class="kw">jags</span>(</span>
+<span id="cb2154-11"><a href="conjugate-priors.html#cb2154-11"></a>  <span class="dt">data =</span> Dat,</span>
+<span id="cb2154-12"><a href="conjugate-priors.html#cb2154-12"></a>  <span class="dt">parameters.to.save =</span> <span class="kw">c</span>(<span class="st">&quot;P.ability&quot;</span>, <span class="st">&quot;P.Moneyback&quot;</span>, <span class="st">&quot;theta&quot;</span>, <span class="st">&quot;y.pred&quot;</span>),</span>
+<span id="cb2154-13"><a href="conjugate-priors.html#cb2154-13"></a>  <span class="dt">n.iter =</span> <span class="dv">100100</span>,</span>
+<span id="cb2154-14"><a href="conjugate-priors.html#cb2154-14"></a>  <span class="dt">model.file =</span> <span class="kw">paste</span>(bugpath, </span>
+<span id="cb2154-15"><a href="conjugate-priors.html#cb2154-15"></a>                     <span class="st">&quot;/backupfiles/bondmodel.txt&quot;</span>, </span>
+<span id="cb2154-16"><a href="conjugate-priors.html#cb2154-16"></a>                     <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>),</span>
+<span id="cb2154-17"><a href="conjugate-priors.html#cb2154-17"></a>  <span class="dt">n.chains =</span> <span class="dv">1</span>,</span>
+<span id="cb2154-18"><a href="conjugate-priors.html#cb2154-18"></a>  <span class="dt">n.thin =</span> <span class="dv">1</span>,</span>
+<span id="cb2154-19"><a href="conjugate-priors.html#cb2154-19"></a>  <span class="dt">n.burnin =</span> <span class="dv">100</span>,</span>
+<span id="cb2154-20"><a href="conjugate-priors.html#cb2154-20"></a>  <span class="dt">progress.bar =</span> <span class="st">&quot;none&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling model graph
 ##    Resolving undeclared variables
 ##    Allocating nodes
@@ -2679,7 +2680,7 @@ model{
 ##    Total graph size: 12
 ## 
 ## Initializing model</code></pre>
-<div class="sourceCode" id="cb2149"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2149-1"><a href="conjugate-priors.html#cb2149-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
+<div class="sourceCode" id="cb2156"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2156-1"><a href="conjugate-priors.html#cb2156-1"></a><span class="kw">print</span>(post.jags)</span></code></pre></div>
 <pre><code>## Inference for Bugs model at &quot;/Users/chaoimacmini/Downloads/LSHTMlearningnote/backupfiles/bondmodel.txt&quot;, fit using jags,
 ##  1 chains, each with 100100 iterations (first 100 discarded)
 ##  n.sims = 100000 iterations saved
@@ -2693,23 +2694,23 @@ model{
 ## DIC info (using the rule, pD = var(deviance)/2)
 ## pD = 0.9 and DIC = 4.6
 ## DIC is an estimate of expected predictive error (lower deviance is better).</code></pre>
-<div class="sourceCode" id="cb2151"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2151-1"><a href="conjugate-priors.html#cb2151-1"></a><span class="co"># # Step 1 check model</span></span>
-<span id="cb2151-2"><a href="conjugate-priors.html#cb2151-2"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/bondmodel.txt&quot;, sep = &quot;&quot;)) </span></span>
-<span id="cb2151-3"><a href="conjugate-priors.html#cb2151-3"></a><span class="co"># </span></span>
-<span id="cb2151-4"><a href="conjugate-priors.html#cb2151-4"></a><span class="co"># # compile the model</span></span>
-<span id="cb2151-5"><a href="conjugate-priors.html#cb2151-5"></a><span class="co"># modelCompile(numChains = 1) </span></span>
-<span id="cb2151-6"><a href="conjugate-priors.html#cb2151-6"></a><span class="co"># # There is no need to provide initial values as </span></span>
-<span id="cb2151-7"><a href="conjugate-priors.html#cb2151-7"></a><span class="co"># # they are aleady provided in the model specification</span></span>
-<span id="cb2151-8"><a href="conjugate-priors.html#cb2151-8"></a><span class="co"># modelGenInits() #</span></span>
-<span id="cb2151-9"><a href="conjugate-priors.html#cb2151-9"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
-<span id="cb2151-10"><a href="conjugate-priors.html#cb2151-10"></a><span class="co"># parameters &lt;- c(&quot;P.ability&quot;, &quot;P.Moneyback&quot;, &quot;theta&quot;, &quot;y.pred&quot;)</span></span>
-<span id="cb2151-11"><a href="conjugate-priors.html#cb2151-11"></a><span class="co"># samplesSet(parameters)</span></span>
-<span id="cb2151-12"><a href="conjugate-priors.html#cb2151-12"></a><span class="co"># </span></span>
-<span id="cb2151-13"><a href="conjugate-priors.html#cb2151-13"></a><span class="co"># # Generate 100000 iterations</span></span>
-<span id="cb2151-14"><a href="conjugate-priors.html#cb2151-14"></a><span class="co"># modelUpdate(100000)</span></span>
-<span id="cb2151-15"><a href="conjugate-priors.html#cb2151-15"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
-<span id="cb2151-16"><a href="conjugate-priors.html#cb2151-16"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
-<span id="cb2151-17"><a href="conjugate-priors.html#cb2151-17"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2158"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2158-1"><a href="conjugate-priors.html#cb2158-1"></a><span class="co"># # Step 1 check model</span></span>
+<span id="cb2158-2"><a href="conjugate-priors.html#cb2158-2"></a><span class="co"># modelCheck(paste(bugpath, &quot;/backupfiles/bondmodel.txt&quot;, sep = &quot;&quot;)) </span></span>
+<span id="cb2158-3"><a href="conjugate-priors.html#cb2158-3"></a><span class="co"># </span></span>
+<span id="cb2158-4"><a href="conjugate-priors.html#cb2158-4"></a><span class="co"># # compile the model</span></span>
+<span id="cb2158-5"><a href="conjugate-priors.html#cb2158-5"></a><span class="co"># modelCompile(numChains = 1) </span></span>
+<span id="cb2158-6"><a href="conjugate-priors.html#cb2158-6"></a><span class="co"># # There is no need to provide initial values as </span></span>
+<span id="cb2158-7"><a href="conjugate-priors.html#cb2158-7"></a><span class="co"># # they are aleady provided in the model specification</span></span>
+<span id="cb2158-8"><a href="conjugate-priors.html#cb2158-8"></a><span class="co"># modelGenInits() #</span></span>
+<span id="cb2158-9"><a href="conjugate-priors.html#cb2158-9"></a><span class="co"># # Set monitors on nodes of interest#### SPECIFY, WHICH PARAMETERS TO TRACE:</span></span>
+<span id="cb2158-10"><a href="conjugate-priors.html#cb2158-10"></a><span class="co"># parameters &lt;- c(&quot;P.ability&quot;, &quot;P.Moneyback&quot;, &quot;theta&quot;, &quot;y.pred&quot;)</span></span>
+<span id="cb2158-11"><a href="conjugate-priors.html#cb2158-11"></a><span class="co"># samplesSet(parameters)</span></span>
+<span id="cb2158-12"><a href="conjugate-priors.html#cb2158-12"></a><span class="co"># </span></span>
+<span id="cb2158-13"><a href="conjugate-priors.html#cb2158-13"></a><span class="co"># # Generate 100000 iterations</span></span>
+<span id="cb2158-14"><a href="conjugate-priors.html#cb2158-14"></a><span class="co"># modelUpdate(100000)</span></span>
+<span id="cb2158-15"><a href="conjugate-priors.html#cb2158-15"></a><span class="co"># #### SHOW POSTERIOR STATISTICS</span></span>
+<span id="cb2158-16"><a href="conjugate-priors.html#cb2158-16"></a><span class="co"># sample.statistics &lt;- samplesStats(&quot;*&quot;)</span></span>
+<span id="cb2158-17"><a href="conjugate-priors.html#cb2158-17"></a><span class="co"># print(sample.statistics)</span></span></code></pre></div>
 <ol style="list-style-type: decimal">
 <li><p>第一個問題，可以用 <code>theta</code> 的事後概率分布來回答，十萬次MC計算的結果顯示，邦德能夠準確分辨馬丁尼酒的調制方法的概率是0.78，且這個事後概率分布的95%可信區間是(0.57, 0.93)。</p></li>
 <li><p>第二個問題，邦德擁有能準確分辨馬丁尼酒調制方法的能力(不是猜的)的概率是 <code>P.ability = 0.994</code>。如果邦德只是瞎猜，那麼 <code>theta</code> 就只能等於或者十分接近0.5。所以我們相信邦德有這樣一種分辨能力的概率是99.3%。</p></li>
