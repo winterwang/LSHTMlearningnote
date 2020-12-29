@@ -227,8 +227,8 @@ Ni <- as.integer( rep(c(5, 10, 25, 35), each = 15 ))
 我們設定了60個水池，起始蝌蚪的數量分別是 5，10，25，35 的池子各有15個。另外 $\bar{\alpha}, \sigma$ 定義了我們設計下的總體存活率的對數比值 log-odds 的分佈特徵。接下來就是讓計算機生成符合這個分佈條件 $\text{Normal}(\bar{\alpha}, \sigma)$ 的 60 個水池的存活率的對數比值作為各自的截距。
 
 
-```{r introBayes15-08, cache=TRUE}
-set.seed(2020) # <- I never trust this can generate reliable results anymore
+```{r introBayes15-08, cache=FALSE}
+set.seed(5005) 
 a_pond <- rnorm( nponds, mean = a_bar, sd = sigma)
 ```
 
@@ -236,7 +236,7 @@ a_pond <- rnorm( nponds, mean = a_bar, sd = sigma)
 上面的代碼生成了60個符合設定的均值和標準差的數據，作為每個水池的蝌蚪存活率的對數比值。最後，把這些數據合併成為一個數據框：
 
 
-```{r introBayes15-09, cache=TRUE}
+```{r introBayes15-09, cache=FALSE}
 dsim <- data.frame( pond = 1:nponds, Ni = Ni, true_a = a_pond)
 str(dsim)
 ```
@@ -253,7 +253,7 @@ $$
 
 使用 `logistic` 函數可以方便的計算並且讓計算機模擬一系列該水池的蝌蚪存活數量：
 
-```{r introBayes15-10, cache=TRUE}
+```{r introBayes15-10, cache=FALSE}
 dsim$Si <- rbinom( nponds, prob = logistic(dsim$true_a), size = dsim$Ni)
 str(dsim)
 ```
@@ -266,7 +266,7 @@ str(dsim)
 在這個模型設定下，最簡單快速的是計算完全不合併策略時的結果。這可以直接從前面計算機生成的實驗數據計算獲得。先計算每個水池中蝌蚪的存活概率：
 
 
-```{r introBayes15-11, cache=TRUE}
+```{r introBayes15-11, cache=FALSE}
 dsim$p_nopool <- dsim$Si / dsim$Ni
 head(dsim)
 ```
@@ -287,7 +287,7 @@ dat <- list(
   Ni = dsim$Ni, 
   pond = dsim$pond
 )
-m13.3 <- ulam(
+m13.30 <- ulam(
   alist(
     Si ~ dbinom( Ni, p ), 
     logit(p) <- a_pond[pond], 
@@ -296,52 +296,42 @@ m13.3 <- ulam(
     sigma ~ dexp( 1 )
   ), data = dat, chains = 4
 )
-saveRDS(m13.3, "../Stanfits/m13_3.rds")
+saveRDS(m13.30, "../Stanfits/m13_30.rds")
 ```
 
 
 上面的模型運行計算的就是最基礎版本的隨機截距模型。我們來看一下它給出的 $\bar{\alpha}, \sigma$ 的事後分佈情況，下面的結果包含了六十個水池的截距，會很長：
 
-```{r introBayes15-13, cache=TRUE}
-m13.3 <- readRDS("../Stanfits/m13_3.rds")
-precis( m13.3, depth = 2 )
+```{r introBayes15-13, cache=FALSE}
+m13.30 <- readRDS("../Stanfits/m13_30.rds")
+precis( m13.30, depth = 2 )
 ```
 
 
-很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去：
+很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去。爲了便於比較，先要計算真實的水池中蝌蚪的存活概率。最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差。然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：
 
-```{r introBayes15-14, cache=TRUE}
-post <- extract.samples( m13.3 )
+```{r introBayes15-fig04, cache=FALSE, fig.width=8.5, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds.", fig.align='center', message=FALSE}
+m13.30 <- readRDS("../Stanfits/m13_30.rds")
+post <- extract.samples( m13.30 )
 dsim$p_partpool <- apply( inv_logit(post$a_pond), 2, mean)
-```
 
-爲了便於比較，我們把真實的水池中蝌蚪的存活概率也計算一下
-
-```{r introBayes15-15, cache=TRUE}
-dsim$p_true <- inv_logit( dsim$true_a )
-```
-
-最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差：
-
-```{r introBayes15-16, cache=TRUE}
 dsim <- dsim %>% 
-  mutate(nopool_error = abs(p_nopool - p_true), 
+  mutate(p_true = inv_logit(true_a),
+         nopool_error = abs(p_nopool - p_true), 
          partpool_erro = abs(p_partpool - p_true))
 
 # or similarly you can use basic R command
-nopool_error <- abs( dsim$p_nopool - dsim$p_true )
-partpool_erro <- abs( dsim$p_partpool - dsim$p_true )
-```
+# nopool_erro <- abs( dsim$p_nopool - dsim$p_true )
+# partpool_erro <- abs( dsim$p_partpool - dsim$p_true )
 
 
-然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：
-
-```{r introBayes15-fig04, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds. ", fig.align='center', message=FALSE}
-plot( 1:60, nopool_error, xlab = "Pond", 
+plot( 1:60, dsim$nopool_error,
+      xlab = "Pond", 
       ylab = "absolute error", bty = "n",
       col = rangi2, pch = 16, 
       ylim = c(0, 0.6))
-points( 1:60, partpool_erro)
+points( 1:60, dsim$partpool_erro )
+
 
 # mark posterior mean probability across tanks 
 error_avg <- dsim %>%
@@ -377,11 +367,14 @@ segments(47, error_avg$partpool_avg[4],
 abline( v = 16.5, lwd = 0.5 )
 abline( v = 32.5, lwd = 0.5 )
 abline( v = 46.5, lwd = 0.5 )
-text( 8, 0.6, 'tiny ponds (5)')
-text( 16 + 8, 0.6, 'small ponds (10)')
-text( 32 + 8, 0.6, 'medium ponds (25)')
-text( 48 + 8, 0.6, 'large ponds (35)')
+text( 8, 0.6, 'Tiny ponds (5)')
+text( 16 + 8, 0.6, 'Small ponds (10)')
+text( 32 + 8, 0.6, 'Medium ponds (25)')
+text( 46 + 8, 0.6, 'Large ponds (35)')
 ```
 
+從圖 \@ref(fig:introBayes15-fig04) 中我們首先能夠直接一眼就觀察到的重要信息就是，這兩種方案，一個是完全不合併方案，一個是部分合併方案，無論是哪一種，其實對樣本量大的水池（圖中靠右側的水池）的存活概率估計誤差都比較低。這主要是因爲樣本量越多，估計得越精確。而樣本量較小的水池，途中靠左側的水池中，由於蝌蚪數量有限，即使是部分合併方案使用的隨機截距模型也給出比較大的誤差。其次，藍色線 (完全不合併方案) 幾乎總是在黑色虛線 (隨機截距模型，部分合併方案) 的上方，或者二者在大樣本時，會十分接近。當然隨機截距並不總是更加優越，只是在許許多多的計算中，從長遠來看 (in the long run) 隨機截距模型給出的結果誤差會平均地比較小。第三，藍色線和黑色虛線之間的差距在樣本量越小時，越明顯。也就是說，同樣因爲小樣本會造成結果有估計誤差，隨機截距模型給出的誤差要相對小一些。
+
+那麼，从計算機的模擬計算結果中，我們學到了什麼？記得圖 \@ref(fig:introBayes15-fig01) 中我們見過樣本量越小的池塘的模型結果更加靠近樣本均值的虛線，也就是縮水更加嚴重。但是從計算機模擬的結果來看的話，樣本量越小的池塘的存活概率估計結果是隨機截距模型能給出更加小的誤差估計。這兩個現象並不是偶然發生的。樣本量小的水池，傾向於發生模型的過度擬合 overfitting。由於樣本量較小的水池蘊含的信息量較少，所以它們的模型估計結果更加容易受到樣本均值的影響。也就是被其他樣本量更多的水池的數據的影響。
 
 
