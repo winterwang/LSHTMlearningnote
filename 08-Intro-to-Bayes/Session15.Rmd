@@ -310,7 +310,7 @@ precis( m13.30, depth = 2 )
 
 很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去。爲了便於比較，先要計算真實的水池中蝌蚪的存活概率。最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差。然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：
 
-```{r introBayes15-fig04, cache=FALSE, fig.width=8.5, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds.", fig.align='center', message=FALSE}
+```{r introBayes15-fig04, cache=TRUE, fig.width=8.5, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds.", fig.align='center', message=FALSE}
 m13.30 <- readRDS("../Stanfits/m13_30.rds")
 post <- extract.samples( m13.30 )
 dsim$p_partpool <- apply( inv_logit(post$a_pond), 2, mean)
@@ -375,6 +375,107 @@ text( 46 + 8, 0.6, 'Large ponds (35)')
 
 從圖 \@ref(fig:introBayes15-fig04) 中我們首先能夠直接一眼就觀察到的重要信息就是，這兩種方案，一個是完全不合併方案，一個是部分合併方案，無論是哪一種，其實對樣本量大的水池（圖中靠右側的水池）的存活概率估計誤差都比較低。這主要是因爲樣本量越多，估計得越精確。而樣本量較小的水池，途中靠左側的水池中，由於蝌蚪數量有限，即使是部分合併方案使用的隨機截距模型也給出比較大的誤差。其次，藍色線 (完全不合併方案) 幾乎總是在黑色虛線 (隨機截距模型，部分合併方案) 的上方，或者二者在大樣本時，會十分接近。當然隨機截距並不總是更加優越，只是在許許多多的計算中，從長遠來看 (in the long run) 隨機截距模型給出的結果誤差會平均地比較小。第三，藍色線和黑色虛線之間的差距在樣本量越小時，越明顯。也就是說，同樣因爲小樣本會造成結果有估計誤差，隨機截距模型給出的誤差要相對小一些。
 
-那麼，从計算機的模擬計算結果中，我們學到了什麼？記得圖 \@ref(fig:introBayes15-fig01) 中我們見過樣本量越小的池塘的模型結果更加靠近樣本均值的虛線，也就是縮水更加嚴重。但是從計算機模擬的結果來看的話，樣本量越小的池塘的存活概率估計結果是隨機截距模型能給出更加小的誤差估計。這兩個現象並不是偶然發生的。樣本量小的水池，傾向於發生模型的過度擬合 overfitting。由於樣本量較小的水池蘊含的信息量較少，所以它們的模型估計結果更加容易受到樣本均值的影響。也就是被其他樣本量更多的水池的數據的影響。
+那麼，从計算機的模擬計算結果中，我們學到了什麼？記得圖 \@ref(fig:introBayes15-fig01) 中我們見過樣本量越小的池塘的模型結果更加靠近樣本均值的虛線，也就是縮水更加嚴重。但是從計算機模擬的結果來看的話，樣本量越小的池塘的存活概率估計結果是隨機截距模型能給出更加小的誤差估計。這兩個現象並不是偶然發生的。樣本量小的水池，傾向於發生模型的過度擬合 overfitting。由於樣本量較小的水池蘊含的信息量較少，所以它們的模型估計結果更加容易受到樣本均值的影響。也就是被其他樣本量更多的水池的數據的影響。當一個個的水池本身各自的樣本量都相對較多時，你可能會認爲隨機截距或者叫多層回歸模型能給出的估計結果優化就很有限。事實上即便是每個數據層級本身的樣本量也比較大的情況下，使用多層回歸模型來計算也沒有任何壞處。大樣本量的一些層級的估計結果有可能有助於改善較小樣本量層級的結果的預測以及參數的估計結果。所以，平均地看，其實始終應該使用隨機效應模型，也就是部分合併方案的策略，因爲它總是能提供較優的結果估計，而且能夠從數據本身學習獲得應該使用的超參數等用於調節 (regularization) 模型的估計和運行。
 
+
+下面的代碼有助於我們重複使用已經運行過的模型，減少計算機重複運算的壓力。當你想要重複上述計算機模擬過程的時候，可能會希望讓模型運行其他的模擬數據，採集新的事後分佈樣本：
+
+
+```{r introBayes15-1401, cache=TRUE}
+a <- 1.5
+sigma <- 1.5
+nponds <- 60
+Ni <- as.integer( rep(c(5, 10, 25, 35), each = 15 ))
+set.seed(12345)
+a_pond <- rnorm( nponds, mean = a, sd = sigma)
+dsim <- data.frame( pond = 1:nponds, 
+                    Ni = Ni, 
+                    true_a = a_pond)
+
+dsim$Si <- rbinom( nponds, prob = inv_logit( dsim$true_a ), size = dsim$Ni )
+dsim$p_nopool <-  dsim$Si / dsim$Ni
+```
+
+
+```{r introBayes15-14, cache=TRUE, results="hide", eval=FALSE}
+
+newdat <-  list(Si = dsim$Si, 
+                Ni = dsim$Ni, 
+                pond = 1:nponds)
+
+m13.3new <- stan( fit = m13.30@stanfit, 
+                  data = newdat, 
+                  chains = 4 )
+saveRDS(m13.3new, "../Stanfits/m13_3new.rds")
+```
+
+一旦你的計算機已經運行好了一個模型，`m13.30`，那麼假如只需要修改模型的樣本數據，模型結構不需要改變的話，使用上述的方法會大大提升新模型的運行速度，並且保存結果在 `m13.3new` 裏面。然後你只需要使用類似的方法重新繪製新數據給出的新結果，而不需要每次再重頭運行模型本身。需要重複利用的模型運算結果已經存儲在了每個 stan 模型中的 `stanfit` 部分。只要給它新的相同變量的數據框，它就能迅速給出新的事後概率分佈結果。這是非常有用的技巧。
+
+
+```{r introBayes15-fig05, cache=FALSE, fig.width=8.5, fig.height=5,  fig.cap="New data was fed to m13.3 model and generate new posterior estimations.", fig.align='center', message=FALSE}
+m13.3new <- readRDS("../Stanfits/m13_3new.rds")
+post <- extract.samples( m13.3new )
+dsim$p_partpool <- apply( inv_logit(post$a_pond), 2, mean)
+
+dsim <- dsim %>% 
+  mutate(p_true = inv_logit(true_a),
+         nopool_error = abs(p_nopool - p_true), 
+         partpool_erro = abs(p_partpool - p_true))
+
+# or similarly you can use basic R command
+# nopool_erro <- abs( dsim$p_nopool - dsim$p_true )
+# partpool_erro <- abs( dsim$p_partpool - dsim$p_true )
+
+
+plot( 1:60, dsim$nopool_error,
+      xlab = "Pond", 
+      ylab = "absolute error", bty = "n",
+      col = rangi2, pch = 16, 
+      ylim = c(0, 0.6))
+points( 1:60, dsim$partpool_erro )
+
+
+# mark posterior mean probability across tanks 
+error_avg <- dsim %>%
+  group_by(Ni) %>% 
+  summarise(nopool_avg = mean(nopool_error), 
+            partpool_avg = mean(partpool_erro))
+segments(1, error_avg$nopool_avg[1], 
+         16, error_avg$nopool_avg[1], 
+         col = rangi2, lwd = 2)
+segments(1, error_avg$partpool_avg[1], 
+         16, error_avg$partpool_avg[1], 
+         col = "black", lwd = 2, lty = 2)
+segments(17, error_avg$nopool_avg[2], 
+         32, error_avg$nopool_avg[2], 
+         col = rangi2, lwd = 2)
+segments(17, error_avg$partpool_avg[2], 
+         32, error_avg$partpool_avg[2], 
+         col = "black", lwd = 2, lty = 2)
+segments(33, error_avg$nopool_avg[3], 
+         46, error_avg$nopool_avg[3], 
+         col = rangi2, lwd = 2)
+segments(33, error_avg$partpool_avg[3], 
+         46, error_avg$partpool_avg[3], 
+         col = "black", lwd = 2, lty = 2)
+segments(47, error_avg$nopool_avg[4], 
+         60, error_avg$nopool_avg[4], 
+         col = rangi2, lwd = 2)
+segments(47, error_avg$partpool_avg[4], 
+         60, error_avg$partpool_avg[4], 
+         col = "black", lwd = 2, lty = 2)
+
+# draw vertical dividers between tank densities
+abline( v = 16.5, lwd = 0.5 )
+abline( v = 32.5, lwd = 0.5 )
+abline( v = 46.5, lwd = 0.5 )
+text( 8, 0.6, 'Tiny ponds (5)')
+text( 16 + 8, 0.6, 'Small ponds (10)')
+text( 32 + 8, 0.6, 'Medium ponds (25)')
+text( 46 + 8, 0.6, 'Large ponds (35)')
+```
+
+
+
+## 使用多於一個類別作爲多層回歸的隨機變量
 

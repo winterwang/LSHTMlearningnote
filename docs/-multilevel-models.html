@@ -1974,7 +1974,95 @@ p_i = \frac{\exp(\alpha_i)}{1 +\exp(\alpha_i)}
 </p>
 </div>
 <p>從圖 <a href="-multilevel-models.html#fig:introBayes15-fig04">55.4</a> 中我們首先能夠直接一眼就觀察到的重要信息就是，這兩種方案，一個是完全不合併方案，一個是部分合併方案，無論是哪一種，其實對樣本量大的水池（圖中靠右側的水池）的存活概率估計誤差都比較低。這主要是因爲樣本量越多，估計得越精確。而樣本量較小的水池，途中靠左側的水池中，由於蝌蚪數量有限，即使是部分合併方案使用的隨機截距模型也給出比較大的誤差。其次，藍色線 (完全不合併方案) 幾乎總是在黑色虛線 (隨機截距模型，部分合併方案) 的上方，或者二者在大樣本時，會十分接近。當然隨機截距並不總是更加優越，只是在許許多多的計算中，從長遠來看 (in the long run) 隨機截距模型給出的結果誤差會平均地比較小。第三，藍色線和黑色虛線之間的差距在樣本量越小時，越明顯。也就是說，同樣因爲小樣本會造成結果有估計誤差，隨機截距模型給出的誤差要相對小一些。</p>
-<p>那麼，从計算機的模擬計算結果中，我們學到了什麼？記得圖 <a href="#fig::introBayes15-fig01"><strong>??</strong></a> 中我們見過樣本量越小的池塘的模型結果更加靠近樣本均值的虛線，也就是縮水更加嚴重。但是從計算機模擬的結果來看的話，樣本量越小的池塘的存活概率估計結果是隨機截距模型能給出更加小的誤差估計。這兩個現象並不是偶然發生的。樣本量小的水池，傾向於發生模型的過度擬合 overfitting。</p>
+<p>那麼，从計算機的模擬計算結果中，我們學到了什麼？記得圖 <a href="-multilevel-models.html#fig:introBayes15-fig01">55.1</a> 中我們見過樣本量越小的池塘的模型結果更加靠近樣本均值的虛線，也就是縮水更加嚴重。但是從計算機模擬的結果來看的話，樣本量越小的池塘的存活概率估計結果是隨機截距模型能給出更加小的誤差估計。這兩個現象並不是偶然發生的。樣本量小的水池，傾向於發生模型的過度擬合 overfitting。由於樣本量較小的水池蘊含的信息量較少，所以它們的模型估計結果更加容易受到樣本均值的影響。也就是被其他樣本量更多的水池的數據的影響。當一個個的水池本身各自的樣本量都相對較多時，你可能會認爲隨機截距或者叫多層回歸模型能給出的估計結果優化就很有限。事實上即便是每個數據層級本身的樣本量也比較大的情況下，使用多層回歸模型來計算也沒有任何壞處。大樣本量的一些層級的估計結果有可能有助於改善較小樣本量層級的結果的預測以及參數的估計結果。所以，平均地看，其實始終應該使用隨機效應模型，也就是部分合併方案的策略，因爲它總是能提供較優的結果估計，而且能夠從數據本身學習獲得應該使用的超參數等用於調節 (regularization) 模型的估計和運行。</p>
+<p>下面的代碼有助於我們重複使用已經運行過的模型，減少計算機重複運算的壓力。當你想要重複上述計算機模擬過程的時候，可能會希望讓模型運行其他的模擬數據，採集新的事後分佈樣本：</p>
+<div class="sourceCode" id="cb1038"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1038-1"><a href="-multilevel-models.html#cb1038-1"></a>a &lt;-<span class="st"> </span><span class="fl">1.5</span></span>
+<span id="cb1038-2"><a href="-multilevel-models.html#cb1038-2"></a>sigma &lt;-<span class="st"> </span><span class="fl">1.5</span></span>
+<span id="cb1038-3"><a href="-multilevel-models.html#cb1038-3"></a>nponds &lt;-<span class="st"> </span><span class="dv">60</span></span>
+<span id="cb1038-4"><a href="-multilevel-models.html#cb1038-4"></a>Ni &lt;-<span class="st"> </span><span class="kw">as.integer</span>( <span class="kw">rep</span>(<span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">25</span>, <span class="dv">35</span>), <span class="dt">each =</span> <span class="dv">15</span> ))</span>
+<span id="cb1038-5"><a href="-multilevel-models.html#cb1038-5"></a><span class="kw">set.seed</span>(<span class="dv">12345</span>)</span>
+<span id="cb1038-6"><a href="-multilevel-models.html#cb1038-6"></a>a_pond &lt;-<span class="st"> </span><span class="kw">rnorm</span>( nponds, <span class="dt">mean =</span> a, <span class="dt">sd =</span> sigma)</span>
+<span id="cb1038-7"><a href="-multilevel-models.html#cb1038-7"></a>dsim &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">pond =</span> <span class="dv">1</span><span class="op">:</span>nponds, </span>
+<span id="cb1038-8"><a href="-multilevel-models.html#cb1038-8"></a>                    <span class="dt">Ni =</span> Ni, </span>
+<span id="cb1038-9"><a href="-multilevel-models.html#cb1038-9"></a>                    <span class="dt">true_a =</span> a_pond)</span>
+<span id="cb1038-10"><a href="-multilevel-models.html#cb1038-10"></a></span>
+<span id="cb1038-11"><a href="-multilevel-models.html#cb1038-11"></a>dsim<span class="op">$</span>Si &lt;-<span class="st"> </span><span class="kw">rbinom</span>( nponds, <span class="dt">prob =</span> <span class="kw">inv_logit</span>( dsim<span class="op">$</span>true_a ), <span class="dt">size =</span> dsim<span class="op">$</span>Ni )</span>
+<span id="cb1038-12"><a href="-multilevel-models.html#cb1038-12"></a>dsim<span class="op">$</span>p_nopool &lt;-<span class="st">  </span>dsim<span class="op">$</span>Si <span class="op">/</span><span class="st"> </span>dsim<span class="op">$</span>Ni</span></code></pre></div>
+<div class="sourceCode" id="cb1039"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1039-1"><a href="-multilevel-models.html#cb1039-1"></a>newdat &lt;-<span class="st">  </span><span class="kw">list</span>(<span class="dt">Si =</span> dsim<span class="op">$</span>Si, </span>
+<span id="cb1039-2"><a href="-multilevel-models.html#cb1039-2"></a>                <span class="dt">Ni =</span> dsim<span class="op">$</span>Ni, </span>
+<span id="cb1039-3"><a href="-multilevel-models.html#cb1039-3"></a>                <span class="dt">pond =</span> <span class="dv">1</span><span class="op">:</span>nponds)</span>
+<span id="cb1039-4"><a href="-multilevel-models.html#cb1039-4"></a></span>
+<span id="cb1039-5"><a href="-multilevel-models.html#cb1039-5"></a>m13<span class="fl">.3</span>new &lt;-<span class="st"> </span><span class="kw">stan</span>( <span class="dt">fit =</span> m13<span class="fl">.30</span><span class="op">@</span>stanfit, </span>
+<span id="cb1039-6"><a href="-multilevel-models.html#cb1039-6"></a>                  <span class="dt">data =</span> newdat, </span>
+<span id="cb1039-7"><a href="-multilevel-models.html#cb1039-7"></a>                  <span class="dt">chains =</span> <span class="dv">4</span> )</span>
+<span id="cb1039-8"><a href="-multilevel-models.html#cb1039-8"></a><span class="kw">saveRDS</span>(m13<span class="fl">.3</span>new, <span class="st">&quot;../Stanfits/m13_3new.rds&quot;</span>)</span></code></pre></div>
+<p>一旦你的計算機已經運行好了一個模型，<code>m13.30</code>，那麼假如只需要修改模型的樣本數據，模型結構不需要改變的話，使用上述的方法會大大提升新模型的運行速度，並且保存結果在 <code>m13.3new</code> 裏面。然後你只需要使用類似的方法重新繪製新數據給出的新結果，而不需要每次再重頭運行模型本身。需要重複利用的模型運算結果已經存儲在了每個 stan 模型中的 <code>stanfit</code> 部分。只要給它新的相同變量的數據框，它就能迅速給出新的事後概率分佈結果。這是非常有用的技巧。</p>
+<div class="sourceCode" id="cb1040"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1040-1"><a href="-multilevel-models.html#cb1040-1"></a>m13<span class="fl">.3</span>new &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&quot;../Stanfits/m13_3new.rds&quot;</span>)</span>
+<span id="cb1040-2"><a href="-multilevel-models.html#cb1040-2"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m13<span class="fl">.3</span>new )</span>
+<span id="cb1040-3"><a href="-multilevel-models.html#cb1040-3"></a>dsim<span class="op">$</span>p_partpool &lt;-<span class="st"> </span><span class="kw">apply</span>( <span class="kw">inv_logit</span>(post<span class="op">$</span>a_pond), <span class="dv">2</span>, mean)</span>
+<span id="cb1040-4"><a href="-multilevel-models.html#cb1040-4"></a></span>
+<span id="cb1040-5"><a href="-multilevel-models.html#cb1040-5"></a>dsim &lt;-<span class="st"> </span>dsim <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1040-6"><a href="-multilevel-models.html#cb1040-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">p_true =</span> <span class="kw">inv_logit</span>(true_a),</span>
+<span id="cb1040-7"><a href="-multilevel-models.html#cb1040-7"></a>         <span class="dt">nopool_error =</span> <span class="kw">abs</span>(p_nopool <span class="op">-</span><span class="st"> </span>p_true), </span>
+<span id="cb1040-8"><a href="-multilevel-models.html#cb1040-8"></a>         <span class="dt">partpool_erro =</span> <span class="kw">abs</span>(p_partpool <span class="op">-</span><span class="st"> </span>p_true))</span>
+<span id="cb1040-9"><a href="-multilevel-models.html#cb1040-9"></a></span>
+<span id="cb1040-10"><a href="-multilevel-models.html#cb1040-10"></a><span class="co"># or similarly you can use basic R command</span></span>
+<span id="cb1040-11"><a href="-multilevel-models.html#cb1040-11"></a><span class="co"># nopool_erro &lt;- abs( dsim$p_nopool - dsim$p_true )</span></span>
+<span id="cb1040-12"><a href="-multilevel-models.html#cb1040-12"></a><span class="co"># partpool_erro &lt;- abs( dsim$p_partpool - dsim$p_true )</span></span>
+<span id="cb1040-13"><a href="-multilevel-models.html#cb1040-13"></a></span>
+<span id="cb1040-14"><a href="-multilevel-models.html#cb1040-14"></a></span>
+<span id="cb1040-15"><a href="-multilevel-models.html#cb1040-15"></a><span class="kw">plot</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">60</span>, dsim<span class="op">$</span>nopool_error,</span>
+<span id="cb1040-16"><a href="-multilevel-models.html#cb1040-16"></a>      <span class="dt">xlab =</span> <span class="st">&quot;Pond&quot;</span>, </span>
+<span id="cb1040-17"><a href="-multilevel-models.html#cb1040-17"></a>      <span class="dt">ylab =</span> <span class="st">&quot;absolute error&quot;</span>, <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>,</span>
+<span id="cb1040-18"><a href="-multilevel-models.html#cb1040-18"></a>      <span class="dt">col =</span> rangi2, <span class="dt">pch =</span> <span class="dv">16</span>, </span>
+<span id="cb1040-19"><a href="-multilevel-models.html#cb1040-19"></a>      <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.6</span>))</span>
+<span id="cb1040-20"><a href="-multilevel-models.html#cb1040-20"></a><span class="kw">points</span>( <span class="dv">1</span><span class="op">:</span><span class="dv">60</span>, dsim<span class="op">$</span>partpool_erro )</span>
+<span id="cb1040-21"><a href="-multilevel-models.html#cb1040-21"></a></span>
+<span id="cb1040-22"><a href="-multilevel-models.html#cb1040-22"></a></span>
+<span id="cb1040-23"><a href="-multilevel-models.html#cb1040-23"></a><span class="co"># mark posterior mean probability across tanks </span></span>
+<span id="cb1040-24"><a href="-multilevel-models.html#cb1040-24"></a>error_avg &lt;-<span class="st"> </span>dsim <span class="op">%&gt;%</span></span>
+<span id="cb1040-25"><a href="-multilevel-models.html#cb1040-25"></a><span class="st">  </span><span class="kw">group_by</span>(Ni) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1040-26"><a href="-multilevel-models.html#cb1040-26"></a><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">nopool_avg =</span> <span class="kw">mean</span>(nopool_error), </span>
+<span id="cb1040-27"><a href="-multilevel-models.html#cb1040-27"></a>            <span class="dt">partpool_avg =</span> <span class="kw">mean</span>(partpool_erro))</span>
+<span id="cb1040-28"><a href="-multilevel-models.html#cb1040-28"></a><span class="kw">segments</span>(<span class="dv">1</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-29"><a href="-multilevel-models.html#cb1040-29"></a>         <span class="dv">16</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-30"><a href="-multilevel-models.html#cb1040-30"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-31"><a href="-multilevel-models.html#cb1040-31"></a><span class="kw">segments</span>(<span class="dv">1</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-32"><a href="-multilevel-models.html#cb1040-32"></a>         <span class="dv">16</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">1</span>], </span>
+<span id="cb1040-33"><a href="-multilevel-models.html#cb1040-33"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-34"><a href="-multilevel-models.html#cb1040-34"></a><span class="kw">segments</span>(<span class="dv">17</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-35"><a href="-multilevel-models.html#cb1040-35"></a>         <span class="dv">32</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-36"><a href="-multilevel-models.html#cb1040-36"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-37"><a href="-multilevel-models.html#cb1040-37"></a><span class="kw">segments</span>(<span class="dv">17</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-38"><a href="-multilevel-models.html#cb1040-38"></a>         <span class="dv">32</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">2</span>], </span>
+<span id="cb1040-39"><a href="-multilevel-models.html#cb1040-39"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-40"><a href="-multilevel-models.html#cb1040-40"></a><span class="kw">segments</span>(<span class="dv">33</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-41"><a href="-multilevel-models.html#cb1040-41"></a>         <span class="dv">46</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-42"><a href="-multilevel-models.html#cb1040-42"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-43"><a href="-multilevel-models.html#cb1040-43"></a><span class="kw">segments</span>(<span class="dv">33</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-44"><a href="-multilevel-models.html#cb1040-44"></a>         <span class="dv">46</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">3</span>], </span>
+<span id="cb1040-45"><a href="-multilevel-models.html#cb1040-45"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-46"><a href="-multilevel-models.html#cb1040-46"></a><span class="kw">segments</span>(<span class="dv">47</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-47"><a href="-multilevel-models.html#cb1040-47"></a>         <span class="dv">60</span>, error_avg<span class="op">$</span>nopool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-48"><a href="-multilevel-models.html#cb1040-48"></a>         <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-49"><a href="-multilevel-models.html#cb1040-49"></a><span class="kw">segments</span>(<span class="dv">47</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-50"><a href="-multilevel-models.html#cb1040-50"></a>         <span class="dv">60</span>, error_avg<span class="op">$</span>partpool_avg[<span class="dv">4</span>], </span>
+<span id="cb1040-51"><a href="-multilevel-models.html#cb1040-51"></a>         <span class="dt">col =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>, <span class="dt">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb1040-52"><a href="-multilevel-models.html#cb1040-52"></a></span>
+<span id="cb1040-53"><a href="-multilevel-models.html#cb1040-53"></a><span class="co"># draw vertical dividers between tank densities</span></span>
+<span id="cb1040-54"><a href="-multilevel-models.html#cb1040-54"></a><span class="kw">abline</span>( <span class="dt">v =</span> <span class="fl">16.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb1040-55"><a href="-multilevel-models.html#cb1040-55"></a><span class="kw">abline</span>( <span class="dt">v =</span> <span class="fl">32.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb1040-56"><a href="-multilevel-models.html#cb1040-56"></a><span class="kw">abline</span>( <span class="dt">v =</span> <span class="fl">46.5</span>, <span class="dt">lwd =</span> <span class="fl">0.5</span> )</span>
+<span id="cb1040-57"><a href="-multilevel-models.html#cb1040-57"></a><span class="kw">text</span>( <span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;Tiny ponds (5)&#39;</span>)</span>
+<span id="cb1040-58"><a href="-multilevel-models.html#cb1040-58"></a><span class="kw">text</span>( <span class="dv">16</span> <span class="op">+</span><span class="st"> </span><span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;Small ponds (10)&#39;</span>)</span>
+<span id="cb1040-59"><a href="-multilevel-models.html#cb1040-59"></a><span class="kw">text</span>( <span class="dv">32</span> <span class="op">+</span><span class="st"> </span><span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;Medium ponds (25)&#39;</span>)</span>
+<span id="cb1040-60"><a href="-multilevel-models.html#cb1040-60"></a><span class="kw">text</span>( <span class="dv">46</span> <span class="op">+</span><span class="st"> </span><span class="dv">8</span>, <span class="fl">0.6</span>, <span class="st">&#39;Large ponds (35)&#39;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig05"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig05-1.png" alt="New data was fed to m13.3 model and generate new posterior estimations." width="816" />
+<p class="caption">
+圖 55.5: New data was fed to m13.3 model and generate new posterior estimations.
+</p>
+</div>
 
 </div>
 </div>

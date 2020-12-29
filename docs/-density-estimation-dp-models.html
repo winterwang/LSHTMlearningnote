@@ -1783,17 +1783,17 @@ G | y_1,\dots, y_n \sim \mathbf{DP}(M + n, \frac{MG_0 + \sum_{i = 1}^n \delta_{y
 </table>
 <p>假如我們思考這樣一個模型 <span class="math inline">\(y_i \sim G\)</span>，其中給集羣分佈(clonal size distribution)的先驗概率分佈是一個狄雷克雷過程分佈 <span class="math inline">\(G\sim\)</span><strong>DP</strong><span class="math inline">\((MG_0)\)</span>。由於計數型數據必須爲正(positive counts)，我們使用均值等於 2 的泊松分佈作爲中心測度 centering measure <span class="math inline">\(G_0 = \mathbf{Poi}(2)\)</span>。總量參數 (total mass parameter) 使用 <span class="math inline">\(M =1\)</span>。</p>
 <p>下列採樣過程的代碼來自 <a href="https://rpubs.com/kaz_yos/dp1">https://rpubs.com/kaz_yos/dp1</a>，你也可以參考原作者的<a href="https://web.ma.utexas.edu/users/pmueller/bnp/R/DP/tcr/Tcell-ex3-DP.R">網站</a></p>
-<div class="sourceCode" id="cb2375"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2375-1"><a href="-density-estimation-dp-models.html#cb2375-1"></a><span class="kw">library</span>(MCMCpack)</span>
-<span id="cb2375-2"><a href="-density-estimation-dp-models.html#cb2375-2"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb2375-3"><a href="-density-estimation-dp-models.html#cb2375-3"></a>tcell &lt;-<span class="st"> </span><span class="kw">tribble</span>(</span>
-<span id="cb2375-4"><a href="-density-estimation-dp-models.html#cb2375-4"></a>    <span class="op">~</span>count, <span class="op">~</span>frequency,</span>
-<span id="cb2375-5"><a href="-density-estimation-dp-models.html#cb2375-5"></a>    <span class="dv">1</span>, <span class="dv">37</span>,</span>
-<span id="cb2375-6"><a href="-density-estimation-dp-models.html#cb2375-6"></a>    <span class="dv">2</span>, <span class="dv">11</span>,</span>
-<span id="cb2375-7"><a href="-density-estimation-dp-models.html#cb2375-7"></a>    <span class="dv">3</span>, <span class="dv">5</span>,</span>
-<span id="cb2375-8"><a href="-density-estimation-dp-models.html#cb2375-8"></a>    <span class="dv">4</span>, <span class="dv">2</span>,</span>
-<span id="cb2375-9"><a href="-density-estimation-dp-models.html#cb2375-9"></a>    <span class="co">## &gt;= 5, 0,</span></span>
-<span id="cb2375-10"><a href="-density-estimation-dp-models.html#cb2375-10"></a>    )</span>
-<span id="cb2375-11"><a href="-density-estimation-dp-models.html#cb2375-11"></a>tcell</span></code></pre></div>
+<div class="sourceCode" id="cb2378"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2378-1"><a href="-density-estimation-dp-models.html#cb2378-1"></a><span class="kw">library</span>(MCMCpack)</span>
+<span id="cb2378-2"><a href="-density-estimation-dp-models.html#cb2378-2"></a><span class="kw">library</span>(tidyverse)</span>
+<span id="cb2378-3"><a href="-density-estimation-dp-models.html#cb2378-3"></a>tcell &lt;-<span class="st"> </span><span class="kw">tribble</span>(</span>
+<span id="cb2378-4"><a href="-density-estimation-dp-models.html#cb2378-4"></a>    <span class="op">~</span>count, <span class="op">~</span>frequency,</span>
+<span id="cb2378-5"><a href="-density-estimation-dp-models.html#cb2378-5"></a>    <span class="dv">1</span>, <span class="dv">37</span>,</span>
+<span id="cb2378-6"><a href="-density-estimation-dp-models.html#cb2378-6"></a>    <span class="dv">2</span>, <span class="dv">11</span>,</span>
+<span id="cb2378-7"><a href="-density-estimation-dp-models.html#cb2378-7"></a>    <span class="dv">3</span>, <span class="dv">5</span>,</span>
+<span id="cb2378-8"><a href="-density-estimation-dp-models.html#cb2378-8"></a>    <span class="dv">4</span>, <span class="dv">2</span>,</span>
+<span id="cb2378-9"><a href="-density-estimation-dp-models.html#cb2378-9"></a>    <span class="co">## &gt;= 5, 0,</span></span>
+<span id="cb2378-10"><a href="-density-estimation-dp-models.html#cb2378-10"></a>    )</span>
+<span id="cb2378-11"><a href="-density-estimation-dp-models.html#cb2378-11"></a>tcell</span></code></pre></div>
 <pre><code>## # A tibble: 4 x 2
 ##   count frequency
 ##   &lt;dbl&gt;     &lt;dbl&gt;
@@ -1801,28 +1801,28 @@ G | y_1,\dots, y_n \sim \mathbf{DP}(M + n, \frac{MG_0 + \sum_{i = 1}^n \delta_{y
 ## 2     2        11
 ## 3     3         5
 ## 4     4         2</code></pre>
-<div class="sourceCode" id="cb2377"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2377-1"><a href="-density-estimation-dp-models.html#cb2377-1"></a><span class="co"># Prior</span></span>
-<span id="cb2377-2"><a href="-density-estimation-dp-models.html#cb2377-2"></a></span>
-<span id="cb2377-3"><a href="-density-estimation-dp-models.html#cb2377-3"></a>G0_vector &lt;-<span class="st"> </span><span class="cf">function</span>(lambda, min, max) {</span>
-<span id="cb2377-4"><a href="-density-estimation-dp-models.html#cb2377-4"></a>    <span class="co">## values below min are truncated</span></span>
-<span id="cb2377-5"><a href="-density-estimation-dp-models.html#cb2377-5"></a>    <span class="co">## values above max are collapsed</span></span>
-<span id="cb2377-6"><a href="-density-estimation-dp-models.html#cb2377-6"></a></span>
-<span id="cb2377-7"><a href="-density-estimation-dp-models.html#cb2377-7"></a>    <span class="co">## Probabilities from Poisson(lambda) for min:max</span></span>
-<span id="cb2377-8"><a href="-density-estimation-dp-models.html#cb2377-8"></a>    p_vec &lt;-<span class="st"> </span><span class="kw">dpois</span>(<span class="dt">x =</span> min<span class="op">:</span>max, <span class="dt">lambda =</span> lambda)</span>
-<span id="cb2377-9"><a href="-density-estimation-dp-models.html#cb2377-9"></a>    <span class="co">## Probability for max+1 ...</span></span>
-<span id="cb2377-10"><a href="-density-estimation-dp-models.html#cb2377-10"></a>    p_upper_tail &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">-</span><span class="st"> </span><span class="kw">ppois</span>(<span class="dt">q =</span> max, <span class="dt">lambda =</span> lambda)</span>
-<span id="cb2377-11"><a href="-density-estimation-dp-models.html#cb2377-11"></a>    <span class="co">## Collapse to max</span></span>
-<span id="cb2377-12"><a href="-density-estimation-dp-models.html#cb2377-12"></a>    p_vec[<span class="kw">length</span>(p_vec)] &lt;-<span class="st"> </span>p_vec[<span class="kw">length</span>(p_vec)] <span class="op">+</span><span class="st"> </span>p_upper_tail</span>
-<span id="cb2377-13"><a href="-density-estimation-dp-models.html#cb2377-13"></a>    <span class="co">## Renormalize</span></span>
-<span id="cb2377-14"><a href="-density-estimation-dp-models.html#cb2377-14"></a>    p_vec &lt;-<span class="st"> </span>p_vec <span class="op">/</span><span class="st"> </span><span class="kw">sum</span>(p_vec)</span>
-<span id="cb2377-15"><a href="-density-estimation-dp-models.html#cb2377-15"></a>    <span class="co">## Name</span></span>
-<span id="cb2377-16"><a href="-density-estimation-dp-models.html#cb2377-16"></a>    <span class="kw">names</span>(p_vec) &lt;-<span class="st"> </span>min<span class="op">:</span>max</span>
-<span id="cb2377-17"><a href="-density-estimation-dp-models.html#cb2377-17"></a>    <span class="co">##</span></span>
-<span id="cb2377-18"><a href="-density-estimation-dp-models.html#cb2377-18"></a>    <span class="kw">return</span>(p_vec)</span>
-<span id="cb2377-19"><a href="-density-estimation-dp-models.html#cb2377-19"></a>}</span>
-<span id="cb2377-20"><a href="-density-estimation-dp-models.html#cb2377-20"></a></span>
-<span id="cb2377-21"><a href="-density-estimation-dp-models.html#cb2377-21"></a><span class="co">## Collapse all values beyond 8 to 8+ bin</span></span>
-<span id="cb2377-22"><a href="-density-estimation-dp-models.html#cb2377-22"></a><span class="kw">G0_vector</span>(<span class="dt">lambda =</span> <span class="dv">2</span>, <span class="dt">min =</span> <span class="dv">1</span>, <span class="dt">max =</span> <span class="dv">8</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2380"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2380-1"><a href="-density-estimation-dp-models.html#cb2380-1"></a><span class="co"># Prior</span></span>
+<span id="cb2380-2"><a href="-density-estimation-dp-models.html#cb2380-2"></a></span>
+<span id="cb2380-3"><a href="-density-estimation-dp-models.html#cb2380-3"></a>G0_vector &lt;-<span class="st"> </span><span class="cf">function</span>(lambda, min, max) {</span>
+<span id="cb2380-4"><a href="-density-estimation-dp-models.html#cb2380-4"></a>    <span class="co">## values below min are truncated</span></span>
+<span id="cb2380-5"><a href="-density-estimation-dp-models.html#cb2380-5"></a>    <span class="co">## values above max are collapsed</span></span>
+<span id="cb2380-6"><a href="-density-estimation-dp-models.html#cb2380-6"></a></span>
+<span id="cb2380-7"><a href="-density-estimation-dp-models.html#cb2380-7"></a>    <span class="co">## Probabilities from Poisson(lambda) for min:max</span></span>
+<span id="cb2380-8"><a href="-density-estimation-dp-models.html#cb2380-8"></a>    p_vec &lt;-<span class="st"> </span><span class="kw">dpois</span>(<span class="dt">x =</span> min<span class="op">:</span>max, <span class="dt">lambda =</span> lambda)</span>
+<span id="cb2380-9"><a href="-density-estimation-dp-models.html#cb2380-9"></a>    <span class="co">## Probability for max+1 ...</span></span>
+<span id="cb2380-10"><a href="-density-estimation-dp-models.html#cb2380-10"></a>    p_upper_tail &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">-</span><span class="st"> </span><span class="kw">ppois</span>(<span class="dt">q =</span> max, <span class="dt">lambda =</span> lambda)</span>
+<span id="cb2380-11"><a href="-density-estimation-dp-models.html#cb2380-11"></a>    <span class="co">## Collapse to max</span></span>
+<span id="cb2380-12"><a href="-density-estimation-dp-models.html#cb2380-12"></a>    p_vec[<span class="kw">length</span>(p_vec)] &lt;-<span class="st"> </span>p_vec[<span class="kw">length</span>(p_vec)] <span class="op">+</span><span class="st"> </span>p_upper_tail</span>
+<span id="cb2380-13"><a href="-density-estimation-dp-models.html#cb2380-13"></a>    <span class="co">## Renormalize</span></span>
+<span id="cb2380-14"><a href="-density-estimation-dp-models.html#cb2380-14"></a>    p_vec &lt;-<span class="st"> </span>p_vec <span class="op">/</span><span class="st"> </span><span class="kw">sum</span>(p_vec)</span>
+<span id="cb2380-15"><a href="-density-estimation-dp-models.html#cb2380-15"></a>    <span class="co">## Name</span></span>
+<span id="cb2380-16"><a href="-density-estimation-dp-models.html#cb2380-16"></a>    <span class="kw">names</span>(p_vec) &lt;-<span class="st"> </span>min<span class="op">:</span>max</span>
+<span id="cb2380-17"><a href="-density-estimation-dp-models.html#cb2380-17"></a>    <span class="co">##</span></span>
+<span id="cb2380-18"><a href="-density-estimation-dp-models.html#cb2380-18"></a>    <span class="kw">return</span>(p_vec)</span>
+<span id="cb2380-19"><a href="-density-estimation-dp-models.html#cb2380-19"></a>}</span>
+<span id="cb2380-20"><a href="-density-estimation-dp-models.html#cb2380-20"></a></span>
+<span id="cb2380-21"><a href="-density-estimation-dp-models.html#cb2380-21"></a><span class="co">## Collapse all values beyond 8 to 8+ bin</span></span>
+<span id="cb2380-22"><a href="-density-estimation-dp-models.html#cb2380-22"></a><span class="kw">G0_vector</span>(<span class="dt">lambda =</span> <span class="dv">2</span>, <span class="dt">min =</span> <span class="dv">1</span>, <span class="dt">max =</span> <span class="dv">8</span>)</span></code></pre></div>
 <pre><code>##            1            2            3            4            5            6            7 
 ## 0.3130352855 0.3130352855 0.2086901903 0.1043450952 0.0417380381 0.0139126794 0.0039750512 
 ##            8 
