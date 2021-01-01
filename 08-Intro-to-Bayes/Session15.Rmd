@@ -498,15 +498,71 @@ str(d)
 
 $$
 \begin{aligned}
-
+L_i & \sim \text{Binomial}(1, p_i)  \\ 
+\text{logit} & = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
+\beta_j   & \sim \text{Normal}(0, 0.5) \;\;\;\; \text{for } j = 1,\dots, 4\\
+\alpha_j  & \sim \text{Normal}(\bar{\alpha}, \sigma_\alpha) \;\;\;\; \text{for } j = 1, \dots, 7 \\
+\color{green}{\gamma_j } &\;  \color{green}{\sim \text{Normal}(0, \sigma_\gamma)\;\;\;\;\; \text{for } j = 1, \dots, 6} \\
+\bar{\alpha}  & \sim \text{Normal}(0, 1.5) \\ 
+\sigma_\alpha & \sim \text{Exponential} (1) \\
+\color{green}{\sigma_\gamma} & \;\color{green}{ \sim \text{Exponential}(1)}
 \end{aligned}
 $$
 
+從模型結構上，我們給不同的分層變量設置了自己的參數向量，對於每隻黑猩猩 `actor`，我們設定的參數向量是 $\alpha$，它有7個元素，長度是 7，因爲一共有七隻黑猩猩；實驗的 `block` 有 6 個，所以它的參數向量長度是 6。這兩個分層變量需要有自己的方差（標準差）參數，也就是 $\sigma_\alpha, \sigma_\gamma$。要注意的一點是只能給一個總體平均值 $\bar{\alpha}$ 給兩個隨機截距。下面的代碼就可以運行上述模型：
 
-```{r}
 
+
+```{r introBayes15-16, cache=TRUE}
+d <- d %>% 
+  mutate(treatment = 1 + prosoc_left + 2*condition)
+table(d$treatment)
+
+dat_list <- list(
+  pulled_left = d$pulled_left, 
+  actor  = d$actor, 
+  block_id = d$block, 
+  treatment = as.integer(d$treatment)
+)
 ```
 
 
+```{r introBayes15-17, cache=TRUE, results='hide', eval=FALSE}
+set.seed(13) 
 
+m13.4 <- ulam(
+  alist(
+    pulled_left  ~ dbinom( 1, p ) , 
+    logit(p) <- a[actor] + g[block_id] + b[treatment], 
+    b[treatment] ~ dnorm( 0, 0.5 ), 
+    ## adaptive priors
+    a[actor] ~ dnorm( a_bar,  sigma_a ), 
+    g[block_id] ~ dnorm( 0, sigma_g ), 
+    ## hyper-priors 
+    a_bar ~ dnorm( 0, 1.5 ), 
+    sigma_a ~ dexp(1), 
+    sigma_g ~ dexp(1)
+  ), data = dat_list, chains = 4, cores = 4, log_lik = TRUE
+)
+saveRDS(m13.4, "../Stanfits/m13_4.rds")
+```
+
+
+```{r  introBayes15-18, cache=TRUE}
+m13.4 <- readRDS("../Stanfits/m13_4.rds")
+precis(m13.4, depth = 2)
+```
+
+
+```{r introBayes15-fig06, cache=FALSE, fig.width=5, fig.height=8,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE}
+plot( precis(m13.4, depth = 2) )
+```
+
+```{r introBayes15-fig07, cache=FALSE, fig.width=6, fig.height=5.5,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE}
+post <- extract.samples( m13.4 )
+rethinking::dens( post$sigma_a ,
+                  xlim = c(0, 4), 
+                  ylim = c(0, 3.8))
+rethinking::dens( post$sigma_g , add =  TRUE)
+```
 
