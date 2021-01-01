@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2020-12-30" />
+<meta name="date" content="2021-01-01" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2087,11 +2087,120 @@ p_i = \frac{\exp(\alpha_i)}{1 +\exp(\alpha_i)}
 <div id="黑猩猩數據的多層回歸模型-multilevel-chimpanzees" class="section level3">
 <h3><span class="header-section-number">55.3.1</span> 黑猩猩數據的多層回歸模型 multilevel chimpanzees</h3>
 <p>我們可以直接利用 Chapter <a href="-bayesian-glm.html#chimpanzees">53.1.1</a> 一開始設定好的模型，增加 <code>block</code> 的隨機截距：</p>
-$$
-<span class="math display">\[\begin{aligned}
-
-\end{aligned}\]</span>
-<p>$$</p>
+<p><span class="math display">\[
+\begin{aligned}
+L_i &amp; \sim \text{Binomial}(1, p_i)  \\ 
+\text{logit} &amp; = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
+\beta_j   &amp; \sim \text{Normal}(0, 0.5) \;\;\;\; \text{for } j = 1,\dots, 4\\
+\alpha_j  &amp; \sim \text{Normal}(\bar{\alpha}, \sigma_\alpha) \;\;\;\; \text{for } j = 1, \dots, 7 \\
+\color{green}{\gamma_j } &amp;\;  \color{green}{\sim \text{Normal}(0, \sigma_\gamma)\;\;\;\;\; \text{for } j = 1, \dots, 6} \\
+\bar{\alpha}  &amp; \sim \text{Normal}(0, 1.5) \\ 
+\sigma_\alpha &amp; \sim \text{Exponential} (1) \\
+\color{green}{\sigma_\gamma} &amp; \;\color{green}{ \sim \text{Exponential}(1)}
+\end{aligned}
+\]</span></p>
+<p>從模型結構上，我們給不同的分層變量設置了自己的參數向量，對於每隻黑猩猩 <code>actor</code>，我們設定的參數向量是 <span class="math inline">\(\alpha\)</span>，它有7個元素，長度是 7，因爲一共有七隻黑猩猩；實驗的 <code>block</code> 有 6 個，所以它的參數向量長度是 6。這兩個分層變量需要有自己的方差（標準差）參數，也就是 <span class="math inline">\(\sigma_\alpha, \sigma_\gamma\)</span>。要注意的一點是只能給一個總體平均值 <span class="math inline">\(\bar{\alpha}\)</span> 給兩個隨機截距。下面的代碼就可以運行上述模型：</p>
+<div class="sourceCode" id="cb1043"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1043-1"><a href="-multilevel-models.html#cb1043-1"></a>d &lt;-<span class="st"> </span>d <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1043-2"><a href="-multilevel-models.html#cb1043-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">treatment =</span> <span class="dv">1</span> <span class="op">+</span><span class="st"> </span>prosoc_left <span class="op">+</span><span class="st"> </span><span class="dv">2</span><span class="op">*</span>condition)</span>
+<span id="cb1043-3"><a href="-multilevel-models.html#cb1043-3"></a><span class="kw">table</span>(d<span class="op">$</span>treatment)</span></code></pre></div>
+<pre><code>## 
+##   1   2   3   4 
+## 126 126 126 126</code></pre>
+<div class="sourceCode" id="cb1045"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1045-1"><a href="-multilevel-models.html#cb1045-1"></a>dat_list &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb1045-2"><a href="-multilevel-models.html#cb1045-2"></a>  <span class="dt">pulled_left =</span> d<span class="op">$</span>pulled_left, </span>
+<span id="cb1045-3"><a href="-multilevel-models.html#cb1045-3"></a>  <span class="dt">actor  =</span> d<span class="op">$</span>actor, </span>
+<span id="cb1045-4"><a href="-multilevel-models.html#cb1045-4"></a>  <span class="dt">block_id =</span> d<span class="op">$</span>block, </span>
+<span id="cb1045-5"><a href="-multilevel-models.html#cb1045-5"></a>  <span class="dt">treatment =</span> <span class="kw">as.integer</span>(d<span class="op">$</span>treatment)</span>
+<span id="cb1045-6"><a href="-multilevel-models.html#cb1045-6"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1046"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1046-1"><a href="-multilevel-models.html#cb1046-1"></a><span class="kw">set.seed</span>(<span class="dv">13</span>) </span>
+<span id="cb1046-2"><a href="-multilevel-models.html#cb1046-2"></a></span>
+<span id="cb1046-3"><a href="-multilevel-models.html#cb1046-3"></a>m13<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb1046-4"><a href="-multilevel-models.html#cb1046-4"></a>  <span class="kw">alist</span>(</span>
+<span id="cb1046-5"><a href="-multilevel-models.html#cb1046-5"></a>    pulled_left  <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ) , </span>
+<span id="cb1046-6"><a href="-multilevel-models.html#cb1046-6"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>g[block_id] <span class="op">+</span><span class="st"> </span>b[treatment], </span>
+<span id="cb1046-7"><a href="-multilevel-models.html#cb1046-7"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb1046-8"><a href="-multilevel-models.html#cb1046-8"></a>    <span class="co">## adaptive priors</span></span>
+<span id="cb1046-9"><a href="-multilevel-models.html#cb1046-9"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( a_bar,  sigma_a ), </span>
+<span id="cb1046-10"><a href="-multilevel-models.html#cb1046-10"></a>    g[block_id] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, sigma_g ), </span>
+<span id="cb1046-11"><a href="-multilevel-models.html#cb1046-11"></a>    <span class="co">## hyper-priors </span></span>
+<span id="cb1046-12"><a href="-multilevel-models.html#cb1046-12"></a>    a_bar <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb1046-13"><a href="-multilevel-models.html#cb1046-13"></a>    sigma_a <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb1046-14"><a href="-multilevel-models.html#cb1046-14"></a>    sigma_g <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb1046-15"><a href="-multilevel-models.html#cb1046-15"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cores =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb1046-16"><a href="-multilevel-models.html#cb1046-16"></a>)</span>
+<span id="cb1046-17"><a href="-multilevel-models.html#cb1046-17"></a><span class="kw">saveRDS</span>(m13<span class="fl">.4</span>, <span class="st">&quot;../Stanfits/m13_4.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1047"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1047-1"><a href="-multilevel-models.html#cb1047-1"></a>m13<span class="fl">.4</span> &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&quot;../Stanfits/m13_4.rds&quot;</span>)</span>
+<span id="cb1047-2"><a href="-multilevel-models.html#cb1047-2"></a><span class="kw">precis</span>(m13<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##                 mean         sd         5.5%        94.5%     n_eff     Rhat4
+## b[1]    -0.127619719 0.30371293 -0.612525116  0.351831861 403.94596 1.0109754
+## b[2]     0.408238854 0.30232189 -0.053260952  0.901320472 358.18837 1.0087428
+## b[3]    -0.472686499 0.29977648 -0.933074984  0.020725297 325.50478 1.0134452
+## b[4]     0.287140550 0.30400142 -0.196915752  0.783449534 314.64426 1.0108916
+## a[1]    -0.370040842 0.38111969 -0.956288690  0.250165297 359.95580 1.0120710
+## a[2]     4.722208260 1.32508814  3.099312312  6.970585847 441.65568 1.0040650
+## a[3]    -0.671017597 0.38087108 -1.286621692 -0.060970107 393.42474 1.0081857
+## a[4]    -0.676761827 0.37681820 -1.281970759 -0.079834071 379.66040 1.0108697
+## a[5]    -0.362885676 0.37315672 -0.958119173  0.248182788 388.40275 1.0096311
+## a[6]     0.572373093 0.37008050 -0.019418355  1.173132021 413.40776 1.0063314
+## a[7]     2.109826748 0.45840001  1.380573715  2.851828350 468.89658 1.0065407
+## g[1]    -0.156800879 0.22875942 -0.566965710  0.094427404 321.47070 1.0083836
+## g[2]     0.038277620 0.19474280 -0.222321524  0.363343586 947.73530 1.0013975
+## g[3]     0.055900123 0.19581427 -0.188554858  0.364005505 764.31955 1.0000968
+## g[4]     0.011329983 0.17640463 -0.245645460  0.291591789 900.16676 1.0016050
+## g[5]    -0.033451700 0.19154418 -0.343860156  0.234539865 821.95378 1.0082556
+## g[6]     0.110218541 0.20252666 -0.129571122  0.438377440 760.17843 1.0023356
+## a_bar    0.633025847 0.73797175 -0.516031871  1.785298810 700.52766 1.0041607
+## sigma_a  2.032605929 0.64825884  1.220010000  3.139888818 570.05539 1.0006796
+## sigma_g  0.209456474 0.17425778  0.032948405  0.516423626 252.48113 1.0167476</code></pre>
+<p>首先，我們從 <code>n_eff</code> 可以看出各個參數的有效樣本量差別其實較大。這樣的現象在結構複雜的模型進行事後樣本採樣的過程中其實很常見。這可能會有許多不同的原因，其中之一是模型中可能有一個或者幾個在樣本採集時花了較多的時間在某個邊界值附近不停地採集樣本。這裏很顯然就是 <code>sigma_g</code>，它花了很多時間在它的起始值 0 附近不停地採集樣本，它的 <code>Rhat</code> 值也顯然大於 1。這些都是採樣效率低下的信號。</p>
+<div class="sourceCode" id="cb1049"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1049-1"><a href="-multilevel-models.html#cb1049-1"></a><span class="kw">plot</span>( <span class="kw">precis</span>(m13<span class="fl">.4</span>, <span class="dt">depth =</span> <span class="dv">2</span>) )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig06"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig06-1.png" alt="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions" width="480" />
+<p class="caption">
+圖 55.6: Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions
+</p>
+</div>
+<p>其次，觀察 <code>sigma_a</code> 和 <code>sigma_g</code> 會很容易就發現不同黑猩猩之間的變化顯然比不同天進行實驗的變化要顯著的多。這一現象可以用圖 <a href="-multilevel-models.html#fig:introBayes15-fig07">55.7</a> 展示得更加清楚。</p>
+<div class="sourceCode" id="cb1050"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1050-1"><a href="-multilevel-models.html#cb1050-1"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m13<span class="fl">.4</span> )</span>
+<span id="cb1050-2"><a href="-multilevel-models.html#cb1050-2"></a>rethinking<span class="op">::</span><span class="kw">dens</span>( post<span class="op">$</span>sigma_a ,</span>
+<span id="cb1050-3"><a href="-multilevel-models.html#cb1050-3"></a>                  <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">4</span>), </span>
+<span id="cb1050-4"><a href="-multilevel-models.html#cb1050-4"></a>                  <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">3.8</span>), </span>
+<span id="cb1050-5"><a href="-multilevel-models.html#cb1050-5"></a>                  <span class="dt">col =</span> rangi2, </span>
+<span id="cb1050-6"><a href="-multilevel-models.html#cb1050-6"></a>                  <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb1050-7"><a href="-multilevel-models.html#cb1050-7"></a>                  <span class="dt">lwd =</span> <span class="dv">2</span>, </span>
+<span id="cb1050-8"><a href="-multilevel-models.html#cb1050-8"></a>                  <span class="dt">xlab =</span> <span class="st">&quot;standard deviation&quot;</span>, </span>
+<span id="cb1050-9"><a href="-multilevel-models.html#cb1050-9"></a>                  <span class="dt">ylab =</span> <span class="st">&quot;Density&quot;</span>)</span>
+<span id="cb1050-10"><a href="-multilevel-models.html#cb1050-10"></a>rethinking<span class="op">::</span><span class="kw">dens</span>( post<span class="op">$</span>sigma_g , <span class="dt">add =</span>  <span class="ot">TRUE</span>, </span>
+<span id="cb1050-11"><a href="-multilevel-models.html#cb1050-11"></a>                  <span class="dt">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb1050-12"><a href="-multilevel-models.html#cb1050-12"></a></span>
+<span id="cb1050-13"><a href="-multilevel-models.html#cb1050-13"></a><span class="kw">text</span>( <span class="fl">0.8</span>, <span class="fl">02.5</span>, <span class="st">&#39;block&#39;</span>)</span>
+<span id="cb1050-14"><a href="-multilevel-models.html#cb1050-14"></a><span class="kw">text</span>( <span class="dv">3</span>, <span class="fl">0.5</span>, <span class="st">&#39;actor&#39;</span>, <span class="dt">col =</span> rangi2)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig07"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig07-1.png" alt="Posterior distributions of the standard deviations of varying intercepts by actor (blue), and block (black)." width="576" />
+<p class="caption">
+圖 55.7: Posterior distributions of the standard deviations of varying intercepts by actor (blue), and block (black).
+</p>
+</div>
+<p>這也就是說增加不同實驗 <code>block</code> 的隨機截距並沒有讓模型增加的過度擬合的風險。我們來比較一下只有一個黑猩猩隨機截距時的模型和 <code>m13.4</code> 之間的模型信息差別：</p>
+<div class="sourceCode" id="cb1051"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1051-1"><a href="-multilevel-models.html#cb1051-1"></a><span class="kw">set.seed</span>(<span class="dv">14</span>)</span>
+<span id="cb1051-2"><a href="-multilevel-models.html#cb1051-2"></a>m13<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb1051-3"><a href="-multilevel-models.html#cb1051-3"></a>  <span class="kw">alist</span>(</span>
+<span id="cb1051-4"><a href="-multilevel-models.html#cb1051-4"></a>    pulled_left <span class="op">~</span><span class="st"> </span><span class="kw">dbinom</span>( <span class="dv">1</span>, p ), </span>
+<span id="cb1051-5"><a href="-multilevel-models.html#cb1051-5"></a>    <span class="kw">logit</span>(p) &lt;-<span class="st"> </span>a[actor] <span class="op">+</span><span class="st"> </span>b[treatment] , </span>
+<span id="cb1051-6"><a href="-multilevel-models.html#cb1051-6"></a>    b[treatment] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb1051-7"><a href="-multilevel-models.html#cb1051-7"></a>    a[actor] <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( a_bar, sigma_a ),</span>
+<span id="cb1051-8"><a href="-multilevel-models.html#cb1051-8"></a>    a_bar <span class="op">~</span><span class="st"> </span><span class="kw">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb1051-9"><a href="-multilevel-models.html#cb1051-9"></a>    sigma_a <span class="op">~</span><span class="st"> </span><span class="kw">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb1051-10"><a href="-multilevel-models.html#cb1051-10"></a>  ), <span class="dt">data =</span> dat_list, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cores =</span> <span class="dv">4</span>, <span class="dt">log_lik =</span> <span class="ot">TRUE</span></span>
+<span id="cb1051-11"><a href="-multilevel-models.html#cb1051-11"></a>)</span>
+<span id="cb1051-12"><a href="-multilevel-models.html#cb1051-12"></a></span>
+<span id="cb1051-13"><a href="-multilevel-models.html#cb1051-13"></a><span class="kw">saveRDS</span>(m13<span class="fl">.5</span>, <span class="st">&quot;../Stanfits/m13_5.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1052"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1052-1"><a href="-multilevel-models.html#cb1052-1"></a>m13<span class="fl">.5</span> &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&quot;../Stanfits/m13_5.rds&quot;</span>)</span>
+<span id="cb1052-2"><a href="-multilevel-models.html#cb1052-2"></a><span class="kw">compare</span>(m13<span class="fl">.4</span>, m13<span class="fl">.5</span>)</span></code></pre></div>
+<pre><code>##            WAIC        SE      dWAIC       dSE      pWAIC     weight
+## m13.5 531.37616 19.126297 0.00000000        NA  8.5921361 0.60655949
+## m13.4 532.24191 19.421569 0.86574585 1.6294066 10.6837879 0.39344051</code></pre>
+<p>從 <code>m13.4</code> 和 <code>m13.5</code> 兩個模型之間的比較結果來看，即便 <code>m13.4</code> 中多增加了 7 個未知參數，但是 <code>pWAIC</code> 的比較，也就是實際有效參數個數之間的差只有 2。這主要是因爲 <code>block</code> 的事後分佈的方差其實十分接近 0，所以表示這個 <code>block</code> 部分的隨機截距部分增加的參數的實際結果都接近 0。我們的多層回歸模型雖然可以做到增加實驗 <code>block</code> 的隨機截距，但是增加這個隨機截距對模型並沒有顯著的改善，可以說沒有太多幫助。</p>
 
 </div>
 </div>

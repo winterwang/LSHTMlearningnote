@@ -554,15 +554,58 @@ precis(m13.4, depth = 2)
 ```
 
 
+首先，我們從 `n_eff` 可以看出各個參數的有效樣本量差別其實較大。這樣的現象在結構複雜的模型進行事後樣本採樣的過程中其實很常見。這可能會有許多不同的原因，其中之一是模型中可能有一個或者幾個在樣本採集時花了較多的時間在某個邊界值附近不停地採集樣本。這裏很顯然就是 `sigma_g`，它花了很多時間在它的起始值 0 附近不停地採集樣本，它的 `Rhat` 值也顯然大於 1。這些都是採樣效率低下的信號。
+
+
 ```{r introBayes15-fig06, cache=FALSE, fig.width=5, fig.height=8,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE}
 plot( precis(m13.4, depth = 2) )
 ```
 
-```{r introBayes15-fig07, cache=FALSE, fig.width=6, fig.height=5.5,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE}
+其次，觀察 `sigma_a` 和 `sigma_g` 會很容易就發現不同黑猩猩之間的變化顯然比不同天進行實驗的變化要顯著的多。這一現象可以用圖 \@ref(fig:introBayes15-fig07) 展示得更加清楚。
+
+
+```{r introBayes15-fig07, cache=FALSE, fig.width=6, fig.height=5.5,  fig.cap="Posterior distributions of the standard deviations of varying intercepts by actor (blue), and block (black).", fig.align='center', message=FALSE}
 post <- extract.samples( m13.4 )
 rethinking::dens( post$sigma_a ,
                   xlim = c(0, 4), 
-                  ylim = c(0, 3.8))
-rethinking::dens( post$sigma_g , add =  TRUE)
+                  ylim = c(0, 3.8), 
+                  col = rangi2, 
+                  bty = "n", 
+                  lwd = 2, 
+                  xlab = "standard deviation", 
+                  ylab = "Density")
+rethinking::dens( post$sigma_g , add =  TRUE, 
+                  lwd = 2)
+
+text( 0.8, 02.5, 'block')
+text( 3, 0.5, 'actor', col = rangi2)
 ```
+
+這也就是說增加不同實驗 `block` 的隨機截距並沒有讓模型增加的過度擬合的風險。我們來比較一下只有一個黑猩猩隨機截距時的模型和 `m13.4` 之間的模型信息差別：
+
+
+```{r  introBayes15-19, cache=TRUE, results='hide', eval=FALSE}
+set.seed(14)
+m13.5 <- ulam(
+  alist(
+    pulled_left ~ dbinom( 1, p ), 
+    logit(p) <- a[actor] + b[treatment] , 
+    b[treatment] ~ dnorm( 0, 0.5 ), 
+    a[actor] ~ dnorm( a_bar, sigma_a ),
+    a_bar ~ dnorm( 0, 1.5 ), 
+    sigma_a ~ dexp(1)
+  ), data = dat_list, chains = 4, cores = 4, log_lik = TRUE
+)
+
+saveRDS(m13.5, "../Stanfits/m13_5.rds")
+```
+
+
+```{r  introBayes15-20, cache=TRUE}
+m13.5 <- readRDS("../Stanfits/m13_5.rds")
+compare(m13.4, m13.5)
+```
+
+從 `m13.4` 和 `m13.5` 兩個模型之間的比較結果來看，即便 `m13.4` 中多增加了 7 個未知參數，但是 `pWAIC` 的比較，也就是實際有效參數個數之間的差只有 2。這主要是因爲 `block` 的事後分佈的方差其實十分接近 0，所以表示這個 `block` 部分的隨機截距部分增加的參數的實際結果都接近 0。我們的多層回歸模型雖然可以做到增加實驗 `block` 的隨機截距，但是增加這個隨機截距對模型並沒有顯著的改善，可以說沒有太多幫助。
+
 
