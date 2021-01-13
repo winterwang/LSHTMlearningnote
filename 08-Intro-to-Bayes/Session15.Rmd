@@ -1,5 +1,6 @@
-> Many statistical models also have anterograde amnesia. As the models move from one cluster - individual, group, location - in the data to another, estimating parameters for each cluster, they forget everything about the previous cluster. ... These models implicitly assume that nothing learned about any one category informs estimates for the other categories -- the parameters are independent of one another and learn from completely separate proportions of the data. This would be like forgetting you had ever been in a cafe, each time you go to a new cafe. Cafes do differ, but they are also alike. 
-> ~ Richard McElreath
+> Many statistical models also have anterograde amnesia. As the models move from one cluster - individual, group, location - in the data to another, estimating parameters for each cluster, they forget everything about the previous cluster. ... These models implicitly assume that nothing learned about any one category informs estimates for the other categories -- the parameters are independent of one another and learn from completely separate proportions of the data. This would be like forgetting you had ever been in a cafe, each time you go to a new cafe. Cafes do differ, but they are also alike.
+>
+> :   Richard McElreath
 
 其實，當我們開始使用回歸模型時，最推薦的就是從多層回歸模型入手，把它當作一種應該實施的默認選項。當然的確非多層回歸的簡單模型在一些場合下就能夠勝任數據分析的過程給出滿意的結果，但事實上更多時候你會發現多層回歸模型會更加出色的幫助我們理解這個世界。所以最好的狀態其實是，我們先從多層回歸模型入手分析數據，隨着分析的深入，過程中我們可能發現不再需要多層模型結構就能完成分析任務。這其實好過我們從一開始就忽略掉了多層回歸模型的這一關鍵的可能性。
 
@@ -10,7 +11,6 @@ data("reedfrogs")
 d <- reedfrogs
 str(d)
 ```
-
 
 現在我們只關心上述數據中生存下來的蝌蚪數量 `surv`，和開始時的蝌蚪數量 `density`。該數據包涵了很多的變化和不確定性，或者叫做方差 variance。這些變化和不確定性可能來自不同的實驗條件，或者未知的原因。所以，假設每一行數據中的10只蝌蚪，被放在了不同的水池裏，也就是說，上面的數據中我們有48個水池做重複的實驗。於是該數據就可以被理解爲是重複相似的實驗，但是每次的實驗又有一些微妙的不同。每一個水池，就是一個數據的層級 'cluster'。如果我們忽略這個層級的概念，我們可能就忽略掉了他們本身在實驗開始之時的基線生存狀況 (baseline survival) 本身可能存在的不確定性 (variation)。這個不確定性，或者叫基線生存狀況的方差可能掩蓋住一些重要的發現。如果我們允許每個水池擁有自己單獨的其實狀態，也就是函數的截距，但是假如僅僅使用啞變量的方法 dummy variable，那其實我們就掉進了進行性健忘症的陷阱裏。因爲雖然他們是不同的水池做的實驗，但是一個水池的結果其實是能提示或者告訴我們其他水池的實驗結果的一些信息的，而不是完全地相互獨立毫無關聯性。
 
@@ -25,7 +25,6 @@ S_i  & \sim \text{Binomial}(N_i, p_i) \\
 $$
 
 這個模型很容易可以編碼成爲 Stan 模型：
-
 
 ```{r introBayes15-02, cache=TRUE}
 # make the tank cluster variable
@@ -52,16 +51,12 @@ m13.1 <- ulam(
 saveRDS(m13.1, "../Stanfits/m13_1.rds")
 ```
 
-
-
 ```{r introBayes15-03, cache=TRUE}
 m13.1 <- readRDS("../Stanfits/m13_1.rds")
 precis(m13.1, depth = 2)
 ```
 
-
 你會看見模型的運算結果是告訴我們 48 個池塘本身的基線生存狀況，也就是有 48 個截距。但是 `m13.1` 並不是一個多層回歸模型，下面的模型中關鍵部分的加入才使得這個模型變得更加有意義：
-
 
 $$
 \begin{aligned}
@@ -75,7 +70,6 @@ $$
 
 上述模型中值得注意的是，除了允許不同水池的基線生存狀況，也就是截距可以各不相同，我們還允許這些截距之間存在聯繫。也就是這些截距本身是服從正（常）態分佈的，該正（常）態分佈的均值是 $\bar{\alpha}$，標準差是 $\sigma$。這個截距服從的正（常）態分佈的參數，也有自己的先驗概率分佈。我們把這樣的參數叫做超參數 hyperparameters，他們是參數的參數，他們的先驗概率分佈被叫做超先驗 hyperpriors。我們可以用下面的代碼來運行這個模型：
 
-
 ```{r introBayes15-04, cache=TRUE, results="hide", eval=FALSE}
 m13.2 <- ulam(
   alist(S ~ dbinom( N, p ), 
@@ -88,7 +82,6 @@ m13.2 <- ulam(
 saveRDS(m13.2, "../Stanfits/m13_2.rds")
 ```
 
-
 先比較一下這兩個模型之間的模型信息差別：
 
 ```{r introBayes15-05, cache=TRUE}
@@ -98,18 +91,13 @@ compare( m13.1, m13.2 )
 
 從兩個模型之間的比較結果來看，首先，`m13.2` 只有 21 個有效的參數，比起實際的參數個數 50 個少了很多。這是因爲對這些截距增加了超參數的限制之後，他們受到了更多的約束，更加趨近於彼此。我們可以看看這個模型給出的截距分佈的超參數的事後概率分佈估計：
 
-
 ```{r  introBayes15-06, cache=TRUE}
 precis(m13.2, depth = 2, pars = c("a_bar", "sigma"))
 ```
 
-
 這裡的截距分佈的超參數的事後估計其實給出了十分精確的估計，其均值在 1.34 左右，標準差是1.62，這說明了不同的水池之間的關係十分近似。也就是說，我們使用這個多層回歸模型，讓模型自己從數據中去學習並獲得截距和截距之間的關係。這比起一開始我們自己給 `m13.1` 設定的標準差 `1.5` 還要激進。於是這個多層回歸模型事實上給模型參數的估計增加了更多的限制。
 
-
 為了加深我們對這個激進的超參數的理解，我們把這兩個模型 `m13.1, m13.2` 給出的估計結果繪製成圖形來觀察：
-
-
 
 ```{r introBayes15-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Empirical proportions of surviviors in each tadpolle tank, shown by the filled blue points, plotted with the 48 per-tank parameters from the multilevel model, shown by the black circles. The dashed line locates the average proportion of survivors across all tanks. The vertical lines divide tanks with different initial densities of tadpoles: small tanks (10 tadpoles), medium tanks (25), and large tanks (35). In every tank, the posterior mean from the multilevel model is closer to the dashed line than the empirical proportion is. This reflects the pooling of information across tanks, to help with inference.", fig.align='center'}
 # extract Stan Samples
@@ -141,16 +129,11 @@ text( 16 + 8, 0, 'medium tanks')
 text( 32 + 8, 0, 'large tanks')
 ```
 
-
-
-
 圖 \@ref(fig:introBayes15-fig01) 中，橫軸是水池的編號，從左往右依次是從 1 到 48 號水池；縱軸是水池中蝌蚪生存下來的比例。圖中藍色的點是原始數據點，也就是實際觀察值 `propsurv`。黑色的鏤空點則是模型估計的每個水池的截距。水平的橫虛線是估計的所有水池的蝌蚪存活概率的平均值 $\alpha$。而圖中的縱向的實線是把水池按照實驗開始時的蝌蚪密度計算的不同類型的池子，從小，中，到大三種類型的池子，各16個。不難注意到我們能看見多層回歸模型給出的推測值都相對觀察值更靠近總體平均生存概率。看起來似乎是黑色鏤空的圓點都更加靠近數據分佈的中心，平均值附近。這種現象又被叫做縮水現象 shrinkage，這是由於增加了超參數之後的多層回歸模型的參數估計受到的限制性的調整 regularization。其次，我們也發現在圖左側，也就是起始蝌蚪密度較小的水池裏，多層回歸模型估計的生存概率值更加靠近總體平均值，也就是縮水得更加明顯，距離觀察數據比密度大的水池要遠。也就是說，在小的水池裏，我們更加容易發現模型估計值和觀察值之間的差別，但是在其實密度大的水池中，觀察值和模型估計值更加接近。最後，如果藍色的點離虛線的總體均值越遠，它和黑色點，多層回歸模型估計值之間的差別越大。
 
 上述三種現象其實是在告訴我們一件很重要的事，也就是把信息綜合起來的話，每一個層級的參數估計都會受益得到提升和改善 (pooling information across clusters to improve estimates) 。這裏的綜合信息 pooling information 的意義是，每一個水池的數據，每一個層級的數據，都含有能提高和改善其他層級參數估計信息 each tank provides information that can be used to improve the estimates for all of the other tanks。這是因爲我們假設了每個水池的截距 log-odds 雖有變化但不獨立而是服從某個正（常）態分佈。有了這個分佈的假設，貝葉斯估計就能幫助我們共享信息給不同的數據層級。
 
-
 那麼，模型估計的這些青蛙的總體生存概率的分佈是怎樣的呢？我們可以從它對應的模型事後概率分佈中獲得結果繪製成圖。我們先繪製事後概率分佈中前100個 $\alpha, \sigma$ 組合的平均存活率的分佈：
-
 
 ```{r introBayes15-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The inferred population of survival across tanks. 100 Gaussian distributions of the log-odds of survival, sampled from the posteriro of m13.2.", fig.align='center'}
 # show first 100 populations in the posterior 
@@ -163,9 +146,7 @@ for( i in 1:100 )
          col = col.alpha("black", 0.2))
 ```
 
-
 圖 \@ref(fig:introBayes15-fig02) 告訴我們，均值 $\alpha$ 和它對應的標準差 $\sigma$ 都是有相當程度不確定性的 (uncertainty)。
-
 
 ```{r  introBayes15-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Survival probabilities for 8000 new simulated tanks, averaging over the posterior distribution in previous figure.", fig.align='center'}
 # sample 8000 imaginary tanks from the posterior distribution 
@@ -176,21 +157,17 @@ dens( inv_logit(sim_tanks), lwd = 2, adj = 0.1,
       xlab = "probability survive", bty = "n")
 ```
 
-
-
 ## 多層回歸的變化的效應和過度擬合/過低擬合之間的交易 varing effects and the underfitting/overfitting trade-off
 
 使用多層回歸模型使得模型可以估計不同（截距或者斜率）的效應，其最大的好處是能夠給出更加準確的估計。其原理就是使用混合效應模型其實使得模型儘量避免了過度/過低擬合。如果建立模型是爲了預測未知池塘中蝌蚪存活概率的話，我們可以有三種策略：
 
-1. 完全合併策略，complete pooling。這方法其實是把總體的水池蝌蚪生存率這一數據看作是不變的 the population survival probability of ponds is invariant，也就是固定一個截距，適用所有的池塘。
-2. 完全不合併策略，no pooling。這方法類似 `m13.1` 模型的方案，無視水池和水池之間可能存在的相關性，把每個水池都看作的獨立互不影響的。也就是進行性失憶 模型。
-3. 部分合併策略，partial pooling。這方法其實是 `m13.2` 模型的多層回歸模型方案，通過允許水池之間有相關性，使模型自行學習應有的超參數。
+1.  完全合併策略，complete pooling。這方法其實是把總體的水池蝌蚪生存率這一數據看作是不變的 the population survival probability of ponds is invariant，也就是固定一個截距，適用所有的池塘。
+2.  完全不合併策略，no pooling。這方法類似 `m13.1` 模型的方案，無視水池和水池之間可能存在的相關性，把每個水池都看作的獨立互不影響的。也就是進行性失憶 模型。
+3.  部分合併策略，partial pooling。這方法其實是 `m13.2` 模型的多層回歸模型方案，通過允許水池之間有相關性，使模型自行學習應有的超參數。
 
 很顯然，第一個方案其實很不切合實際，雖然把所有的數據都彙總到一個點上，但是指望用這唯一的一個估計結果來適用所有的水池的生存概率，認爲所有的水池都會產生相同的結果是不符合現實情況的，這一方案認爲水池和水池之間生存概率不會有差別，沒有變化和靈活性, all ponds are identical。第二個方案則是另一個極端，認爲每一個水池都給出完全不同的結果，即使相同也是偶然，水池之間毫無關聯。圖 \@ref(fig:introBayes15-fig01) 中的藍色實心點就是這樣的模型。用於估計每個點的位置的數據在第二個方案下都會變得很少，所以每一個估計都變得更加不精確。第三個方案就是多層回歸模型增加的混合效應，它的部分合併策略其實是第一個和第二個方案的折衷辦法，使得模型的估計給出更加靈活的結果，也更適合擴展到預測未知數據，同時避免了過度/過低擬合。
 
-
 爲了展示這個效果，我們可以用計算機模擬一些生存率的蝌蚪水池數據作爲已知的結果，用不同的模型來分析獲得其估計，從而直觀地理解這三種方案的不同思路。
-
 
 ### 用於產生模擬數據的模型 the model
 
@@ -208,13 +185,11 @@ $$
 
 為了能順利從這個模型中產生模擬數據，我們需要給模型中賦予真實值的參數有：
 
-1. $\bar{\alpha}$ 是總體池塘蝌蚪存活概率的平均值的對數比值 average log-odds of survival in the entire population of ponds。
-2. $\sigma$ 是總體池塘蝌蚪存活概率平均值的對數比值的標準差 the standard deviation of the distribution of log-odds of survival among ponds。
-3. $\alpha$ 一系列水池的蝌蚪存過概率的對數比值的真實值，作為模型的變動截距 a vector of individual pond intercepts, one for each pond。
-
+1.  $\bar{\alpha}$ 是總體池塘蝌蚪存活概率的平均值的對數比值 average log-odds of survival in the entire population of ponds。
+2.  $\sigma$ 是總體池塘蝌蚪存活概率平均值的對數比值的標準差 the standard deviation of the distribution of log-odds of survival among ponds。
+3.  $\alpha$ 一系列水池的蝌蚪存過概率的對數比值的真實值，作為模型的變動截距 a vector of individual pond intercepts, one for each pond。
 
 此外，我們還需要設定每個水池的蝌蚪起始樣本量 $N_i$，這些都設定完畢之後，就只剩下每個水池可能存活的蝌蚪數量了，這個可以使用二項分佈的隨機值來設定。
-
 
 ```{r introBayes15-07, cache=TRUE}
 a_bar <- 1.5
@@ -223,27 +198,23 @@ nponds <- 60
 Ni <- as.integer( rep(c(5, 10, 25, 35), each = 15 ))
 ```
 
-
 我們設定了60個水池，起始蝌蚪的數量分別是 5，10，25，35 的池子各有15個。另外 $\bar{\alpha}, \sigma$ 定義了我們設計下的總體存活率的對數比值 log-odds 的分佈特徵。接下來就是讓計算機生成符合這個分佈條件 $\text{Normal}(\bar{\alpha}, \sigma)$ 的 60 個水池的存活率的對數比值作為各自的截距。
-
 
 ```{r introBayes15-08, cache=FALSE}
 set.seed(5005) 
 a_pond <- rnorm( nponds, mean = a_bar, sd = sigma)
 ```
 
-
 上面的代碼生成了60個符合設定的均值和標準差的數據，作為每個水池的蝌蚪存活率的對數比值。最後，把這些數據合併成為一個數據框：
-
 
 ```{r introBayes15-09, cache=FALSE}
 dsim <- data.frame( pond = 1:nponds, Ni = Ni, true_a = a_pond)
 str(dsim)
 ```
+
 生成的數據框 `dsim` 有三個變量，一個是水池編號，一個是水池起始蝌蚪數量，一個是真實的存活概率的對數比值 (log-odds)。
 
-
-### 模擬存活概率結果 simulate survivors 
+### 模擬存活概率結果 simulate survivors
 
 根據我們設定的每個水池的"真實"存活概率的對數比值，我們不難計算每個水池的"真實"存活概率：
 
@@ -258,13 +229,9 @@ dsim$Si <- rbinom( nponds, prob = logistic(dsim$true_a), size = dsim$Ni)
 str(dsim)
 ```
 
-
-
 ### 計算完全不合併策略 no-pooling estimates
 
-
 在這個模型設定下，最簡單快速的是計算完全不合併策略時的結果。這可以直接從前面計算機生成的實驗數據計算獲得。先計算每個水池中蝌蚪的存活概率：
-
 
 ```{r introBayes15-11, cache=FALSE}
 dsim$p_nopool <- dsim$Si / dsim$Ni
@@ -273,13 +240,9 @@ head(dsim)
 
 數據 `dsim` 的新增一列 `p_nopool` 就是每個水池實際觀察到的蝌蚪存活概率。這個計算結果等同於我們把每個水池當作一個啞變量互無關聯時給出的模型估計結果。
 
-
-
-
 ### 計算部分合併策略的結果 partial-pooling estimates
 
 我們來使用 Stan 運行這個部分合併結果的模型
-
 
 ```{r  introBayes15-12, cache=TRUE, results="hide", eval=FALSE}
 dat <- list(
@@ -299,14 +262,12 @@ m13.30 <- ulam(
 saveRDS(m13.30, "../Stanfits/m13_30.rds")
 ```
 
-
 上面的模型運行計算的就是最基礎版本的隨機截距模型。我們來看一下它給出的 $\bar{\alpha}, \sigma$ 的事後分佈情況，下面的結果包含了六十個水池的截距，會很長：
 
 ```{r introBayes15-13, cache=FALSE}
 m13.30 <- readRDS("../Stanfits/m13_30.rds")
 precis( m13.30, depth = 2 )
 ```
-
 
 很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去。爲了便於比較，先要計算真實的水池中蝌蚪的存活概率。最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差。然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：
 
@@ -377,9 +338,7 @@ text( 46 + 8, 0.6, 'Large ponds (35)')
 
 那麼，从計算機的模擬計算結果中，我們學到了什麼？記得圖 \@ref(fig:introBayes15-fig01) 中我們見過樣本量越小的池塘的模型結果更加靠近樣本均值的虛線，也就是縮水更加嚴重。但是從計算機模擬的結果來看的話，樣本量越小的池塘的存活概率估計結果是隨機截距模型能給出更加小的誤差估計。這兩個現象並不是偶然發生的。樣本量小的水池，傾向於發生模型的過度擬合 overfitting。由於樣本量較小的水池蘊含的信息量較少，所以它們的模型估計結果更加容易受到樣本均值的影響。也就是被其他樣本量更多的水池的數據的影響。當一個個的水池本身各自的樣本量都相對較多時，你可能會認爲隨機截距或者叫多層回歸模型能給出的估計結果優化就很有限。事實上即便是每個數據層級本身的樣本量也比較大的情況下，使用多層回歸模型來計算也沒有任何壞處。大樣本量的一些層級的估計結果有可能有助於改善較小樣本量層級的結果的預測以及參數的估計結果。所以，平均地看，其實始終應該使用隨機效應模型，也就是部分合併方案的策略，因爲它總是能提供較優的結果估計，而且能夠從數據本身學習獲得應該使用的超參數等用於調節 (regularization) 模型的估計和運行。
 
-
 下面的代碼有助於我們重複使用已經運行過的模型，減少計算機重複運算的壓力。當你想要重複上述計算機模擬過程的時候，可能會希望讓模型運行其他的模擬數據，採集新的事後分佈樣本：
-
 
 ```{r introBayes15-1401, cache=TRUE}
 a <- 1.5
@@ -396,7 +355,6 @@ dsim$Si <- rbinom( nponds, prob = inv_logit( dsim$true_a ), size = dsim$Ni )
 dsim$p_nopool <-  dsim$Si / dsim$Ni
 ```
 
-
 ```{r introBayes15-14, cache=TRUE, results="hide", eval=FALSE}
 
 newdat <-  list(Si = dsim$Si, 
@@ -410,7 +368,6 @@ saveRDS(m13.3new, "../Stanfits/m13_3new.rds")
 ```
 
 一旦你的計算機已經運行好了一個模型，`m13.30`，那麼假如只需要修改模型的樣本數據，模型結構不需要改變的話，使用上述的方法會大大提升新模型的運行速度，並且保存結果在 `m13.3new` 裏面。然後你只需要使用類似的方法重新繪製新數據給出的新結果，而不需要每次再重頭運行模型本身。需要重複利用的模型運算結果已經存儲在了每個 stan 模型中的 `stanfit` 部分。只要給它新的相同變量的數據框，它就能迅速給出新的事後概率分佈結果。這是非常有用的技巧。
-
 
 ```{r introBayes15-fig05, cache=FALSE, fig.width=8.5, fig.height=5,  fig.cap="New data was fed to m13.3 model and generate new posterior estimations.", fig.align='center', message=FALSE}
 m13.3new <- readRDS("../Stanfits/m13_3new.rds")
@@ -475,12 +432,9 @@ text( 32 + 8, 0.6, 'Medium ponds (25)')
 text( 46 + 8, 0.6, 'Large ponds (35)')
 ```
 
-
-
 ## 使用多於一個類別作爲多層回歸的隨機變量 more than one type of cluster
 
 我們當然可以在同一個模型中加入更多的 $(>1)$ 分層變量。例如我們在 Chapter \@ref(chimpanzees) 看到的黑猩猩社會學數據 `data(chimpanzees)`。
-
 
 ```{r introBayes15-15, cache=TRUE}
 data("chimpanzees")
@@ -493,8 +447,6 @@ str(d)
 ### 黑猩猩數據的多層回歸模型 multilevel chimpanzees
 
 我們可以直接利用 Chapter \@ref(chimpanzees) 一開始設定好的模型，增加 `block` 的隨機截距：
-
-
 
 $$
 \begin{aligned}
@@ -511,8 +463,6 @@ $$
 
 從模型結構上，我們給不同的分層變量設置了自己的參數向量，對於每隻黑猩猩 `actor`，我們設定的參數向量是 $\alpha$，它有7個元素，長度是 7，因爲一共有七隻黑猩猩；實驗的 `block` 有 6 個，所以它的參數向量長度是 6。這兩個分層變量需要有自己的方差（標準差）參數，也就是 $\sigma_\alpha, \sigma_\gamma$。要注意的一點是只能給一個總體平均值 $\bar{\alpha}$ 給兩個隨機截距。下面的代碼就可以運行上述模型：
 
-
-
 ```{r introBayes15-16, cache=TRUE}
 d <- d %>% 
   mutate(treatment = 1 + prosoc_left + 2*condition)
@@ -525,7 +475,6 @@ dat_list <- list(
   treatment = as.integer(d$treatment)
 )
 ```
-
 
 ```{r introBayes15-17, cache=TRUE, results='hide', eval=FALSE}
 set.seed(13) 
@@ -547,22 +496,18 @@ m13.4 <- ulam(
 saveRDS(m13.4, "../Stanfits/m13_4.rds")
 ```
 
-
 ```{r  introBayes15-18, cache=TRUE}
 m13.4 <- readRDS("../Stanfits/m13_4.rds")
 precis(m13.4, depth = 2)
 ```
 
-
 首先，我們從 `n_eff` 可以看出各個參數的有效樣本量差別其實較大。這樣的現象在結構複雜的模型進行事後樣本採樣的過程中其實很常見。這可能會有許多不同的原因，其中之一是模型中可能有一個或者幾個在樣本採集時花了較多的時間在某個邊界值附近不停地採集樣本。這裏很顯然就是 `sigma_g`，它花了很多時間在它的起始值 0 附近不停地採集樣本，它的 `Rhat` 值也顯然大於 1。這些都是採樣效率低下的信號。
-
 
 ```{r introBayes15-fig06, cache=FALSE, fig.width=5, fig.height=8,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE}
 precis_plot( precis(m13.4, depth = 2) )
 ```
 
 其次，觀察 `sigma_a` 和 `sigma_g` 會很容易就發現不同黑猩猩之間的變化顯然比不同天進行實驗的變化要顯著的多。這一現象可以用圖 \@ref(fig:introBayes15-fig07) 展示得更加清楚。
-
 
 ```{r introBayes15-fig07, cache=FALSE, fig.width=6, fig.height=5.5,  fig.cap="Posterior distributions of the standard deviations of varying intercepts by actor (blue), and block (black).", fig.align='center', message=FALSE}
 post <- extract.samples( m13.4 )
@@ -583,7 +528,6 @@ text( 3, 0.5, 'actor', col = rangi2)
 
 這也就是說增加不同實驗 `block` 的隨機截距並沒有讓模型增加的過度擬合的風險。我們來比較一下只有一個黑猩猩隨機截距時的模型和 `m13.4` 之間的模型信息差別：
 
-
 ```{r  introBayes15-19, cache=TRUE, results='hide', eval=FALSE}
 set.seed(14)
 m13.5 <- ulam(
@@ -600,7 +544,6 @@ m13.5 <- ulam(
 saveRDS(m13.5, "../Stanfits/m13_5.rds")
 ```
 
-
 ```{r  introBayes15-20, cache=TRUE}
 m13.5 <- readRDS("../Stanfits/m13_5.rds")
 compare(m13.4, m13.5)
@@ -608,4 +551,65 @@ compare(m13.4, m13.5)
 
 從 `m13.4` 和 `m13.5` 兩個模型之間的比較結果來看，即便 `m13.4` 中多增加了 7 個未知參數，但是 `pWAIC` 的比較，也就是實際有效參數個數之間的差只有 2。這主要是因爲 `block` 的事後分佈的方差其實十分接近 0，所以表示這個 `block` 部分的隨機截距部分增加的參數的實際結果都接近 0。我們的多層回歸模型雖然可以做到增加實驗 `block` 的隨機截距，但是增加這個隨機截距對模型並沒有顯著的改善，可以說沒有太多幫助。
 
+## 分散轉換與非中心型先驗概率 divergent transition and non-centered priors
+
+使用並運行多層回歸模型時，Stan 經常可能送給你一個莫名其妙的警告，類似：
+
+```
+There were 15 divergent transitions after warmup.
+```
+
+具體原因可能有很多，有主要兩種方式來克服這個警告。第一種是使用更多的 burn-in 或者叫做 warm-up，並且調整 Stan 裏的設置採樣跳躍幅度的變量 `adapt_delta`，它默認是 0.8，把它改成0.9以上（只能是小於1的數值）的數字之後跳躍採集樣本的幅度會縮小一些，從而改善事後樣本採集的代表性，一定程度上可以避免看見上述警告。但是有些多層回歸模型不論你怎麼調整這個跳躍幅度，增加採樣的 burn-in 過程，它始終都無法給出合適的事後樣本分佈。這時候需要使用的技巧是重新改寫你的模型。很多統計學模型你可以轉換思路用別的方式來表達在數學上涵義相同的模型。這個方法又被叫做再參數化 (reparameterize)。
+
+下面是兩個簡單的實例。
+
+
+### 魔鬼的漏斗 the devil's funnel
+
+我們不需要用複雜的模型就能體驗到 Stan 給出的分散轉換 divergent transition 警告。假如有兩個簡單的變量 $v, x$ 他們之間的關係是：
+
+$$
+\begin{aligned}
+v & \sim \text{Normal}(0, 3) \\ 
+x & \sim \text{Normal}(0, \exp(v))
+\end{aligned}
+$$
+
+
+沒有特別的數據，只有這樣兩個互相有聯繫的聯合分佈需要我們嘗試去採集樣本。這是典型的多層回歸結構模型，因爲變量 $x$ 的方差由另一個變量 $v$ 來決定。這個模型的運行程序如下：
+
+
+```{r introBayes15-21, cache=TRUE, results='hide', eval=FALSE}
+m13.7 <- ulam(
+  alist(
+    v ~ normal(0, 3), 
+    x ~ normal(0, exp(v))
+  ), data = list(N = 1), chains = 4
+)
+saveRDS(m13.7, "../Stanfits/m13_7.rds")
+```
+
+你會很顯然看見一連串的警告，叫你去看這個看那個求助啥的：
+
+```
+There were 78 divergent transitions after warmup. See
+http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+to find out why this is a problem and how to eliminate them.There were 2 transitions after warmup that exceeded the maximum treedepth. Increase max_treedepth above 10. See
+http://mc-stan.org/misc/warnings.html#maximum-treedepth-exceededThere were 2 chains where the estimated Bayesian Fraction of Missing Information was low. See
+http://mc-stan.org/misc/warnings.html#bfmi-lowExamine the pairs() plot to diagnose sampling problems
+The largest R-hat is 1.15, indicating chains have not mixed.
+Running the chains for more iterations may help. See
+http://mc-stan.org/misc/warnings.html#r-hatBulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.
+Running the chains for more iterations may help. See
+http://mc-stan.org/misc/warnings.html#bulk-essTail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable.
+Running the chains for more iterations may help. See
+http://mc-stan.org/misc/warnings.html#tail-ess
+```
+
+模型運行給出的事後概率分佈也十分地糟糕：
+
+```{r  introBayes15-22, cache=TRUE}
+m13.7 <- readRDS("../Stanfits/m13_7.rds")
+precis(m13.7)
+```
 
