@@ -615,7 +615,7 @@ precis(m13.7)
 
 看一下它可憐的採樣軌跡圖 trace plot ：
 
-```{r introBayes15-fig08, cache=FALSE, fig.width=6, fig.height=3.5,  fig.cap="`traceplot(m13.7)`", fig.align='center', message=FALSE}
+```{r introBayes15-fig08, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7)`", fig.align='center', message=FALSE}
 traceplot(m13.7)
 ```
 
@@ -660,7 +660,7 @@ precis(m13.7nc)
 
 
 
-```{r introBayes15-fig09, cache=FALSE, fig.width=6, fig.height=3.5,  fig.cap="`traceplot(m13.7nc)`", fig.align='center', message=FALSE}
+```{r introBayes15-fig09, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7nc)`", fig.align='center', message=FALSE}
 traceplot(m13.7nc)
 ```
 
@@ -671,7 +671,7 @@ traceplot(m13.7nc)
 如果我們把此時採樣成功的 $x$ 和 $v$ 之間繪製散點圖，你就會直觀的看見這個像魔鬼一樣的漏斗的真實形狀：
 
 
-```{r introBayes15-fig10, cache=FALSE, fig.width=4, fig.height=3.5,  fig.cap="The devil's funnel.", fig.align='center', message=FALSE}
+```{r introBayes15-fig10, cache=FALSE, fig.width=6, fig.height=5,  fig.cap="The devil's funnel.", fig.align='center', message=FALSE}
 dat.sam <- extract.samples(m13.7nc)
 plot(dat.sam$x, 
      dat.sam$v, 
@@ -745,10 +745,85 @@ $$
 $$
 \begin{aligned}
 L_i & \sim \text{Binomial}(1, p_i) \\ 
-\text{logit}(p_i) & = \color{green}{\underbrace{\bar\alpha + z_{\text{ACTOR[i]}}\sigma_\alpha}_{\alpha_\text{ACTOR[i]}}} + \color{green}{\underbrace{x_{\text{BLOCK}[i]}\sigma_\gamma}_{\gamma_\text{BLOCK[i]}}} + \beta_{\text{TREATMENT}[i]} \\
-\beta_j & \sim \text{Normal}(0, 0.5)
+\text{logit}(p_i) & = \color{lightblue}{\underbrace{\bar\alpha + z_{\text{ACTOR[i]}}\sigma_\alpha}_{\alpha_\text{ACTOR[i]}}} + \color{lightblue}{\underbrace{x_{\text{BLOCK}[i]}\sigma_\gamma}_{\gamma_\text{BLOCK[i]}}} + \beta_{\text{TREATMENT}[i]} \\
+\beta_j & \sim \text{Normal}(0, 0.5), \text{ for } j = 1,\dots,4 \\ 
+\color{lightblue}{z_j} & \color{lightblue}{\; \sim \text{Normal}(0,1)} & \text{[Standardized actor intercepts]} \\
+\color{lightblue}{x_j} & \color{lightblue}{\; \sim \text{Normal}(0,1)} & \text{[Standardized block intercepts]} \\
+\bar{\alpha} & \sim \text{Normal}(0, 1.5) \\ 
+\sigma_\alpha & \sim \text{Exponential}(1) \\
+\sigma_\gamma & \sim \text{Exponential}(1)
 \end{aligned}
 $$
 
+
+不難發現經過修改厚的模型中向量 $z$ 提供了標準化的 actor 隨機截距，$x$ 提供了標準化的 block 隨機截距。每頭大猩猩 actor 的隨機截距實際被定義爲：
+
+$$
+\alpha_j = \bar\alpha + z_j \sigma_\alpha
+$$
+
+每個實驗區塊 block 的隨機截距被定義爲：
+
+$$
+\gamma_j = x_j\sigma_\gamma
+$$
+
+現在我們來運行這個被重新改寫過的 `m13.4` 模型：
+
+
+```{r introBayes15-28, cache=TRUE, results='hide', eval=FALSE}
+set.seed(13)
+m13.4nc <- ulam(
+  alist(
+    pulled_left ~ dbinom(1, p), 
+    logit(p) <-  a_bar + z[actor]*sigma_a +    # actor intercepts
+                x[block_id]*sigma_g +        # block intercepts
+                b[treatment] ,
+    b[treatment] ~ dnorm( 0, 0.5 ), 
+    z[actor] ~ dnorm( 0, 1 ),
+    x[block_id] ~ dnorm( 0, 1 ), 
+    a_bar ~ dnorm( 0, 1.5 ), 
+    sigma_a ~ dexp(1), 
+    sigma_g ~ dexp(1), 
+    gq> vector[actor]: a <<- a_bar + z*sigma_a, 
+    gq> vector[block_id]: g<<- x*sigma_g
+  ), data = dat_list, chains = 4, cores = 4
+)
+
+saveRDS(m13.4nc, "../Stanfits/m13_4nc.rds")
+
+```
+
+
+`m13.4nc` 的 `n_eff` 顯然比 `m13.4` 改善很多，而且也沒有報錯：
+
+```{r introBayes15-29, cache=TRUE}
+m13.4nc <- readRDS("../Stanfits/m13_4nc.rds")
+precis(m13.4nc, depth = 2)
+```
+
+用圖形來比較 `m13.4` 和 `m13.4nc` 二者之間的 `n_eff` 更加直觀：
+
+
+```{r introBayes15-fig11, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Comparing the centered (horizontal) and non-centered (vertical) parameerizations of the multilevel chimpanzees model, m13.4. Each point is a parameter. All but two parameters lie above the diagonal, indicating better sampling for the non-centered parameterization.", fig.align='center'}
+precis_c <- precis( m13.4, depth = 2 )
+precis_nc <- precis( m13.4nc, depth = 2 )
+pars <- c( paste("a[", 1:7, "]", sep = ""), 
+           paste("g[", 1:6, "]", sep = ""), 
+           paste("b[", 1:4, "]", sep = ""), 
+           "a_bar", "sigma_a", "sigma_g")
+
+neff_table <- cbind( precis_c[pars, "n_eff"], 
+                     precis_nc[pars, "n_eff"])
+
+plot( neff_table, 
+      xlim = range(neff_table), 
+      ylim = range(neff_table), 
+      xlab = "n_eff (centered)", 
+      ylab = "n_eff (non-centered)", 
+      lwd = 2, 
+      bty = "n")
+abline(a = 0, b = 1, lty = 2)
+```
 
 

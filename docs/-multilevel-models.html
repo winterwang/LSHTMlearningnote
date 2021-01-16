@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2021-01-13" />
+<meta name="date" content="2021-01-16" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -918,6 +918,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="55.4" data-path="-multilevel-models.html"><a href="-multilevel-models.html#分散轉換與非中心型先驗概率-divergent-transition-and-non-centered-priors"><i class="fa fa-check"></i><b>55.4</b> 分散轉換與非中心型先驗概率 divergent transition and non-centered priors</a>
 <ul>
 <li class="chapter" data-level="55.4.1" data-path="-multilevel-models.html"><a href="-multilevel-models.html#魔鬼的漏斗-the-devils-funnel"><i class="fa fa-check"></i><b>55.4.1</b> 魔鬼的漏斗 the devil’s funnel</a></li>
+<li class="chapter" data-level="55.4.2" data-path="-multilevel-models.html"><a href="-multilevel-models.html#參數非中心化的黑猩猩數據"><i class="fa fa-check"></i><b>55.4.2</b> 參數非中心化的黑猩猩數據</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -2378,7 +2379,7 @@ p_i = \frac{\exp(\alpha_i)}{1 +\exp(\alpha_i)}
 <p><span class="math display">\[
 \begin{aligned}
 L_i &amp; \sim \text{Binomial}(1, p_i)  \\ 
-\text{logit} &amp; = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
+\text{logit}(p_i) &amp; = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
 \beta_j   &amp; \sim \text{Normal}(0, 0.5) \;\;\;\; \text{for } j = 1,\dots, 4\\
 \alpha_j  &amp; \sim \text{Normal}(\bar{\alpha}, \sigma_\alpha) \;\;\;\; \text{for } j = 1, \dots, 7 \\
 \color{green}{\gamma_j } &amp;\;  \color{green}{\sim \text{Normal}(0, \sigma_\gamma)\;\;\;\;\; \text{for } j = 1, \dots, 6} \\
@@ -2527,12 +2528,233 @@ Running the chains for more iterations may help. See
 http://mc-stan.org/misc/warnings.html#bulk-essTail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable.
 Running the chains for more iterations may help. See
 http://mc-stan.org/misc/warnings.html#tail-ess</code></pre>
-<p>模型運行給出的事後概率分佈也十分地糟糕：</p>
+<p>這個只有兩個參數需要估計的模型運行給出的事後概率分佈也十分地糟糕，上面的警告中給出了相當多的分散轉換 (divergent transitions) ，下面的模型運行結果總結也給出了特別差勁的 <code>n_eff, Rhat</code>：</p>
 <div class="sourceCode" id="cb1055"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1055-1"><a href="-multilevel-models.html#cb1055-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.7</span> <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../Stanfits/m13_7.rds&quot;</span>)</span>
 <span id="cb1055-2"><a href="-multilevel-models.html#cb1055-2" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(m13<span class="fl">.7</span>)</span></code></pre></div>
 <pre><code>##          mean          sd         5.5%      94.5%     n_eff     Rhat4
 ## v   1.7154855   2.3068647   -1.4054807  5.9914017 17.287243 1.1557813
 ## x -41.8446286 311.2534143 -271.8156635 47.4611106 92.111681 1.0141386</code></pre>
+<p>看一下它可憐的採樣軌跡圖 trace plot ：</p>
+<div class="sourceCode" id="cb1057"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1057-1"><a href="-multilevel-models.html#cb1057-1" aria-hidden="true" tabindex="-1"></a><span class="fu">traceplot</span>(m13<span class="fl">.7</span>)</span></code></pre></div>
+<pre><code>## [1] 1000
+## [1] 1
+## [1] 1000</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig08"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig08-1.png" alt="`traceplot(m13.7)`" width="576" />
+<p class="caption">
+圖 55.8: <code>traceplot(m13.7)</code>
+</p>
+</div>
+<p>我們可以簡單地通過修改模型的構建模式來克服這個問題。因爲變量 <span class="math inline">\(x\)</span> 的方差取決於 <span class="math inline">\(v\)</span>：</p>
+<p><span class="math display">\[
+x \sim \text{Normal}(0, \exp(v))
+\]</span></p>
+<p>變量 <span class="math inline">\(v\)</span> 決定了 <span class="math inline">\(x\)</span> 的方差大小，上面的這種模型結構被叫做參數中心化 (centered parameterization)，其涵義就是一個參數的分佈由另一個參數或者多個參數來決定。參數中心化之外的另一種選擇是參數非中心化 (non-centered parameterization)。這個非中心化就是把參數之間的依賴關係保留，但是在寫成模型的時候儘量避免在指定分佈的那行中加入兩個參數。例如可以把 <code>m13.7</code> 的表達式改寫成：</p>
+<p><span class="math display">\[
+\begin{aligned}
+v &amp; \sim \text{Normal}(0, 3) \\ 
+z &amp; \sim \text{Normal}(0, 1) \\ 
+x &amp; = z \exp(v)
+\end{aligned}
+\]</span></p>
+<p>很多人可能一開始不理解爲什麼要這樣寫。但是仔細想想應該不難理解，這其實是我們平時在把觀察值標準化的一個逆向過程。我們在把某個變量標準化的過程是怎樣的？通常是把它減去自己的平均值，然後除以自己的標準差。新產生的變量就是一個均值爲0，標準差是1的標準正（常）態分佈。也就是說，上面的表達式裏，我們通過 <span class="math inline">\(z\)</span>，一個標準正（常）態分佈變量，把 <span class="math inline">\(x\)</span> 和 <span class="math inline">\(v\)</span> 之間的關係串聯起來。<span class="math inline">\(x\)</span> 本身的均值是零，它除以自己的標準差 <span class="math inline">\(\frac{x}{\exp(v)}\)</span> 就成爲了一個標準正（常）態的變量 <span class="math inline">\(z\)</span>。經過這一番等價轉換之後模型變得可以順利在 Stan 裏被運行和採樣了。</p>
+<div class="sourceCode" id="cb1059"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1059-1"><a href="-multilevel-models.html#cb1059-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.7</span>nc <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1059-2"><a href="-multilevel-models.html#cb1059-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1059-3"><a href="-multilevel-models.html#cb1059-3" aria-hidden="true" tabindex="-1"></a>    v <span class="sc">~</span> <span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">3</span>), </span>
+<span id="cb1059-4"><a href="-multilevel-models.html#cb1059-4" aria-hidden="true" tabindex="-1"></a>    z <span class="sc">~</span> <span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb1059-5"><a href="-multilevel-models.html#cb1059-5" aria-hidden="true" tabindex="-1"></a>    gq<span class="sc">&gt;</span> real[<span class="dv">1</span>]<span class="sc">:</span> x <span class="ot">&lt;&lt;-</span> z<span class="sc">*</span><span class="fu">exp</span>(v)</span>
+<span id="cb1059-6"><a href="-multilevel-models.html#cb1059-6" aria-hidden="true" tabindex="-1"></a>  ), <span class="at">data =</span> <span class="fu">list</span>(<span class="at">N =</span> <span class="dv">1</span>), <span class="at">chains =</span> <span class="dv">4</span></span>
+<span id="cb1059-7"><a href="-multilevel-models.html#cb1059-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1059-8"><a href="-multilevel-models.html#cb1059-8" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(m13<span class="fl">.7</span>nc, <span class="st">&quot;../Stanfits/m13_7nc.rds&quot;</span>)</span></code></pre></div>
+<p>整個世界恢復了安靜。你看模型運行的結果也是正常的了：</p>
+<div class="sourceCode" id="cb1060"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1060-1"><a href="-multilevel-models.html#cb1060-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.7</span>nc <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../Stanfits/m13_7nc.rds&quot;</span>)</span>
+<span id="cb1060-2"><a href="-multilevel-models.html#cb1060-2" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(m13<span class="fl">.7</span>nc)</span></code></pre></div>
+<pre><code>##            mean           sd        5.5%      94.5%     n_eff     Rhat4
+## v -0.0287545661   2.95017093  -4.6421334  4.6942797 1267.2926 1.0028912
+## z -0.0093817719   0.97405443  -1.5831453  1.4929941 1459.2957 1.0004412
+## x  2.5224882198 197.04808870 -22.7731384 20.7557186 1787.5479 1.0006452</code></pre>
+<div class="sourceCode" id="cb1062"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1062-1"><a href="-multilevel-models.html#cb1062-1" aria-hidden="true" tabindex="-1"></a><span class="fu">traceplot</span>(m13<span class="fl">.7</span>nc)</span></code></pre></div>
+<pre><code>## [1] 1000
+## [1] 1
+## [1] 1000</code></pre>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig09"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig09-1.png" alt="`traceplot(m13.7nc)`" width="576" />
+<p class="caption">
+圖 55.9: <code>traceplot(m13.7nc)</code>
+</p>
+</div>
+<p>如果我們把此時採樣成功的 <span class="math inline">\(x\)</span> 和 <span class="math inline">\(v\)</span> 之間繪製散點圖，你就會直觀的看見這個像魔鬼一樣的漏斗的真實形狀：</p>
+<div class="sourceCode" id="cb1064"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1064-1"><a href="-multilevel-models.html#cb1064-1" aria-hidden="true" tabindex="-1"></a>dat.sam <span class="ot">&lt;-</span> <span class="fu">extract.samples</span>(m13<span class="fl">.7</span>nc)</span>
+<span id="cb1064-2"><a href="-multilevel-models.html#cb1064-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dat.sam<span class="sc">$</span>x, </span>
+<span id="cb1064-3"><a href="-multilevel-models.html#cb1064-3" aria-hidden="true" tabindex="-1"></a>     dat.sam<span class="sc">$</span>v, </span>
+<span id="cb1064-4"><a href="-multilevel-models.html#cb1064-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb1064-5"><a href="-multilevel-models.html#cb1064-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;x&quot;</span>,</span>
+<span id="cb1064-6"><a href="-multilevel-models.html#cb1064-6" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;v&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig10"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig10-1.png" alt="The devil's funnel." width="576" />
+<p class="caption">
+圖 55.10: The devil’s funnel.
+</p>
+</div>
+<p>我們成功地對這樣的近乎畸形的變量實施了轉換數據之後的事後樣本採集。</p>
+</div>
+<div id="參數非中心化的黑猩猩數據" class="section level3" number="55.4.2">
+<h3><span class="header-section-number">55.4.2</span> 參數非中心化的黑猩猩數據</h3>
+<p>接下來我們來試圖解決黑猩猩數據中使用多層回歸模型時出現的分散轉移 divergent transition 問題。當時我們的 <code>m13.4</code> 試圖給 <code>block</code> 增加隨機效應，當時在設定參數的先驗概率分佈時，設定了兩個參數在相同的行裏，他們也是導致模型運行報警的原因。現在我們可以來試着解決它。</p>
+<p><span class="math display">\[
+\begin{aligned}
+L_i &amp; \sim \text{Binomial}(1, p_i)  \\ 
+\text{logit}(p_i) &amp; = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
+\beta_j   &amp; \sim \text{Normal}(0, 0.5) \;\;\;\; \text{for } j = 1,\dots, 4\\
+\alpha_j  &amp; \sim \text{Normal}(\bar{\alpha}, \sigma_\alpha) \;\;\;\; \text{for } j = 1, \dots, 7 \\
+\color{green}{\gamma_j } &amp;\;  \color{green}{\sim \text{Normal}(0, \sigma_\gamma)\;\;\;\;\; \text{for } j = 1, \dots, 6} \\
+\bar{\alpha}  &amp; \sim \text{Normal}(0, 1.5) \\ 
+\sigma_\alpha &amp; \sim \text{Exponential} (1) \\
+\color{green}{\sigma_\gamma} &amp; \;\color{green}{ \sim \text{Exponential}(1)}
+\end{aligned}
+\]</span></p>
+<p>在對模型進行重新參數化之前，我們可以先試着在 Stan 內部嘗試調整 <code>adapt_delta</code> ，它原本默認的大小是 0.95：</p>
+<div class="sourceCode" id="cb1065"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1065-1"><a href="-multilevel-models.html#cb1065-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2020</span>)</span>
+<span id="cb1065-2"><a href="-multilevel-models.html#cb1065-2" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.4</span>b <span class="ot">&lt;-</span> <span class="fu">ulam</span>(m13<span class="fl">.4</span>, <span class="at">chains =</span> <span class="dv">4</span>, </span>
+<span id="cb1065-3"><a href="-multilevel-models.html#cb1065-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">cores =</span> <span class="dv">4</span>, </span>
+<span id="cb1065-4"><a href="-multilevel-models.html#cb1065-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.99</span>))</span>
+<span id="cb1065-5"><a href="-multilevel-models.html#cb1065-5" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(m13<span class="fl">.4</span>b, <span class="st">&quot;../Stanfits/m13_4b.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1066"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1066-1"><a href="-multilevel-models.html#cb1066-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.4</span>b <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../Stanfits/m13_4b.rds&quot;</span>)</span>
+<span id="cb1066-2"><a href="-multilevel-models.html#cb1066-2" aria-hidden="true" tabindex="-1"></a><span class="fu">divergent</span>(m13<span class="fl">.4</span>b)</span></code></pre></div>
+<pre><code>## [1] 5</code></pre>
+<p>可見修改這個 <code>adapt_delta</code> 也沒有辦法提升太多，它依然在報錯。當然偶爾也能真的解決問題，實在是在看你的運氣。而且很多時候，即使它不再通過電腦系統警告，它實際採集的事後樣本也是十分低效的。你可以觀察 <code>precis(m13.4b)</code> 給出的 <code>n_eff</code>，也就是有效樣本量其實很多都還是小於500的。實際使用4条獨立採集鏈每條500個獨立樣本的總樣本量應該在2000左右。</p>
+<div class="sourceCode" id="cb1068"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1068-1"><a href="-multilevel-models.html#cb1068-1" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(m13<span class="fl">.4</span>b, <span class="at">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##                  mean         sd         5.5%        94.5%      n_eff     Rhat4
+## b[1]    -0.1572102900 0.30678784 -0.639271495  0.343564769  402.50898 1.0133566
+## b[2]     0.3760131051 0.29844899 -0.097009535  0.852948659  438.79219 1.0067294
+## b[3]    -0.4949120780 0.30808988 -1.001918025 -0.017546887  418.26237 1.0100785
+## b[4]     0.2581843386 0.30676503 -0.246029052  0.754586625  414.13612 1.0107870
+## a[1]    -0.3475363401 0.36432862 -0.926144369  0.200724744  437.14385 1.0091803
+## a[2]     4.5946727777 1.21993398  3.006558784  6.800638368  619.43260 1.0103146
+## a[3]    -0.6335415787 0.36505148 -1.198982995 -0.042148804  389.82795 1.0122092
+## a[4]    -0.6393672456 0.36432523 -1.227955826 -0.078705404  464.07412 1.0089550
+## a[5]    -0.3338642974 0.37663905 -0.946543034  0.275166346  473.68551 1.0118031
+## a[6]     0.5991703820 0.37498622  0.026426968  1.186117279  457.28046 1.0091865
+## a[7]     2.1471699790 0.45691772  1.450735749  2.914264702  533.10034 1.0133078
+## g[1]    -0.1428730829 0.20044449 -0.525017505  0.070405136  471.73005 1.0111776
+## g[2]     0.0387465222 0.15132335 -0.168327269  0.306505379  682.87717 1.0038622
+## g[3]     0.0505496597 0.15814008 -0.155178555  0.328932444  767.76580 1.0058225
+## g[4]     0.0089953387 0.15486352 -0.230211915  0.257745757 1082.25766 1.0003697
+## g[5]    -0.0225651857 0.16089717 -0.292705183  0.227528171 1291.59183 1.0018525
+## g[6]     0.0996398014 0.18231717 -0.116919531  0.447152911  506.41514 1.0121506
+## a_bar    0.5884998301 0.74455413 -0.641517611  1.727670676  572.43485 1.0061693
+## sigma_a  1.9687830785 0.63396246  1.175349730  3.176123372  897.43947 1.0017410
+## sigma_g  0.1856985870 0.16517592  0.012759445  0.499172450  233.36486 1.0295059</code></pre>
+<p>如果通過修改參數的形式使之去中心化，則能夠大大改善模型的運行。這個模型裏需要修改參數化的主要是這兩行：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\alpha_j &amp; \sim \text{Normal}(\bar\alpha, \sigma_\alpha) &amp; \text{[intercepts for actors]}\\ 
+\gamma_j &amp; \sim \text{Normal}(0, \sigma_\gamma)&amp; \text{[intercepts for blocks]}
+\end{aligned}
+\]</span></p>
+<p>這裏面其實有三個“中心化”的參數：<span class="math inline">\(\bar\alpha, \sigma_\alpha, \sigma_\gamma\)</span>。使用類似 <code>m13.7nc</code> 的方法，我們需要爲他們設定標準化的替代參數：</p>
+<p><span class="math display">\[
+\begin{aligned}
+L_i &amp; \sim \text{Binomial}(1, p_i) \\ 
+\text{logit}(p_i) &amp; = \color{lightblue}{\underbrace{\bar\alpha + z_{\text{ACTOR[i]}}\sigma_\alpha}_{\alpha_\text{ACTOR[i]}}} + \color{lightblue}{\underbrace{x_{\text{BLOCK}[i]}\sigma_\gamma}_{\gamma_\text{BLOCK[i]}}} + \beta_{\text{TREATMENT}[i]} \\
+\beta_j &amp; \sim \text{Normal}(0, 0.5), \text{ for } j = 1,\dots,4 \\ 
+\color{lightblue}{z_j} &amp; \color{lightblue}{\; \sim \text{Normal}(0,1)} &amp; \text{[Standardized actor intercepts]} \\
+\color{lightblue}{x_j} &amp; \color{lightblue}{\; \sim \text{Normal}(0,1)} &amp; \text{[Standardized block intercepts]} \\
+\bar{\alpha} &amp; \sim \text{Normal}(0, 1.5) \\ 
+\sigma_\alpha &amp; \sim \text{Exponential}(1) \\
+\sigma_\gamma &amp; \sim \text{Exponential}(1)
+\end{aligned}
+\]</span></p>
+<p>不難發現經過修改厚的模型中向量 <span class="math inline">\(z\)</span> 提供了標準化的 actor 隨機截距，<span class="math inline">\(x\)</span> 提供了標準化的 block 隨機截距。每頭大猩猩 actor 的隨機截距實際被定義爲：</p>
+<p><span class="math display">\[
+\alpha_j = \bar\alpha + z_j \sigma_\alpha
+\]</span></p>
+<p>每個實驗區塊 block 的隨機截距被定義爲：</p>
+<p><span class="math display">\[
+\gamma_j = x_j\sigma_\gamma
+\]</span></p>
+<p>現在我們來運行這個被重新改寫過的 <code>m13.4</code> 模型：</p>
+<div class="sourceCode" id="cb1070"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1070-1"><a href="-multilevel-models.html#cb1070-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">13</span>)</span>
+<span id="cb1070-2"><a href="-multilevel-models.html#cb1070-2" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.4</span>nc <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1070-3"><a href="-multilevel-models.html#cb1070-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1070-4"><a href="-multilevel-models.html#cb1070-4" aria-hidden="true" tabindex="-1"></a>    pulled_left <span class="sc">~</span> <span class="fu">dbinom</span>(<span class="dv">1</span>, p), </span>
+<span id="cb1070-5"><a href="-multilevel-models.html#cb1070-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">logit</span>(p) <span class="ot">&lt;-</span>  a_bar <span class="sc">+</span> z[actor]<span class="sc">*</span>sigma_a <span class="sc">+</span>    <span class="co"># actor intercepts</span></span>
+<span id="cb1070-6"><a href="-multilevel-models.html#cb1070-6" aria-hidden="true" tabindex="-1"></a>                x[block_id]<span class="sc">*</span>sigma_g <span class="sc">+</span>        <span class="co"># block intercepts</span></span>
+<span id="cb1070-7"><a href="-multilevel-models.html#cb1070-7" aria-hidden="true" tabindex="-1"></a>                b[treatment] ,</span>
+<span id="cb1070-8"><a href="-multilevel-models.html#cb1070-8" aria-hidden="true" tabindex="-1"></a>    b[treatment] <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="fl">0.5</span> ), </span>
+<span id="cb1070-9"><a href="-multilevel-models.html#cb1070-9" aria-hidden="true" tabindex="-1"></a>    z[actor] <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">1</span> ),</span>
+<span id="cb1070-10"><a href="-multilevel-models.html#cb1070-10" aria-hidden="true" tabindex="-1"></a>    x[block_id] <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">1</span> ), </span>
+<span id="cb1070-11"><a href="-multilevel-models.html#cb1070-11" aria-hidden="true" tabindex="-1"></a>    a_bar <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="fl">1.5</span> ), </span>
+<span id="cb1070-12"><a href="-multilevel-models.html#cb1070-12" aria-hidden="true" tabindex="-1"></a>    sigma_a <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb1070-13"><a href="-multilevel-models.html#cb1070-13" aria-hidden="true" tabindex="-1"></a>    sigma_g <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>), </span>
+<span id="cb1070-14"><a href="-multilevel-models.html#cb1070-14" aria-hidden="true" tabindex="-1"></a>    gq<span class="sc">&gt;</span> vector[actor]<span class="sc">:</span> a <span class="ot">&lt;&lt;-</span> a_bar <span class="sc">+</span> z<span class="sc">*</span>sigma_a, </span>
+<span id="cb1070-15"><a href="-multilevel-models.html#cb1070-15" aria-hidden="true" tabindex="-1"></a>    gq<span class="sc">&gt;</span> vector[block_id]<span class="sc">:</span> g<span class="ot">&lt;&lt;-</span> x<span class="sc">*</span>sigma_g</span>
+<span id="cb1070-16"><a href="-multilevel-models.html#cb1070-16" aria-hidden="true" tabindex="-1"></a>  ), <span class="at">data =</span> dat_list, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span></span>
+<span id="cb1070-17"><a href="-multilevel-models.html#cb1070-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1070-18"><a href="-multilevel-models.html#cb1070-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1070-19"><a href="-multilevel-models.html#cb1070-19" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(m13<span class="fl">.4</span>nc, <span class="st">&quot;../Stanfits/m13_4nc.rds&quot;</span>)</span></code></pre></div>
+<p><code>m13.4nc</code> 的 <code>n_eff</code> 顯然比 <code>m13.4</code> 改善很多，而且也沒有報錯：</p>
+<div class="sourceCode" id="cb1071"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1071-1"><a href="-multilevel-models.html#cb1071-1" aria-hidden="true" tabindex="-1"></a>m13<span class="fl">.4</span>nc <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../Stanfits/m13_4nc.rds&quot;</span>)</span>
+<span id="cb1071-2"><a href="-multilevel-models.html#cb1071-2" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(m13<span class="fl">.4</span>nc, <span class="at">depth =</span> <span class="dv">2</span>)</span></code></pre></div>
+<pre><code>##                  mean         sd          5.5%         94.5%      n_eff      Rhat4
+## b[1]    -0.1373449475 0.30100329 -0.6152752117  0.3434728833 1109.20149 1.00595881
+## b[2]     0.3888674543 0.31027407 -0.0889388119  0.8914549736 1126.93533 1.00365251
+## b[3]    -0.4870408411 0.30935145 -0.9839392550  0.0070806699 1149.30896 1.00403385
+## b[4]     0.2675311406 0.29608590 -0.2053236335  0.7265043819 1139.59722 1.00422956
+## z[1]    -0.5139834523 0.39675770 -1.1678480395  0.0977745452  570.20117 1.01007561
+## z[2]     2.1279913179 0.64805501  1.1422861675  3.2224402595  834.76934 1.00325956
+## z[3]    -0.6837229179 0.41584942 -1.3577540963 -0.0245178170  569.57612 1.00789383
+## z[4]    -0.6869211727 0.40944901 -1.3445954812 -0.0236560772  568.85572 1.00689660
+## z[5]    -0.5172173982 0.39191673 -1.1403129550  0.1034563609  590.52189 1.00843504
+## z[6]    -0.0016439012 0.36846295 -0.5776370019  0.5809683677  556.94923 1.00899136
+## z[7]     0.8286856465 0.45469306  0.1351884604  1.5921906220  577.79040 1.00723877
+## x[1]    -0.6899484779 0.92017834 -2.1405682214  0.7927252571 1879.62650 1.00020587
+## x[2]     0.1683882817 0.82967260 -1.2074554330  1.4459472568 1988.35621 0.99902014
+## x[3]     0.1883825661 0.88729551 -1.3445548516  1.5454719722 1599.57387 0.99934747
+## x[4]     0.0736859911 0.87573225 -1.3284010857  1.5004526253 1872.59855 0.99969896
+## x[5]    -0.1579854442 0.86476793 -1.5691453644  1.1965664548 1965.01018 1.00022145
+## x[6]     0.4404814966 0.83099134 -0.9035996548  1.7467719731 2034.08888 1.00044538
+## a_bar    0.5966686669 0.72455365 -0.5512172079  1.7547745106  457.50619 1.01001900
+## sigma_a  1.9868039280 0.62475020  1.1935664496  3.0806919070  548.75222 1.01023381
+## sigma_g  0.2055282086 0.16780483  0.0170035585  0.5116821942 1035.04896 1.00196218
+## g[1]    -0.1659934915 0.21774107 -0.5702435381  0.0761933321 1360.43058 1.00156195
+## g[2]     0.0426012678 0.17846856 -0.2168633003  0.3449450507 2239.18753 1.00002541
+## g[3]     0.0505519252 0.17811492 -0.1941666909  0.3582976624 1811.46328 0.99948636
+## g[4]     0.0143612958 0.17667352 -0.2641923950  0.2970075014 1916.45293 0.99928424
+## g[5]    -0.0349256905 0.17496328 -0.3471585015  0.2205464443 1695.10486 1.00045918
+## g[6]     0.1072076540 0.19605102 -0.1279119869  0.4622580054 1506.23216 1.00111282
+## a[1]    -0.3404283451 0.36533335 -0.9132766082  0.2629761164 1281.86213 1.00166555
+## a[2]     4.6517792446 1.26372873  3.0195252176  6.7913091202 1291.08110 1.00269334
+## a[3]    -0.6469904859 0.36686590 -1.2332357909 -0.0507023244 1220.56241 1.00349456
+## a[4]    -0.6567906671 0.37266026 -1.2479210814 -0.0427601862 1359.97407 1.00534633
+## a[5]    -0.3469747466 0.37267807 -0.9282008426  0.2647662951 1230.41847 1.00636946
+## a[6]     0.5924776232 0.37474838  0.0034196068  1.2016656784 1213.69242 1.00800165
+## a[7]     2.1128718972 0.47064296  1.3943355597  2.8918979665 1700.68726 1.00210149</code></pre>
+<p>用圖形來比較 <code>m13.4</code> 和 <code>m13.4nc</code> 二者之間的 <code>n_eff</code> 更加直觀：</p>
+<div class="sourceCode" id="cb1073"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1073-1"><a href="-multilevel-models.html#cb1073-1" aria-hidden="true" tabindex="-1"></a>precis_c <span class="ot">&lt;-</span> <span class="fu">precis</span>( m13<span class="fl">.4</span>, <span class="at">depth =</span> <span class="dv">2</span> )</span>
+<span id="cb1073-2"><a href="-multilevel-models.html#cb1073-2" aria-hidden="true" tabindex="-1"></a>precis_nc <span class="ot">&lt;-</span> <span class="fu">precis</span>( m13<span class="fl">.4</span>nc, <span class="at">depth =</span> <span class="dv">2</span> )</span>
+<span id="cb1073-3"><a href="-multilevel-models.html#cb1073-3" aria-hidden="true" tabindex="-1"></a>pars <span class="ot">&lt;-</span> <span class="fu">c</span>( <span class="fu">paste</span>(<span class="st">&quot;a[&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>, <span class="st">&quot;]&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;&quot;</span>), </span>
+<span id="cb1073-4"><a href="-multilevel-models.html#cb1073-4" aria-hidden="true" tabindex="-1"></a>           <span class="fu">paste</span>(<span class="st">&quot;g[&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>, <span class="st">&quot;]&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;&quot;</span>), </span>
+<span id="cb1073-5"><a href="-multilevel-models.html#cb1073-5" aria-hidden="true" tabindex="-1"></a>           <span class="fu">paste</span>(<span class="st">&quot;b[&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="st">&quot;]&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;&quot;</span>), </span>
+<span id="cb1073-6"><a href="-multilevel-models.html#cb1073-6" aria-hidden="true" tabindex="-1"></a>           <span class="st">&quot;a_bar&quot;</span>, <span class="st">&quot;sigma_a&quot;</span>, <span class="st">&quot;sigma_g&quot;</span>)</span>
+<span id="cb1073-7"><a href="-multilevel-models.html#cb1073-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1073-8"><a href="-multilevel-models.html#cb1073-8" aria-hidden="true" tabindex="-1"></a>neff_table <span class="ot">&lt;-</span> <span class="fu">cbind</span>( precis_c[pars, <span class="st">&quot;n_eff&quot;</span>], </span>
+<span id="cb1073-9"><a href="-multilevel-models.html#cb1073-9" aria-hidden="true" tabindex="-1"></a>                     precis_nc[pars, <span class="st">&quot;n_eff&quot;</span>])</span>
+<span id="cb1073-10"><a href="-multilevel-models.html#cb1073-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1073-11"><a href="-multilevel-models.html#cb1073-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( neff_table, </span>
+<span id="cb1073-12"><a href="-multilevel-models.html#cb1073-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">xlim =</span> <span class="fu">range</span>(neff_table), </span>
+<span id="cb1073-13"><a href="-multilevel-models.html#cb1073-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">ylim =</span> <span class="fu">range</span>(neff_table), </span>
+<span id="cb1073-14"><a href="-multilevel-models.html#cb1073-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;n_eff (centered)&quot;</span>, </span>
+<span id="cb1073-15"><a href="-multilevel-models.html#cb1073-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">ylab =</span> <span class="st">&quot;n_eff (non-centered)&quot;</span>, </span>
+<span id="cb1073-16"><a href="-multilevel-models.html#cb1073-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">lwd =</span> <span class="dv">2</span>, </span>
+<span id="cb1073-17"><a href="-multilevel-models.html#cb1073-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb1073-18"><a href="-multilevel-models.html#cb1073-18" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">a =</span> <span class="dv">0</span>, <span class="at">b =</span> <span class="dv">1</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes15-fig11"></span>
+<img src="bookdown_files/figure-html/introBayes15-fig11-1.png" alt="Comparing the centered (horizontal) and non-centered (vertical) parameerizations of the multilevel chimpanzees model, m13.4. Each point is a parameter. All but two parameters lie above the diagonal, indicating better sampling for the non-centered parameterization." width="576" />
+<p class="caption">
+圖 55.11: Comparing the centered (horizontal) and non-centered (vertical) parameerizations of the multilevel chimpanzees model, m13.4. Each point is a parameter. All but two parameters lie above the diagonal, indicating better sampling for the non-centered parameterization.
+</p>
+</div>
 
 </div>
 </div>
