@@ -606,16 +606,38 @@ Running the chains for more iterations may help. See
 http://mc-stan.org/misc/warnings.html#tail-ess
 ```
 
-這個只有兩個參數需要估計的模型運行給出的事後概率分佈也十分地糟糕，上面的警告中給出了相當多的分散轉換 (divergent transitions) ：
+這個只有兩個參數需要估計的模型運行給出的事後概率分佈也十分地糟糕，上面的警告中給出了相當多的分散轉換 (divergent transitions) ，下面的模型運行結果總結也給出了特別差勁的 `n_eff, Rhat`：
 
 ```{r  introBayes15-22, cache=TRUE}
 m13.7 <- readRDS("../Stanfits/m13_7.rds")
 precis(m13.7)
 ```
 
+看一下它可憐的採樣軌跡圖 trace plot ：
+
+```{r introBayes15-fig08, cache=FALSE, fig.width=6, fig.height=3.5,  fig.cap="`traceplot(m13.7)`", fig.align='center', message=FALSE}
+traceplot(m13.7)
+```
 
 
+我們可以簡單地通過修改模型的構建模式來克服這個問題。因爲變量 $x$ 的方差取決於 $v$： 
 
+$$
+x \sim \text{Normal}(0, \exp(v))
+$$
+
+變量 $v$ 決定了 $x$ 的方差大小，上面的這種模型結構被叫做參數中心化 (centered parameterization)，其涵義就是一個參數的分佈由另一個參數或者多個參數來決定。參數中心化之外的另一種選擇是參數非中心化 (non-centered parameterization)。這個非中心化就是把參數之間的依賴關係保留，但是在寫成模型的時候儘量避免在指定分佈的那行中加入兩個參數。例如可以把 `m13.7` 的表達式改寫成：
+
+
+$$
+\begin{aligned}
+v & \sim \text{Normal}(0, 3) \\ 
+z & \sim \text{Normal}(0, 1) \\ 
+x & = z \exp(v)
+\end{aligned}
+$$
+
+很多人可能一開始不理解爲什麼要這樣寫。但是這其實是我們平時在把觀察值標準化的一個逆向過程。我們在給
 
 
 
