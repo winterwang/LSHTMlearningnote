@@ -451,7 +451,7 @@ str(d)
 $$
 \begin{aligned}
 L_i & \sim \text{Binomial}(1, p_i)  \\ 
-\text{logit} & = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
+\text{logit}(p_i) & = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
 \beta_j   & \sim \text{Normal}(0, 0.5) \;\;\;\; \text{for } j = 1,\dots, 4\\
 \alpha_j  & \sim \text{Normal}(\bar{\alpha}, \sigma_\alpha) \;\;\;\; \text{for } j = 1, \dots, 7 \\
 \color{green}{\gamma_j } &\;  \color{green}{\sim \text{Normal}(0, \sigma_\gamma)\;\;\;\;\; \text{for } j = 1, \dots, 6} \\
@@ -660,6 +660,82 @@ precis(m13.7nc)
 
 
 
+```{r introBayes15-fig09, cache=FALSE, fig.width=6, fig.height=3.5,  fig.cap="`traceplot(m13.7nc)`", fig.align='center', message=FALSE}
+traceplot(m13.7nc)
+```
 
+
+
+
+
+如果我們把此時採樣成功的 $x$ 和 $v$ 之間繪製散點圖，你就會直觀的看見這個像魔鬼一樣的漏斗的真實形狀：
+
+
+```{r introBayes15-fig10, cache=FALSE, fig.width=4, fig.height=3.5,  fig.cap="The devil's funnel.", fig.align='center', message=FALSE}
+dat.sam <- extract.samples(m13.7nc)
+plot(dat.sam$x, 
+     dat.sam$v, 
+     bty = "n", 
+     xlab = "x",
+     ylab = "v")
+```
+
+
+
+我們成功地對這樣的近乎畸形的變量實施了轉換數據之後的事後樣本採集。
+
+### 參數非中心化的黑猩猩數據
+
+接下來我們來試圖解決黑猩猩數據中使用多層回歸模型時出現的分散轉移 divergent transition 問題。當時我們的 `m13.4` 試圖給 `block` 增加隨機效應，當時在設定參數的先驗概率分佈時，設定了兩個參數在相同的行裏，他們也是導致模型運行報警的原因。現在我們可以來試着解決它。
+
+
+$$
+\begin{aligned}
+L_i & \sim \text{Binomial}(1, p_i)  \\ 
+\text{logit}(p_i) & = \alpha_{\text{ACTOR}[i]} + \color{green}{\gamma_{\text{BLOCK}[i]}} + \beta_{\text{TREATMENT}[i]}\\
+\beta_j   & \sim \text{Normal}(0, 0.5) \;\;\;\; \text{for } j = 1,\dots, 4\\
+\alpha_j  & \sim \text{Normal}(\bar{\alpha}, \sigma_\alpha) \;\;\;\; \text{for } j = 1, \dots, 7 \\
+\color{green}{\gamma_j } &\;  \color{green}{\sim \text{Normal}(0, \sigma_\gamma)\;\;\;\;\; \text{for } j = 1, \dots, 6} \\
+\bar{\alpha}  & \sim \text{Normal}(0, 1.5) \\ 
+\sigma_\alpha & \sim \text{Exponential} (1) \\
+\color{green}{\sigma_\gamma} & \;\color{green}{ \sim \text{Exponential}(1)}
+\end{aligned}
+$$
+
+在對模型進行重新參數化之前，我們可以先試着在 Stan 內部嘗試調整 `adapt_delta` ，它原本默認的大小是 0.95：
+
+
+```{r introBayes15-25, cache=TRUE, results='hide', eval=FALSE}
+set.seed(2020)
+m13.4b <- ulam(m13.4, chains = 4, 
+               cores = 4, 
+               control = list(adapt_delta = 0.99))
+saveRDS(m13.4b, "../Stanfits/m13_4b.rds")
+
+```
+
+
+
+```{r  introBayes15-26, cache=TRUE}
+m13.4b <- readRDS("../Stanfits/m13_4b.rds")
+divergent(m13.4b)
+```
+
+可見修改這個 `adapt_delta` 也沒有辦法提升太多，它依然在報錯。當然偶爾也能真的解決問題，實在是在看你的運氣。而且很多時候，即使它不再通過電腦系統警告，它實際採集的事後樣本也是十分低效的。你可以觀察 `precis(m13.4b)` 給出的 `n_eff`，也就是有效樣本量其實很多都還是小於500的。實際使用4条獨立採集鏈每條500個獨立樣本的總樣本量應該在2000左右。
+
+```{r introBayes15-27, cache=TRUE}
+precis(m13.4b, depth = 2)
+```
+
+
+如果通過修改參數的形式使之去中心化，則能夠大大改善模型的運行。這個模型需要修改參數化的主要是這兩行：
+
+
+$$
+\begin{aligned}
+\alpha_j & \sim \text{Normal}(\bar\alpha, \sigma_\alpha) & \text{[intercepts for actors]}\\ 
+\gamma_j & \sim \text{Normal}(0, \sigma_\gamma)& \text{[intercepts for blocks]}
+\end{aligned}
+$$
 
 
