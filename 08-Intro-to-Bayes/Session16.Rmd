@@ -78,3 +78,55 @@ set.seed(5)
 vary_effects <- mvrnorm( N_cafes, Mu, Sigma )
 ```
 
+現在看看我們採集的這個20家咖啡的樣本數據 `vary_effect` ，它現在應該是一個有 20 行 2  列的矩陣：
+
+
+```{r introBayes16-07, cache=TRUE}
+vary_effects
+```
+
+每一行就是一家咖啡店的數據。第一列是截距，第二列是斜率。我們來把他們各自提取出來命名：
+
+```{r introBayes16-08, cache=TRUE}
+a_cafe <- vary_effects[, 1] # the intercepts
+b_cafe <- vary_effects[, 2] # the slopes
+```
+
+下面的代碼把上面採集的截距和斜率數據之間的關係繪製成帶有橢圓形二維高斯分佈的散點關係圖：
+
+
+```{r introBayes16-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="20 cafes sampled from a statistial population. The horizontal axis is the intercept (average morning wait) for each cafe. The vertical axis is the slope (average difference between afternnon and morning wait) for each cafe. The gray ellipses illustrate the multivariate Gaussian population of intercepts and slopes.", fig.align='center'}
+plot( a_cafe, b_cafe, col = rangi2, 
+      xlab = "intercepts (a_cafe)", 
+      ylab = "slopes (b_cafe)")
+
+# overlay population distribution
+
+# library(ellipse)
+for ( l in c(0.1, 0.3, 0.5, 0.8, 0.99) )
+  lines(ellipse::ellipse(Sigma, centre = Mu, level = l), col = col.alpha('black', 0.2))
+```
+
+### 模擬觀察值 simulate observations 
+
+上文中的 `vary_effects` 模擬的是20家餐廳的特徵值（也就是參數），並非實際上午/下午等待時間的觀察值。接下來我們可以模擬採集每家咖啡店的等待時間了。我們假設派機器人去每家餐廳十次，5次上午，5次下午，記錄每次的點餐等待時間，一共200次的觀察結果：
+
+```{r introBayes16-09, cache=TRUE}
+set.seed(22)
+N_visits <- 10
+
+afternoon <- rep(0:1, N_visits * N_cafes / 2)
+
+cafe_id <- rep( 1:N_cafes, each = N_visits )
+
+mu <- a_cafe[cafe_id] + b_cafe[cafe_id] * afternoon
+sigma <- 0.5 # std dev within cafes
+
+wait <- rnorm( N_visits*N_cafes, mu, sigma )
+
+d <- data.frame( cafe = cafe_id, afternoon = afternoon, wait = wait)
+```
+
+
+
+
