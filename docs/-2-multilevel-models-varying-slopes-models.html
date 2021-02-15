@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2021-02-09" />
+<meta name="date" content="2021-02-15" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -785,7 +785,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="56" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html"><i class="fa fa-check"></i><b>56</b> 貝葉斯多層回歸模型2 隨機斜率模型 multilevel models – varying slopes models</a><ul>
-<li class="chapter" data-level="56.1" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html#模擬隨機斜率數據"><i class="fa fa-check"></i><b>56.1</b> 模擬隨機斜率數據</a></li>
+<li class="chapter" data-level="56.1" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html#模擬隨機斜率數據"><i class="fa fa-check"></i><b>56.1</b> 模擬隨機斜率數據</a><ul>
+<li class="chapter" data-level="56.1.1" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html#模擬觀察值-simulate-observations"><i class="fa fa-check"></i><b>56.1.1</b> 模擬觀察值 simulate observations</a></li>
+</ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
 <li class="chapter" data-level="57" data-path="revision.html"><a href="revision.html"><i class="fa fa-check"></i><b>57</b> 重要概念複習</a><ul>
@@ -1566,7 +1568,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1><span class="header-section-number">第 56 章</span> 貝葉斯多層回歸模型2 隨機斜率模型 multilevel models – varying slopes models</h1>
 <div id="模擬隨機斜率數據" class="section level2">
 <h2><span class="header-section-number">56.1</span> 模擬隨機斜率數據</h2>
-<p>先定義機器人可能造訪的咖啡數據人羣 (population of cafes)。我們需要定義的有早晨和下午的平均等待時間 (average wait time)，還有二者之間的相關係數 (correlation coefficient)。我們現在 R 裏面定義這幾個關鍵的參數，然後從中採集咖啡店樣本：</p>
+<p>先定義機器人可能造訪的咖啡數據人羣 (population of cafes)。我們需要定義的有早晨和下午的平均等待時間 (average wait time)，還有二者之間的相關係數 (correlation coefficient)。先在 R 裏面定義這幾個關鍵的參數，然後從中採集咖啡店樣本：</p>
 <div class="sourceCode" id="cb1076"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1076-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1076-1"></a>a &lt;-<span class="st"> </span><span class="fl">3.5</span>                <span class="co"># average morning wait time</span></span>
 <span id="cb1076-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1076-2"></a>b &lt;-<span class="st"> </span>(<span class="op">-</span><span class="dv">1</span>)               <span class="co"># average difference afternoon wait time</span></span>
 <span id="cb1076-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1076-3"></a>sigma_a &lt;-<span class="st"> </span><span class="dv">1</span>            <span class="co"># standard dev in intercepts</span></span>
@@ -1608,7 +1610,72 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## [1,]  1.00 -0.35
 ## [2,] -0.35  0.25</code></pre>
 <p>第二種方法看起來稍微複雜些，但是有助於理解我們在貝葉斯模型中對這些參數設定先驗概率分佈的方法。</p>
+<p>接下來我們可以開始採集咖啡店數據樣本了。假設我們只想要採集20家咖啡店的等待數據，那麼先定義：</p>
+<div class="sourceCode" id="cb1082"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1082-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1082-1"></a>N_cafes &lt;-<span class="st"> </span><span class="dv">20</span></span></code></pre></div>
+<p>讓計算機模擬這20家咖啡店的等待時間數據，我們需要做的就是指定它們之間的關係，也就是使用上面定義好的斜率，截距之間的二維高斯分佈矩陣：</p>
+<div class="sourceCode" id="cb1083"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1083-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1083-1"></a><span class="kw">library</span>(MASS)</span>
+<span id="cb1083-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1083-2"></a><span class="kw">set.seed</span>(<span class="dv">5</span>)</span>
+<span id="cb1083-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1083-3"></a>vary_effects &lt;-<span class="st"> </span><span class="kw">mvrnorm</span>( N_cafes, Mu, Sigma )</span></code></pre></div>
+<p>現在看看我們採集的這個20家咖啡的樣本數據 <code>vary_effect</code> ，它現在應該是一個有 20 行 2 列的矩陣：</p>
+<div class="sourceCode" id="cb1084"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1084-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1084-1"></a>vary_effects</span></code></pre></div>
+<pre><code>##            [,1]        [,2]
+##  [1,] 4.2239624 -1.60935645
+##  [2,] 2.0104980 -0.75177037
+##  [3,] 4.5658109 -1.94826458
+##  [4,] 3.3436353 -1.19265388
+##  [5,] 1.7009705 -0.58556181
+##  [6,] 4.1343727 -1.14445388
+##  [7,] 3.7944692 -1.62646613
+##  [8,] 3.9465976 -1.71527939
+##  [9,] 3.8642671 -0.90716770
+## [10,] 3.4676137 -0.68040541
+## [11,] 2.2428755 -0.61815155
+## [12,] 4.1595055 -1.65921204
+## [13,] 4.3002830 -2.11254740
+## [14,] 3.5069480 -1.44064299
+## [15,] 4.3820864 -1.87989834
+## [16,] 3.5211329 -1.35069860
+## [17,] 4.2167127 -0.91927985
+## [18,] 5.9130025 -1.23136238
+## [19,] 3.4773057 -0.35703411
+## [20,] 3.7748988 -1.05704571</code></pre>
+<p>每一行就是一家咖啡店的數據。第一列是截距，第二列是斜率。我們來把他們各自提取出來命名：</p>
+<div class="sourceCode" id="cb1086"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1086-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1086-1"></a>a_cafe &lt;-<span class="st"> </span>vary_effects[, <span class="dv">1</span>] <span class="co"># the intercepts</span></span>
+<span id="cb1086-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1086-2"></a>b_cafe &lt;-<span class="st"> </span>vary_effects[, <span class="dv">2</span>] <span class="co"># the slopes</span></span></code></pre></div>
+<p>下面的代碼把上面採集的截距和斜率數據之間的關係繪製成帶有橢圓形二維高斯分佈的散點關係圖：</p>
+<div class="sourceCode" id="cb1087"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1087-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-1"></a><span class="kw">plot</span>( a_cafe, b_cafe, <span class="dt">col =</span> rangi2, </span>
+<span id="cb1087-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-2"></a>      <span class="dt">xlab =</span> <span class="st">&quot;intercepts (a_cafe)&quot;</span>, </span>
+<span id="cb1087-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-3"></a>      <span class="dt">ylab =</span> <span class="st">&quot;slopes (b_cafe)&quot;</span>)</span>
+<span id="cb1087-4"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-4"></a></span>
+<span id="cb1087-5"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-5"></a><span class="co"># overlay population distribution</span></span>
+<span id="cb1087-6"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-6"></a></span>
+<span id="cb1087-7"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-7"></a><span class="co"># library(ellipse)</span></span>
+<span id="cb1087-8"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-8"></a><span class="cf">for</span> ( l <span class="cf">in</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="fl">0.3</span>, <span class="fl">0.5</span>, <span class="fl">0.8</span>, <span class="fl">0.99</span>) )</span>
+<span id="cb1087-9"><a href="-2-multilevel-models-varying-slopes-models.html#cb1087-9"></a>  <span class="kw">lines</span>(ellipse<span class="op">::</span><span class="kw">ellipse</span>(Sigma, <span class="dt">centre =</span> Mu, <span class="dt">level =</span> l), <span class="dt">col =</span> <span class="kw">col.alpha</span>(<span class="st">&#39;black&#39;</span>, <span class="fl">0.2</span>))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes16-fig01"></span>
+<img src="bookdown_files/figure-html/introBayes16-fig01-1.png" alt="20 cafes sampled from a statistial population. The horizontal axis is the intercept (average morning wait) for each cafe. The vertical axis is the slope (average difference between afternnon and morning wait) for each cafe. The gray ellipses illustrate the multivariate Gaussian population of intercepts and slopes." width="576" />
+<p class="caption">
+圖 56.1: 20 cafes sampled from a statistial population. The horizontal axis is the intercept (average morning wait) for each cafe. The vertical axis is the slope (average difference between afternnon and morning wait) for each cafe. The gray ellipses illustrate the multivariate Gaussian population of intercepts and slopes.
+</p>
+</div>
+<div id="模擬觀察值-simulate-observations" class="section level3">
+<h3><span class="header-section-number">56.1.1</span> 模擬觀察值 simulate observations</h3>
+<p>上文中的 <code>vary_effects</code> 模擬的是20家餐廳的特徵值（也就是參數），並非實際上午/下午等待時間的觀察值。接下來我們可以模擬採集每家咖啡店的等待時間了。我們假設派機器人去每家餐廳十次，5次上午，5次下午，記錄每次的點餐等待時間，一共200次的觀察結果：</p>
+<div class="sourceCode" id="cb1088"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1088-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-1"></a><span class="kw">set.seed</span>(<span class="dv">22</span>)</span>
+<span id="cb1088-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-2"></a>N_visits &lt;-<span class="st"> </span><span class="dv">10</span></span>
+<span id="cb1088-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-3"></a></span>
+<span id="cb1088-4"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-4"></a>afternoon &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">1</span>, N_visits <span class="op">*</span><span class="st"> </span>N_cafes <span class="op">/</span><span class="st"> </span><span class="dv">2</span>)</span>
+<span id="cb1088-5"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-5"></a></span>
+<span id="cb1088-6"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-6"></a>cafe_id &lt;-<span class="st"> </span><span class="kw">rep</span>( <span class="dv">1</span><span class="op">:</span>N_cafes, <span class="dt">each =</span> N_visits )</span>
+<span id="cb1088-7"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-7"></a></span>
+<span id="cb1088-8"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-8"></a>mu &lt;-<span class="st"> </span>a_cafe[cafe_id] <span class="op">+</span><span class="st"> </span>b_cafe[cafe_id] <span class="op">*</span><span class="st"> </span>afternoon</span>
+<span id="cb1088-9"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-9"></a>sigma &lt;-<span class="st"> </span><span class="fl">0.5</span> <span class="co"># std dev within cafes</span></span>
+<span id="cb1088-10"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-10"></a></span>
+<span id="cb1088-11"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-11"></a>wait &lt;-<span class="st"> </span><span class="kw">rnorm</span>( N_visits<span class="op">*</span>N_cafes, mu, sigma )</span>
+<span id="cb1088-12"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-12"></a></span>
+<span id="cb1088-13"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-13"></a>d &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">cafe =</span> cafe_id, <span class="dt">afternoon =</span> afternoon, <span class="dt">wait =</span> wait)</span></code></pre></div>
 
+</div>
 </div>
 </div>
 
