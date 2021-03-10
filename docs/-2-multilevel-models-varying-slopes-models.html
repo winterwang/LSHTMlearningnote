@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2021-02-15" />
+<meta name="date" content="2021-03-10" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -787,6 +787,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="56" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html"><i class="fa fa-check"></i><b>56</b> 貝葉斯多層回歸模型2 隨機斜率模型 multilevel models – varying slopes models</a><ul>
 <li class="chapter" data-level="56.1" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html#模擬隨機斜率數據"><i class="fa fa-check"></i><b>56.1</b> 模擬隨機斜率數據</a><ul>
 <li class="chapter" data-level="56.1.1" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html#模擬觀察值-simulate-observations"><i class="fa fa-check"></i><b>56.1.1</b> 模擬觀察值 simulate observations</a></li>
+<li class="chapter" data-level="56.1.2" data-path="-2-multilevel-models-varying-slopes-models.html"><a href="-2-multilevel-models-varying-slopes-models.html#隨機斜率模型-the-varying-slopes-model"><i class="fa fa-check"></i><b>56.1.2</b> 隨機斜率模型 the varying slopes model</a></li>
 </ul></li>
 </ul></li>
 <li class="part"><span><b>VIII 廣義線性迴歸模型 Generalised Linear Regression</b></span></li>
@@ -1566,6 +1567,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
             <section class="normal" id="section-">
 <div id="貝葉斯多層回歸模型2-隨機斜率模型-multilevel-models-varying-slopes-models" class="section level1">
 <h1><span class="header-section-number">第 56 章</span> 貝葉斯多層回歸模型2 隨機斜率模型 multilevel models – varying slopes models</h1>
+<blockquote>
+<dl>
+<dt>We are always forced to analyze data with a model that is <em>MISSPECIFIED</em>: the true data-generating process is different than the model.</dt>
+<dd>Richard McElreath
+</dd>
+</dl>
+</blockquote>
 <div id="模擬隨機斜率數據" class="section level2">
 <h2><span class="header-section-number">56.1</span> 模擬隨機斜率數據</h2>
 <p>先定義機器人可能造訪的咖啡數據人羣 (population of cafes)。我們需要定義的有早晨和下午的平均等待時間 (average wait time)，還有二者之間的相關係數 (correlation coefficient)。先在 R 裏面定義這幾個關鍵的參數，然後從中採集咖啡店樣本：</p>
@@ -1674,6 +1682,212 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1088-11"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-11"></a>wait &lt;-<span class="st"> </span><span class="kw">rnorm</span>( N_visits<span class="op">*</span>N_cafes, mu, sigma )</span>
 <span id="cb1088-12"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-12"></a></span>
 <span id="cb1088-13"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-13"></a>d &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">cafe =</span> cafe_id, <span class="dt">afternoon =</span> afternoon, <span class="dt">wait =</span> wait)</span></code></pre></div>
+<p>這時候我們可以看看剛剛設計好的 <code>d</code> 裏面的模擬數據實際是什麼樣的。它就是一個典型的具有多層結構的數據。該數據展示了每家咖啡店上午下午各自的等待時間的10次觀察值。在這個例子中，沒有缺失值，數據 <code>d</code> 的每一家咖啡店都有5次早上的等待時間，5次下午等待的時間。但是實際情況下並不一定要這樣完美的平衡數據 (balanced data)。因爲多層模型可以克服不平衡數據之間信息不均衡的問題。觀察值數量少的分層，可以從觀察值數量多的分層中獲取需要的信息。</p>
+<div class="sourceCode" id="cb1089"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1089-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1089-1"></a>d</span></code></pre></div>
+<pre><code>##     cafe afternoon       wait
+## 1      1         0 3.96789287
+## 2      1         1 3.85719780
+## 3      1         0 4.72787549
+## 4      1         1 2.76101325
+## 5      1         0 4.11948274
+## 6      1         1 3.54365216
+## 7      1         0 4.19094922
+## 8      1         1 2.53322349
+## 9      1         0 4.12403208
+## 10     1         1 2.76488683
+## 11     2         0 1.62854439
+## 12     2         1 1.29970861
+## 13     2         0 2.38201217
+## 14     2         1 1.21671656
+## 15     2         0 1.61405077
+## 16     2         1 0.79765084
+## 17     2         0 2.44127922
+## 18     2         1 2.26019875
+## 19     2         0 2.47877354
+## 20     2         1 0.45086022
+## 21     3         0 4.27828263
+## 22     3         1 2.61555980
+## 23     3         0 4.22775462
+## 24     3         1 2.09273220
+## 25     3         0 4.29417064
+## 26     3         1 2.89561861
+## 27     3         0 4.69222978
+## 28     3         1 2.16663900
+## 29     3         0 4.97800660
+## 30     3         1 1.83740646
+## 31     4         0 3.61263229
+## 32     4         1 1.51680447
+## 33     4         0 3.66389520
+## 34     4         1 1.88310050
+## 35     4         0 2.83381388
+## 36     4         1 1.74704066
+## 37     4         0 3.37204790
+## 38     4         1 2.62608711
+## 39     4         0 2.78025354
+## 40     4         1 2.05039727
+## 41     5         0 1.58672262
+## 42     5         1 1.39476687
+## 43     5         0 2.07534326
+## 44     5         1 2.07451092
+## 45     5         0 2.20457445
+## 46     5         1 2.74208344
+## 47     5         0 1.62009654
+## 48     5         1 1.28228651
+## 49     5         0 1.11163406
+## 50     5         1 1.65421090
+## 51     6         0 3.63628220
+## 52     6         1 3.25343413
+## 53     6         0 3.38895992
+## 54     6         1 3.21060038
+## 55     6         0 4.84805203
+## 56     6         1 2.95677784
+## 57     6         0 4.93688401
+## 58     6         1 2.56600841
+## 59     6         0 4.65546095
+## 60     6         1 2.83684349
+## 61     7         0 3.39842347
+## 62     7         1 2.87883244
+## 63     7         0 3.71734170
+## 64     7         1 2.10216079
+## 65     7         0 3.35206327
+## 66     7         1 3.02472873
+## 67     7         0 3.87415058
+## 68     7         1 3.22051009
+## 69     7         0 3.64746868
+## 70     7         1 1.83859303
+## 71     8         0 3.69717083
+## 72     8         1 2.13051665
+## 73     8         0 3.73031810
+## 74     8         1 2.03475254
+## 75     8         0 4.11988430
+## 76     8         1 1.98789784
+## 77     8         0 3.53527736
+## 78     8         1 2.34108380
+## 79     8         0 5.00740877
+## 80     8         1 2.68060608
+## 81     9         0 4.41054032
+## 82     9         1 3.13604585
+## 83     9         0 3.54858087
+## 84     9         1 3.28393530
+## 85     9         0 4.70344126
+## 86     9         1 2.19279893
+## 87     9         0 4.16043455
+## 88     9         1 2.33705694
+## 89     9         0 3.22909431
+## 90     9         1 2.34705227
+## 91    10         0 3.77907832
+## 92    10         1 2.78157777
+## 93    10         0 3.69081236
+## 94    10         1 2.68420410
+## 95    10         0 3.67393993
+## 96    10         1 2.75262487
+## 97    10         0 3.30098871
+## 98    10         1 2.58824054
+## 99    10         0 3.21703851
+## 100   10         1 2.40083917
+## 101   11         0 1.38667742
+## 102   11         1 1.22511458
+## 103   11         0 1.53744811
+## 104   11         1 1.89110303
+## 105   11         0 2.04402510
+## 106   11         1 1.48254731
+## 107   11         0 2.30536755
+## 108   11         1 2.01478728
+## 109   11         0 1.80507689
+## 110   11         1 1.04504142
+## 111   12         0 4.08657113
+## 112   12         1 1.66107914
+## 113   12         0 3.49821320
+## 114   12         1 2.22085478
+## 115   12         0 2.91461478
+## 116   12         1 3.08988812
+## 117   12         0 4.55635794
+## 118   12         1 3.30401089
+## 119   12         0 4.19247951
+## 120   12         1 3.01479616
+## 121   13         0 3.96699142
+## 122   13         1 2.01436164
+## 123   13         0 4.08236651
+## 124   13         1 1.21423366
+## 125   13         0 3.88132888
+## 126   13         1 1.81697117
+## 127   13         0 3.59272478
+## 128   13         1 2.75531180
+## 129   13         0 4.38184346
+## 130   13         1 1.94903835
+## 131   14         0 3.24261544
+## 132   14         1 1.60857524
+## 133   14         0 2.42337294
+## 134   14         1 1.85613469
+## 135   14         0 4.12437619
+## 136   14         1 2.31017600
+## 137   14         0 3.11938934
+## 138   14         1 2.45634075
+## 139   14         0 2.80332298
+## 140   14         1 2.97607038
+## 141   15         0 5.18102379
+## 142   15         1 2.57793413
+## 143   15         0 4.47487114
+## 144   15         1 1.85053159
+## 145   15         0 4.92310768
+## 146   15         1 2.29673367
+## 147   15         0 4.36119409
+## 148   15         1 1.67176490
+## 149   15         0 4.09221970
+## 150   15         1 2.09181276
+## 151   16         0 3.13944342
+## 152   16         1 1.98183283
+## 153   16         0 3.79479127
+## 154   16         1 2.99458024
+## 155   16         0 3.47416487
+## 156   16         1 2.26114565
+## 157   16         0 3.56143844
+## 158   16         1 2.40309058
+## 159   16         0 2.89764361
+## 160   16         1 2.09863899
+## 161   17         0 3.87331567
+## 162   17         1 3.02783424
+## 163   17         0 4.40761393
+## 164   17         1 3.11628773
+## 165   17         0 4.07922057
+## 166   17         1 2.88009269
+## 167   17         0 4.61896380
+## 168   17         1 3.06487518
+## 169   17         0 4.20184368
+## 170   17         1 2.98002230
+## 171   18         0 4.86862744
+## 172   18         1 4.82690257
+## 173   18         0 5.35794006
+## 174   18         1 4.70569848
+## 175   18         0 6.51988718
+## 176   18         1 4.89279548
+## 177   18         0 6.13039040
+## 178   18         1 5.18333827
+## 179   18         0 5.90308893
+## 180   18         1 4.78818005
+## 181   19         0 3.72962922
+## 182   19         1 2.97724581
+## 183   19         0 2.62285651
+## 184   19         1 3.28546538
+## 185   19         0 3.89410074
+## 186   19         1 3.06592164
+## 187   19         0 2.77675590
+## 188   19         1 3.45867208
+## 189   19         0 2.58195816
+## 190   19         1 2.89008482
+## 191   20         0 3.61681880
+## 192   20         1 1.95058581
+## 193   20         0 3.88237086
+## 194   20         1 2.91975208
+## 195   20         0 3.56912011
+## 196   20         1 2.10980626
+## 197   20         0 3.79004089
+## 198   20         1 2.83762599
+## 199   20         0 3.78405641
+## 200   20         1 3.63405858</code></pre>
+</div>
+<div id="隨機斜率模型-the-varying-slopes-model" class="section level3">
+<h3><span class="header-section-number">56.1.2</span> 隨機斜率模型 the varying slopes model</h3>
 
 </div>
 </div>
