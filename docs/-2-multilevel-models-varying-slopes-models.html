@@ -1683,211 +1683,206 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb1088-12"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-12"></a></span>
 <span id="cb1088-13"><a href="-2-multilevel-models-varying-slopes-models.html#cb1088-13"></a>d &lt;-<span class="st"> </span><span class="kw">data.frame</span>( <span class="dt">cafe =</span> cafe_id, <span class="dt">afternoon =</span> afternoon, <span class="dt">wait =</span> wait)</span></code></pre></div>
 <p>這時候我們可以看看剛剛設計好的 <code>d</code> 裏面的模擬數據實際是什麼樣的。它就是一個典型的具有多層結構的數據。該數據展示了每家咖啡店上午下午各自的等待時間的10次觀察值。在這個例子中，沒有缺失值，數據 <code>d</code> 的每一家咖啡店都有5次早上的等待時間，5次下午等待的時間。但是實際情況下並不一定要這樣完美的平衡數據 (balanced data)。因爲多層模型可以克服不平衡數據之間信息不均衡的問題。觀察值數量少的分層，可以從觀察值數量多的分層中獲取需要的信息。</p>
-<div class="sourceCode" id="cb1089"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1089-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1089-1"></a>d</span></code></pre></div>
-<pre><code>##     cafe afternoon       wait
-## 1      1         0 3.96789287
-## 2      1         1 3.85719780
-## 3      1         0 4.72787549
-## 4      1         1 2.76101325
-## 5      1         0 4.11948274
-## 6      1         1 3.54365216
-## 7      1         0 4.19094922
-## 8      1         1 2.53322349
-## 9      1         0 4.12403208
-## 10     1         1 2.76488683
-## 11     2         0 1.62854439
-## 12     2         1 1.29970861
-## 13     2         0 2.38201217
-## 14     2         1 1.21671656
-## 15     2         0 1.61405077
-## 16     2         1 0.79765084
-## 17     2         0 2.44127922
-## 18     2         1 2.26019875
-## 19     2         0 2.47877354
-## 20     2         1 0.45086022
-## 21     3         0 4.27828263
-## 22     3         1 2.61555980
-## 23     3         0 4.22775462
-## 24     3         1 2.09273220
-## 25     3         0 4.29417064
-## 26     3         1 2.89561861
-## 27     3         0 4.69222978
-## 28     3         1 2.16663900
-## 29     3         0 4.97800660
-## 30     3         1 1.83740646
-## 31     4         0 3.61263229
-## 32     4         1 1.51680447
-## 33     4         0 3.66389520
-## 34     4         1 1.88310050
-## 35     4         0 2.83381388
-## 36     4         1 1.74704066
-## 37     4         0 3.37204790
-## 38     4         1 2.62608711
-## 39     4         0 2.78025354
-## 40     4         1 2.05039727
-## 41     5         0 1.58672262
-## 42     5         1 1.39476687
-## 43     5         0 2.07534326
-## 44     5         1 2.07451092
-## 45     5         0 2.20457445
-## 46     5         1 2.74208344
-## 47     5         0 1.62009654
-## 48     5         1 1.28228651
-## 49     5         0 1.11163406
-## 50     5         1 1.65421090
-## 51     6         0 3.63628220
-## 52     6         1 3.25343413
-## 53     6         0 3.38895992
-## 54     6         1 3.21060038
-## 55     6         0 4.84805203
-## 56     6         1 2.95677784
-## 57     6         0 4.93688401
-## 58     6         1 2.56600841
-## 59     6         0 4.65546095
-## 60     6         1 2.83684349
-## 61     7         0 3.39842347
-## 62     7         1 2.87883244
-## 63     7         0 3.71734170
-## 64     7         1 2.10216079
-## 65     7         0 3.35206327
-## 66     7         1 3.02472873
-## 67     7         0 3.87415058
-## 68     7         1 3.22051009
-## 69     7         0 3.64746868
-## 70     7         1 1.83859303
-## 71     8         0 3.69717083
-## 72     8         1 2.13051665
-## 73     8         0 3.73031810
-## 74     8         1 2.03475254
-## 75     8         0 4.11988430
-## 76     8         1 1.98789784
-## 77     8         0 3.53527736
-## 78     8         1 2.34108380
-## 79     8         0 5.00740877
-## 80     8         1 2.68060608
-## 81     9         0 4.41054032
-## 82     9         1 3.13604585
-## 83     9         0 3.54858087
-## 84     9         1 3.28393530
-## 85     9         0 4.70344126
-## 86     9         1 2.19279893
-## 87     9         0 4.16043455
-## 88     9         1 2.33705694
-## 89     9         0 3.22909431
-## 90     9         1 2.34705227
-## 91    10         0 3.77907832
-## 92    10         1 2.78157777
-## 93    10         0 3.69081236
-## 94    10         1 2.68420410
-## 95    10         0 3.67393993
-## 96    10         1 2.75262487
-## 97    10         0 3.30098871
-## 98    10         1 2.58824054
-## 99    10         0 3.21703851
-## 100   10         1 2.40083917
-## 101   11         0 1.38667742
-## 102   11         1 1.22511458
-## 103   11         0 1.53744811
-## 104   11         1 1.89110303
-## 105   11         0 2.04402510
-## 106   11         1 1.48254731
-## 107   11         0 2.30536755
-## 108   11         1 2.01478728
-## 109   11         0 1.80507689
-## 110   11         1 1.04504142
-## 111   12         0 4.08657113
-## 112   12         1 1.66107914
-## 113   12         0 3.49821320
-## 114   12         1 2.22085478
-## 115   12         0 2.91461478
-## 116   12         1 3.08988812
-## 117   12         0 4.55635794
-## 118   12         1 3.30401089
-## 119   12         0 4.19247951
-## 120   12         1 3.01479616
-## 121   13         0 3.96699142
-## 122   13         1 2.01436164
-## 123   13         0 4.08236651
-## 124   13         1 1.21423366
-## 125   13         0 3.88132888
-## 126   13         1 1.81697117
-## 127   13         0 3.59272478
-## 128   13         1 2.75531180
-## 129   13         0 4.38184346
-## 130   13         1 1.94903835
-## 131   14         0 3.24261544
-## 132   14         1 1.60857524
-## 133   14         0 2.42337294
-## 134   14         1 1.85613469
-## 135   14         0 4.12437619
-## 136   14         1 2.31017600
-## 137   14         0 3.11938934
-## 138   14         1 2.45634075
-## 139   14         0 2.80332298
-## 140   14         1 2.97607038
-## 141   15         0 5.18102379
-## 142   15         1 2.57793413
-## 143   15         0 4.47487114
-## 144   15         1 1.85053159
-## 145   15         0 4.92310768
-## 146   15         1 2.29673367
-## 147   15         0 4.36119409
-## 148   15         1 1.67176490
-## 149   15         0 4.09221970
-## 150   15         1 2.09181276
-## 151   16         0 3.13944342
-## 152   16         1 1.98183283
-## 153   16         0 3.79479127
-## 154   16         1 2.99458024
-## 155   16         0 3.47416487
-## 156   16         1 2.26114565
-## 157   16         0 3.56143844
-## 158   16         1 2.40309058
-## 159   16         0 2.89764361
-## 160   16         1 2.09863899
-## 161   17         0 3.87331567
-## 162   17         1 3.02783424
-## 163   17         0 4.40761393
-## 164   17         1 3.11628773
-## 165   17         0 4.07922057
-## 166   17         1 2.88009269
-## 167   17         0 4.61896380
-## 168   17         1 3.06487518
-## 169   17         0 4.20184368
-## 170   17         1 2.98002230
-## 171   18         0 4.86862744
-## 172   18         1 4.82690257
-## 173   18         0 5.35794006
-## 174   18         1 4.70569848
-## 175   18         0 6.51988718
-## 176   18         1 4.89279548
-## 177   18         0 6.13039040
-## 178   18         1 5.18333827
-## 179   18         0 5.90308893
-## 180   18         1 4.78818005
-## 181   19         0 3.72962922
-## 182   19         1 2.97724581
-## 183   19         0 2.62285651
-## 184   19         1 3.28546538
-## 185   19         0 3.89410074
-## 186   19         1 3.06592164
-## 187   19         0 2.77675590
-## 188   19         1 3.45867208
-## 189   19         0 2.58195816
-## 190   19         1 2.89008482
-## 191   20         0 3.61681880
-## 192   20         1 1.95058581
-## 193   20         0 3.88237086
-## 194   20         1 2.91975208
-## 195   20         0 3.56912011
-## 196   20         1 2.10980626
-## 197   20         0 3.79004089
-## 198   20         1 2.83762599
-## 199   20         0 3.78405641
-## 200   20         1 3.63405858</code></pre>
+<div class="sourceCode" id="cb1089"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1089-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1089-1"></a><span class="kw">head</span>(d, <span class="dv">20</span>)</span></code></pre></div>
+<pre><code>##    cafe afternoon       wait
+## 1     1         0 3.96789287
+## 2     1         1 3.85719780
+## 3     1         0 4.72787549
+## 4     1         1 2.76101325
+## 5     1         0 4.11948274
+## 6     1         1 3.54365216
+## 7     1         0 4.19094922
+## 8     1         1 2.53322349
+## 9     1         0 4.12403208
+## 10    1         1 2.76488683
+## 11    2         0 1.62854439
+## 12    2         1 1.29970861
+## 13    2         0 2.38201217
+## 14    2         1 1.21671656
+## 15    2         0 1.61405077
+## 16    2         1 0.79765084
+## 17    2         0 2.44127922
+## 18    2         1 2.26019875
+## 19    2         0 2.47877354
+## 20    2         1 0.45086022</code></pre>
 </div>
 <div id="隨機斜率模型-the-varying-slopes-model" class="section level3">
 <h3><span class="header-section-number">56.1.2</span> 隨機斜率模型 the varying slopes model</h3>
+<p>接下來我們可以進入建立模型的階段了。前一小節的過程是，我們使用計算機隨機生成了20家咖啡廳的點餐等待時間數據，這些咖啡廳本身來自一個符合某種特徵的咖啡廳羣體 (population)，這裏我們使用該數據來進一步鞏固我們對前一小節中數據產生過程的理解。</p>
+<p>這裏的數據除了有隨機的截距，還有加入每個咖啡廳等待時間的隨機斜率，模型可以用數學表達式描述成爲：</p>
+<p><span class="math display">\[
+\begin{aligned}
+W_i &amp; \sim \text{Normal}(\mu_i, \sigma) &amp; \text{[likelihood]} \\
+\mu_i &amp; = \alpha_{\text{CAFE}[i]} + \beta_{\text{CAFE}[i]} A_i &amp; \text{[linear model]}
+\end{aligned}
+\]</span></p>
+<p>特別地，我們可以描述隨機截距和隨機斜率之間的協方差矩陣 (covariance matrix) 成爲：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\left[
+    \begin{array}{c}
+    \alpha_{\text{CAFE}[i]} \\ 
+    \beta_{\text{CAFE}[i]}
+    \end{array}
+\right] &amp; \sim 
+\text{MVNormal}\left( 
+\left[
+\begin{array}{c}
+\alpha \\
+\beta
+\end{array}
+\right], \textbf{S}
+\right) &amp; \text{[population of varying effects]} \\ 
+\textbf{S} &amp; = 
+\left(
+\begin{array}{cc}
+\sigma_\alpha &amp; 0\\
+0 &amp; \sigma_\beta
+\end{array}
+\right) \textbf{R} 
+\left(
+\begin{array}{cc}
+\sigma_\alpha &amp; 0\\
+0 &amp; \sigma_\beta
+\end{array}
+\right) &amp; \text{[construct covariance matrix]}
+\end{aligned} 
+\]</span></p>
+<p>第一行的表達式的涵義是，我們認爲該數據中的咖啡廳點餐等待時間的數據，是有規律的，每個咖啡廳有自己的隨機截距和斜率，這兩個重要參數本身的先驗概率分佈是一個二維 (two-dimensional) 正（常）態分佈。這個二維正（常）態分佈的均值是 <span class="math inline">\(\alpha, \beta\)</span>，協方差矩陣是 <span class="math inline">\(\textbf{S}\)</span>。</p>
+<p>第二行的表達式的涵義是進一步定義協方差矩陣 <span class="math inline">\(\textbf{S}\)</span>。將它分解成爲兩個標準差矩陣 (standard deviations)，還有一個相關性矩陣 (correlation matrix) <span class="math inline">\(\textbf{R}\)</span>。接下來就是定義超參數的先驗概率分佈了 (hyper-priors)。我們定義上述模型中的各個參數的先驗概率分佈爲：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\alpha &amp; \sim \text{Normal}(5, 2) &amp; \text{[prior for average intercept]} \\ 
+\beta  &amp; \sim \text{Normal}(-1, 0.5) &amp; \text{[prior for average slope]}  \\ 
+\sigma &amp; \sim \text{Exponential}(1) &amp; \text{[prior stddev within cafes]} \\ 
+\sigma_\alpha &amp; \sim \text{Exponential}(1) &amp; \text{[prior stddev among intercepts]} \\
+\sigma_\beta &amp; \sim \text{Exponential}(1) &amp; \text{[prior stddev among slopes]} \\ 
+\textbf{R}  &amp; \sim \text{LKJcorr} (2)   &amp; \text{[prior for correlation matrix]}
+\end{aligned}
+\]</span></p>
+<p>最後一行的 <span class="math inline">\(\textbf{R}\)</span> 可能不太眼熟，但是它其實就是爲相關關係矩陣定義的先驗概率。這裏我們只有兩個參數之間存在可能的相關關係，截距和斜率，二者的相關關係矩陣就是 <span class="math inline">\(2 \times 2\)</span> 的簡單形式：</p>
+<p><span class="math display">\[
+\begin{aligned}
+\textbf{R} = \left( 
+\begin{array}{cc}
+1 &amp; \rho \\
+\rho &amp; 1
+\end{array}
+\right)
+\end{aligned}
+\]</span></p>
+<p>其中 <span class="math inline">\(\rho\)</span> 就是隨機斜率和隨機截距之間的相關係數 (correlation coefficient)。那實際上 <span class="math inline">\(\text{LKJcorr}(2)\)</span> 又是什麼涵義呢？其實它是提供了一個極爲微弱的先驗概率信息，並且儘量避免模型採集極端的相關關係取值，如 <span class="math inline">\(1, -1\)</span>。該分佈如果使用 <span class="math inline">\(\text{LKJcorr}(1)\)</span> 的話，則意味着我們認爲所有的相關係數從 (-1, 1) 中都有可能，包括兩端的極端情況。我們可以繪圖來理解這個分佈的特徵。</p>
+<div class="sourceCode" id="cb1091"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1091-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-1"></a>R &lt;-<span class="st"> </span><span class="kw">rlkjcorr</span>( <span class="dv">10000</span>, <span class="dt">K =</span> <span class="dv">2</span>, <span class="dt">eta =</span> <span class="dv">4</span> )</span>
+<span id="cb1091-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-2"></a><span class="kw">dens</span>( R[, <span class="dv">1</span>, <span class="dv">2</span>], <span class="dt">xlab =</span> <span class="st">&quot;correlation&quot;</span>, </span>
+<span id="cb1091-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-3"></a>      <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb1091-4"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-4"></a>R &lt;-<span class="st"> </span><span class="kw">rlkjcorr</span>( <span class="dv">10000</span>, <span class="dt">K =</span> <span class="dv">2</span>, <span class="dt">eta =</span> <span class="dv">1</span> )</span>
+<span id="cb1091-5"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-5"></a><span class="kw">dens</span>( R[, <span class="dv">1</span>, <span class="dv">2</span>], <span class="dt">xlab =</span> <span class="st">&quot;correlation&quot;</span>, </span>
+<span id="cb1091-6"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-6"></a>      <span class="dt">add =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb1091-7"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-7"></a>R &lt;-<span class="st"> </span><span class="kw">rlkjcorr</span>( <span class="dv">10000</span>, <span class="dt">K =</span> <span class="dv">2</span>, <span class="dt">eta =</span> <span class="dv">2</span> )</span>
+<span id="cb1091-8"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-8"></a><span class="kw">dens</span>( R[, <span class="dv">1</span>, <span class="dv">2</span>], <span class="dt">xlab =</span> <span class="st">&quot;correlation&quot;</span>, </span>
+<span id="cb1091-9"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-9"></a>      <span class="dt">add =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb1091-10"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-10"></a></span>
+<span id="cb1091-11"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-11"></a><span class="kw">text</span>( <span class="dv">0</span>, <span class="fl">0.45</span>, <span class="st">&#39;eta = 1&#39;</span>)</span>
+<span id="cb1091-12"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-12"></a><span class="kw">text</span>( <span class="dv">0</span>, <span class="fl">0.8</span>, <span class="st">&quot;eta = 2&quot;</span>)</span>
+<span id="cb1091-13"><a href="-2-multilevel-models-varying-slopes-models.html#cb1091-13"></a><span class="kw">text</span>( <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="st">&quot;eta = 4&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes16-fig02"></span>
+<img src="bookdown_files/figure-html/introBayes16-fig02-1.png" alt="LKJcorr(eta) probability density. The plot shows the distribution of correlation coefficients extracted from random 2-by-2 correlation matrices, for three values of eta. When eta = 1, all correlations are equally plausible. As eta increases, extreme correlations become less plausible." width="576" />
+<p class="caption">
+圖 56.2: LKJcorr(eta) probability density. The plot shows the distribution of correlation coefficients extracted from random 2-by-2 correlation matrices, for three values of eta. When eta = 1, all correlations are equally plausible. As eta increases, extreme correlations become less plausible.
+</p>
+</div>
+<p>我們終於準備好了這個模型的背景知識，現在，我們來實際寫下這個模型的代碼並運行該模型。</p>
+<div class="sourceCode" id="cb1092"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1092-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-1"></a><span class="kw">set.seed</span>(<span class="dv">867530</span>)</span>
+<span id="cb1092-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-2"></a>m14<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">ulam</span>(</span>
+<span id="cb1092-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-3"></a>  <span class="kw">alist</span>(</span>
+<span id="cb1092-4"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-4"></a>    wait  <span class="op">~</span><span class="st"> </span><span class="kw">normal</span>( mu, sigma ), </span>
+<span id="cb1092-5"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-5"></a>    mu &lt;-<span class="st"> </span>a_cafe[cafe] <span class="op">+</span><span class="st"> </span>b_cafe[cafe] <span class="op">*</span><span class="st"> </span>afternoon,</span>
+<span id="cb1092-6"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-6"></a>    <span class="kw">c</span>(a_cafe, b_cafe)[cafe] <span class="op">~</span><span class="st"> </span><span class="kw">multi_normal</span>(<span class="kw">c</span>(a, b), Rho, </span>
+<span id="cb1092-7"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-7"></a>                                           sigma_cafe), </span>
+<span id="cb1092-8"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-8"></a>    a <span class="op">~</span><span class="st"> </span><span class="kw">normal</span>(<span class="dv">5</span>, <span class="dv">2</span>), </span>
+<span id="cb1092-9"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-9"></a>    b <span class="op">~</span><span class="st"> </span><span class="kw">normal</span>(<span class="op">-</span><span class="dv">1</span>, <span class="fl">0.5</span>), </span>
+<span id="cb1092-10"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-10"></a>    sigma_cafe <span class="op">~</span><span class="st"> </span><span class="kw">exponential</span>(<span class="dv">1</span>), </span>
+<span id="cb1092-11"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-11"></a>    sigma <span class="op">~</span><span class="st"> </span><span class="kw">exponential</span>(<span class="dv">1</span>),</span>
+<span id="cb1092-12"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-12"></a>    Rho <span class="op">~</span><span class="st"> </span><span class="kw">lkj_corr</span>(<span class="dv">2</span>)</span>
+<span id="cb1092-13"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-13"></a>  ), <span class="dt">data =</span> d, <span class="dt">chains =</span> <span class="dv">4</span>, <span class="dt">cores =</span> <span class="dv">4</span></span>
+<span id="cb1092-14"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-14"></a>)</span>
+<span id="cb1092-15"><a href="-2-multilevel-models-varying-slopes-models.html#cb1092-15"></a><span class="kw">saveRDS</span>(m14<span class="fl">.1</span>, <span class="st">&quot;../Stanfits/m14_1.rds&quot;</span>)</span></code></pre></div>
+<p>模型花了一點時間成功運行之後，我們來直接觀察 <code>m14.1</code> 給出的隨機斜率和隨機截距之間的相關係數的事後樣本分佈：</p>
+<div class="sourceCode" id="cb1093"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1093-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-1"></a>m14<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&quot;../Stanfits/m14_1.rds&quot;</span>)</span>
+<span id="cb1093-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-2"></a></span>
+<span id="cb1093-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-3"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m14<span class="fl">.1</span> ) </span>
+<span id="cb1093-4"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-4"></a></span>
+<span id="cb1093-5"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-5"></a><span class="kw">dens</span>( post<span class="op">$</span>Rho[,<span class="dv">1</span>,<span class="dv">2</span>], <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>), </span>
+<span id="cb1093-6"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-6"></a>       <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)                      <span class="co"># posterior</span></span>
+<span id="cb1093-7"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-7"></a></span>
+<span id="cb1093-8"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-8"></a>R &lt;-<span class="st"> </span><span class="kw">rlkjcorr</span>(<span class="dv">10000</span>, <span class="dt">K =</span> <span class="dv">2</span>, <span class="dt">eta =</span> <span class="dv">2</span>)   <span class="co"># prior</span></span>
+<span id="cb1093-9"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-9"></a><span class="kw">dens</span>( R[,<span class="dv">1</span>,<span class="dv">2</span>], <span class="dt">add =</span> <span class="ot">TRUE</span>, <span class="dt">lty =</span> <span class="dv">2</span>, <span class="dt">col =</span> rangi2, <span class="dt">lwd =</span> <span class="dv">3</span>)</span>
+<span id="cb1093-10"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-10"></a><span class="kw">text</span>( <span class="fl">0.45</span>, <span class="fl">0.8</span> , <span class="st">&quot;prior&quot;</span>, <span class="dt">col =</span> rangi2)</span>
+<span id="cb1093-11"><a href="-2-multilevel-models-varying-slopes-models.html#cb1093-11"></a><span class="kw">text</span>( <span class="fl">-0.25</span>, <span class="fl">2.0</span>, <span class="st">&quot;posterior&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes16-fig03"></span>
+<img src="bookdown_files/figure-html/introBayes16-fig03-1.png" alt="Posterior distribution of the correlation between intercepts and slopes. Black: Posterior distribution of the correlation, reliably below zero. Dashed blue: prior distribution, the LKJcoor(2) density." width="576" />
+<p class="caption">
+圖 56.3: Posterior distribution of the correlation between intercepts and slopes. Black: Posterior distribution of the correlation, reliably below zero. Dashed blue: prior distribution, the LKJcoor(2) density.
+</p>
+</div>
+<div class="sourceCode" id="cb1094"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1094-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1094-1"></a><span class="co"># precis( m14.1, depth = 2 )</span></span></code></pre></div>
+<p>我們發現事後的相關係數集中在小於零的部分。因爲模型認爲斜率和截距之間的相關性是負的，符合我們產生數據的過程中使用的圖 <a href="-2-multilevel-models-varying-slopes-models.html#fig:introBayes16-fig01">56.1</a> 中所示。接下來，繪製一下隨機效應部分的示意圖，並且和原始數據做一個比較。</p>
+<div class="sourceCode" id="cb1095"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1095-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-1"></a><span class="co"># compute unpooled estimates directly from data</span></span>
+<span id="cb1095-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-2"></a></span>
+<span id="cb1095-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-3"></a>a1 &lt;-<span class="st"> </span><span class="kw">sapply</span>( <span class="dv">1</span><span class="op">:</span>N_cafes, </span>
+<span id="cb1095-4"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-4"></a>              <span class="cf">function</span>(i) <span class="kw">mean</span>(wait[cafe_id <span class="op">==</span><span class="st"> </span>i <span class="op">&amp;</span><span class="st"> </span>afternoon <span class="op">==</span><span class="st"> </span><span class="dv">0</span>]))</span>
+<span id="cb1095-5"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-5"></a>b1 &lt;-<span class="st"> </span><span class="kw">sapply</span>( <span class="dv">1</span><span class="op">:</span>N_cafes, </span>
+<span id="cb1095-6"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-6"></a>              <span class="cf">function</span>(i) <span class="kw">mean</span>(wait[cafe_id <span class="op">==</span><span class="st"> </span>i <span class="op">&amp;</span><span class="st"> </span>afternoon <span class="op">==</span><span class="st"> </span><span class="dv">1</span>])) <span class="op">-</span><span class="st"> </span>a1</span>
+<span id="cb1095-7"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-7"></a></span>
+<span id="cb1095-8"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-8"></a><span class="co"># extract posterior means of partially pooled estimates</span></span>
+<span id="cb1095-9"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-9"></a>post &lt;-<span class="st"> </span><span class="kw">extract.samples</span>( m14<span class="fl">.1</span> )</span>
+<span id="cb1095-10"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-10"></a>a2 &lt;-<span class="st"> </span><span class="kw">apply</span>( post<span class="op">$</span>a_cafe, <span class="dv">2</span>, mean )</span>
+<span id="cb1095-11"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-11"></a>b2 &lt;-<span class="st"> </span><span class="kw">apply</span>( post<span class="op">$</span>b_cafe, <span class="dv">2</span>, mean )</span>
+<span id="cb1095-12"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-12"></a></span>
+<span id="cb1095-13"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-13"></a><span class="co"># plot both and connect with lines</span></span>
+<span id="cb1095-14"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-14"></a></span>
+<span id="cb1095-15"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-15"></a><span class="kw">plot</span>(a1, b1, <span class="dt">xlab =</span> <span class="st">&quot;intercept&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;slope&quot;</span>, </span>
+<span id="cb1095-16"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-16"></a>     <span class="dt">pch =</span> <span class="dv">16</span>, <span class="dt">col =</span> rangi2, <span class="dt">ylim  =</span> <span class="kw">c</span>( <span class="kw">min</span>(b1) <span class="op">-</span><span class="st"> </span><span class="fl">0.1</span>, <span class="kw">max</span>(b1) <span class="op">+</span><span class="st"> </span><span class="fl">0.1</span>), </span>
+<span id="cb1095-17"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-17"></a>     <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="kw">min</span>(a1) <span class="op">-</span><span class="st"> </span><span class="fl">0.1</span>, <span class="kw">max</span>(a1) <span class="op">+</span><span class="st"> </span><span class="fl">0.1</span>) ,</span>
+<span id="cb1095-18"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-18"></a>      <span class="dt">bty =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb1095-19"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-19"></a></span>
+<span id="cb1095-20"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-20"></a><span class="kw">points</span>( a2, b2, <span class="dt">pch =</span> <span class="dv">1</span>)</span>
+<span id="cb1095-21"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-21"></a></span>
+<span id="cb1095-22"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-22"></a><span class="cf">for</span> ( i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>N_cafes ) <span class="kw">lines</span>( <span class="kw">c</span>(a1[i], a2[i]), <span class="kw">c</span>(b1[i], b2[i]) )</span>
+<span id="cb1095-23"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-23"></a></span>
+<span id="cb1095-24"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-24"></a><span class="co"># superimpose the contours of the population</span></span>
+<span id="cb1095-25"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-25"></a><span class="co"># compute the posterior mean bivariate Gaussian</span></span>
+<span id="cb1095-26"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-26"></a></span>
+<span id="cb1095-27"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-27"></a>Mu_est &lt;-<span class="st"> </span><span class="kw">c</span>( <span class="kw">mean</span>(post<span class="op">$</span>a), <span class="kw">mean</span>(post<span class="op">$</span>b) )</span>
+<span id="cb1095-28"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-28"></a>rho_est &lt;-<span class="st"> </span><span class="kw">mean</span>(post<span class="op">$</span>Rho[,<span class="dv">1</span>,<span class="dv">2</span>]) </span>
+<span id="cb1095-29"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-29"></a>sa_est &lt;-<span class="st"> </span><span class="kw">mean</span>( post<span class="op">$</span>sigma_cafe[,<span class="dv">1</span>] )</span>
+<span id="cb1095-30"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-30"></a>sb_est &lt;-<span class="st"> </span><span class="kw">mean</span>( post<span class="op">$</span>sigma_cafe[,<span class="dv">2</span>] )</span>
+<span id="cb1095-31"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-31"></a>cov_ab &lt;-<span class="st"> </span>sa_est <span class="op">*</span><span class="st"> </span>sb_est <span class="op">*</span><span class="st"> </span>rho_est</span>
+<span id="cb1095-32"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-32"></a>Sigma_est &lt;-<span class="st"> </span><span class="kw">matrix</span>( <span class="kw">c</span>(sa_est<span class="op">^</span><span class="dv">2</span> , cov_ab, cov_ab, sb_est<span class="op">^</span><span class="dv">2</span>), <span class="dt">ncol =</span> <span class="dv">2</span> )</span>
+<span id="cb1095-33"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-33"></a></span>
+<span id="cb1095-34"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-34"></a><span class="co"># draw contours</span></span>
+<span id="cb1095-35"><a href="-2-multilevel-models-varying-slopes-models.html#cb1095-35"></a><span class="kw">library</span>(ellipse)</span></code></pre></div>
+<pre><code>## 
+## Attaching package: &#39;ellipse&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:rethinking&#39;:
+## 
+##     pairs</code></pre>
+<pre><code>## The following object is masked from &#39;package:car&#39;:
+## 
+##     ellipse</code></pre>
+<pre><code>## The following object is masked from &#39;package:graphics&#39;:
+## 
+##     pairs</code></pre>
+<div class="sourceCode" id="cb1100"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1100-1"><a href="-2-multilevel-models-varying-slopes-models.html#cb1100-1"></a><span class="cf">for</span> ( l <span class="cf">in</span> <span class="kw">c</span>(<span class="fl">0.1</span>, <span class="fl">0.3</span>, <span class="fl">0.5</span>, <span class="fl">0.8</span>, <span class="fl">0.99</span>) )</span>
+<span id="cb1100-2"><a href="-2-multilevel-models-varying-slopes-models.html#cb1100-2"></a>  <span class="kw">lines</span>(<span class="kw">ellipse</span>(Sigma_est, <span class="dt">centre =</span> Mu_est, <span class="dt">level =</span> l), </span>
+<span id="cb1100-3"><a href="-2-multilevel-models-varying-slopes-models.html#cb1100-3"></a>        <span class="dt">col =</span> <span class="kw">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.2</span>))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span id="fig:introBayes16-fig04"></span>
+<img src="bookdown_files/figure-html/introBayes16-fig04-1.png" alt="Shinkage in two dimensions. Raw unpooled intercepts and slopes (filled blue) compared to partially pooled posterior means (open circles). The gray contours show the inferred population of varying effects." width="576" />
+<p class="caption">
+圖 56.4: Shinkage in two dimensions. Raw unpooled intercepts and slopes (filled blue) compared to partially pooled posterior means (open circles). The gray contours show the inferred population of varying effects.
+</p>
+</div>
+<p>圖 <a href="-2-multilevel-models-varying-slopes-models.html#fig:introBayes16-fig04">56.4</a> 中藍色的點表示的是原始數據直接取平均值計算獲得的結果。空心點則是根據隨機效應模型的估計給出的各個餐廳的截距和斜率的事後概率分佈的估計平均值。二者之間用實線連接。我們發現每個空心點（模型估計值）的兩個維度都比簡單粗暴計算的原始值要更加靠近這個二維高斯分佈的中心點位置（這個現象被叫做塌陷 shrinkage）。距離中心點越遠的藍點，它的塌陷程度 (shrinkage) 越大</p>
 
 </div>
 </div>

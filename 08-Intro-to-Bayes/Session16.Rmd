@@ -133,7 +133,7 @@ d <- data.frame( cafe = cafe_id, afternoon = afternoon, wait = wait)
 
 這時候我們可以看看剛剛設計好的 `d` 裏面的模擬數據實際是什麼樣的。它就是一個典型的具有多層結構的數據。該數據展示了每家咖啡店上午下午各自的等待時間的10次觀察值。在這個例子中，沒有缺失值，數據 `d` 的每一家咖啡店都有5次早上的等待時間，5次下午等待的時間。但是實際情況下並不一定要這樣完美的平衡數據 (balanced data)。因爲多層模型可以克服不平衡數據之間信息不均衡的問題。觀察值數量少的分層，可以從觀察值數量多的分層中獲取需要的信息。
 
-```{r}
+```{r introBayes16-10}
 head(d, 20)
 ```
 
@@ -167,15 +167,15 @@ $$
 \alpha \\
 \beta
 \end{array}
-\right], \text{S}
+\right], \textbf{S}
 \right) & \text{[population of varying effects]} \\ 
-\text{S} & = 
+\textbf{S} & = 
 \left(
 \begin{array}{cc}
 \sigma_\alpha & 0\\
 0 & \sigma_\beta
 \end{array}
-\right) \text{R} 
+\right) \textbf{R} 
 \left(
 \begin{array}{cc}
 \sigma_\alpha & 0\\
@@ -185,6 +185,141 @@ $$
 \end{aligned} 
 $$
 
-第一行的表達式的涵義是，我們認爲該數據中的咖啡廳點餐等待時間的數據，是有規律的，每個咖啡廳有自己的隨機截距和斜率，這兩個重要參數本身的先驗概率分佈是一個二維 (two-dimensional) 正（常）態分佈。
+第一行的表達式的涵義是，我們認爲該數據中的咖啡廳點餐等待時間的數據，是有規律的，每個咖啡廳有自己的隨機截距和斜率，這兩個重要參數本身的先驗概率分佈是一個二維 (two-dimensional) 正（常）態分佈。這個二維正（常）態分佈的均值是 $\alpha, \beta$，協方差矩陣是 $\textbf{S}$。
+
+第二行的表達式的涵義是進一步定義協方差矩陣 $\textbf{S}$。將它分解成爲兩個標準差矩陣 (standard deviations)，還有一個相關性矩陣 (correlation matrix) $\textbf{R}$。接下來就是定義超參數的先驗概率分佈了 (hyper-priors)。我們定義上述模型中的各個參數的先驗概率分佈爲：
+
+$$
+\begin{aligned}
+\alpha & \sim \text{Normal}(5, 2) & \text{[prior for average intercept]} \\ 
+\beta  & \sim \text{Normal}(-1, 0.5) & \text{[prior for average slope]}  \\ 
+\sigma & \sim \text{Exponential}(1) & \text{[prior stddev within cafes]} \\ 
+\sigma_\alpha & \sim \text{Exponential}(1) & \text{[prior stddev among intercepts]} \\
+\sigma_\beta & \sim \text{Exponential}(1) & \text{[prior stddev among slopes]} \\ 
+\textbf{R}  & \sim \text{LKJcorr} (2)   & \text{[prior for correlation matrix]}
+\end{aligned}
+$$
+
+最後一行的 $\textbf{R}$ 可能不太眼熟，但是它其實就是爲相關關係矩陣定義的先驗概率。這裏我們只有兩個參數之間存在可能的相關關係，截距和斜率，二者的相關關係矩陣就是 $2 \times 2$ 的簡單形式：
+
+$$
+\begin{aligned}
+\textbf{R} = \left( 
+\begin{array}{cc}
+1 & \rho \\
+\rho & 1
+\end{array}
+\right)
+\end{aligned}
+$$
+
+其中 $\rho$ 就是隨機斜率和隨機截距之間的相關係數 (correlation coefficient)。那實際上 $\text{LKJcorr}(2)$ 又是什麼涵義呢？其實它是提供了一個極爲微弱的先驗概率信息，並且儘量避免模型採集極端的相關關係取值，如 $1, -1$。該分佈如果使用 $\text{LKJcorr}(1)$ 的話，則意味着我們認爲所有的相關係數從 (-1, 1) 中都有可能，包括兩端的極端情況。我們可以繪圖來理解這個分佈的特徵。
+
+```{r  introBayes16-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="LKJcorr(eta) probability density. The plot shows the distribution of correlation coefficients extracted from random 2-by-2 correlation matrices, for three values of eta. When eta = 1, all correlations are equally plausible. As eta increases, extreme correlations become less plausible.", fig.align='center'}
+R <- rlkjcorr( 10000, K = 2, eta = 4 )
+dens( R[, 1, 2], xlab = "correlation", 
+      bty = "n")
+R <- rlkjcorr( 10000, K = 2, eta = 1 )
+dens( R[, 1, 2], xlab = "correlation", 
+      add = TRUE)
+R <- rlkjcorr( 10000, K = 2, eta = 2 )
+dens( R[, 1, 2], xlab = "correlation", 
+      add = TRUE)
+
+text( 0, 0.45, 'eta = 1')
+text( 0, 0.8, "eta = 2")
+text( 0.5, 1, "eta = 4")
+```
+
+
+我們終於準備好了這個模型的背景知識，現在，我們來實際寫下這個模型的代碼並運行該模型。
+
+
+```{r introBayes16-11, eval=FALSE}
+set.seed(867530)
+m14.1 <- ulam(
+  alist(
+    wait  ~ normal( mu, sigma ), 
+    mu <- a_cafe[cafe] + b_cafe[cafe] * afternoon,
+    c(a_cafe, b_cafe)[cafe] ~ multi_normal(c(a, b), Rho, 
+                                           sigma_cafe), 
+    a ~ normal(5, 2), 
+    b ~ normal(-1, 0.5), 
+    sigma_cafe ~ exponential(1), 
+    sigma ~ exponential(1),
+    Rho ~ lkj_corr(2)
+  ), data = d, chains = 4, cores = 4
+)
+saveRDS(m14.1, "../Stanfits/m14_1.rds")
+```
+
+模型花了一點時間成功運行之後，我們來直接觀察 `m14.1` 給出的隨機斜率和隨機截距之間的相關係數的事後樣本分佈：
+
+
+
+```{r introBayes16-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior distribution of the correlation between intercepts and slopes. Black: Posterior distribution of the correlation, reliably below zero. Dashed blue: prior distribution, the LKJcoor(2) density.", fig.align='center'}
+m14.1 <- readRDS("../Stanfits/m14_1.rds")
+
+post <- extract.samples( m14.1 ) 
+
+dens( post$Rho[,1,2], xlim = c(-1, 1), 
+       bty = "n")                      # posterior
+
+R <- rlkjcorr(10000, K = 2, eta = 2)   # prior
+dens( R[,1,2], add = TRUE, lty = 2, col = rangi2, lwd = 3)
+text( 0.45, 0.8 , "prior", col = rangi2)
+text( -0.25, 2.0, "posterior")
+
+# precis( m14.1, depth = 2 )
+```
+
+
+
+我們發現事後的相關係數集中在小於零的部分。因爲模型認爲斜率和截距之間的相關性是負的，符合我們產生數據的過程中使用的圖 \@ref(fig:introBayes16-fig01) 中所示。接下來，繪製一下隨機效應部分的示意圖，並且和原始數據做一個比較。
+
+```{r introBayes16-fig04, cache=TRUE, fig.width=6, fig.height=5, message=FALSE, fig.cap="Shinkage in two dimensions. Raw unpooled intercepts and slopes (filled blue) compared to partially pooled posterior means (open circles). The gray contours show the inferred population of varying effects.", fig.align='center'}
+# compute unpooled estimates directly from data
+
+a1 <- sapply( 1:N_cafes, 
+              function(i) mean(wait[cafe_id == i & afternoon == 0]))
+b1 <- sapply( 1:N_cafes, 
+              function(i) mean(wait[cafe_id == i & afternoon == 1])) - a1
+
+# extract posterior means of partially pooled estimates
+post <- extract.samples( m14.1 )
+a2 <- apply( post$a_cafe, 2, mean )
+b2 <- apply( post$b_cafe, 2, mean )
+
+# plot both and connect with lines
+
+plot(a1, b1, xlab = "intercept", ylab = "slope", 
+     pch = 16, col = rangi2, ylim  = c( min(b1) - 0.1, max(b1) + 0.1), 
+     xlim = c(min(a1) - 0.1, max(a1) + 0.1) ,
+      bty = "n")
+
+points( a2, b2, pch = 1)
+
+for ( i in 1:N_cafes ) lines( c(a1[i], a2[i]), c(b1[i], b2[i]) )
+
+# superimpose the contours of the population
+# compute the posterior mean bivariate Gaussian
+
+Mu_est <- c( mean(post$a), mean(post$b) )
+rho_est <- mean(post$Rho[,1,2]) 
+sa_est <- mean( post$sigma_cafe[,1] )
+sb_est <- mean( post$sigma_cafe[,2] )
+cov_ab <- sa_est * sb_est * rho_est
+Sigma_est <- matrix( c(sa_est^2 , cov_ab, cov_ab, sb_est^2), ncol = 2 )
+
+# draw contours
+library(ellipse)
+for ( l in c(0.1, 0.3, 0.5, 0.8, 0.99) )
+  lines(ellipse(Sigma_est, centre = Mu_est, level = l), 
+        col = col.alpha("black", 0.2))
+
+```
+
+
+圖 \@ref(fig:introBayes16-fig04) 中藍色的點表示的是原始數據直接取平均值計算獲得的結果。空心點則是根據隨機效應模型的估計給出的各個餐廳的截距和斜率的事後概率分佈的估計平均值。二者之間用實線連接。我們發現每個空心點（模型估計值）的兩個維度都比簡單粗暴計算的原始值要更加靠近這個二維高斯分佈的中心點位置（這個現象被叫做塌陷 shrinkage）。距離中心點越遠的藍點，它的塌陷程度 (shrinkage) 越大。
 
 
