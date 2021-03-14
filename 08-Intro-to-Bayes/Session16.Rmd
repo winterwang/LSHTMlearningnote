@@ -323,3 +323,43 @@ for ( l in c(0.1, 0.3, 0.5, 0.8, 0.99) )
 圖 \@ref(fig:introBayes16-fig04) 中藍色的點表示的是原始數據直接取平均值計算獲得的結果。空心點則是根據隨機效應模型的估計給出的各個餐廳的截距和斜率的事後概率分佈的估計平均值。二者之間用實線連接。我們發現每個空心點（模型估計值）的兩個維度都比簡單粗暴計算的原始值要更加靠近這個二維高斯分佈的中心點位置（這個現象被叫做塌陷 shrinkage）。距離中心點越遠的藍點，它的塌陷程度 (shrinkage) 越大。
 
 
+
+相同的數據我們把它轉換到實際的觀察值尺度，並繪製成圖 \@ref(fig:introBayes16-fig05)。橫軸表示的是早晨的每家咖啡廳點餐等待時間（分鐘），縱軸則是下午的每家咖啡廳點菜等待時間。藍色的點是未經模型擬合的簡單粗暴計算的原始值。空心點則是模型給出的時候估計預測值。虛線表示的餐廳是上午下午點餐等待時間相等的情況（就是對角線）。這裏其實展示的是，參數的塌陷現象同樣會體現在觀測值的原始尺度上。而原始觀測值尺度上，上午，下午點餐的等待時間是成正比的，也就是上午等待時間長的餐廳，下午點餐的時間也會很長。很顯然，這樣的餐廳很受歡迎，等待時間在什麼時間去都比較長。但是整體餐廳的等待時間的分佈都落在表示上午下午點餐時間等長的虛線的下方，表示總體的傾向是幾乎所有的餐廳的下午等待時間平均要短於上午的等待時間。
+
+```{r introBayes16-fig05, cache=TRUE, fig.width=6, fig.height=5, message=FALSE, fig.cap="The same estimates on the outcome scale.", fig.align='center'}
+# Convert varying effects to waiting times
+wait_morning_1 <- (a1)
+wait_afternoon_1 <- (a1 + b1)
+wait_morning_2 <- (a2)
+wait_afternoon_2 <- (a2 + b2)
+
+# plot both and connect with lines
+
+plot( wait_morning_1, wait_afternoon_1, xlab = "morning wait", 
+      ylab = "afternoon wait", pch = 16, col = rangi2, 
+      ylim = c(min(wait_afternoon_1) - 0.1, max(wait_afternoon_1) + 0.1), 
+      xlim = c(min(wait_morning_1) - 0.1, max(wait_morning_1) + 0.1 ),
+       bty = "n")
+
+points( wait_morning_2, wait_afternoon_2, pch = 1)
+
+for ( i in 1:N_cafes )
+  lines( c(wait_morning_1[i], wait_morning_2[i]), 
+         c(wait_afternoon_1[i], wait_afternoon_2[i]) )
+
+abline( a = 0, b = 1, lty = 2)
+  
+# now shrinkage distribution by simulation
+v <- mvrnorm( 10000, Mu_est, Sigma_est )
+v[, 2] <- v[, 1] + v[, 2]
+Sigma_est2 <- cov(v)
+Mu_est2 <- Mu_est
+Mu_est2[2] <- Mu_est[1] + Mu_est[2]
+
+# draw contours
+library(ellipse)
+for (l in c(0.1, 0.3, 0.5, 0.8, 0.99)) 
+  lines(ellipse(Sigma_est2, centre = Mu_est2, level = l), 
+        col = col.alpha("black", 0.5))
+```
+
