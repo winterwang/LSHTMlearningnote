@@ -116,7 +116,7 @@ str(dat_slim)
 
 準備好了數據之後，接下來，我們使用 Stan 進行事後分佈樣本採集：
 
-```{r introBayes12-05, cache=TRUE, results="hide"}
+```{r introBayes12-05, cache=TRUE, results="hide", eval=FALSE}
 m9.1 <- ulam(
   alist(
     log_gdp_std ~ dnorm( mu, sigma ), 
@@ -126,47 +126,55 @@ m9.1 <- ulam(
     sigma ~ dexp(1)
   ), data = dat_slim, chains = 1 , cmdstan = TRUE
 )
+saveRDS(m9.1, "../Stanfits/m9_1.rds")
 ```
 
 ```{r introBayes12-0501, cache=TRUE}
+m9.1 <-  readRDS("../Stanfits/m9_1.rds")
 precis( m9.1, depth = 2 )
 ```
 
 我們還可以使用多条採樣鏈，及使用多個計算機內核以平行計算提升效率：
 
 
-```{r introBayes12-06, cache=TRUE}
-m9.1 <- ulam(
+```{r introBayes12-06, cache=TRUE, eval=FALSE}
+m9.104 <- ulam(
   alist(
     log_gdp_std ~ dnorm( mu, sigma ), 
     mu <- a[cid] + b[cid] * ( rugged_std - 0.215 ) , 
     a[cid] ~ dnorm(1, 0.1), 
     b[cid] ~ dnorm(0, 0.3), 
     sigma ~ dexp(1)
-  ), data = dat_slim, chains = 4, cores = 4, cmdstan = TRUE
+  ), data = dat_slim, chains = 4, cores = 4 , cmdstan = TRUE
 )
-show( m9.1 )
-precis( m9.1 , depth = 2)
+saveRDS(m9.104, "../Stanfits/m9_104.rds")
+```
+
+```{r introBayes12-050101, cache=TRUE}
+m9.104 <-  readRDS("../Stanfits/m9_104.rds")
+
+show( m9.104 )
+precis( m9.104 , depth = 2 )
 ```
 
 除了使用 `traceplot()` 來進行診斷給出軌跡圖之外：
 
 
 ```{r  introBayes12-fig03, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Trace plot of the Markov chain from the ruggedness model, m9.1. (Gray region is warmup)", fig.align='center'}
-traceplot(m9.1)
+traceplot(m9.104)
 ```
 
 還可以使用 `trunkplot()` 繪製 軌跡排序圖 (trace rank plot)。
 
 ```{r introBayes12-fig04, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Trunk plot of the Markov chain from the ruggedness model, m9.1.", fig.align='center'}
- trankplot( m9.1 )
+ trankplot( m9.104 )
 ```
 
 使用 `stancode()` 可以閱讀計算機自動生成的 Stan 代碼：
 
 
 ```{r introBayes12-07, cache=TRUE}
-stancode(m9.1)
+stancode(m9.104)
 ```
 
 
@@ -175,7 +183,7 @@ stancode(m9.1)
 有些模型給出的事後概率密度十分的寬且不準確，這常常是由於不加思索地給予所謂的“無信息先驗概率分佈”，也就是常見的平先驗概率分佈 (flat priors)。你可能會發現它給出的事後樣本採集鏈十分的野蠻，一會兒非常大，一會兒非常地小。下面是一個最簡單的例子，它用於計算兩個來自高斯分佈的觀察值 -1，和 1 的事後均值和標準差，使用的就是典型的平分佈作爲先驗概率分佈：
 
 
-```{r introBayes12-08, cache=TRUE, results="hide"}
+```{r introBayes12-08, cache=TRUE, results="hide", eval=FALSE}
 y <- c(-1, 1)
 set.seed(11)
 m9.2 <- ulam(
@@ -186,9 +194,22 @@ m9.2 <- ulam(
     sigma ~ dexp(0.0001)
   ), data  = list(y = y), chains = 3, cmdstan = TRUE
 )
+saveRDS(m9.2, "../Stanfits/m9_2.rds")
+```
+
+```
+## Compiling Stan program...
+## 
+## Warning: 70 of 1500 (5.0%) transitions ended with a divergence.
+## This may indicate insufficient exploration of the posterior distribution.
+## Possible remedies include: 
+##   * Increasing adapt_delta closer to 1 (default is 0.8) 
+##   * Reparameterizing the model (e.g. using a non-centered parameterization)
+##   * Using informative or weakly informative prior distributions
 ```
 
 ```{r introBayes12-0801, cache=TRUE}
+m9.2 <-  readRDS("../Stanfits/m9_2.rds")
 precis(m9.2)
 ```
 
@@ -219,7 +240,7 @@ $$
 我們僅僅是給均值，和對應的標準差增加了一點點比平概率分佈多一些信息的分佈。於是這個模型可以變成：
 
 
-```{r  introBayes12-09, cache=TRUE, results="hide"}
+```{r  introBayes12-09, cache=TRUE, results="hide", eval=FALSE}
 set.seed(11)
 m9.3 <- ulam(
   alist(
@@ -229,9 +250,11 @@ m9.3 <- ulam(
     sigma ~ dexp(1)
   ), data = list(y = y), chains = 3, cmdstan = TRUE
 )
+saveRDS(m9.3, "../Stanfits/m9_3.rds")
 ```
 
 ```{r introBayes12-0901, cache=TRUE}
+m9.3 <-  readRDS("../Stanfits/m9_3.rds")
 precis(m9.3)
 ```
 
@@ -278,7 +301,7 @@ $$
 
 3. 下面的代碼是上述模型的翻譯，這時 Stan 運行的時間會較長；
 
-```{r introBayes12-11, cache=TRUE, results="hide"}
+```{r introBayes12-11, cache=TRUE, results="hide", eval=FALSE}
 set.seed(384)
 m9.4 <- ulam(
   alist(
@@ -289,10 +312,31 @@ m9.4 <- ulam(
     sigma ~ dexp(1)
   ), data = list(y = y), chains = 3, cmdstan = TRUE
 )
+saveRDS(m9.4, "../Stanfits/m9_4.rds")
+```
+
+```
+## Compiling Stan program...
+## Chain 2 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:
+## Chain 2 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in '/var/folders/n0/td0mphcj6w99jbbq4p9s5xf40000gn/T/Rtmpdj1T5J/model-100ab3fc5fda4.stan', line 15, column 4 to column 29)
+## Chain 2 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,
+## Chain 2 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.
+## Chain 2
+## Chain 3 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:
+## Chain 3 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in '/var/folders/n0/td0mphcj6w99jbbq4p9s5xf40000gn/T/Rtmpdj1T5J/model-100ab3fc5fda4.stan', line 15, column 4 to column 29)
+## Chain 3 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,
+## Chain 3 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.
+## Chain 3
+## 1125 of 1500 (75.0%) transitions hit the maximum treedepth limit of 10 or 2^10-1 leapfrog steps.
+## Trajectories that are prematurely terminated due to this limit will result in slow exploration.
+## Increasing the max_treedepth limit can avoid this at the expense of more computation.
+## If increasing max_treedepth does not remove warnings, try to reparameterize the model.
 ```
 
 
+
 ```{r introBayes12-1101, cache=TRUE}
+m9.4 <-  readRDS("../Stanfits/m9_4.rds")
 precis(m9.4)
 ```
 
@@ -311,7 +355,7 @@ trankplot(m9.4)
 
 同樣地，對先驗概率分佈加以調整之後，有助於我們的模型事後樣本的採集。
 
-```{r introBayes12-12, cache=TRUE, results="hide"}
+```{r introBayes12-12, cache=TRUE, results="hide", eval=FALSE}
 set.seed(384)
 m9.5 <- ulam(
   alist(
@@ -322,9 +366,11 @@ m9.5 <- ulam(
     sigma ~ dexp(1)
   ), data = list(y = y), chains = 3, cmdstan = TRUE
 )
+saveRDS(m9.5, "../Stanfits/m9_5.rds")
 ```
 
 ```{r introBayes12-1201, cache=TRUE}
+m9.5 <- readRDS("../Stanfits/m9_5.rds")
 precis(m9.5)
 ```
 
