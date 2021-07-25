@@ -1,0 +1,110 @@
+
+
+我們使用相同的白血病患者數據來展示分析代碼和結果：
+
+```{example Survival-analysis-1001}
+**給白血病患者數據套用 Cox 比例風險回歸模型** 在這個數據中，42名白血病患者中各有21人分別在治療和對照組。研究者關心的事件是病情的緩解 (remission)。追蹤時間是從白血病診斷時起，單位是週數。那麼暴露變量就是被分配到治療組與否，其中被分配到對照組的患者的風險度被認爲是基線風險度 (baseline hazard)。於是這個模型其實可以簡單描述成：
+
+```
+
+
+
+$$
+\begin{cases}
+     h_0(t)   & 對照組 \text{ control group} \\
+     h_0(t) e^\beta & 治療組 \text{ treatment group}
+\end{cases}
+$$
+
+使用偏似然法計算該模型的參數我們獲得對數風險度比 (log hazard ratio) 的估計值 $\hat\beta = -1.51$，其對應的標準誤是 $0.410$，95% 信賴區間是 (-2.31, -0.71)。於是相應的，風險度比 $\exp \hat\beta = 0.22$，95% 信賴區間是 $(0.10, 0.49)$。
+
+該模型用 Stata 計算的過程如下
+
+```{r engine='stata', echo=FALSE, eval=TRUE}
+infile group weeks remission using https://data.princeton.edu/wws509/datasets/gehan.raw
+label define group 1 "control" 2 "treated"
+label values group group
+stset weeks, failure(remission)
+stcox group
+stcox group, nohr
+```
+
+
+該模型用 R 計算的過程如下
+
+```{r  Surv10-01, cache=TRUE}
+gehan <- read.table("https://data.princeton.edu/wws509/datasets/gehan.raw", 
+                    header =  FALSE, sep ="", 
+                    col.names = c( "group", "weeks", "remission"))
+
+cox.model <- coxph(Surv(time = weeks, event = remission) ~ as.factor(group), 
+                     data = gehan, method = "breslow")
+summary(cox.model)
+```
+
+
+
+相同的模型如果使用 `brms` 通過 Stan 運行貝葉斯模型的話是這樣子的：
+
+
+```{r Surv10-02, cache=TRUE, eval=FALSE}
+gehan <- gehan %>% 
+  mutate( remission1 = 1 - remission ) %>% 
+  mutate( Group = as.factor(group) )
+
+fitCox1002 <- 
+  brm(data = gehan,
+      family = brmsfamily("cox"),
+      weeks | cens(remission1) ~ 1 + Group,
+      iter = 4000, warmup = 1500, chains = 4, cores = 4,
+      seed = 14)
+saveRDS(fitCox1002, "../Stanfits/Cox1002.rds")
+```
+
+
+
+Check the summary for `fitCox1002`.
+
+```{r Surv10-03, cache=TRUE}
+fitCox1002 <- readRDS("../Stanfits/Cox1002.rds")
+print(fitCox1002)
+```
+
+計算對應的貝葉斯事後危險度比 Hazard Ratio
+
+```{r Surv10-04, cache=TRUE}
+post <- posterior_samples(fitCox1002)
+
+post %>% 
+  transmute(`hazard ratio` = exp(b_Group2)) %>% 
+  summarise(median = median(`hazard ratio`),
+            sd     = sd(`hazard ratio`),
+            ll     = quantile(`hazard ratio`, probs = .025),
+            ul     = quantile(`hazard ratio`, probs = .975)) %>% 
+  mutate_all(round, digits = 4)
+```
+
+
+繪製貝葉斯方法獲得的事後分佈概率密度函數 (Why not glance at the full posterior?)：
+
+
+
+```{r Surv10-fig01, fig.width = 4, fig.height = 2.5, cache=TRUE, fig.cap="The full posterior distribution of the hazard ratio from model fitCox1002", fig.align='center'}
+post %>% 
+  transmute(`hazard ratio` = exp(b_Group2)) %>% 
+  ggplot(aes(x = `hazard ratio`, y = 0)) +
+  geom_vline(xintercept = 1, color = "white") +
+  stat_halfeye(.width = c(.5, .95)) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  xlab("hazard ratio for Group2 vs Group1") +
+  theme(panel.grid = element_blank())
+```
+
+
+從已經運行好的模型中調取 `brms` 自動爲我們生成的 Stan 代碼:
+
+
+```{r Surv10-05, cache=TRUE}
+fitCox1002$model
+```
+
