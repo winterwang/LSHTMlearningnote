@@ -1,14 +1,47 @@
 
-本章內容不討論任何理論的東西，着重強調用 R 進行實際數據的分析，並加強對輸出結果的理解。
 
 
-此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。
 
-```{r SME01, cache=TRUE, message=FALSE, warning=FALSE}
-whitehal <- read_dta("../backupfiles/whitehal.dta")
-whitehal$followupyrs <- (whitehal$timeout - whitehal$timein)/365.25
+本章內容不討論任何理論的東西，着重強調用 R/Stata/Stan 進行實際數據的分析，並加強對輸出結果的理解。
+
+
+此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。同時我們儘可能展示Stata的使用方法，並且同時給出R的解決方案。在允許的情況下，部分模型也會給出使用貝葉斯方法運算的過程和結果。
+
+數據是從 Whitehall Cohort Study (`whitehal.dta`) 隨機採集10%的樣本數據。該研究的研究對象是英國的公務員羣體，調查的是心血管疾病的發病率和一些生活習慣之間的關係，更詳細的內容可以參考原始論文 [@marmot1978employment]，或者[維基百科主頁](https://en.wikipedia.org/wiki/Whitehall_Study#cite_note-:0-1)。
+
+## Q1-Q3 讀取數據，簡單歸納，分割年齡，計算年齡組的粗死亡率 
+
+```{r  SME02-01stata,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/whitehal.dta", clear
+stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
+```
+
+
+經過 Stata `stset` 命令的生存時間總結。我們指定了數據 `whitehal` 中的總死亡 `all` 作爲觀察結果，時間變量分別是 `timein` 和 `timeout`，單位是“日”。我們發現在這個樣本中，1677名隨訪對象一共有403名在研究結束以前死亡。時間尺度 `timein` 是從被錄用爲公務員的第一天，隨訪結束時間是 `timeout`，最長的人觀察了 19.4 年。相似的信息在R裏面實現的方法也很簡單：
+
+
+```{r SME02-01R, cache=TRUE, message=FALSE, warning=FALSE}
+whitehal <- read_dta("../backupfiles/whitehal.dta") # read in the dataset
+whitehal$followupyrs <- (whitehal$timeout - whitehal$timein)/365.25 # change time as years
 max(whitehal$followupyrs*365.25) # time difference in days
 summary(whitehal$followupyrs <- as.numeric(whitehal$followupyrs)) # time difference in years
+epiDisplay::tab1(whitehal$all, graph = FALSE)
+```
+
+該數據中的變量 `agein` 其實是研究參與對象在進入隊列時的年齡。我們打算把這個變量改成 5 歲爲階梯的分類型變量 (40-44, 45-49, 50-54, ..., 65-69)。在 Stata 會用到 `egen` 命令。同時，我們可以使用 `strate` 命令來查看這個樣本中隨着年齡增加，粗死亡率的變化是怎樣的。另一個獲取相同結果的命令是 `stptime` 命令。
+
+
+```{r  SME02-02stata,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/whitehal.dta", clear
+stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
+egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
+strate agecat, per(1000)
+stptime, by(agecat) per(1000)
+```
+
+在 R 裏面你可以使用 `epitools:pois.exact` 的函數來計算並獲得相似的結果：
+
+```{r SME02-02R, cache=TRUE, message=FALSE, warning=FALSE}
 
 # categorize agein into groups (40-44, 45-49, 50-54, ... , 65-69)
 whitehal$agecat <- cut(whitehal$agein, breaks = seq(40, 70, 5), right = FALSE)
@@ -16,24 +49,53 @@ with(whitehal, table(agecat))
 
 # examine how mortality rates change with age at entry
 # 
-# with(whitehal %>% group_by(agecat) %>%
-#   summarise(D = sum(all),
-#             Y = sum(followupyrs)),
-#   cbind(whitehal$agecat, pois.exact(x = D, pt = Y/1000)))
 
+whitehall_sum <- whitehal %>% group_by(agecat) %>%
+  summarise(D = sum(all),
+            Y = sum(followupyrs)) 
+cbind(whitehall_sum, pois.exact(x = whitehall_sum$D, 
+                                pt = whitehall_sum$Y/1000)[,-c(1, 6)])
+```
+
+
+## Q4 計算不同年齡組相對於最年輕的年齡組的死亡率比 Rate ratio, RR
+
+在 Stata 你需要使用 `stmh` 命令來計算死亡率比。
+
+```{r  SME02-03stata,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/whitehal.dta", clear
+egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
+stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
+stmh agecat, c(1, 0)
+stmh agecat, c(2, 0)
+stmh agecat, c(3, 0)
+stmh agecat, c(4, 0)
+stmh agecat, c(5, 0)
+```
+
+
+但是在 R 裏面，需要使用最簡單的泊松回歸模型來計算上述死亡率比。
+
+```{r SME02-03R, cache=TRUE, message=FALSE, warning=FALSE}
 
 ## rate ratios and 95% CIs for each age category compare with [40,44) age group
-Model0 <- glm(all ~ agecat + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model0)
+Model0 <- glm(all ~ agecat + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); 
+ci.exp(Model0)
 
 ## The rate ratios are increasing with age although there is no statistical evidence
 ## at 5% level that the rate among 45-49 year olds is different to the rate among men
 ## who are <40 years
+```
 
 
-# with(whitehal %>% group_by(grade) %>%
-#   summarise(D = sum(all),
-#             Y = sum(followupyrs)),
-#   cbind(whitehal$grade, pois.exact(x = D, pt = Y/1000)))
+我們發現，死亡率比隨着年齡的增加而顯著升高。
+
+
+
+## Q5 
+
+```{r}
+
 
 Model1 <- glm(all ~ factor(grade) + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model1)
 
@@ -84,3 +146,4 @@ mhgrade_age$res$RR.homog
 
 ## Hence, we do not need to present the stratum-specific estimates.
 ```
+

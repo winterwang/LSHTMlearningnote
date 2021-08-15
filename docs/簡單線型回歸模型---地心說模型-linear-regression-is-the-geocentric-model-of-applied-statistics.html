@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 104 章 貝葉斯和概率論的比較 | 醫學統計學</title>
-  <meta name="description" content="第 104 章 貝葉斯和概率論的比較 | 醫學統計學" />
+  <title>第 46 章 簡單線型回歸模型 - 地心說模型 Linear regression is the geocentric model of applied statistics | 醫學統計學</title>
+  <meta name="description" content="第 46 章 簡單線型回歸模型 - 地心說模型 Linear regression is the geocentric model of applied statistics | 醫學統計學" />
   <meta name="generator" content="bookdown 0.23 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 104 章 貝葉斯和概率論的比較 | 醫學統計學" />
+  <meta property="og:title" content="第 46 章 簡單線型回歸模型 - 地心說模型 Linear regression is the geocentric model of applied statistics | 醫學統計學" />
   <meta property="og:type" content="book" />
   
   <meta property="og:image" content="/img/cover.jpg" />
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 104 章 貝葉斯和概率論的比較 | 醫學統計學" />
+  <meta name="twitter:title" content="第 46 章 簡單線型回歸模型 - 地心說模型 Linear regression is the geocentric model of applied statistics | 醫學統計學" />
   
   
   <meta name="twitter:image" content="/img/cover.jpg" />
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="MCMC-revisit.html"/>
-<link rel="next" href="nonparaBayes-intro.html"/>
+<link rel="prev" href="多參數模型-introduction-to-multiparameter-models.html"/>
+<link rel="next" href="直線和曲線-curves-and-lines.html"/>
 <script src="libs/header-attrs/header-attrs.js"></script>
 <script src="libs/jquery/jquery-3.6.0.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
@@ -1883,55 +1883,817 @@ div.csl-indent {
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="compare-Bayes-freq" class="section level1" number="104">
-<h1><span class="header-section-number">第 104 章</span> 貝葉斯和概率論的比較</h1>
+<div id="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics" class="section level1" number="46">
+<h1><span class="header-section-number">第 46 章</span> 簡單線型回歸模型 - 地心說模型 Linear regression is the geocentric model of applied statistics</h1>
+<p>這裡的簡單筆記來自經典教學書 <a href="https://xcelab.net/rm/statistical-rethinking/">Statistical Rethinking</a>。</p>
+<div id="為什麼正常態分佈是正常的-why-normal-distribution-is-normal" class="section level2" number="46.1">
+<h2><span class="header-section-number">46.1</span> 為什麼正（常）態分佈是正常的 why normal distribution is normal?</h2>
 <blockquote>
-<p>Bayesianisom provides advice about how you should change your degree of belief as you acquire new evidence.</p>
+<dl>
+<dt>Keep in mind that using a model is not equivalent to swearing an oath on it. The golem is your servant, not the other way around.</dt>
+<dd>Richard McElreath
+</dd>
+</dl>
 </blockquote>
-<div id="兩種方法的不同點總覽" class="section level2" number="104.1">
-<h2><span class="header-section-number">104.1</span> 兩種方法的不同點總覽</h2>
-<p>嚴格來說，每個研究問題，都可以通過兩種統計學方法，要麼概率論手段，要麼貝葉斯思想，來描述及進行推斷。它們之間的不同，通過前面幾個章節的描述應該能夠切身體會得到：</p>
-<ol style="list-style-type: decimal">
-<li>貝葉斯思想利用的是事後概率分佈 <span class="math inline">\(p(\theta|y) \propto p(y|\theta)p(\theta)\)</span>；而傳統概率論統計學只需要使用其中的似然(likelihood)部分。</li>
-<li>貝葉斯思想需要使用者把進行實驗之前，已經有的知識和背景總結成爲先驗概率分佈 (prior distribution, <span class="math inline">\(p(\theta)\)</span>)；而傳統概率論並無數學或者統計學的方案來考慮這些實驗進行之前已經有的背景知識，有的只是做完實驗之後，事後的討論，及對實驗結果的解讀，演繹時進行的描述。</li>
-<li>貝葉斯思想一般是對噪音參數 (nuisance parameters) 進行取均值的做法；而傳統概率論是把這些參數也極大化 (maximise)。</li>
-<li>貝葉斯統計學方法相對來說對計算能力要求較高，但是 MCMC 計算機模擬採樣過程使得現實中特別複雜的統計學模型也能變得直觀且易於獲得結果。</li>
-</ol>
-<p>下面我們來討論一下上面提到的這些不同點在常見的臨牀實驗，以及流行病學研究的統計學案例中如何啓示分析者作出選擇。</p>
+<p>概率分佈如果是離散型的，如二項分佈，描述它的分佈函數被叫做概率質量函數 (probability mass functions)。當概率分佈是連續型的，如正（常）態/高斯分佈，描述它的分佈函數被叫做概率密度函數 (probability density functions)。概率密度本身的取值是可以大於1的，如：</p>
+<div class="sourceCode" id="cb474"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb474-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb474-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dnorm</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="fl">0.1</span>) <span class="co"># mean = 0, sd = 0.1</span></span></code></pre></div>
+<pre><code>## [1] 3.9894228</code></pre>
+<p>是讓 R 幫助我們計算 <span class="math inline">\(p(0 | 0, (\sqrt{0.1})^2)\)</span> 的取值。其結果差不多要等於4。這並沒有出錯，<strong>概率密度</strong>的概念其實是累積概率的增長速率 (the rate of change in cumulative probability)。所以在概率密度函數的平滑曲線上，累積概率增加的越快的區間，它的增長速率，也就是概率密度很容易超過1。但是，概率密度函數的曲線下面積，則永遠不可能超過1。</p>
 </div>
-<div id="亞組分析-subgroup-analysis" class="section level2" number="104.2">
-<h2><span class="header-section-number">104.2</span> 亞組分析 subgroup analysis</h2>
-<p>很常見的一種現象是，一些藥物的治療效果，在總體中被發現具有顯著性的療效，但是當分析人員把研究對象根據一些特徵進行分層分析之後，卻發現這種顯著療效只存在與一部分亞組對象中，（如男性中有療效，但是女性中沒有療效等類似的現象）。同時，交互作用分析的結果又提示說分層變量和療效之間並沒有有意義的交互作用 (while an interaction analysis reveals that the effect is not significantly different for men and women)。</p>
-<p>例如，我們看這樣一個實際的例子，有一個臨牀實驗比較的是 sinvastatin 和安慰劑對患者血清膽固醇水平下降能力上的異同。實驗對象有男性也有女性，它們的共同點是(曾經)患有心絞痛，或者心肌梗塞。實驗組和對照組的五年死亡人數等數據總結如下：</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:Bayesian1001"></span>
-<img src="img/table10-1.png" alt="Five-year mortality for simvastatin vs. placebo trial." width="80%" />
+<div id="身高的高斯模型-gaussian-model-of-height" class="section level2" number="46.2">
+<h2><span class="header-section-number">46.2</span> 身高的高斯模型 Gaussian model of height</h2>
+<div class="sourceCode" id="cb476"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb476-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb476-1" aria-hidden="true" tabindex="-1"></a><span class="co"># library(rethinking)</span></span>
+<span id="cb476-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb476-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;Howell1&quot;</span>)</span>
+<span id="cb476-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb476-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb476-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb476-4" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> Howell1</span>
+<span id="cb476-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb476-5" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(d)</span></code></pre></div>
+<pre><code>## &#39;data.frame&#39;:    544 obs. of  4 variables:
+##  $ height: num  152 140 137 157 145 ...
+##  $ weight: num  47.8 36.5 31.9 53 41.3 ...
+##  $ age   : num  63 63 65 41 51 35 32 27 19 54 ...
+##  $ male  : int  1 0 0 1 0 1 0 1 0 1 ...</code></pre>
+<div class="sourceCode" id="cb478"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb478-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb478-1" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(d)</span></code></pre></div>
+<pre><code>##                mean          sd       5.5%      94.5%     histogram
+## height 138.26359632 27.60244764 81.1085500 165.735000 ▁▁▁▁▁▁▁▂▁▇▇▅▁
+## weight  35.61061759 14.71917818  9.3607214  54.502894 ▁▂▃▂▂▂▂▅▇▇▃▂▁
+## age     29.34439338 20.74688822  1.0000000  66.135000     ▇▅▅▃▅▂▂▁▁
+## male     0.47242647  0.49969861  0.0000000   1.000000    ▇▁▁▁▁▁▁▁▁▇</code></pre>
+<div class="sourceCode" id="cb480"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb480-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb480-1" aria-hidden="true" tabindex="-1"></a><span class="co"># filter out non-adults</span></span>
+<span id="cb480-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb480-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb480-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb480-3" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> d[ d<span class="sc">$</span>age <span class="sc">&gt;=</span> <span class="dv">18</span>, ]</span></code></pre></div>
+<p>寫下身高的模型，</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_i &amp; \sim \text{Normal}(\mu, \sigma) &amp;\text{     [Likelihood]} \\
+\mu &amp; \sim \text{Normal}(178, 20)     &amp;\text{     [prior for } \mu] \\
+\sigma &amp; \sim \text{Uniform}(0, 50)          &amp;\text{     [prior for } \sigma]\\
+\end{aligned}
+\]</span></p>
+<p>觀察一下我們設定的先驗概率分佈的形狀：</p>
+<div class="sourceCode" id="cb481"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb481-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb481-1" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>( <span class="fu">dnorm</span>( x, <span class="dv">178</span>, <span class="dv">20</span>), <span class="at">from =</span> <span class="dv">100</span>, <span class="at">to =</span> <span class="dv">250</span>, <span class="at">xlab =</span> <span class="sc">~</span>mu)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-02"></span>
+<img src="bookdown_files/figure-html/introBayes06-02-1.png" alt="The shape for prior distribution of the mean." width="90%" />
 <p class="caption">
-圖 104.1: Five-year mortality for simvastatin vs. placebo trial.
+圖 46.1: The shape for prior distribution of the mean.
 </p>
 </div>
-<p>根據這個結果，就有人會提出尖銳的問題，到底女性患者是否應該使用該藥物來降低膽固醇？</p>
-<ul>
-<li>是。理由是總體（男女共同的）治療是有效果的，且交互作用並無提示療效有男女差異。</li>
-<li>否。理由是分層分析結果現實女性中療效是無顯著意義的，並且還甚至可能有害 (RR &gt; 1)。</li>
-</ul>
-<p>如果使用貝葉斯思想來進行接下來的分析的話，貝葉斯統計學會要求給療效<span class="math inline">\(\times\)</span>性別這一代表交互作用的變量的回歸係數加上有信息的先驗概率分佈 (informative prior)，但是給其他的回歸係數以不含信息的先驗概率分佈 (non-informative priors on all the other parameters.)。這樣的一種方法，可以從男性結果中借來 (borrowing information from men) 一些療效信息，因爲顯然上面這個實驗中女性患者的數量很少，只有男性患者的不到三分之一人數。同時把模型中男性相對女性患者的信息量比重下調 (down-weighting information from men compared with information from women)。</p>
+<div class="sourceCode" id="cb482"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb482-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb482-1" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>( <span class="fu">dunif</span>( x, <span class="dv">0</span>, <span class="dv">50</span>), <span class="at">from =</span> <span class="sc">-</span><span class="dv">10</span>, <span class="at">to =</span> <span class="dv">60</span>, <span class="at">xlab =</span> <span class="sc">~</span>sigma)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-03"></span>
+<img src="bookdown_files/figure-html/introBayes06-03-1.png" alt="The shape for prior distribution of the standard deviation." width="90%" />
+<p class="caption">
+圖 46.2: The shape for prior distribution of the standard deviation.
+</p>
 </div>
-<div id="多重比較問題-multiple-comparisons" class="section level2" number="104.3">
-<h2><span class="header-section-number">104.3</span> 多重比較問題 multiple comparisons</h2>
-<p>臨牀實驗和流行病學研究同時都面對多重比較的問題。貝葉斯統計學方法提供了</p>
-
+<p>當你選定了參數 <span class="math inline">\(h, \mu, \sigma\)</span> 的先驗概率分佈時，你其實同時選定了他們的聯合分佈 (joint distribution)。從這個聯合先驗概率分佈中採集一些樣本，可以輔助我們判斷選擇這樣的先驗概率分佈是否是合適/不壞的。</p>
+<div class="sourceCode" id="cb483"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb483-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb483-1" aria-hidden="true" tabindex="-1"></a>sample_mu <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">10000</span>, <span class="dv">178</span>, <span class="dv">20</span>)</span>
+<span id="cb483-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb483-2" aria-hidden="true" tabindex="-1"></a>sample_sigma <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">10000</span>, <span class="dv">0</span>, <span class="dv">50</span>)</span>
+<span id="cb483-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb483-3" aria-hidden="true" tabindex="-1"></a>prior_h <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">10000</span>, sample_mu, sample_sigma)</span>
+<span id="cb483-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb483-4" aria-hidden="true" tabindex="-1"></a><span class="fu">dens</span>( prior_h )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-04"></span>
+<img src="bookdown_files/figure-html/introBayes06-04-1.png" alt="The shape for samplings from prior distribution of the height generated from the joint distrition chosen for the mean and standard deviation." width="90%" />
+<p class="caption">
+圖 46.3: The shape for samplings from prior distribution of the height generated from the joint distrition chosen for the mean and standard deviation.
+</p>
+</div>
+<p>看起來身高的先驗概率分佈似乎合乎常理，可以暫且認為均值和標準差的先驗概率選擇並不太糟糕。</p>
+<p>當你刻意去選擇更加寬泛的先驗概率分佈給均值時，可能導致不合理的數據出現。如下圖 <a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#fig:introBayes06-05">46.4</a> 中顯示的那樣，當刻意給身高的均值 <span class="math inline">\(\mu\)</span> 賦予更加“不含信息”，或者模糊的先驗概率 <span class="math inline">\(\text{Normal}(178, 100)\)</span>，時給出的身高的先驗概率分佈中出現了不少身高為負數的情況，這就是不合理的先驗概率分佈。</p>
+<div class="sourceCode" id="cb484"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb484-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb484-1" aria-hidden="true" tabindex="-1"></a>sample_mu <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">10000</span>, <span class="dv">178</span>, <span class="dv">100</span>)</span>
+<span id="cb484-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb484-2" aria-hidden="true" tabindex="-1"></a>prior_h <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">10000</span>, sample_mu, sample_sigma)</span>
+<span id="cb484-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb484-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dens</span>( prior_h )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-05"></span>
+<img src="bookdown_files/figure-html/introBayes06-05-1.png" alt="The shape for samplings from prior distribution of the height generated from the joint distrition chosen for the mean and standard deviation, with flatter and less information prior for the mean (mu ~ N(178, 100))." width="90%" />
+<p class="caption">
+圖 46.4: The shape for samplings from prior distribution of the height generated from the joint distrition chosen for the mean and standard deviation, with flatter and less information prior for the mean (mu ~ N(178, 100)).
+</p>
+</div>
+<p>模型的貝葉斯定理表達式：</p>
+<p><span class="math display">\[
+\text{Pr}(\mu, \sigma | h) = \frac{\prod_i \text{Normal}(h_i|\mu, \sigma)\text{Normal}(\mu | 178, 20)\text{Uniform}(\sigma|0,50)}{\int\int \prod_i \text{Normal}(h_i|\mu, \sigma)\text{Normal}(\mu | 178, 20)\text{Uniform}(\sigma|0,50) d\mu d\sigma}
+\]</span></p>
+<div id="小方格估計法近似事後概率分佈" class="section level3" number="46.2.1">
+<h3><span class="header-section-number">46.2.1</span> 小方格估計法近似事後概率分佈</h3>
+<div class="sourceCode" id="cb485"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb485-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 在 150 - 160 之間產生100個數據區間</span></span>
+<span id="cb485-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-2" aria-hidden="true" tabindex="-1"></a>mu_list <span class="ot">&lt;-</span> <span class="fu">seq</span>( <span class="at">from =</span> <span class="dv">150</span>, <span class="at">to =</span> <span class="dv">160</span>, <span class="at">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb485-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb485-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 在 7-9 之間產生 100 個數據區間</span></span>
+<span id="cb485-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-5" aria-hidden="true" tabindex="-1"></a>sigma_list <span class="ot">&lt;-</span> <span class="fu">seq</span>( <span class="at">from  =</span> <span class="dv">7</span>, <span class="at">to =</span> <span class="dv">9</span>, <span class="at">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb485-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb485-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 用上面生成的方差和均值交叉做出 10000 個均值和方差的數據格子</span></span>
+<span id="cb485-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-8" aria-hidden="true" tabindex="-1"></a>post <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>( <span class="at">mu =</span> mu_list, <span class="at">sigma =</span> sigma_list)</span>
+<span id="cb485-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb485-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 在對數尺度上用加法運算，會節約計算成本</span></span>
+<span id="cb485-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-11" aria-hidden="true" tabindex="-1"></a>post<span class="sc">$</span>LL <span class="ot">&lt;-</span> <span class="fu">sapply</span>( <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(post), <span class="cf">function</span>(i) <span class="fu">sum</span>(</span>
+<span id="cb485-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dnorm</span>( d2<span class="sc">$</span>height, post<span class="sc">$</span>mu[i], post<span class="sc">$</span>sigma[i], <span class="at">log =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb485-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-13" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb485-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb485-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-15" aria-hidden="true" tabindex="-1"></a><span class="co"># 計算取對數下的事後概率分佈的分母部分 </span></span>
+<span id="cb485-16"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-16" aria-hidden="true" tabindex="-1"></a>post<span class="sc">$</span>prod <span class="ot">&lt;-</span> post<span class="sc">$</span>LL <span class="sc">+</span> </span>
+<span id="cb485-17"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dnorm</span>( post<span class="sc">$</span>mu, <span class="dv">178</span>, <span class="dv">20</span>, <span class="at">log =</span> <span class="cn">TRUE</span>) <span class="sc">+</span> </span>
+<span id="cb485-18"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dunif</span>(post<span class="sc">$</span>sigma, <span class="dv">0</span>, <span class="dv">50</span>, <span class="at">log =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb485-19"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb485-20"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Scale all of the log-products by the maximum log-product</span></span>
+<span id="cb485-21"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb485-22"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb485-22" aria-hidden="true" tabindex="-1"></a>post<span class="sc">$</span>prob <span class="ot">&lt;-</span> <span class="fu">exp</span>( post<span class="sc">$</span>prod <span class="sc">-</span> <span class="fu">max</span>(post<span class="sc">$</span>prod))</span></code></pre></div>
+<p>可以繪製簡單的事後均值，事後標準差的等高圖分佈，登高線本身使用上面代碼計算的身高的相對事後概率分佈。</p>
+<div class="sourceCode" id="cb486"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb486-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb486-1" aria-hidden="true" tabindex="-1"></a><span class="fu">contour_xyz</span>( post<span class="sc">$</span>mu, post<span class="sc">$</span>sigma, post<span class="sc">$</span>prob)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-07"></span>
+<img src="bookdown_files/figure-html/introBayes06-07-1.png" alt="Simple contour plot of the posterior means and standard deviations of height with relative posterior probability distribution. " width="90%" />
+<p class="caption">
+圖 46.5: Simple contour plot of the posterior means and standard deviations of height with relative posterior probability distribution.
+</p>
+</div>
+<div class="sourceCode" id="cb487"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb487-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb487-1" aria-hidden="true" tabindex="-1"></a><span class="fu">image_xyz</span>(post<span class="sc">$</span>mu, post<span class="sc">$</span>sigma, post<span class="sc">$</span>prob)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-08"></span>
+<img src="bookdown_files/figure-html/introBayes06-08-1.png" alt="Simple heat map plot of the posterior means and standard deviations of height with relative posterior probability distribution. " width="90%" />
+<p class="caption">
+圖 46.6: Simple heat map plot of the posterior means and standard deviations of height with relative posterior probability distribution.
+</p>
 </div>
 </div>
+<div id="從計算獲得的事後概率分佈中採樣" class="section level3" number="46.2.2">
+<h3><span class="header-section-number">46.2.2</span> 從計算獲得的事後概率分佈中採樣</h3>
+<div class="sourceCode" id="cb488"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb488-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb488-1" aria-hidden="true" tabindex="-1"></a>sample.rows <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span> <span class="sc">:</span> <span class="fu">nrow</span>(post), <span class="at">size =</span> <span class="dv">10000</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb488-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb488-2" aria-hidden="true" tabindex="-1"></a>                      <span class="at">prob =</span> post<span class="sc">$</span>prob)</span>
+<span id="cb488-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb488-3" aria-hidden="true" tabindex="-1"></a>sample.mu <span class="ot">&lt;-</span> post<span class="sc">$</span>mu[ sample.rows ]</span>
+<span id="cb488-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb488-4" aria-hidden="true" tabindex="-1"></a>sample.sigma <span class="ot">&lt;-</span> post<span class="sc">$</span>sigma[ sample.rows]</span>
+<span id="cb488-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb488-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb488-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb488-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(sample.mu, sample.sigma, <span class="at">cex =</span> <span class="fl">0.7</span>, <span class="at">pch =</span> <span class="dv">16</span>, </span>
+<span id="cb488-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb488-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="fu">col.alpha</span>(rangi2, <span class="fl">0.2</span>))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-09"></span>
+<img src="bookdown_files/figure-html/introBayes06-09-1.png" alt="Samples from the posterior distribution for the heights data." width="90%" />
+<p class="caption">
+圖 46.7: Samples from the posterior distribution for the heights data.
+</p>
+</div>
+<div class="sourceCode" id="cb489"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb489-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb489-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dens</span>(sample.mu)</span></code></pre></div>
+<p><img src="bookdown_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<div class="sourceCode" id="cb490"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb490-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb490-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dens</span>(sample.sigma)</span></code></pre></div>
+<p><img src="bookdown_files/figure-html/unnamed-chunk-3-2.png" width="672" /></p>
+<div class="sourceCode" id="cb491"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb491-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb491-1" aria-hidden="true" tabindex="-1"></a><span class="fu">PI</span>(sample.mu)</span></code></pre></div>
+<pre><code>##        5%       94% 
+## 153.93939 155.25253</code></pre>
+<div class="sourceCode" id="cb493"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb493-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb493-1" aria-hidden="true" tabindex="-1"></a><span class="fu">PI</span>(sample.sigma)</span></code></pre></div>
+<pre><code>##        5%       94% 
+## 7.3232323 8.2525253</code></pre>
+</div>
+<div id="使用二次方程近似法" class="section level3" number="46.2.3">
+<h3><span class="header-section-number">46.2.3</span> 使用二次方程近似法</h3>
+<p>使用R語言定義我們的身高模型：</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_i &amp; \sim \text{Normal}(\mu, \sigma) &amp;\text{     [Likelihood]} \\
+\mu &amp; \sim \text{Normal}(178, 20)     &amp;\text{     [prior for } \mu] \\
+\sigma &amp; \sim \text{Uniform}(0, 50)          &amp;\text{     [prior for } \sigma]\\
+\end{aligned}
+\]</span></p>
+<div class="sourceCode" id="cb495"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb495-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-1" aria-hidden="true" tabindex="-1"></a>flist <span class="ot">&lt;-</span> <span class="fu">alist</span>(</span>
+<span id="cb495-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-2" aria-hidden="true" tabindex="-1"></a>  height <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
+<span id="cb495-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-3" aria-hidden="true" tabindex="-1"></a>  mu     <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">178</span>, <span class="dv">20</span> ), </span>
+<span id="cb495-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-4" aria-hidden="true" tabindex="-1"></a>  sigma  <span class="sc">~</span> <span class="fu">dunif</span>( <span class="dv">0</span> , <span class="dv">50</span> )</span>
+<span id="cb495-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb495-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb495-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-7" aria-hidden="true" tabindex="-1"></a>m4<span class="fl">.1</span> <span class="ot">&lt;-</span> <span class="fu">quap</span>( flist, <span class="at">data =</span> d2)</span>
+<span id="cb495-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb495-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb495-9" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>( m4<span class="fl">.1</span> )</span></code></pre></div>
+<pre><code>##              mean         sd        5.5%       94.5%
+## mu    154.6069052 0.41197188 153.9484946 155.2653158
+## sigma   7.7309053 0.29134572   7.2652786   8.1965321</code></pre>
+<p>繪製該數據中身高曲線之間的關係圖：</p>
+<div class="sourceCode" id="cb497"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb497-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(d2$height, d2$weight)</span></span>
+<span id="cb497-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data =</span> d2, </span>
+<span id="cb497-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-3" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> weight, <span class="at">y =</span> height)) <span class="sc">+</span></span>
+<span id="cb497-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb497-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb497-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb497-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid =</span> <span class="fu">element_blank</span>())</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-11"></span>
+<img src="bookdown_files/figure-html/introBayes06-11-1.png" alt="Plot adults height against weight." width="90%" />
+<p class="caption">
+圖 46.8: Plot adults height against weight.
+</p>
+</div>
+<p>如何使用身高來做體重的預測變量，從而建立一個簡單線型回歸模型？</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_i &amp; \sim \text{Normal}(\mu_i, \sigma)  &amp; [\text{likelihood}]\\
+\mu_i &amp; = \alpha + \beta (x_i - \bar{x}) &amp; [\text{linear model}]\\
+\alpha &amp; \sim \text{Normal}(178, 20)    &amp; [\text{prior for } \alpha]\\
+\beta &amp; \sim \text{Normal}(0, 10)       &amp; [\text{prior for } \beta]\\   
+\sigma &amp; \sim \text{Uniform}(0, 50)     &amp; [\text{prior for } \sigma]
+\end{aligned}
+\]</span></p>
+</div>
+<div id="關於-beta-的先驗概率-priors" class="section level3" number="46.2.4">
+<h3><span class="header-section-number">46.2.4</span> 關於 <span class="math inline">\(\beta\)</span> 的先驗概率 Priors</h3>
+<p>代碼來自書中(P95 Rcode 4.38)：</p>
+<div class="sourceCode" id="cb498"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb498-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2971</span>)</span>
+<span id="cb498-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-2" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">100</span> <span class="co">#n number of simulation lines</span></span>
+<span id="cb498-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb498-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-4" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">rnorm</span>( N, <span class="dv">178</span>, <span class="dv">20</span>)</span>
+<span id="cb498-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-5" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">rnorm</span>( N, <span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb498-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb498-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( <span class="cn">NULL</span>, <span class="at">xlim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight) , <span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>, <span class="dv">400</span>), </span>
+<span id="cb498-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;weight&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;height&quot;</span>)</span>
+<span id="cb498-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-9" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>( <span class="at">h =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb498-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-10" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>( <span class="at">h =</span> <span class="dv">272</span>, <span class="at">lty =</span> <span class="dv">1</span>, <span class="at">lwd =</span> <span class="fl">0.5</span>)</span>
+<span id="cb498-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-11" aria-hidden="true" tabindex="-1"></a><span class="fu">mtext</span>(<span class="st">&quot;b ~ dnorm(0, 10)&quot;</span> )</span>
+<span id="cb498-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb498-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-13" aria-hidden="true" tabindex="-1"></a>xbar <span class="ot">&lt;-</span> <span class="fu">mean</span>(d2<span class="sc">$</span>weight)</span>
+<span id="cb498-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb498-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ( i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) <span class="fu">curve</span>( a[i] <span class="sc">+</span> b[i]<span class="sc">*</span>(x <span class="sc">-</span> xbar) ,</span>
+<span id="cb498-16"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">from =</span> <span class="fu">min</span>(d2<span class="sc">$</span>weight), <span class="at">to =</span> <span class="fu">max</span>(d2<span class="sc">$</span>weight), <span class="at">add =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb498-17"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">col =</span> <span class="fu">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.2</span>)</span>
+<span id="cb498-18"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb498-18" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-12"></span>
+<img src="bookdown_files/figure-html/introBayes06-12-1.png" alt="Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior." width="90%" />
+<p class="caption">
+圖 46.9: Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior.
+</p>
+</div>
+<p>相同圖形使用 tidyverse 和 ggplot2 來製作(參考 <a href="https://bookdown.org/content/4857/geocentric-models.html#a-gaussian-model-of-height">Statistical rethinking with brms, ggplot2, and the tidyverse: Second edition</a>：</p>
+<div class="sourceCode" id="cb499"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb499-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">4</span>)</span>
+<span id="cb499-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-2" aria-hidden="true" tabindex="-1"></a><span class="co"># how many lines would you like?</span></span>
+<span id="cb499-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-3" aria-hidden="true" tabindex="-1"></a>n_lines <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb499-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb499-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-5" aria-hidden="true" tabindex="-1"></a>lines <span class="ot">&lt;-</span></span>
+<span id="cb499-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">n =</span> <span class="dv">1</span><span class="sc">:</span>n_lines,</span>
+<span id="cb499-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">a =</span> <span class="fu">rnorm</span>(n_lines, <span class="at">mean =</span> <span class="dv">178</span>, <span class="at">sd =</span> <span class="dv">20</span>),</span>
+<span id="cb499-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">b =</span> <span class="fu">rnorm</span>(n_lines, <span class="at">mean =</span> <span class="dv">0</span>,   <span class="at">sd =</span> <span class="dv">10</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb499-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-9" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">expand</span>(tidyr<span class="sc">::</span><span class="fu">nesting</span>(n, a, b), <span class="at">weight =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight)) <span class="sc">%&gt;%</span> </span>
+<span id="cb499-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">height =</span> a <span class="sc">+</span> b <span class="sc">*</span> (weight <span class="sc">-</span> <span class="fu">mean</span>(d2<span class="sc">$</span>weight)))</span>
+<span id="cb499-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb499-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb499-12" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(lines)</span></code></pre></div>
+<pre><code>## # A tibble: 6 × 5
+##       n     a     b weight height
+##   &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1     1  182.  6.85   31.1   87.0
+## 2     1  182.  6.85   63.0  306. 
+## 3     2  167. -1.15   31.1  183. 
+## 4     2  167. -1.15   63.0  146. 
+## 5     3  196. -3.56   31.1  245. 
+## 6     3  196. -3.56   63.0  132.</code></pre>
+<div class="sourceCode" id="cb501"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb501-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb501-1" aria-hidden="true" tabindex="-1"></a>lines <span class="sc">%&gt;%</span> </span>
+<span id="cb501-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb501-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> weight, <span class="at">y =</span> height, <span class="at">group =</span> n)) <span class="sc">+</span></span>
+<span id="cb501-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb501-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">272</span>), <span class="at">linetype =</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">1</span>, <span class="at">size =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb501-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb501-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">alpha =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">10</span>) <span class="sc">+</span></span>
+<span id="cb501-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb501-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>, <span class="dv">400</span>)) <span class="sc">+</span></span>
+<span id="cb501-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb501-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">&quot;b ~ dnorm(0, 10)&quot;</span>) <span class="sc">+</span></span>
+<span id="cb501-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb501-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-13"></span>
+<img src="bookdown_files/figure-html/introBayes06-13-1.png" alt="Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior." width="90%" />
+<p class="caption">
+圖 46.10: Prior predictive simulation for the height and weight model. Simulation using the beta ~ N(0, 10) prior.
+</p>
+</div>
+<p>可見這樣的身高作為先驗概率明顯是不合理的，因為有大量的數據低於 0 cm，甚至於大於人類的極限身高272cm。如何將這個關於身高的先驗概率合理化呢？解決方法的一種是使用對數正（常）態分佈。對數正（常）態分佈，其實就是指，一組取了對數之後的數值服從正（常）態分佈。</p>
+<p><span class="math display">\[
+\beta \sim \text{Log-Normal}(0, 1)
+\]</span></p>
+<div class="sourceCode" id="cb502"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb502-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-1" aria-hidden="true" tabindex="-1"></a><span class="co"># b &lt;- rlnorm(10000, 0, 1)</span></span>
+<span id="cb502-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-2" aria-hidden="true" tabindex="-1"></a><span class="co"># dens(b, xlim = c(0, 5), adj = 0.1)</span></span>
+<span id="cb502-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-3" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">4</span>)</span>
+<span id="cb502-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">b =</span> <span class="fu">rlnorm</span>(<span class="dv">10000</span>, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> <span class="dv">1</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb502-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> b)) <span class="sc">+</span> </span>
+<span id="cb502-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="at">fill =</span> <span class="st">&quot;grey70&quot;</span>) <span class="sc">+</span></span>
+<span id="cb502-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">5</span>)) <span class="sc">+</span></span>
+<span id="cb502-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb502-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-14"></span>
+<img src="bookdown_files/figure-html/introBayes06-14-1.png" alt="The density shape for lognormal (0,1), it is the distribution whose logarithm is normally distributed." width="576" />
+<p class="caption">
+圖 46.11: The density shape for lognormal (0,1), it is the distribution whose logarithm is normally distributed.
+</p>
+</div>
+<p>我們還可以把採集的對數正（常）態分佈樣本取對數，和標準正（常）態分佈做一個圖形上的比較。</p>
+<div class="sourceCode" id="cb503"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb503-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">4</span>)</span>
+<span id="cb503-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb503-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">rnorm =</span> <span class="fu">rnorm</span>(<span class="dv">100000</span>, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> <span class="dv">1</span>),</span>
+<span id="cb503-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-4" aria-hidden="true" tabindex="-1"></a>       <span class="st">`</span><span class="at">log(rlognorm)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">log</span>(<span class="fu">rlnorm</span>(<span class="dv">100000</span>, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> <span class="dv">1</span>))) <span class="sc">%&gt;%</span> </span>
+<span id="cb503-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">everything</span>()) <span class="sc">%&gt;%</span> </span>
+<span id="cb503-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> value)) <span class="sc">+</span> </span>
+<span id="cb503-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_density</span>(<span class="at">fill =</span> <span class="st">&quot;grey70&quot;</span>) <span class="sc">+</span> </span>
+<span id="cb503-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">3</span>)) <span class="sc">+</span> </span>
+<span id="cb503-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>() <span class="sc">+</span> </span>
+<span id="cb503-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb503-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>( <span class="sc">~</span> name, <span class="at">nrow =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-15"></span>
+<img src="bookdown_files/figure-html/introBayes06-15-1.png" alt="The density shape for log(lognormal (0, 1)) and normal(0, 1), they are the same." width="432" />
+<p class="caption">
+圖 46.12: The density shape for log(lognormal (0, 1)) and normal(0, 1), they are the same.
+</p>
+</div>
+<p>使用對數正（常）態分佈作為 <span class="math inline">\(\beta\)</span> 的先驗概率分佈，試試看它給出的身高預測範圍大致是怎樣的。</p>
+<div class="sourceCode" id="cb504"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb504-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2971</span>)</span>
+<span id="cb504-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-2" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">100</span> <span class="co">#n number of simulation lines</span></span>
+<span id="cb504-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb504-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-4" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">rnorm</span>( N, <span class="dv">178</span>, <span class="dv">20</span>)</span>
+<span id="cb504-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-5" aria-hidden="true" tabindex="-1"></a><span class="co"># b &lt;- rnorm( N, 0, 10)</span></span>
+<span id="cb504-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-6" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="fu">rlnorm</span>( N, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb504-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb504-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( <span class="cn">NULL</span>, <span class="at">xlim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight) , <span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>, <span class="dv">400</span>), </span>
+<span id="cb504-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;weight&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;height&quot;</span>)</span>
+<span id="cb504-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-10" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>( <span class="at">h =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb504-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-11" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>( <span class="at">h =</span> <span class="dv">272</span>, <span class="at">lty =</span> <span class="dv">1</span>, <span class="at">lwd =</span> <span class="fl">0.5</span>)</span>
+<span id="cb504-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-12" aria-hidden="true" tabindex="-1"></a><span class="fu">mtext</span>(<span class="st">&quot;b ~ dlognorm(0, 1)&quot;</span> )</span>
+<span id="cb504-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb504-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-14" aria-hidden="true" tabindex="-1"></a>xbar <span class="ot">&lt;-</span> <span class="fu">mean</span>(d2<span class="sc">$</span>weight)</span>
+<span id="cb504-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb504-16"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ( i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) <span class="fu">curve</span>( a[i] <span class="sc">+</span> b[i]<span class="sc">*</span>(x <span class="sc">-</span> xbar) ,</span>
+<span id="cb504-17"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">from =</span> <span class="fu">min</span>(d2<span class="sc">$</span>weight), <span class="at">to =</span> <span class="fu">max</span>(d2<span class="sc">$</span>weight), <span class="at">add =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb504-18"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">col =</span> <span class="fu">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.2</span>)</span>
+<span id="cb504-19"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb504-19" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-16"></span>
+<img src="bookdown_files/figure-html/introBayes06-16-1.png" alt="Prior predictive simulation for the height and weight model. Simulation using the beta ~ log-normal(0, 1) prior, within much reasonable human ranges." width="576" />
+<p class="caption">
+圖 46.13: Prior predictive simulation for the height and weight model. Simulation using the beta ~ log-normal(0, 1) prior, within much reasonable human ranges.
+</p>
+</div>
+<p>使用 ggplot2 做一邊相同的事。</p>
+<div class="sourceCode" id="cb505"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb505-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-1" aria-hidden="true" tabindex="-1"></a><span class="co"># make a tibble to annotate the plot</span></span>
+<span id="cb505-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-2" aria-hidden="true" tabindex="-1"></a>Text <span class="ot">&lt;-</span></span>
+<span id="cb505-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">weight =</span> <span class="fu">c</span>(<span class="dv">34</span>, <span class="dv">43</span>),</span>
+<span id="cb505-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">height =</span> <span class="fu">c</span>(<span class="dv">0</span> <span class="sc">-</span> <span class="dv">25</span>, <span class="dv">272</span> <span class="sc">+</span> <span class="dv">25</span>),</span>
+<span id="cb505-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">label  =</span> <span class="fu">c</span>(<span class="st">&quot;Embryo&quot;</span>, <span class="st">&quot;World&#39;s tallest person (272 cm)&quot;</span>))</span>
+<span id="cb505-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb505-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-7" aria-hidden="true" tabindex="-1"></a><span class="co"># simulate</span></span>
+<span id="cb505-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-8" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">4</span>)</span>
+<span id="cb505-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb505-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-10" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">n =</span> <span class="dv">1</span><span class="sc">:</span>n_lines,</span>
+<span id="cb505-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">a =</span> <span class="fu">rnorm</span>(n_lines, <span class="at">mean =</span> <span class="dv">178</span>, <span class="at">sd =</span> <span class="dv">20</span>),</span>
+<span id="cb505-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">b =</span> <span class="fu">rlnorm</span>(n_lines, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> <span class="dv">1</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb505-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-13" aria-hidden="true" tabindex="-1"></a>  tidyr<span class="sc">::</span><span class="fu">expand</span>(tidyr<span class="sc">::</span><span class="fu">nesting</span>(n, a, b), <span class="at">weight =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight)) <span class="sc">%&gt;%</span> </span>
+<span id="cb505-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">height =</span> a <span class="sc">+</span> b <span class="sc">*</span> (weight <span class="sc">-</span> <span class="fu">mean</span>(d2<span class="sc">$</span>weight))) <span class="sc">%&gt;%</span> </span>
+<span id="cb505-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb505-16"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># plot</span></span>
+<span id="cb505-17"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> weight, <span class="at">y =</span> height, <span class="at">group =</span> n)) <span class="sc">+</span></span>
+<span id="cb505-18"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">272</span>), <span class="at">linetype =</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">1</span>, <span class="at">size =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb505-19"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">alpha =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">10</span>) <span class="sc">+</span></span>
+<span id="cb505-20"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="at">geom =</span> <span class="st">&quot;text&quot;</span>, </span>
+<span id="cb505-21"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-21" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> <span class="fu">c</span>(<span class="dv">34</span>, <span class="dv">43</span>), <span class="at">y =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">25</span>, <span class="dv">297</span>), </span>
+<span id="cb505-22"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-22" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="fu">c</span>(<span class="st">&quot;Embryo&quot;</span>, <span class="st">&quot;World&#39;s tallest person (272 cm)&quot;</span>),</span>
+<span id="cb505-23"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-23" aria-hidden="true" tabindex="-1"></a>           <span class="at">size =</span> <span class="dv">5</span>) <span class="sc">+</span></span>
+<span id="cb505-24"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">100</span>, <span class="dv">400</span>)) <span class="sc">+</span></span>
+<span id="cb505-25"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">&quot;log(b) ~ dnorm(0, 1)&quot;</span>) <span class="sc">+</span></span>
+<span id="cb505-26"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb505-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-17"></span>
+<img src="bookdown_files/figure-html/introBayes06-17-1.png" alt="Prior predictive simulation for the height and weight model. Simulation using the beta ~ log-normal(0, 1) prior, within much reasonable human ranges." width="576" />
+<p class="caption">
+圖 46.14: Prior predictive simulation for the height and weight model. Simulation using the beta ~ log-normal(0, 1) prior, within much reasonable human ranges.
+</p>
+</div>
+<blockquote>
+<p>A serious problem in contemporary applied statistics is “p-hacking,” the practice of adjusting the model and the data to achieve a desired result.
+The desired result is usually a p-value less than 5%.</p>
+<footer>
+— <a href="https://xcelab.net/rm/">Richard McElreath</a>
+</footer>
+</blockquote>
+<p>於是我們現在把修改了 <span class="math inline">\(\beta\)</span> 的先驗概率分佈之後的模型定義：</p>
+<p><span class="math display">\[
+\begin{aligned}
+h_i &amp; \sim \text{Normal}(\mu_i, \sigma)  &amp; [\text{likelihood}]\\
+\mu_i &amp; = \alpha + \beta (x_i - \bar{x}) &amp; [\text{linear model}]\\
+\alpha &amp; \sim \text{Normal}(178, 20)    &amp; [\text{prior for } \alpha]\\
+\beta &amp; \sim \text{Log-Normal}(0, 1)       &amp; [\text{prior for } \beta]\\   
+\sigma &amp; \sim \text{Uniform}(0, 50)     &amp; [\text{prior for } \sigma]
+\end{aligned}
+\]</span></p>
+<p>於是用這個模型來獲取我們需要的事後概率分佈的方法就顯而易見了：</p>
+<div class="sourceCode" id="cb506"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb506-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the average weight, x-bar</span></span>
+<span id="cb506-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-2" aria-hidden="true" tabindex="-1"></a>xbar <span class="ot">&lt;-</span> <span class="fu">mean</span>(d2<span class="sc">$</span>weight)</span>
+<span id="cb506-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb506-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-4" aria-hidden="true" tabindex="-1"></a><span class="co"># fit model</span></span>
+<span id="cb506-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb506-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-6" aria-hidden="true" tabindex="-1"></a>m4<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">quap</span>(</span>
+<span id="cb506-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb506-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-8" aria-hidden="true" tabindex="-1"></a>    height <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ),</span>
+<span id="cb506-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-9" aria-hidden="true" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a <span class="sc">+</span> b <span class="sc">*</span> (weight <span class="sc">-</span> xbar),</span>
+<span id="cb506-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-10" aria-hidden="true" tabindex="-1"></a>    a <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">178</span>, <span class="dv">20</span>),</span>
+<span id="cb506-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-11" aria-hidden="true" tabindex="-1"></a>    b <span class="sc">~</span> <span class="fu">dlnorm</span>(<span class="dv">0</span>, <span class="dv">1</span>), </span>
+<span id="cb506-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-12" aria-hidden="true" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dunif</span>( <span class="dv">0</span>, <span class="dv">50</span> )</span>
+<span id="cb506-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-13" aria-hidden="true" tabindex="-1"></a>  ), <span class="at">data =</span> d2</span>
+<span id="cb506-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb506-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb506-16"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb506-16" aria-hidden="true" tabindex="-1"></a><span class="fu">precis</span>(m4<span class="fl">.3</span>)</span></code></pre></div>
+<pre><code>##               mean          sd         5.5%       94.5%
+## a     154.60136214 0.270307732 154.16935817 155.0333661
+## b       0.90328092 0.041923643   0.83627884   0.9702830
+## sigma   5.07188228 0.191154912   4.76637981   5.3773848</code></pre>
+<div class="sourceCode" id="cb508"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb508-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-1" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> d2 <span class="sc">%&gt;%</span> </span>
+<span id="cb508-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">weight_c =</span> weight <span class="sc">-</span> <span class="fu">mean</span>(weight))</span>
+<span id="cb508-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb508-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-4" aria-hidden="true" tabindex="-1"></a>b4<span class="fl">.3</span> <span class="ot">&lt;-</span> </span>
+<span id="cb508-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span> d2, </span>
+<span id="cb508-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> gaussian, </span>
+<span id="cb508-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-7" aria-hidden="true" tabindex="-1"></a>      height <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> weight_c,</span>
+<span id="cb508-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">178</span>, <span class="dv">20</span>), <span class="at">class =</span> Intercept), </span>
+<span id="cb508-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">lognormal</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">class =</span> b), </span>
+<span id="cb508-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-10" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">uniform</span>(<span class="dv">0</span>, <span class="dv">50</span>), <span class="at">class =</span> sigma)), </span>
+<span id="cb508-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">28000</span>, <span class="at">warmup =</span> <span class="dv">27000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>,</span>
+<span id="cb508-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb508-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">seed =</span> <span class="dv">4</span>)</span></code></pre></div>
+<pre><code>## Warning: It appears as if you have specified a lower bounded prior on a parameter that has no natural lower bound.
+## If this is really what you want, please specify argument &#39;lb&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## b ~ lognormal(0, 1)</code></pre>
+<pre><code>## Warning: It appears as if you have specified an upper bounded prior on a parameter that has no natural upper bound.
+## If this is really what you want, please specify argument &#39;ub&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## sigma ~ uniform(0, 50)</code></pre>
+<div class="sourceCode" id="cb511"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb511-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb511-1" aria-hidden="true" tabindex="-1"></a>b4<span class="fl">.3</span></span></code></pre></div>
+<pre><code>##  Family: gaussian 
+##   Links: mu = identity; sigma = identity 
+## Formula: height ~ 1 + weight_c 
+##    Data: d2 (Number of observations: 352) 
+## Samples: 4 chains, each with iter = 28000; warmup = 27000; thin = 1;
+##          total post-warmup samples = 4000
+## 
+## Population-Level Effects: 
+##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+## Intercept   154.60      0.27   154.08   155.13 1.00     4422     2990
+## weight_c      0.90      0.04     0.82     0.99 1.01      513      605
+## 
+## Family Specific Parameters: 
+##       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+## sigma     5.10      0.19     4.74     5.48 1.00     2404     1453
+## 
+## Samples were drawn using sampling(NUTS). For each parameter, Bulk_ESS
+## and Tail_ESS are effective sample size measures, and Rhat is the potential
+## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
+<p>觀察各個參數事後樣本之間的協方差 (covariances)，幾乎可以忽略不計。</p>
+<div class="sourceCode" id="cb513"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb513-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb513-1" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>( <span class="fu">vcov</span>(m4<span class="fl">.3</span>), <span class="dv">3</span>)</span></code></pre></div>
+<pre><code>##           a     b sigma
+## a     0.073 0.000 0.000
+## b     0.000 0.002 0.000
+## sigma 0.000 0.000 0.037</code></pre>
+<div class="sourceCode" id="cb515"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb515-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb515-1" aria-hidden="true" tabindex="-1"></a><span class="fu">posterior_samples</span>(b4<span class="fl">.3</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb515-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb515-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>lp__) <span class="sc">%&gt;%</span></span>
+<span id="cb515-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb515-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cov</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb515-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb515-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round</span>(<span class="at">digits =</span> <span class="dv">3</span>)</span></code></pre></div>
+<pre><code>##             b_Intercept b_weight_c  sigma
+## b_Intercept       0.074      0.000 -0.001
+## b_weight_c        0.000      0.002  0.000
+## sigma            -0.001      0.000  0.035</code></pre>
+<div class="sourceCode" id="cb517"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb517-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb517-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pairs</span>(m4<span class="fl">.3</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-21"></span>
+<img src="bookdown_files/figure-html/introBayes06-21-1.png" alt="Both marginal posteriors and the covariance." width="90%" />
+<p class="caption">
+圖 46.15: Both marginal posteriors and the covariance.
+</p>
+</div>
+<div class="sourceCode" id="cb518"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb518-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb518-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pairs</span>(b4<span class="fl">.3</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-22"></span>
+<img src="bookdown_files/figure-html/introBayes06-22-1.png" alt="Both marginal posteriors and the covariance." width="90%" />
+<p class="caption">
+圖 46.16: Both marginal posteriors and the covariance.
+</p>
+</div>
+<p>繪製事後估計獲得的均值給出的回歸直線。</p>
+<div class="sourceCode" id="cb519"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb519-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb519-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( height <span class="sc">~</span> weight, <span class="at">data =</span> d2, <span class="at">col =</span> rangi2)</span>
+<span id="cb519-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb519-2" aria-hidden="true" tabindex="-1"></a>post <span class="ot">&lt;-</span> <span class="fu">extract.samples</span>(m4<span class="fl">.3</span>)</span>
+<span id="cb519-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb519-3" aria-hidden="true" tabindex="-1"></a>a_map <span class="ot">&lt;-</span> <span class="fu">mean</span>(post<span class="sc">$</span>a)</span>
+<span id="cb519-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb519-4" aria-hidden="true" tabindex="-1"></a>b_map <span class="ot">&lt;-</span> <span class="fu">mean</span>(post<span class="sc">$</span>b)</span>
+<span id="cb519-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb519-5" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>( a_map <span class="sc">+</span> b_map <span class="sc">*</span> (x <span class="sc">-</span> xbar), <span class="at">add =</span>  <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-23"></span>
+<img src="bookdown_files/figure-html/introBayes06-23-1.png" alt="Height in centimeters plotted against weight in kilograms, with the line at the posterior mean plotted in black." width="90%" />
+<p class="caption">
+圖 46.17: Height in centimeters plotted against weight in kilograms, with the line at the posterior mean plotted in black.
+</p>
+</div>
+<p>ggplot2繪圖結果：</p>
+<div class="sourceCode" id="cb520"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb520-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb520-1" aria-hidden="true" tabindex="-1"></a>d2 <span class="sc">%&gt;%</span></span>
+<span id="cb520-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb520-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> weight_c, <span class="at">y =</span> height)) <span class="sc">+</span></span>
+<span id="cb520-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb520-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">intercept =</span> <span class="fu">fixef</span>(b4<span class="fl">.3</span>)[<span class="dv">1</span>], </span>
+<span id="cb520-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb520-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">slope     =</span> <span class="fu">fixef</span>(b4<span class="fl">.3</span>)[<span class="dv">2</span>]) <span class="sc">+</span></span>
+<span id="cb520-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb520-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">&quot;royalblue&quot;</span>) <span class="sc">+</span></span>
+<span id="cb520-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb520-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-24"></span>
+<img src="bookdown_files/figure-html/introBayes06-24-1.png" alt="Height in centimeters plotted against weight in kilograms, with the line at the posterior mean plotted in black." width="90%" />
+<p class="caption">
+圖 46.18: Height in centimeters plotted against weight in kilograms, with the line at the posterior mean plotted in black.
+</p>
+</div>
+<p>為了顯示斜率和截距本身的不確定性，我們來從參數的事後聯合概率分佈中採集一些樣本出來做觀察：</p>
+<div class="sourceCode" id="cb521"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb521-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb521-1" aria-hidden="true" tabindex="-1"></a>post <span class="ot">&lt;-</span> <span class="fu">extract.samples</span>( m4<span class="fl">.3</span> )</span>
+<span id="cb521-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb521-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb521-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb521-3" aria-hidden="true" tabindex="-1"></a>post[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, ]</span></code></pre></div>
+<pre><code>##           a          b     sigma
+## 1 154.92100 0.84143711 5.0106010
+## 2 155.01037 0.89948190 4.7643790
+## 3 154.52622 0.86317300 5.1595400
+## 4 154.36448 0.92057833 4.9611818
+## 5 154.84028 0.96997652 4.9353836</code></pre>
+<div class="sourceCode" id="cb523"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb523-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb523-1" aria-hidden="true" tabindex="-1"></a>postb <span class="ot">&lt;-</span> <span class="fu">posterior_samples</span>(b4<span class="fl">.3</span>)</span>
+<span id="cb523-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb523-2" aria-hidden="true" tabindex="-1"></a>postb <span class="sc">%&gt;%</span> </span>
+<span id="cb523-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb523-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>)</span></code></pre></div>
+<pre><code>##   b_Intercept b_weight_c     sigma       lp__
+## 1   154.66245 0.88533915 4.9504041 -1079.0811
+## 2   154.58678 0.87731835 5.1787020 -1079.0369
+## 3   154.62115 0.88187555 4.8357462 -1079.7450
+## 4   154.86586 0.87762482 5.0785964 -1079.3860
+## 5   154.79090 0.87777544 5.1243940 -1079.1707</code></pre>
+<p>這些 a, b 的無數配對，就是該線型回歸給出的事後回歸線的截距和斜率的無數的組合，每一個組合，是一條事後回歸直線。這些事後截距和事後斜率的均值，是圖 <a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#fig:introBayes06-24">46.18</a> 和 <a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#fig:introBayes06-23">46.17</a> 中的那條事後均值提供的直線。事實上，這些截距和斜率本身的不確定性才是更加值得關注的。</p>
+<p>下面的計算過程是先使用 <code>d2</code> 數據中前10個人的身高體重做相同的事後回歸直線分析，然後逐漸增加數據量，你會觀察到這些事後斜率和事後截距的不確定性在發生的一個動態變化：</p>
+<div class="sourceCode" id="cb525"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb525-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb525-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-2" aria-hidden="true" tabindex="-1"></a>dN <span class="ot">&lt;-</span> d2[<span class="dv">1</span><span class="sc">:</span>N, ]</span>
+<span id="cb525-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-3" aria-hidden="true" tabindex="-1"></a>mN <span class="ot">&lt;-</span> <span class="fu">quap</span>(</span>
+<span id="cb525-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb525-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-5" aria-hidden="true" tabindex="-1"></a>    height <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
+<span id="cb525-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-6" aria-hidden="true" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a <span class="sc">+</span> b<span class="sc">*</span>(weight <span class="sc">-</span> <span class="fu">mean</span>(weight)), </span>
+<span id="cb525-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-7" aria-hidden="true" tabindex="-1"></a>    a <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">178</span>, <span class="dv">20</span> ), </span>
+<span id="cb525-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-8" aria-hidden="true" tabindex="-1"></a>    b <span class="sc">~</span> <span class="fu">dlnorm</span>( <span class="dv">0</span>, <span class="dv">1</span> ), </span>
+<span id="cb525-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-9" aria-hidden="true" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dunif</span>( <span class="dv">0</span>, <span class="dv">50</span> )</span>
+<span id="cb525-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-10" aria-hidden="true" tabindex="-1"></a>  ), <span class="at">data =</span> dN</span>
+<span id="cb525-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb525-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>接下來繪製 <code>mN</code> 模型中給出的事後回歸直線的一部分：</p>
+<div class="sourceCode" id="cb526"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb526-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-1" aria-hidden="true" tabindex="-1"></a><span class="co"># extract 20 samples from the posterior </span></span>
+<span id="cb526-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-2" aria-hidden="true" tabindex="-1"></a>post <span class="ot">&lt;-</span> <span class="fu">extract.samples</span>( mN, <span class="at">n =</span> <span class="dv">20</span>)</span>
+<span id="cb526-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb526-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-4" aria-hidden="true" tabindex="-1"></a><span class="co"># display raw data and sample size</span></span>
+<span id="cb526-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb526-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dN<span class="sc">$</span>weight, dN<span class="sc">$</span>height, </span>
+<span id="cb526-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight), <span class="at">ylim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>height), </span>
+<span id="cb526-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-8" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> rangi2, <span class="at">xlab =</span> <span class="st">&quot;weight&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;height&quot;</span>)</span>
+<span id="cb526-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-9" aria-hidden="true" tabindex="-1"></a><span class="fu">mtext</span>(<span class="fu">concat</span>( <span class="st">&quot;N = &quot;</span>, N)) </span>
+<span id="cb526-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb526-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-11" aria-hidden="true" tabindex="-1"></a><span class="co"># plot the lines with transparency </span></span>
+<span id="cb526-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb526-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ( i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>) </span>
+<span id="cb526-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">curve</span>( post<span class="sc">$</span>a[i] <span class="sc">+</span> post<span class="sc">$</span>b[i] <span class="sc">*</span> (x <span class="sc">-</span> <span class="fu">mean</span>(dN<span class="sc">$</span>weight)), </span>
+<span id="cb526-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb526-15" aria-hidden="true" tabindex="-1"></a>         <span class="at">col =</span> <span class="fu">col.alpha</span>(<span class="st">&quot;black&quot;</span>, <span class="fl">0.3</span>), <span class="at">add =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-27"></span>
+<img src="bookdown_files/figure-html/introBayes06-27-1.png" alt="Samples from the quadratic approximate posterior distribution for the height/weight model with 20 samples of data. 20 Lines sampled from the posterior distribution." width="576" />
+<p class="caption">
+圖 46.19: Samples from the quadratic approximate posterior distribution for the height/weight model with 20 samples of data. 20 Lines sampled from the posterior distribution.
+</p>
+</div>
+<p>增加樣本量，你只需要修改上述 <code>N = 10</code> 中的數字，然後逐個繪圖就能觀察。下面的代碼使用 <code>brms</code> 包來實現：</p>
+<div class="sourceCode" id="cb527"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb527-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">10</span> </span>
+<span id="cb527-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb527-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-3" aria-hidden="true" tabindex="-1"></a>b4<span class="fl">.3</span> <span class="ot">&lt;-</span> </span>
+<span id="cb527-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span>  d2 <span class="sc">%&gt;%</span> </span>
+<span id="cb527-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-5" aria-hidden="true" tabindex="-1"></a>        <span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span>N), </span>
+<span id="cb527-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> gaussian, </span>
+<span id="cb527-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-7" aria-hidden="true" tabindex="-1"></a>      height <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> weight_c, </span>
+<span id="cb527-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">178</span>, <span class="dv">20</span>), <span class="at">class =</span> Intercept), </span>
+<span id="cb527-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">lognormal</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">class =</span> b), </span>
+<span id="cb527-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-10" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">uniform</span>(<span class="dv">0</span>, <span class="dv">50</span>), <span class="at">class =</span> sigma)), </span>
+<span id="cb527-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">28000</span>, <span class="at">warmup =</span> <span class="dv">27000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, </span>
+<span id="cb527-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb527-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">seed =</span> <span class="dv">4</span>)</span></code></pre></div>
+<pre><code>## Warning: It appears as if you have specified a lower bounded prior on a parameter that has no natural lower bound.
+## If this is really what you want, please specify argument &#39;lb&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## b ~ lognormal(0, 1)</code></pre>
+<pre><code>## Warning: It appears as if you have specified an upper bounded prior on a parameter that has no natural upper bound.
+## If this is really what you want, please specify argument &#39;ub&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## sigma ~ uniform(0, 50)</code></pre>
+<div class="sourceCode" id="cb530"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb530-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">50</span> </span>
+<span id="cb530-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-2" aria-hidden="true" tabindex="-1"></a>b4<span class="fl">.3</span>_50 <span class="ot">&lt;-</span> </span>
+<span id="cb530-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span>  d2 <span class="sc">%&gt;%</span> </span>
+<span id="cb530-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span>N), </span>
+<span id="cb530-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> gaussian, </span>
+<span id="cb530-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-6" aria-hidden="true" tabindex="-1"></a>      height <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> weight_c, </span>
+<span id="cb530-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">178</span>, <span class="dv">20</span>), <span class="at">class =</span> Intercept), </span>
+<span id="cb530-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-8" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">lognormal</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">class =</span> b), </span>
+<span id="cb530-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">uniform</span>(<span class="dv">0</span>, <span class="dv">50</span>), <span class="at">class =</span> sigma)), </span>
+<span id="cb530-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">28000</span>, <span class="at">warmup =</span> <span class="dv">27000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, </span>
+<span id="cb530-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb530-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">seed =</span> <span class="dv">4</span>)</span></code></pre></div>
+<pre><code>## Warning: It appears as if you have specified a lower bounded prior on a parameter that has no natural lower bound.
+## If this is really what you want, please specify argument &#39;lb&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## b ~ lognormal(0, 1)
 
+## Warning: It appears as if you have specified an upper bounded prior on a parameter that has no natural upper bound.
+## If this is really what you want, please specify argument &#39;ub&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## sigma ~ uniform(0, 50)</code></pre>
+<div class="sourceCode" id="cb532"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb532-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">150</span> </span>
+<span id="cb532-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-2" aria-hidden="true" tabindex="-1"></a>b4<span class="fl">.3</span>_150 <span class="ot">&lt;-</span> </span>
+<span id="cb532-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span>  d2 <span class="sc">%&gt;%</span> </span>
+<span id="cb532-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span>N), </span>
+<span id="cb532-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> gaussian, </span>
+<span id="cb532-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-6" aria-hidden="true" tabindex="-1"></a>      height <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> weight_c, </span>
+<span id="cb532-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">178</span>, <span class="dv">20</span>), <span class="at">class =</span> Intercept), </span>
+<span id="cb532-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-8" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">lognormal</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">class =</span> b), </span>
+<span id="cb532-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">uniform</span>(<span class="dv">0</span>, <span class="dv">50</span>), <span class="at">class =</span> sigma)), </span>
+<span id="cb532-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">28000</span>, <span class="at">warmup =</span> <span class="dv">27000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, </span>
+<span id="cb532-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb532-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">seed =</span> <span class="dv">4</span>)</span></code></pre></div>
+<pre><code>## Warning: It appears as if you have specified a lower bounded prior on a parameter that has no natural lower bound.
+## If this is really what you want, please specify argument &#39;lb&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## b ~ lognormal(0, 1)
 
+## Warning: It appears as if you have specified an upper bounded prior on a parameter that has no natural upper bound.
+## If this is really what you want, please specify argument &#39;ub&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## sigma ~ uniform(0, 50)</code></pre>
+<div class="sourceCode" id="cb534"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb534-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-1" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">352</span> </span>
+<span id="cb534-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-2" aria-hidden="true" tabindex="-1"></a>b4<span class="fl">.3</span>_352 <span class="ot">&lt;-</span> </span>
+<span id="cb534-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">brm</span>(<span class="at">data =</span>  d2 <span class="sc">%&gt;%</span> </span>
+<span id="cb534-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span>N), </span>
+<span id="cb534-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">family =</span> gaussian, </span>
+<span id="cb534-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-6" aria-hidden="true" tabindex="-1"></a>      height <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> weight_c, </span>
+<span id="cb534-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">prior =</span> <span class="fu">c</span>(<span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">178</span>, <span class="dv">20</span>), <span class="at">class =</span> Intercept), </span>
+<span id="cb534-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-8" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">lognormal</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">class =</span> b), </span>
+<span id="cb534-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">prior</span>(<span class="fu">uniform</span>(<span class="dv">0</span>, <span class="dv">50</span>), <span class="at">class =</span> sigma)), </span>
+<span id="cb534-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">iter =</span> <span class="dv">28000</span>, <span class="at">warmup =</span> <span class="dv">27000</span>, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, </span>
+<span id="cb534-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb534-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">seed =</span> <span class="dv">4</span>)</span></code></pre></div>
+<pre><code>## Warning: It appears as if you have specified a lower bounded prior on a parameter that has no natural lower bound.
+## If this is really what you want, please specify argument &#39;lb&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## b ~ lognormal(0, 1)
 
+## Warning: It appears as if you have specified an upper bounded prior on a parameter that has no natural upper bound.
+## If this is really what you want, please specify argument &#39;ub&#39; of &#39;set_prior&#39; appropriately.
+## Warning occurred for prior 
+## sigma ~ uniform(0, 50)</code></pre>
+<div class="sourceCode" id="cb536"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb536-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-1" aria-hidden="true" tabindex="-1"></a>post010 <span class="ot">&lt;-</span> <span class="fu">posterior_samples</span>(b4<span class="fl">.3</span>)</span>
+<span id="cb536-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-2" aria-hidden="true" tabindex="-1"></a>post050 <span class="ot">&lt;-</span> <span class="fu">posterior_samples</span>(b4<span class="fl">.3</span>_50)</span>
+<span id="cb536-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-3" aria-hidden="true" tabindex="-1"></a>post150 <span class="ot">&lt;-</span> <span class="fu">posterior_samples</span>(b4<span class="fl">.3</span>_150)</span>
+<span id="cb536-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-4" aria-hidden="true" tabindex="-1"></a>post352 <span class="ot">&lt;-</span> <span class="fu">posterior_samples</span>(b4<span class="fl">.3</span>_352)</span>
+<span id="cb536-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-5" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> </span>
+<span id="cb536-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">data =</span>  d2[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span> , ], </span>
+<span id="cb536-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-7" aria-hidden="true" tabindex="-1"></a>         <span class="fu">aes</span>(<span class="at">x =</span> weight_c, <span class="at">y =</span> height)) <span class="sc">+</span></span>
+<span id="cb536-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">intercept =</span> post010[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">1</span>], </span>
+<span id="cb536-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-9" aria-hidden="true" tabindex="-1"></a>              <span class="at">slope     =</span> post010[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">2</span>],</span>
+<span id="cb536-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-10" aria-hidden="true" tabindex="-1"></a>              <span class="at">size =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="at">alpha =</span> .<span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb536-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">&quot;royalblue&quot;</span>) <span class="sc">+</span></span>
+<span id="cb536-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight_c),</span>
+<span id="cb536-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-13" aria-hidden="true" tabindex="-1"></a>                  <span class="at">ylim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>height)) <span class="sc">+</span></span>
+<span id="cb536-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">subtitle =</span> <span class="st">&quot;N = 10&quot;</span>)</span>
+<span id="cb536-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb536-16"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-16" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span></span>
+<span id="cb536-17"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">data =</span>  d2[<span class="dv">1</span><span class="sc">:</span><span class="dv">50</span> , ], </span>
+<span id="cb536-18"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-18" aria-hidden="true" tabindex="-1"></a>         <span class="fu">aes</span>(<span class="at">x =</span> weight_c, <span class="at">y =</span> height)) <span class="sc">+</span></span>
+<span id="cb536-19"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">intercept =</span> post050[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">1</span>], </span>
+<span id="cb536-20"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-20" aria-hidden="true" tabindex="-1"></a>              <span class="at">slope     =</span> post050[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">2</span>],</span>
+<span id="cb536-21"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-21" aria-hidden="true" tabindex="-1"></a>              <span class="at">size =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="at">alpha =</span> .<span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb536-22"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">&quot;royalblue&quot;</span>) <span class="sc">+</span></span>
+<span id="cb536-23"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight_c),</span>
+<span id="cb536-24"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-24" aria-hidden="true" tabindex="-1"></a>                  <span class="at">ylim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>height)) <span class="sc">+</span></span>
+<span id="cb536-25"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">subtitle =</span> <span class="st">&quot;N = 50&quot;</span>)</span>
+<span id="cb536-26"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb536-27"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-27" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span></span>
+<span id="cb536-28"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">data =</span>  d2[<span class="dv">1</span><span class="sc">:</span><span class="dv">150</span> , ], </span>
+<span id="cb536-29"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-29" aria-hidden="true" tabindex="-1"></a>         <span class="fu">aes</span>(<span class="at">x =</span> weight_c, <span class="at">y =</span> height)) <span class="sc">+</span></span>
+<span id="cb536-30"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">intercept =</span> post150[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">1</span>], </span>
+<span id="cb536-31"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-31" aria-hidden="true" tabindex="-1"></a>              <span class="at">slope     =</span> post150[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">2</span>],</span>
+<span id="cb536-32"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-32" aria-hidden="true" tabindex="-1"></a>              <span class="at">size =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="at">alpha =</span> .<span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb536-33"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">&quot;royalblue&quot;</span>) <span class="sc">+</span></span>
+<span id="cb536-34"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight_c),</span>
+<span id="cb536-35"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-35" aria-hidden="true" tabindex="-1"></a>                  <span class="at">ylim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>height)) <span class="sc">+</span></span>
+<span id="cb536-36"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">subtitle =</span> <span class="st">&quot;N = 150&quot;</span>)</span>
+<span id="cb536-37"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb536-38"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-38" aria-hidden="true" tabindex="-1"></a>p4 <span class="ot">&lt;-</span> </span>
+<span id="cb536-39"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">data =</span>  d2[<span class="dv">1</span><span class="sc">:</span><span class="dv">352</span> , ], </span>
+<span id="cb536-40"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-40" aria-hidden="true" tabindex="-1"></a>         <span class="fu">aes</span>(<span class="at">x =</span> weight_c, <span class="at">y =</span> height)) <span class="sc">+</span></span>
+<span id="cb536-41"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">intercept =</span> post352[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">1</span>], </span>
+<span id="cb536-42"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-42" aria-hidden="true" tabindex="-1"></a>              <span class="at">slope     =</span> post352[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="dv">2</span>],</span>
+<span id="cb536-43"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-43" aria-hidden="true" tabindex="-1"></a>              <span class="at">size =</span> <span class="dv">1</span><span class="sc">/</span><span class="dv">3</span>, <span class="at">alpha =</span> .<span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb536-44"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">&quot;royalblue&quot;</span>) <span class="sc">+</span></span>
+<span id="cb536-45"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>weight_c),</span>
+<span id="cb536-46"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-46" aria-hidden="true" tabindex="-1"></a>                  <span class="at">ylim =</span> <span class="fu">range</span>(d2<span class="sc">$</span>height)) <span class="sc">+</span></span>
+<span id="cb536-47"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">subtitle =</span> <span class="st">&quot;N = 352&quot;</span>)</span>
+<span id="cb536-48"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb536-49"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-49" aria-hidden="true" tabindex="-1"></a>(p1 <span class="sc">+</span> p2 <span class="sc">+</span> p3 <span class="sc">+</span> p4) <span class="sc">&amp;</span></span>
+<span id="cb536-50"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-50" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="st">&quot;weight&quot;</span>,</span>
+<span id="cb536-51"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-51" aria-hidden="true" tabindex="-1"></a>                     <span class="at">breaks =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">10</span>, <span class="dv">0</span>, <span class="dv">10</span>),</span>
+<span id="cb536-52"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-52" aria-hidden="true" tabindex="-1"></a>                     <span class="at">labels =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>)) <span class="sc">&amp;</span></span>
+<span id="cb536-53"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb536-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-29"></span>
+<img src="bookdown_files/figure-html/introBayes06-29-1.png" alt="Samples from the quadratic approximate posterior distribution for the height/weight model with 20 to 352 (increasing) samples of data. 20 Lines sampled from the posterior distribution." width="960" />
+<p class="caption">
+圖 46.20: Samples from the quadratic approximate posterior distribution for the height/weight model with 20 to 352 (increasing) samples of data. 20 Lines sampled from the posterior distribution.
+</p>
+</div>
+<p>可以看見，當數據越多，事後直線估計給出的穩定性越好，不確定性越小。</p>
+<div class="sourceCode" id="cb537"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb537-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb537-1" aria-hidden="true" tabindex="-1"></a>post <span class="ot">&lt;-</span> <span class="fu">extract.samples</span>( m4<span class="fl">.3</span> )</span>
+<span id="cb537-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb537-2" aria-hidden="true" tabindex="-1"></a>mu_at50 <span class="ot">&lt;-</span> post<span class="sc">$</span>a <span class="sc">+</span> post<span class="sc">$</span>b <span class="sc">*</span> (<span class="dv">50</span> <span class="sc">-</span> xbar)</span>
+<span id="cb537-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb537-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(mu_at50)</span></code></pre></div>
+<pre><code>## [1] 159.31803 158.83253 159.06214 158.61510 159.37716 158.89217</code></pre>
+<p>也就是說，當體重為 50 kg 時，身高的事後概率分佈可以繪製為：</p>
+<div class="sourceCode" id="cb539"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb539-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb539-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dens</span>(mu_at50, <span class="at">col =</span> rangi2, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">xlab =</span> <span class="st">&quot;mu | weight = 50&quot;</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-31"></span>
+<img src="bookdown_files/figure-html/introBayes06-31-1.png" alt="The quadratic approximate posterior distribution of the mean height, when weight is 50 kg. " width="480" />
+<p class="caption">
+圖 46.21: The quadratic approximate posterior distribution of the mean height, when weight is 50 kg.
+</p>
+</div>
+<p>相似的，完成上述圖形的不同代碼可以寫作：</p>
+<div class="sourceCode" id="cb540"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb540-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb540-1" aria-hidden="true" tabindex="-1"></a>mu_at_50 <span class="ot">&lt;-</span> postb <span class="sc">%&gt;%</span> </span>
+<span id="cb540-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb540-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">mu_at_50 =</span> b_Intercept <span class="sc">+</span> b_weight_c <span class="sc">+</span> <span class="fl">5.01</span>)</span>
+<span id="cb540-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb540-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb540-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb540-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(mu_at_50)</span></code></pre></div>
+<pre><code>##    mu_at_50
+## 1 160.55779
+## 2 160.47409
+## 3 160.51302
+## 4 160.75349
+## 5 160.67867
+## 6 160.57037</code></pre>
+<div class="sourceCode" id="cb542"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb542-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb542-1" aria-hidden="true" tabindex="-1"></a>mu_at_50 <span class="sc">%&gt;%</span></span>
+<span id="cb542-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb542-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> mu_at_50, <span class="at">y =</span> <span class="dv">0</span>)) <span class="sc">+</span></span>
+<span id="cb542-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb542-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_halfeye</span>(<span class="at">point_interval =</span> mode_hdi, <span class="at">.width =</span> .<span class="dv">95</span>,</span>
+<span id="cb542-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb542-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">fill =</span> <span class="st">&quot;royalblue&quot;</span>) <span class="sc">+</span></span>
+<span id="cb542-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb542-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="cn">NULL</span>, <span class="at">breaks =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb542-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb542-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="fu">expression</span>(mu[<span class="st">&quot;height | weight = 50&quot;</span>])) <span class="sc">+</span></span>
+<span id="cb542-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb542-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>()</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-32"></span>
+<img src="bookdown_files/figure-html/introBayes06-32-1.png" alt="The quadratic approximate posterior distribution of the mean height, when weight is 50 kg. " width="480" />
+<p class="caption">
+圖 46.22: The quadratic approximate posterior distribution of the mean height, when weight is 50 kg.
+</p>
+</div>
+<p>如果說你要給他增加一個可信區間，那麼當體重為 50 kg時，身高的事後預測89% 區間是：</p>
+<div class="sourceCode" id="cb543"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb543-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb543-1" aria-hidden="true" tabindex="-1"></a><span class="fu">PI</span>(mu_at50, <span class="at">prob =</span> <span class="fl">0.89</span>)</span></code></pre></div>
+<pre><code>##        5%       94% 
+## 158.56552 159.68080</code></pre>
+<p>但是其實我們更希望使用這事後概率分佈來繪製平均事後截距，平均事後斜率給出的直線本身的不確定性（也就是這條直線本身的89%區間）。函數 <code>link()</code> 提供了每一名參加實驗對象的事後身高均值的分佈。</p>
+<div class="sourceCode" id="cb545"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb545-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb545-1" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">link</span>( m4<span class="fl">.3</span> ) </span>
+<span id="cb545-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb545-2" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(mu)</span></code></pre></div>
+<pre><code>##  num [1:1000, 1:352] 158 158 157 157 157 ...</code></pre>
+<p>然後我們使用一段體重的區間來做身高的預測值：</p>
+<div class="sourceCode" id="cb547"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb547-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb547-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define sequence of weights to compute predictions for </span></span>
+<span id="cb547-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb547-2" aria-hidden="true" tabindex="-1"></a><span class="co"># these values will be on the horizontal axis</span></span>
+<span id="cb547-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb547-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb547-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb547-4" aria-hidden="true" tabindex="-1"></a>weight.seq <span class="ot">&lt;-</span> <span class="fu">seq</span>( <span class="at">from =</span> <span class="dv">25</span>, <span class="at">to =</span> <span class="dv">70</span>, <span class="at">by =</span> <span class="dv">1</span>)</span></code></pre></div>
+<p>使用 <code>link()</code> 函數來計算這些體重的事後身高分佈：</p>
+<div class="sourceCode" id="cb548"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb548-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb548-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use link to compute mu</span></span>
+<span id="cb548-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb548-2" aria-hidden="true" tabindex="-1"></a><span class="co"># for each sample from posterior </span></span>
+<span id="cb548-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb548-3" aria-hidden="true" tabindex="-1"></a><span class="co"># and for each weight in weight.seq</span></span>
+<span id="cb548-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb548-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb548-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb548-5" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">link</span>(m4<span class="fl">.3</span>, <span class="at">data =</span> <span class="fu">data.frame</span>(<span class="at">weight =</span> weight.seq))</span>
+<span id="cb548-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb548-6" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(mu)</span></code></pre></div>
+<pre><code>##  num [1:1000, 1:46] 136 137 137 136 138 ...</code></pre>
+<p>繪製這些體重值上的預測事後身高均值：</p>
+<div class="sourceCode" id="cb550"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb550-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb550-1" aria-hidden="true" tabindex="-1"></a><span class="co"># use type = &quot;n&quot; to hide raw data</span></span>
+<span id="cb550-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb550-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( height <span class="sc">~</span> weight, d2, <span class="at">type =</span> <span class="st">&quot;n&quot;</span>)</span>
+<span id="cb550-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb550-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb550-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb550-4" aria-hidden="true" tabindex="-1"></a><span class="co"># loop over samples and plot each mu value</span></span>
+<span id="cb550-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb550-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb550-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb550-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ( i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>)</span>
+<span id="cb550-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb550-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">points</span>( weight.seq, mu[i, ], <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">col =</span> <span class="fu">col.alpha</span>(rangi2, <span class="fl">0.1</span>))</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-37"></span>
+<img src="bookdown_files/figure-html/introBayes06-37-1.png" alt="The first 100 values in the distribution of mu at each weight value." width="528" />
+<p class="caption">
+圖 46.23: The first 100 values in the distribution of mu at each weight value.
+</p>
+</div>
+<p>可以看到每一個體重點上的事後身高預測分佈都是一個類似圖 <a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#fig:introBayes06-31">46.21</a> 那樣的正（常）態分佈。而且也能注意到，身高的事後分佈的不確定性，他們每一個體重值上的事後身高分佈的方差其實是根據不同的身高而有大小區別之分。</p>
+<div class="sourceCode" id="cb551"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb551-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-1" aria-hidden="true" tabindex="-1"></a><span class="co"># summarize the distribution of mu</span></span>
+<span id="cb551-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-2" aria-hidden="true" tabindex="-1"></a>mu.mean <span class="ot">&lt;-</span> <span class="fu">apply</span>( mu, <span class="dv">2</span>, mean )</span>
+<span id="cb551-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-3" aria-hidden="true" tabindex="-1"></a>mu.PI <span class="ot">&lt;-</span> <span class="fu">apply</span>( mu, <span class="dv">2</span>, PI, <span class="at">prob =</span> <span class="fl">0.89</span>)</span>
+<span id="cb551-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb551-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-5" aria-hidden="true" tabindex="-1"></a><span class="co"># plot raw data</span></span>
+<span id="cb551-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-6" aria-hidden="true" tabindex="-1"></a><span class="co"># fading out points to make line and interval more visible </span></span>
+<span id="cb551-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( height <span class="sc">~</span> weight, <span class="at">data =</span> d2, <span class="at">col =</span> <span class="fu">col.alpha</span>(rangi2, <span class="fl">0.5</span>))</span>
+<span id="cb551-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb551-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-9" aria-hidden="true" tabindex="-1"></a><span class="co"># plot the MAP line, aka the mean mu for each weight </span></span>
+<span id="cb551-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-10" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>( weight.seq, mu.mean )</span>
+<span id="cb551-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb551-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-12" aria-hidden="true" tabindex="-1"></a><span class="co"># plot a shaded region for 89% PI</span></span>
+<span id="cb551-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb551-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb551-14" aria-hidden="true" tabindex="-1"></a><span class="fu">shade</span>( mu.PI, weight.seq )</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-38"></span>
+<img src="bookdown_files/figure-html/introBayes06-38-1.png" alt="The height data with 89% compatibility interval of the mean indicated by the shaded region. Compare this region to the distributions of blue points." width="528" />
+<p class="caption">
+圖 46.24: The height data with 89% compatibility interval of the mean indicated by the shaded region. Compare this region to the distributions of blue points.
+</p>
+</div>
+<p>考慮身高本身的方差進來：</p>
+<div class="sourceCode" id="cb552"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb552-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb552-1" aria-hidden="true" tabindex="-1"></a>sim.height <span class="ot">&lt;-</span> <span class="fu">sim</span>(m4<span class="fl">.3</span>, <span class="at">data =</span> <span class="fu">list</span>(<span class="at">weight =</span> weight.seq))</span>
+<span id="cb552-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb552-2" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(sim.height)</span></code></pre></div>
+<pre><code>##  num [1:1000, 1:46] 137 145 131 134 143 ...</code></pre>
+<div class="sourceCode" id="cb554"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb554-1"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-1" aria-hidden="true" tabindex="-1"></a>height.PI <span class="ot">&lt;-</span> <span class="fu">apply</span>( sim.height,  <span class="dv">2</span>, PI, <span class="at">prob =</span> <span class="fl">0.89</span>)</span>
+<span id="cb554-2"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb554-3"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-3" aria-hidden="true" tabindex="-1"></a><span class="co"># plot raw data</span></span>
+<span id="cb554-4"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb554-5"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-5" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>( height <span class="sc">~</span> weight, d2, <span class="at">col =</span> <span class="fu">col.alpha</span>(rangi2, <span class="fl">0.5</span>))</span>
+<span id="cb554-6"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb554-7"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-7" aria-hidden="true" tabindex="-1"></a><span class="co"># draw MAP line</span></span>
+<span id="cb554-8"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb554-9"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-9" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>( weight.seq, mu.mean )</span>
+<span id="cb554-10"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb554-11"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-11" aria-hidden="true" tabindex="-1"></a><span class="co"># draw HPDI region for line</span></span>
+<span id="cb554-12"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-12" aria-hidden="true" tabindex="-1"></a><span class="co"># mu.HPDI &lt;- HPDI()</span></span>
+<span id="cb554-13"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-13" aria-hidden="true" tabindex="-1"></a><span class="fu">shade</span>( mu.PI, weight.seq )</span>
+<span id="cb554-14"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb554-15"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-15" aria-hidden="true" tabindex="-1"></a><span class="co"># draw PI for simulated heights</span></span>
+<span id="cb554-16"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb554-17"><a href="簡單線型回歸模型---地心說模型-linear-regression-is-the-geocentric-model-of-applied-statistics.html#cb554-17" aria-hidden="true" tabindex="-1"></a><span class="fu">shade</span>( height.PI, weight.seq)</span></code></pre></div>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes06-39"></span>
+<img src="bookdown_files/figure-html/introBayes06-39-1.png" alt="89% prediction interval for height, as a function of weight. The solid line is the average line for the mean height at each weight. The two shaded regions show different 89% plausible regions. The narrow shaded interval around the line is the distribution of mu. The wider shaded region represents the region within which the model expects to find 89% of actual heights in the population, at each weight." width="528" />
+<p class="caption">
+圖 46.25: 89% prediction interval for height, as a function of weight. The solid line is the average line for the mean height at each weight. The two shaded regions show different 89% plausible regions. The narrow shaded interval around the line is the distribution of mu. The wider shaded region represents the region within which the model expects to find 89% of actual heights in the population, at each weight.
+</p>
+</div>
+</div>
+</div>
+</div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="MCMC-revisit.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="nonparaBayes-intro.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="多參數模型-introduction-to-multiparameter-models.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="直線和曲線-curves-and-lines.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -1963,7 +2725,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/12-Bayesian-stats.Rmd",
+"link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/08-Intro-to-Bayes.Rmd",
 "text": "編輯"
 },
 "history": {
