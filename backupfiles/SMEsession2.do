@@ -3,6 +3,7 @@ cd "~/Downloads/LSHTMlearningnote/backupfiles/"
 use "whitehal.dta", clear
 
 stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
+quietly stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
 
 tab _st
 
@@ -23,3 +24,26 @@ stmh agecat, c(2, 0)
 stmh agecat, c(3, 0)
 stmh agecat, c(4, 0)
 stmh agecat, c(5, 0)
+
+
+
+* Q5
+
+strate grade, per(1000)
+stmh grade
+
+* Q6-Q8
+
+stmh grade, by(agecat)
+
+
+* Q9
+
+stset timeout, fail(chd) origin(timein) id(id) scale(365.25)
+
+
+stmh grade
+stmh grade, by(smok)
+
+log close
+

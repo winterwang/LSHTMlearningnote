@@ -33,13 +33,13 @@ epiDisplay::tab1(whitehal$all, graph = FALSE)
 
 ```{r  SME02-02stata,  engine='stata', cache=TRUE, echo=FALSE}
 use "../backupfiles/whitehal.dta", clear
-stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
+quietly stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
 egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
 strate agecat, per(1000)
 stptime, by(agecat) per(1000)
 ```
 
-在 R 裏面你可以使用 `epitools:pois.exact` 的函數來計算並獲得相似的結果：
+在 R 裏面你可以使用 `epitools:pois.exact` 的函數來計算並獲得相似，但不完全相同的結果（點估計完全一致，信賴區間的估計存在略微但不明顯的差別）：
 
 ```{r SME02-02R, cache=TRUE, message=FALSE, warning=FALSE}
 
@@ -65,7 +65,7 @@ cbind(whitehall_sum, pois.exact(x = whitehall_sum$D,
 ```{r  SME02-03stata,  engine='stata', cache=TRUE, echo=FALSE}
 use "../backupfiles/whitehal.dta", clear
 egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
-stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25)
+quietly stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25) 
 stmh agecat, c(1, 0)
 stmh agecat, c(2, 0)
 stmh agecat, c(3, 0)
@@ -92,9 +92,22 @@ ci.exp(Model0)
 
 
 
-## Q5 
+## Q5 分析另一個關於職業等級 `grade` 和死亡之間的關係。使用 Stata 的 `stmh` 命令來計算並比較較低等級職業 (low grade) 和較高等級職業 (high grade) 相比，死亡率比是多少。你認爲結果是否提供強有力的證據證明這兩種職業等級之間的死亡率存在顯著差異？
 
-```{r}
+
+```{r  SME02-04stata,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/whitehal.dta", clear
+egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
+quietly stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25) 
+strate grade, per(1000)
+stmh grade
+```
+
+
+由於很顯然地，相比高等級的職業來說，較低等級職業的死亡率比是2.31倍之高，且95%信賴區間也不包含1，(p < 0.0001)。所以，我們認爲數據提供了很強的證據證明兩種職業等級之間的死亡率存在顯著差異。相同的結果可以在R裏面通過下面的R代碼來計算獲得。
+
+
+```{r SME02-04R, cache=TRUE, message=FALSE, warning=FALSE}
 
 
 Model1 <- glm(all ~ factor(grade) + offset(log(followupyrs)), family = poisson(link = "log"), data = whitehal); ci.exp(Model1)
@@ -106,12 +119,35 @@ Model1 <- glm(all ~ factor(grade) + offset(log(followupyrs)), family = poisson(l
 ## we compare the crude RR =2.31 (1.90, 2.81) with the Mantel-Haenszel summary
 ## estimate.
 
-whitehal_table <- aggregate(cbind(all, followupyrs) ~ grade + agecat, data=whitehal, sum)
-stmh_array <- array(c(4, 20,   693.1284,4225.4893,
-                      10,35,   1363.821,6491.072,
-                      30,52,  1399.63, 4660.12,                                                        51,67,   1832.169,3449.846,
-                      59,42,   1660.597,1434.251,
-                      28,5,  316.23840, 79.00879),
+```
+
+## Q6-Q8 試分析上一題中觀察到的職業等級和死亡率之間的關係，是否受到年齡的影響。先嘗試使用 `stmh, by()` 函數來分析不同年齡層中職業等級之間的死亡率比。是否有證據證明職業等級的高低和年齡之間在死亡率比的關係上存在交互作用？又或者是否有年齡的混淆因素會對職業等級和死亡之間的關係造成影響？
+
+
+
+```{r  SME02-05stata,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/whitehal.dta", clear
+egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
+quietly stset timeout, fail(all) enter(timein) origin(timein) id(id) scale(365.25) 
+stmh grade , by(agecat)
+```
+
+在Stata的計算過程中，我們很輕鬆地獲得了不同年齡層級內職業等級之間死亡率比，和對應的信賴區間。並且發現 Mantel-Haenszel 總結的控制了年齡因素之後的年齡調整死亡率比 (rate ratio adjusted by age categories) 是 1.43 (1.16, 1.76)，和上一題計算的粗死亡率比 2.31 (1.90, 2.81) 之間確實有些許不同。所以大概可以認爲年齡對這一關係造成一定程度的混雜 confounding。然而，最後命令行對所有年齡層級的死亡率比的變化做了交互作用的鑑定，並且比較過後發現並無顯著證據證明年齡和職業等級之間存在交互作用 (p = 0.79)。各年齡層的死亡率比並沒有太過誇張的變化，也就是 1.2 - 1.9 之間的差別。所以，我們認爲不需要報告年齡層個字的死亡率比。
+
+
+這裏需要指出的是，Stata這三行的計算過程在 R 裏的實現稍微有一點點複雜：
+
+
+```{r SME02-05R, cache=TRUE, message=FALSE, warning=FALSE}
+
+whitehal_table <- aggregate(cbind(all, followupyrs) ~ grade + agecat, data = whitehal, sum)
+
+stmh_array <- array(c(4, 20,   693.1284,  4225.4893,
+                      10,35,   1363.821,  6491.072,
+                      30,52,   1399.63,   4660.12,                                                        
+                      51,67,   1832.169,  3449.846,
+                      59,42,   1660.597,  1434.251,
+                      28,5,    316.23840, 79.00879),
                       dim=c(2,2,6),
                       dimnames = list(
                       Grade=c("2","1"),
@@ -119,14 +155,15 @@ stmh_array <- array(c(4, 20,   693.1284,4225.4893,
                       Agecat=names(table(whitehal$agecat))
                     ))
 stmh_array
-mhgrade_age <- epi.2by2(stmh_array, method = "cohort.time", units = 1000)
+# mhgrade_age <- epi.2by2(stmh_array, method = "cohort.time", units = 1000)
+mhgrade_age <- epi.2by2(stmh_array, method = "cohort.count", units = 1000)
 mhgrade_age
 
 
 ## Overall estimate and Wald 95% confidence intervals,
 ## controlling for agecate
-mhgrade_age$massoc$IRR.mh.wald
-mhgrade_age$massoc$chisq.mh ## p-value for age-adjusted MH rate ratio
+mhgrade_age$massoc.detail$RR.mh.wald
+mhgrade_age$massoc.detail$chi2.mh ## p-value for age-adjusted MH rate ratio comparing with mull value 1.
 
 
 
@@ -137,13 +174,29 @@ mhgrade_age$massoc$chisq.mh ## p-value for age-adjusted MH rate ratio
 ## To assess whether there is effect modification betwee grade and
 ## agecat we examine the stratum specific estimates and assess
 ## whether there is evidence of important variation between them.
-mhgrade_age$massoc$IRR.strata.wald
+mhgrade_age$massoc.detail$RR.strata.wald
+
 ## The result indicates that the data are compatible with the assumption
 ## of no interaction/effect modification (p=0.79)
 
 ## test for unequal RRs (effect modification):
-mhgrade_age$res$RR.homog
+mhgrade_age$massoc.detail$wRR.homog
 
 ## Hence, we do not need to present the stratum-specific estimates.
 ```
+
+
+## Q9 試分析職業等級和CHD，冠心病死亡之間的關係。此時在Stata需要重新修改你的觀察結果爲 `chd`。職業等級和冠心病死亡之間的關係是否受到吸菸習慣的影響，或者有交互作用呢？
+
+
+
+```{r  SME02-06stata,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/whitehal.dta", clear
+egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
+stset timeout, fail(chd) origin(timein) id(id) scale(365.25)
+stmh grade 
+stmh grade, by(smok)
+```
+
+修改了觀察結果爲冠心病死亡之後，我們計算了職業等級高低之間相比較下的冠心病死亡率比，它未進行吸菸習慣調整時的結果是 1.99 (1.45, 2.74)，調整了吸菸習慣之後的 Mantel Haenszel 死亡率比變成了 1.76 (1.27, 2.44)。同時，檢驗結果表示並無證據證明吸菸和職業等級之間存在統計學意義上的交互作用。
 
