@@ -45,5 +45,25 @@ stset timeout, fail(chd) origin(timein) id(id) scale(365.25)
 stmh grade
 stmh grade, by(smok)
 
+* Q10
+
+quietly stset timeout, fail(chd) origin(timein) id(id) scale(365.25)
+
+strate cholgrp, per(1000)
+
+stmh cholgrp, c(2,1)
+stmh cholgrp, c(3,1)
+stmh cholgrp, c(4,1)
+stmh cholgrp
+
+stmh cholgrp, c(2,1) by(agecat)
+stmh cholgrp, c(3,1) by(agecat)
+stmh cholgrp, c(4,1) by(agecat)
+stmh cholgrp, by(agecat)
+
+
+table cholgrp
+
+
 log close
 

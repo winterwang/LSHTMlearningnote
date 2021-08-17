@@ -2,10 +2,10 @@
 
 
 
-本章內容不討論任何理論的東西，着重強調用 R/Stata/Stan 進行實際數據的分析，並加強對輸出結果的理解。
+本章內容不討論任何理論的東西，着重強調用 R/Stata 進行實際數據的分析，並加強對輸出結果的理解。
 
 
-此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。同時我們儘可能展示Stata的使用方法，並且同時給出R的解決方案。在允許的情況下，部分模型也會給出使用貝葉斯方法運算的過程和結果。
+此次實戰演練的目的是學會怎樣計算死亡率比 (Rate Ratios, RR)。學會用 Mantel-Haenszel 法總結 RR，並討論其意義。同時我們儘可能展示Stata的使用方法，並且儘量也給出R的解決方案。
 
 數據是從 Whitehall Cohort Study (`whitehal.dta`) 隨機採集10%的樣本數據。該研究的研究對象是英國的公務員羣體，調查的是心血管疾病的發病率和一些生活習慣之間的關係，更詳細的內容可以參考原始論文 [@marmot1978employment]，或者[維基百科主頁](https://en.wikipedia.org/wiki/Whitehall_Study#cite_note-:0-1)。
 
@@ -200,3 +200,70 @@ stmh grade, by(smok)
 
 修改了觀察結果爲冠心病死亡之後，我們計算了職業等級高低之間相比較下的冠心病死亡率比，它未進行吸菸習慣調整時的結果是 1.99 (1.45, 2.74)，調整了吸菸習慣之後的 Mantel Haenszel 死亡率比變成了 1.76 (1.27, 2.44)。同時，檢驗結果表示並無證據證明吸菸和職業等級之間存在統計學意義上的交互作用。
 
+## Further Q1 請分析膽固醇水平和 冠心病死亡之間的關係。這一關係是否受到年齡的混雜影響？
+
+
+```{r  SME02-07stata,  engine='stata', cache=TRUE, echo=FALSE}
+use "../backupfiles/whitehal.dta", clear
+egen agecat = cut(agein), at(40, 45, 50, 55, 60, 65, 70) label
+quietly stset timeout, fail(chd) origin(timein) id(id) scale(365.25)
+
+strate cholgrp, per(1000)
+
+stmh cholgrp, c(2,1)
+stmh cholgrp, c(3,1)
+stmh cholgrp, c(4,1)
+stmh cholgrp
+
+stmh cholgrp, c(2,1) by(agecat)
+stmh cholgrp, c(3,1) by(agecat)
+stmh cholgrp, c(4,1) by(agecat)
+stmh cholgrp, by(agecat)
+```
+
+
+把上面這些分析結果總結成爲一個簡潔的表格來，可以寫作：
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-color:#93a1a1;border-spacing:0;}
+.tg td{background-color:#fdf6e3;border-color:#93a1a1;border-style:solid;border-width:1px;color:#002b36;
+  font-family:Arial, sans-serif;font-size:14px;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{background-color:#657b83;border-color:#93a1a1;border-style:solid;border-width:1px;color:#fdf6e3;
+  font-family:Arial, sans-serif;font-size:14px;font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-0lax{text-align:left;vertical-align:top}
+</style>
+<table class="tg">
+<thead>
+  <tr>
+    <th class="tg-0lax"></th>
+    <th class="tg-0lax">Events</th>
+    <th class="tg-0lax">Person-years</th>
+    <th class="tg-0lax">Rate/<br>1000py</th>
+    <th class="tg-0lax">Crude RR (CI)</th>
+    <th class="tg-0lax">Age Adjusted RR  (95% CI)</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0lax">Cholesterol<br>(mmol)<br>&lt;150<br>150-199<br>200-249<br>250+</td>
+    <td class="tg-0lax"> <br> <br>14<br>52<br>59<br>29</td>
+    <td class="tg-0lax"> <br> <br>3952<br>11183<br>8915<br>3554</td>
+    <td class="tg-0lax"> <br> <br>3.54<br>4.65<br>6.62<br>8.16</td>
+    <td class="tg-0lax"> <br> <br>1.00<br>1.31 (0.73-2.37)<br>1.87 (1.04-3.35)<br>2.30 (1.22-4.36)<br>Ptrend = 0.001</td>
+    <td class="tg-0lax"> <br> <br>1.00<br>1.33 (0.73–2.45)<br>1.74 (0.97–3.13)<br>3.10 (1.56–6.18)<br>Ptrend = 0.0003</td>
+  </tr>
+</tbody>
+</table>
+
+
+
+所以，我們的分析結果提供了很強的證據證明，參加實驗的這些公務員的血液膽固醇水平，在沒有任何調整的情況下和冠心病死亡成正相關（傾向性 Ptrend 值 爲 0.001）。雖然似乎有跡象表明膽固醇更高的人羣可能調整年齡因素之後和冠心病死亡的關係更加顯著（負混雜, negative confounding），總體來說年齡調整前後的各個膽固醇水平和冠心病死亡之間的死亡率比並沒有太多不一樣，其結果同樣提供了極強的證據證明膽固醇水平和冠心病死亡之間呈正相關，傾向性 Ptrend 值爲 0.0003。
+
+
+## Further Q2 你認爲，當我們在分析膽固醇和冠心病死亡率之間的關係的時候，需要考慮調整收縮期血壓嗎 (systolic blood pressure)？如果你不同意，爲什麼？
+
+思考這個問題的時候，首先需要考慮的是，收縮期血壓本身是否處在膽固醇和冠心病死亡這二者之間的的因果關係通路上 (on the causal pathway between cholesterol and CHD mortality)？
+
+1. 如果收縮期血壓在生物學機制上不在膽固醇和冠心病死亡之間的因果關係通路上，但是收縮期血壓本身獨立地對冠心病死亡率造成影響 (it has an independent effect on the risk of CHD mortality)。你如果同意這一觀點，那麼調整收縮期血壓是值得建議的。
+
+2. 如果說，收縮期血壓由於某種機制，確實處在膽固醇和冠心病死亡之間的因果關係通路上。那它就不是一個獨立地和冠心病死亡率之間有關的危險因子 (so SBP is not an independent risk factor for CHD mortality)。如果你同意這一情況，那麼，調整SBP是多餘甚至是錯誤的。因爲這將會導致我們低估膽固醇和冠心病死亡率之間的真實關係。
