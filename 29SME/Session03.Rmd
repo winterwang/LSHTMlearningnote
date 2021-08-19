@@ -88,3 +88,88 @@ sts graph, saving(plot1)
 knitr::include_graphics(paste0(bugpath, "/img/plot1.jpg"))
 ```
 
+
+
+## Q3 
+
+使用 `sts list` 命令來查看該數據中第1，3，和5年時的累計生存概率 (cumulative survival probability)。
+
+```{r SME03-03stata,  engine='stata', cache=TRUE, echo=FALSE}
+cd "~/Downloads/LSHTMlearningnote/backupfiles/"
+use trinmlsh
+quietly stset timeout, fail(death) origin(timein) enter(timein) scale(365.25) id(id)
+sts list, at(1, 3, 5)
+```
+
+
+## Q4 
+
+
+給Q2 的 Kaplan-Meier 曲線添加 95% 信賴區間:
+
+
+```
+sts graph, ci saving(plot1, replace)
+```
+
+```{r SME03-statafig2, cache=TRUE, fig.width=6, fig.height=5, echo = FALSE, fig.cap="`sts graph,  ci saving(plot1, replace)`", fig.align='center'}
+knitr::include_graphics(paste0(bugpath, "/img/plot1_ci.jpg"))
+```
+
+## Q5
+
+關注變量 `smokenum`， 查看它的詳細內容。
+
+
+
+```{r SME03-04stata,  engine='stata', cache=TRUE, echo=FALSE}
+cd "~/Downloads/LSHTMlearningnote/backupfiles/"
+use trinmlsh
+quietly stset timeout, fail(death) origin(timein) enter(timein) scale(365.25) id(id)
+tab smokenum
+tab smokenum, nolabel
+```
+
+
+
+生成一個新的變量區分對象是否是現在有吸菸習慣 "current smoker"。比較現在有吸菸習慣和無吸菸習慣的兩組對象的生存曲線，這兩條曲線之間是否有（統計學上的）不同？
+
+```{r SME03-05stata,  engine='stata', cache=TRUE, echo=FALSE}
+cd "~/Downloads/LSHTMlearningnote/backupfiles/"
+use trinmlsh
+quietly stset timeout, fail(death) origin(timein) enter(timein) scale(365.25) id(id)
+gen smokstatus = smokenum >= 2 if smokenum != .
+label define smokstatus 0 "non-smokers" 1 "current smokers"
+label value smokstatus smokstatus
+```
+
+繪製兩組人的生存概率曲線，需要用到 `by(smokstatus)` 選項。
+
+```
+sts graph, by(smokstatus)
+```
+
+```{r SME03-statafig3, cache=TRUE, fig.width=6, fig.height=5, echo = FALSE, fig.cap="`sts graph, by(smokstatus)`", fig.align='center'}
+knitr::include_graphics(paste0(bugpath, "/img/plot3_1.jpg"))
+```
+
+可以看到吸菸和不吸菸兩組人的生存曲線在追蹤到第四年左右之前都十分相似。但是再往後的觀察隨訪時間裏，吸菸者的希望概率似乎要更高。
+
+
+## Q6
+
+檢驗吸菸習慣不同的兩組實驗對象的生存曲線在整個隨訪過程中是否有統計學意義上的不同？
+
+```{r SME03-06stata,  engine='stata', cache=TRUE, echo=FALSE}
+cd "~/Downloads/LSHTMlearningnote/backupfiles/"
+use trinmlsh
+quietly stset timeout, fail(death) origin(timein) enter(timein) scale(365.25) id(id)
+gen smokstatus = smokenum >= 2 if smokenum != .
+label define smokstatus 0 "non-smokers" 1 "current smokers"
+label value smokstatus smokstatus
+sts test smokstatus
+```
+
+Logrank 檢驗結果提示吸菸和不吸菸兩組人的生存曲線確實存在統計學上的差異 (p = 0.03)。
+
+
