@@ -44,6 +44,78 @@ sts graph, by(smokstatus)
 
 sts test smokstatus
 
+* Q7
+
+use mortality, clear
+
+help mortality
+
+describe
+
+* Q8 
+
+gen hyper = .
+replace hyper = 0 if systolic < 140
+replace hyper = 1 if systolic >= 140 & systolic != .
+
+* 09
+
+
+stset exit, failure(died) enter(enter) origin(enter) id(id) scale(365.25)
+
+
+
+* Q10 
+
+
+strate hyper, per(1000)
+
+
+*Q11
+
+stmh hyper
+
+* Q12-Q13
+
+browse
+
+
+* Q14
+
+sts list if hyper == 1
+
+
+* Q15
+
+sts graph, by(hyper)
+
+
+* Q16
+
+sts graph, by(hyper) ci
+
+* Q17
+
+
+sts graph, by(hyper) ci failure ylabel(0 0.05 0.10 0.15 0.20)
+
+* Q18
+
+sts test hyper
+
+* Q19
+
+
+stset exit, failure(died) enter(enter)  id(id) scale(365.25)
+strate hyper, per(1000)
+stmh hyper
+
+* Q20
+sts graph, by(hyper)
+
+
+* Q21
+
 
 
 
