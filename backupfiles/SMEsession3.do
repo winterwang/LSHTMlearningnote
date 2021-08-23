@@ -114,9 +114,6 @@ stmh hyper
 sts graph, by(hyper)
 
 
-* Q21
-
-
 
 
 log close
