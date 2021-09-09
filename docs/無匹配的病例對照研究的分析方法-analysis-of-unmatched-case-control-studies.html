@@ -24,7 +24,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2021-09-08" />
+<meta name="date" content="2021-09-09" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1887,6 +1887,9 @@ div.csl-indent {
 <li class="chapter" data-level="117" data-path="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html"><a href="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html"><i class="fa fa-check"></i><b>117</b> （無匹配的）病例對照研究的分析方法 analysis of unmatched case-control studies</a>
 <ul>
 <li class="chapter" data-level="117.1" data-path="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html"><a href="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html#q1-數據讀入"><i class="fa fa-check"></i><b>117.1</b> Q1 數據讀入</a></li>
+<li class="chapter" data-level="117.2" data-path="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html"><a href="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html#q2-計算粗比值比"><i class="fa fa-check"></i><b>117.2</b> Q2 計算粗比值比</a></li>
+<li class="chapter" data-level="117.3" data-path="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html"><a href="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html#q3-年齡的混雜或者交互-confounding-or-effect-mnodifier"><i class="fa fa-check"></i><b>117.3</b> Q3 年齡的混雜或者交互 confounding or effect-mnodifier</a></li>
+<li class="chapter" data-level="117.4" data-path="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html"><a href="無匹配的病例對照研究的分析方法-analysis-of-unmatched-case-control-studies.html#q4-宗教信仰-religion-rel-和hiv之間的關係"><i class="fa fa-check"></i><b>117.4</b> Q4 宗教信仰 religion <code>rel</code> 和HIV之間的關係</a></li>
 </ul></li>
 <li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>参考文献</a>
 <ul>
@@ -2033,6 +2036,204 @@ was performed.
                               3=very likely/already infected 4=don&#39;t know
    srk          perceived risk of STDs:  1=none/slight 2=quite likely
                               3=very likely/already infected 4=don&#39;t know</code></pre>
+</div>
+<div id="q2-計算粗比值比" class="section level2" number="117.2">
+<h2><span class="header-section-number">117.2</span> Q2 計算粗比值比</h2>
+<p>以受教育程度爲預測變量，HIV患病與否作爲結果變量，計算粗比值比 crude odds ratio (OR)。
+先獲取這倆個變量之間簡單的 <span class="math inline">\(2 \times 2\)</span> 表格，對他們可能有的關係有個大概的印象：</p>
+<pre><code>## .  tabulate case ed2, row
+## 
+## +----------------+
+## | Key            |
+## |----------------|
+## |   frequency    |
+## | row percentage |
+## +----------------+
+## 
+## Case/contr |       education
+##         ol | none/adul  &gt;=1 years |     Total
+## -----------+----------------------+----------
+##          0 |       263        311 |       574 
+##            |     45.82      54.18 |    100.00 
+## -----------+----------------------+----------
+##          1 |        49        140 |       189 
+##            |     25.93      74.07 |    100.00 
+## -----------+----------------------+----------
+##      Total |       312        451 |       763 
+##            |     40.89      59.11 |    100.00 
+## </code></pre>
+<p>進一步計算 Crude OR，分別計算拿不同的教育水平作爲參照 (baseline) 時獲得的粗比值比：</p>
+<pre><code>## .  mhodds case ed2, c(1, 2)
+## 
+## Maximum likelihood estimate of the odds ratio
+## Comparing ed2==1 vs. ed2==2
+## 
+##     ----------------------------------------------------------------
+##      Odds Ratio    chi2(1)        P&gt;chi2        [95% Conf. Interval]
+##     ----------------------------------------------------------------
+##        0.413878      23.25        0.0000         0.285782   0.599391
+##     ----------------------------------------------------------------
+
+## .  mhodds case ed2, c(2, 1)
+## 
+## Maximum likelihood estimate of the odds ratio
+## Comparing ed2==2 vs. ed2==1
+## 
+##     ----------------------------------------------------------------
+##      Odds Ratio    chi2(1)        P&gt;chi2        [95% Conf. Interval]
+##     ----------------------------------------------------------------
+##        2.416169      23.25        0.0000         1.668360   3.499168
+##     ----------------------------------------------------------------</code></pre>
+<p>計算該表格的卡方值 <span class="math inline">\(\chi^2\)</span>，並檢驗這兩個二進制型變量之間是否存在相關性：</p>
+<pre><code>
+## . tab case ed2, chi exact
+
+## Case/contr |       education
+##         ol | none/adul  &gt;=1 years |     Total
+## -----------+----------------------+----------
+##          0 |       263        311 |       574 
+##          1 |        49        140 |       189 
+## -----------+----------------------+----------
+##      Total |       312        451 |       763 
+
+##           Pearson chi2(1) =  23.2789   Pr = 0.000
+##            Fisher&#39;s exact =                 0.000
+##    1-sided Fisher&#39;s exact =                 0.000
+</code></pre>
+<p>其實這裏我們並不需要用到 Fisher’s Exact 檢驗方法，因爲四個空格裏最小的期望值是 <span class="math inline">\(\frac{312 \times 189}{763} = 77.3 &gt; 5\)</span>。所以無論你用哪個檢驗方法都會得出相同的結論，也就是數據給出的證據反對該命題的零假設，也就是兩個二進制變量之間無關。</p>
+</div>
+<div id="q3-年齡的混雜或者交互-confounding-or-effect-mnodifier" class="section level2" number="117.3">
+<h2><span class="header-section-number">117.3</span> Q3 年齡的混雜或者交互 confounding or effect-mnodifier</h2>
+<p>我們希望分析數據來理解受教育水平和是否患有HIV之間的關係受到年齡怎樣的影響。我們先通過不同年齡階層內，教育和HIV之間的關係來看：</p>
+<pre><code>## . bysort age2: tab case ed2, row
+## 
+## ---------------------------------------------------------------------------------------------------
+## -&gt; age2 = 15-24
+## 
+## +----------------+
+## | Key            |
+## |----------------|
+## |   frequency    |
+## | row percentage |
+## +----------------+
+## 
+## Case/contr |       education
+##         ol | none/adul  &gt;=1 years |     Total
+## -----------+----------------------+----------
+##          0 |        37        167 |       204 
+##            |     18.14      81.86 |    100.00 
+## -----------+----------------------+----------
+##          1 |        13         57 |        70 
+##            |     18.57      81.43 |    100.00 
+## -----------+----------------------+----------
+##      Total |        50        224 |       274 
+##            |     18.25      81.75 |    100.00 
+## 
+## ---------------------------------------------------------------------------------------------------
+## -&gt; age2 = 25-34
+## 
+## +----------------+
+## | Key            |
+## |----------------|
+## |   frequency    |
+## | row percentage |
+## +----------------+
+## 
+## Case/contr |       education
+##         ol | none/adul  &gt;=1 years |     Total
+## -----------+----------------------+----------
+##          0 |        79         90 |       169 
+##            |     46.75      53.25 |    100.00 
+## -----------+----------------------+----------
+##          1 |        11         61 |        72 
+##            |     15.28      84.72 |    100.00 
+## -----------+----------------------+----------
+##      Total |        90        151 |       241 
+##            |     37.34      62.66 |    100.00 
+## 
+## ---------------------------------------------------------------------------------------------------
+## -&gt; age2 = 35+
+## 
+## +----------------+
+## | Key            |
+## |----------------|
+## |   frequency    |
+## | row percentage |
+## +----------------+
+## 
+## Case/contr |       education
+##         ol | none/adul  &gt;=1 years |     Total
+## -----------+----------------------+----------
+##          0 |       147         54 |       201 
+##            |     73.13      26.87 |    100.00 
+## -----------+----------------------+----------
+##          1 |        25         22 |        47 
+##            |     53.19      46.81 |    100.00 
+## -----------+----------------------+----------
+##      Total |       172         76 |       248 
+##            |     69.35      30.65 |    100.00 
+</code></pre>
+<p>我們可以使用 <code>by(age2)</code> 選項來計算年齡調整之後的比值比，評價受教育水平和是否患有HIV之間的關係：</p>
+<pre><code>
+## . mhodds case ed2, by(age2)
+## 
+## Maximum likelihood estimate of the odds ratio
+## Comparing ed2==2 vs. ed2==1
+## by age2
+## 
+## -------------------------------------------------------------------------------
+##      age2 | Odds Ratio        chi2(1)         P&gt;chi2       [95% Conf. Interval]
+## ----------+--------------------------------------------------------------------
+##     15-24 |   0.971442           0.01         0.9354         0.48188    1.95837
+##     25-34 |   4.867677          21.28         0.0000         2.31121   10.25188
+##       35+ |   2.395556           7.10         0.0077         1.23412    4.65001
+## -------------------------------------------------------------------------------
+## 
+##     Mantel-Haenszel estimate controlling for age2
+##     ----------------------------------------------------------------
+##      Odds Ratio    chi2(1)        P&gt;chi2        [95% Conf. Interval]
+##     ----------------------------------------------------------------
+##        2.330972      19.46        0.0000         1.582460   3.433536
+##     ----------------------------------------------------------------
+## 
+## Test of homogeneity of ORs (approx): chi2(2)   =   10.31
+##                                      Pr&gt;chi2   =  0.0058
+</code></pre>
+<p>可以清楚的看見，當調整了年齡之後，比較受過1年以上正規教育的人，未受過教育的人患有HIV的比值比 OR 從 2.42 變成了 2.33 (95%CI: 1.58, 3.43)。也就是說數據支持受教育水平和是否患有HIV之間有很強的相關性。但是我們關注到最後一行進行交互作用檢驗部分給出的結果：</p>
+<pre><code>## Test of homogeneity of ORs (approx): chi2(2)   =   10.31
+##                                      Pr&gt;chi2   =  0.0058</code></pre>
+<p>也就是數據同樣發現的一點是，評價教育水平, HIV之間關係的 OR 在不同的年齡分層之間有顯著的不同 (the association between education and HIV infection varies with age group)。而且分層的 OR 值中我們看見教育和HIV患病之間並無關係。如果你也認爲，年齡對教育水平和HIV之間的關係造成的是交互作用的話，那麼我們就必須摒棄年齡調整之後的OR值，轉而應該報告每個年齡層的OR值。</p>
+</div>
+<div id="q4-宗教信仰-religion-rel-和hiv之間的關係" class="section level2" number="117.4">
+<h2><span class="header-section-number">117.4</span> Q4 宗教信仰 religion <code>rel</code> 和HIV之間的關係</h2>
+<p>前面三個問題具體展示了我們應該如何分析並且理解“年齡”對我們關心的“教育水平和HIV患病與否之間的關係”這一命題的影響。接下來我們嘗試用類似的方法來分析“宗教信仰”這一變量。</p>
+<p>值得注意的是，宗教信仰 <code>rel</code> 這個變量裏存在編碼成 <code>9</code> 的缺失值 (missing value)。</p>
+<pre><code>## . recode rel 9=.
+## (rel: 1 changes made)</code></pre>
+<p>這裏再對結果變量和宗教信仰兩個變量之間製作卡方表格：</p>
+<pre><code>## . tabulate case rel, chi row
+## 
+## +----------------+
+## | Key            |
+## |----------------|
+## |   frequency    |
+## | row percentage |
+## +----------------+
+## 
+## Case/contr |                  Religion
+##         ol |         1          2          3          4 |     Total
+## -----------+--------------------------------------------+----------
+##          0 |        28        228        150        167 |       573 
+##            |      4.89      39.79      26.18      29.14 |    100.00 
+## -----------+--------------------------------------------+----------
+##          1 |        20         93         55         21 |       189 
+##            |     10.58      49.21      29.10      11.11 |    100.00 
+## -----------+--------------------------------------------+----------
+##      Total |        48        321        205        188 |       762 
+##            |      6.30      42.13      26.90      24.67 |    100.00 
+## 
+##           Pearson chi2(3) =  29.4949   Pr = 0.000</code></pre>
+<p>初步表格總結發現宗教信仰和是否患有HIV應該是存在關聯性的。在病例中，宗教信仰 <code>rel = 4</code> 也就是其他信仰的人明顯比例較低。</p>
 
 </div>
 </div>

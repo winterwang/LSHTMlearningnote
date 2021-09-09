@@ -30,16 +30,48 @@ tabulate age2 age1
 
 * Q2
 
- 
+ tabulate case ed2, row
+
+ mhodds case ed2, c(1, 2)
+
+ mhodds case ed2, c(2, 1)
 
 
 
+tab case ed2, chi exact
 
 
+* Q3 
+
+bysort age2: tab case ed2, row
+
+mhodds case ed2, by(age2)
 
 
+* Q4 
+
+recode rel 9=.
+
+tabulate case rel, chi row
 
 
 
 log close
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
