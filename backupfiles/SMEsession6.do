@@ -54,7 +54,10 @@ recode rel 9=.
 
 tabulate case rel, chi row
 
+mhodds case ed2, by(rel) c(2,1)
 
+
+mhodds case ed2 if rel!=., c(2,1)
 
 log close
 
