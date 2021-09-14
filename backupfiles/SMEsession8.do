@@ -8,7 +8,12 @@ cd "~/Downloads/LSHTMlearningnote/backupfiles/"
 
 
 
+blik 4 6, samex
 
+
+blik 40 60, samex
+
+blik 400 600, samex
 
 
 
