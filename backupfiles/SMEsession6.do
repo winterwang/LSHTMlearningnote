@@ -59,6 +59,28 @@ mhodds case ed2, by(rel) c(2,1)
 
 mhodds case ed2 if rel!=., c(2,1)
 
+
+* Q5 
+
+recode npa 9=.
+
+mhodds case ed2
+
+mhodds case ed2, by(npa)
+
+mhodds case ed2 if npa!=.
+
+
+* Q6 
+
+recode npa 1=0 2=3 3=7 4=15, gen(npa2)
+
+tabodds case npa2, or
+
+tab case npa2, chi
+
+display chiprob(2, 1.05)
+
 log close
 
 
