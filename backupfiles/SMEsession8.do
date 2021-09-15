@@ -31,15 +31,39 @@ blik 0 1000, samex
 
 * Q5 
 
-plik 1 500
-plik 0 500
+plik 5000 5000
 
-
-plik 1 5000
+plik  5000
 
 plik 700 50000
 
 plik 7 50000
+
+
+
+* Q6
+
+
+plik 1 500
+plik 0 500
+
+
+
+* Q7
+
+blik 15 10, null(0.5) pval
+
+
+* Q8 
+
+blik 24 16, null(0.5) pval
+
+
+* Q9
+
+
+blik 36 24, null(0.5) pval
+
 
 
 help plik
