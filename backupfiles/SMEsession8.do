@@ -1,6 +1,7 @@
-log using sme8, append
+log using sme8.log, append
 
 cd "~/Downloads/LSHTMlearningnote/backupfiles/"
+
 
 
 
@@ -67,6 +68,33 @@ blik 36 24, null(0.5) pval
 
 
 help plik
+
+* Q10
+
+bloglik 4 6
+
+* Q13
+
+bloglik 2 18
+
+* Q14 
+
+bloglik 2 18, logodds
+
+*Q15
+
+ploglik 7 500
+
+* Q16
+
+ploglik 7 500, lograte
+
+
+* Q17 
+
+ploglik 1 1000
+ploglik 1 1000, lograte
+
 
 
 
