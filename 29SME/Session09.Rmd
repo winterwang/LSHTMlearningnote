@@ -123,6 +123,7 @@ Log likelihood = -577.36596                     Pseudo R2         =     0.0486
 
 ## Q6 給出 OR 值
 
+
 ```
 . logistic died vimp
 
@@ -140,3 +141,332 @@ Log likelihood = -577.36596                     Pseudo R2         =     0.0486
 
 ```
 
+值得注意的是，
+
+1. 這時候直接給出的比值比 OR 它下面的 `_cons` 部分其實並不是比值比 OR，而是基線組的比值 (the odds of outcome in the baseline group)。所以，基線比值在本例中的含義其實就是視力沒有受損的人中死亡的比值 (odds of death amongst those visually unimpaired)。
+
+2. 此時給出的標準誤差 (standard error) 只是近似值，可以無視。
+
+3. `z` 統計量和使用 `logit` 命令時計算得出的值完全相同。
+
+4. 信賴區間使用的是對數尺度下計算獲得的信賴區間之後取 `exp` 獲得的。例如 `exp(1.329411) = 3.778816`
+
+你還可以用下面代碼獲取相同的結果：
+
+
+```
+. logit died vimp, or
+
+Iteration 0:   log likelihood = -606.88457  
+Iteration 1:   log likelihood = -578.54009  
+Iteration 2:   log likelihood = -577.36856  
+Iteration 3:   log likelihood = -577.36596  
+Iteration 4:   log likelihood = -577.36596  
+
+Logistic regression                             Number of obs     =      4,298
+                                                LR chi2(1)        =      59.04
+                                                Prob > chi2       =     0.0000
+Log likelihood = -577.36596                     Pseudo R2         =     0.0486
+
+------------------------------------------------------------------------------
+        died | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+        vimp |   5.566292   1.099983     8.69   0.000     3.778816     8.19929
+       _cons |   .0250387   .0025739   -35.87   0.000     .0204696    .0306277
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+
+```
+
+
+## Q7 彙總成報告用的表格
+
+把目前爲止分析的結果彙總成研究報告使用的表格：
+
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-color:#93a1a1;border-spacing:0;}
+.tg td{background-color:#fdf6e3;border-color:#93a1a1;border-style:solid;border-width:1px;color:#002b36;
+  font-family:Arial, sans-serif;font-size:14px;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{background-color:#657b83;border-color:#93a1a1;border-style:solid;border-width:1px;color:#fdf6e3;
+  font-family:Arial, sans-serif;font-size:14px;font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-c3ow{border-color:inherit;text-align:center;vertical-align:top}
+.tg .tg-0pky{border-color:inherit;text-align:left;vertical-align:top}
+</style>
+<table class="tg">
+<thead>
+  <tr>
+    <th class="tg-c3ow">&nbsp;&nbsp;&nbsp;<br> &nbsp;&nbsp;&nbsp;</th>
+    <th class="tg-c3ow">&nbsp;&nbsp;&nbsp;<br>n&nbsp;&nbsp;&nbsp;</th>
+    <th class="tg-c3ow">   <br>Died (row %)   </th>
+    <th class="tg-c3ow">&nbsp;&nbsp;&nbsp;<br>OR (95% CI)&nbsp;&nbsp;&nbsp;</th>
+    <th class="tg-c3ow">&nbsp;&nbsp;&nbsp;<br>P-value&nbsp;&nbsp;&nbsp;</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0pky">&nbsp;&nbsp;&nbsp;<br>Visually unimpaired<br>&nbsp;&nbsp;&nbsp;<br>Visually impaired&nbsp;&nbsp;&nbsp;</td>
+    <td class="tg-c3ow">&nbsp;&nbsp;&nbsp;<br>3971<br>&nbsp;&nbsp;&nbsp;<br>  327&nbsp;&nbsp;&nbsp;</td>
+    <td class="tg-c3ow">   <br>97 (2.4%)<br>   <br>40 (12.2%)   </td>
+    <td class="tg-c3ow">&nbsp;&nbsp;&nbsp;<br>1<br>&nbsp;&nbsp;&nbsp;<br>5.57 (3.78, 8.20)&nbsp;&nbsp;&nbsp;</td>
+    <td class="tg-c3ow">&nbsp;&nbsp;&nbsp;<br>&lt;0.0001&nbsp;&nbsp;&nbsp;</td>
+  </tr>
+</tbody>
+</table>
+
+描述這一分析結果的段落可以寫作：
+
+> 分析結果發現，視力損傷和死亡的危險度強烈相關 (p < 0.0001)。視力損傷的研究對象相比視力正常的人死亡的比值要高出快要6倍之多 (OR 5.57; 95%CI: 3.78, 8.20)。
+
+
+## Q8 瞭解微小絲蟲傳染病 (microfilarial infection) 和死亡之間的關係
+
+
+當曝露變量在表格中是行 (row) 時，我們推薦用行百分比視角來觀察它和結果變量 (列) 之間的關係：
+  
+
+```
+. tab mfgrp died, row
+
++----------------+
+| Key            |
+|----------------|
+|   frequency    |
+| row percentage |
++----------------+
+
+Microfilar |
+       ial |
+   load/mg |         Died
+ (grouped) |         0          1 |     Total
+-----------+----------------------+----------
+Uninfected |     1,274         29 |     1,303 
+           |     97.77       2.23 |    100.00 
+-----------+----------------------+----------
+       <10 |     1,609         62 |     1,671 
+           |     96.29       3.71 |    100.00 
+-----------+----------------------+----------
+     10-49 |       996         33 |     1,029 
+           |     96.79       3.21 |    100.00 
+-----------+----------------------+----------
+       50+ |       193          9 |       202 
+           |     95.54       4.46 |    100.00 
+-----------+----------------------+----------
+     Total |     4,072        133 |     4,205 
+           |     96.84       3.16 |    100.00 
+
+
+```
+
+於是我們發現，未被此寄生蟲感染的人羣，整個實驗進行的過程中，死亡率是 2.23%，如果感染絲蟲的感染量較輕 < 10 load/mg，那麼死亡率會升高至 3.71%。
+
+## Q9 使用指示變量 indicator variable
+
+在變量 `mfgrp` 之前加上 `i.` 等同於告訴計算機程序說，這個 `mfgrp` 變量應噶被編碼成爲指示變量或者叫啞變量 (dummy)。
+
+```
+. logit died i.mfgrp
+
+Iteration 0:   log likelihood = -590.21364  
+Iteration 1:   log likelihood = -586.93331  
+Iteration 2:   log likelihood = -586.86511  
+Iteration 3:   log likelihood = -586.86507  
+
+Logistic regression                             Number of obs     =      4,205
+                                                LR chi2(3)        =       6.70
+                                                Prob > chi2       =     0.0822
+Log likelihood = -586.86507                     Pseudo R2         =     0.0057
+
+------------------------------------------------------------------------------
+        died |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       mfgrp |
+        <10  |   .5263863    .228075     2.31   0.021     .0793676     .973405
+      10-49  |   .3753803   .2580207     1.45   0.146     -.130331    .8810917
+        50+  |   .7171561    .389307     1.84   0.065    -.0458716    1.480184
+             |
+       _cons |   -3.78262   .1877968   -20.14   0.000    -4.150695   -3.414545
+------------------------------------------------------------------------------
+
+```
+
+你可以查看這些計算機自動產生的啞變量：
+
+```
+. list mfgrp i.mfgrp in 1/25
+
+     +--------------------------------------------+
+     |                  0.      1.      2.      3.|
+     |      mfgrp   mfgrp   mfgrp   mfgrp   mfgrp |
+     |--------------------------------------------|
+  1. | Uninfected       1       0       0       0 |
+  2. |        <10       0       1       0       0 |
+  3. |        <10       0       1       0       0 |
+  4. |      10-49       0       0       1       0 |
+  5. |        <10       0       1       0       0 |
+     |--------------------------------------------|
+  6. |          .       .       .       .       . |
+  7. | Uninfected       1       0       0       0 |
+  8. |          .       .       .       .       . |
+  9. |        <10       0       1       0       0 |
+ 10. |        <10       0       1       0       0 |
+     |--------------------------------------------|
+ 11. |          .       .       .       .       . |
+ 12. |        <10       0       1       0       0 |
+ 13. |        <10       0       1       0       0 |
+ 14. | Uninfected       1       0       0       0 |
+ 15. |        <10       0       1       0       0 |
+     |--------------------------------------------|
+ 16. |          .       .       .       .       . |
+ 17. |      10-49       0       0       1       0 |
+ 18. | Uninfected       1       0       0       0 |
+ 19. |      10-49       0       0       1       0 |
+ 20. | Uninfected       1       0       0       0 |
+     |--------------------------------------------|
+ 21. |      10-49       0       0       1       0 |
+ 22. |        50+       0       0       0       1 |
+ 23. |          .       .       .       .       . |
+ 24. |        <10       0       1       0       0 |
+ 25. | Uninfected       1       0       0       0 |
+     +--------------------------------------------+
+```
+
+自動產生的啞變量的同時，計算機還自動加上的標籤。
+
+## Q10 計算比值比
+
+```
+. logistic died i.mfgrp, base
+
+Logistic regression                             Number of obs     =      4,205
+                                                LR chi2(3)        =       6.70
+                                                Prob > chi2       =     0.0822
+Log likelihood = -586.86507                     Pseudo R2         =     0.0057
+
+------------------------------------------------------------------------------
+        died | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+       mfgrp |
+ Uninfected  |          1  (base)
+        <10  |   1.692804   .3860862     2.31   0.021     1.082602    2.646942
+      10-49  |   1.455545   .3755608     1.45   0.146     .8778048    2.413533
+        50+  |   2.048599   .7975339     1.84   0.065     .9551646    4.393753
+             |
+       _cons |    .022763   .0042748   -20.14   0.000     .0157535    .0328914
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+```
+
+在命令行最後添加 `, base` 選項的話，會在計算結果中提示我們哪個組是基線組 (baseline group)，便於查看結果。
+
+1. OR = 1.69 表示感染程度爲 <10 load/mg 的人死亡的比值和基線組（未感染）相比的比值。
+2. OR = 1.46 表示感染程度爲 10-49 load/mg 的人的死亡的比值和基線組（未感染）相比的比值。
+3. OR = 2.05 表示感染程度爲 50+ load/mg 的人的死亡的比值和基線組（未感染）相比的比值。
+4. 一共有三個 Wald 檢驗，和對應的 P 值。他們檢驗的零假設是每一個感染組和未感染組相比死亡的比值比等於1。
+5. 右上角的似然比檢驗 likelihood ratio test 檢驗的是卡方值等於 6.7，自由度是 3 的卡方檢驗，p = 0.0822。這個似然比檢驗的是，同時評價四個關於絲蟲寄生蟲感染程度的啞變量 `mfgrp`，和結果變量死亡 `died` 之間的關係。This tests the association between the variable `mfgrp` and the outcome, death, by simultaneously testing all three parameters in the model.
+
+
+## Q11 簡單陳述上述分析的結果
+
+數據分析的結果表明，絲蟲寄生蟲感染程度和死亡之間的相關性比較不明顯，證據強度爲弱 (p = 0.08)。在未被感染的人羣中，死亡率是 2.2%，確實比其他組死亡率略低。和未被感染的人羣相比，感染程度是 <10, 10-49, 50+ load/mg 的組的死亡比值比分別是 1.69 (95% CI: 1.08, 2.64), 1.46 (0.88, 2.41), 2.05 (0.96, 4.39)。
+
+
+## Q12 似然比檢驗用於模型比較
+
+爲了調整正確的比較模型姿勢，我們需要使用相同的人數在兩個模型中，這裏我們打算比較的兩個模型一個是不含有絲蟲感染變量 `mfgrp` 的模型 (L0)，另一個是含有絲蟲感染變量的模型 (L1)。那麼，我們需要先修改 L0 的人數，再進行二者的比較。
+
+```
+. logistic died if mfgrp!=.
+. estimates store A
+
+. logistic died i.mfgrp
+. estimates store B
+
+. lrtest B A
+
+Likelihood-ratio test                                 LR chi2(3)  =      6.70
+(Assumption: A nested in B)                           Prob > chi2 =    0.0822
+
+```
+
+假如你忘記了一開始調整分析的人數的步驟，直接使用似然比檢驗比較兩個模型的話，電腦會因爲人數不同而報錯：
+
+
+```
+. lrtest B A
+observations differ: 4205 vs. 4298
+```
+
+## Q13 分析年齡組和死亡之間的關係
+
+
+1. 先在模型中只放年齡組一個變量
+
+```
+. logistic died i.agegrp, base
+
+Logistic regression                             Number of obs     =      4,298
+                                                LR chi2(3)        =     110.78
+                                                Prob > chi2       =     0.0000
+Log likelihood = -551.49583                     Pseudo R2         =     0.0913
+
+------------------------------------------------------------------------------
+        died | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      agegrp |
+      15-34  |          1  (base)
+      35-54  |   2.578425   .6004948     4.07   0.000      1.63349    4.069983
+      55-64  |   6.933532   1.895136     7.08   0.000     4.057854    11.84712
+        65+  |   14.80207   3.919374    10.18   0.000     8.809203    24.87186
+             |
+       _cons |   .0133448   .0024127   -23.88   0.000      .009363      .01902
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+```
+
+只有年齡做唯一的解釋變量時，我們發現年齡和死亡呈強烈的正相關。
+
+
+2. 再往模型裏增加一個變量 (視覺損傷)
+
+```
+
+. logistic died i.vimp i.agegrp, base
+
+Logistic regression                             Number of obs     =      4,298
+                                                LR chi2(4)        =     122.05
+                                                Prob > chi2       =     0.0000
+Log likelihood =  -545.8609                     Pseudo R2         =     0.1006
+
+------------------------------------------------------------------------------------
+              died | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+              vimp |
+           Normal  |          1  (base)
+Visually impaired  |   2.202266   .5019659     3.46   0.001     1.408816    3.442592
+                   |
+            agegrp |
+            15-34  |          1  (base)
+            35-54  |   2.354987   .5548487     3.64   0.000     1.484023    3.737116
+            55-64  |   5.415484   1.556832     5.88   0.000     3.082732    9.513469
+              65+  |   9.901309   2.932372     7.74   0.000      5.54116    17.69231
+                   |
+             _cons |   .0131857   .0023851   -23.93   0.000     .0092498    .0187962
+------------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+
+```
+
+我們發現，之前獲得的視覺歲上和死亡之間強烈正相關的比值比 5.57 在調整了年齡之後縮水到了 2.20。
+
+
+## 分析要點 
+
+1. 在實施邏輯回歸模型的計算之前，我們需要先對解釋變量和結果變量進行列表計算等初步的瞭解。
+2. 邏輯回歸模型本身在計算的時候是使用對數比值 log-odds，然後通過數學轉換獲得我們需要的比值比 OR。
+3. 每次模型運行時會對每一個變量進行 Wald 檢驗，它檢驗的都是 logOR/SE 然後和標準正（常）態分佈做比較他們是否等於零。
+4. 似然比檢驗法比較模型時，實際上比較的是兩個模型之間的對數似然 log-likelihood。它的零假設是“目標變量和結果變量之間無關 no association between the variable of interest and the outcome”。
