@@ -733,27 +733,41 @@ shade( mu.PI, weight.seq )
 考慮身高本身的方差進來：
 
 ```{r introBayes06-39, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='89% prediction interval for height, as a function of weight. The solid line is the average line for the mean height at each weight. The two shaded regions show different 89% plausible regions. The narrow shaded interval around the line is the distribution of mu. The wider shaded region represents the region within which the model expects to find 89% of actual heights in the population, at each weight.', fig.align='center'}
+## Manual posterior predictive simulation replacing sim(m4.3, data=...) which
+## failed due to unused 'data' argument in current rethinking version.
+## We construct mu for each posterior sample and weight, then simulate heights.
 
-sim.height <- sim(m4.3, data = list(weight = weight.seq))
-str(sim.height)
+post <- extract.samples(m4.3)                # list of posterior samples (a, b, sigma)
+n_samp <- length(post$a)
 
-height.PI <- apply( sim.height,  2, PI, prob = 0.89)
+# Compute posterior samples of mu for each weight value
+mu.samples <- sapply(weight.seq, function(w) post$a + post$b * (w - xbar))
 
-# plot raw data
+# Recompute summaries if not available or mismatched
+if(!exists("mu.mean") || length(mu.mean) != length(weight.seq)) {
+  mu.mean <- apply(mu.samples, 2, mean)
+}
+if(!exists("mu.PI") || ncol(mu.PI) != length(weight.seq)) {
+  mu.PI <- apply(mu.samples, 2, PI, prob = 0.89)
+}
 
-plot( height ~ weight, d2, col = col.alpha(rangi2, 0.5))
+# Posterior predictive heights: draw one simulated height for each posterior sample and weight
+sim.height <- sapply(1:length(weight.seq), function(j) {
+  rnorm(n_samp, mu.samples[, j], post$sigma)
+})
+height.PI <- apply(sim.height, 2, PI, prob = 0.89)
 
-# draw MAP line
+# Plot raw data
+plot(height ~ weight, d2, col = col.alpha(rangi2, 0.5))
 
-lines( weight.seq, mu.mean )
+# Draw posterior mean line
+lines(weight.seq, mu.mean)
 
-# draw HPDI region for line
-# mu.HPDI <- HPDI()
-shade( mu.PI, weight.seq )
+# Shaded 89% interval for mu (narrow band)
+shade(mu.PI, weight.seq)
 
-# draw PI for simulated heights
-
-shade( height.PI, weight.seq)
+# Shaded 89% predictive interval for heights (wider band)
+shade(height.PI, weight.seq)
 
 ```
 

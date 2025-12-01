@@ -1,4 +1,3 @@
-
 ## 虛假的相關性 {#waffle}
 
 一起來看看一個關於結婚，離婚，和美國每個州的華夫餅餐廳的個數的數據：
@@ -12,6 +11,7 @@ head(d)
 
 把數據標準化：
 
+```{r introBayes08-02, cache=TRUE}
 ```{r introBayes08-02, cache=TRUE}
 d$D <- standardize( d$Divorce )
 d$M <- standardize( d$Marriage )
@@ -389,19 +389,25 @@ abline(v = 0, lty = 2)
 
 
 ```{r introBayes08-12, cache=TRUE}
-# call link without specifying new data
-# so it uses original data 
-mu <- link(m5.3)
+## Manual posterior predictive summary (explicit matrix operations & sampling; supersedes legacy link()/sim() convenience calls)
+## to avoid unsupported arguments or version-specific behavior.
 
-# summarize samples across cases
-mu_mean <- apply( mu, 2, mean )
-mu_PI <- apply(mu, 2, PI)
+post <- extract.samples(m5.3)             # posterior draws
+n_draws <- length(post$a)
 
-# simulate observations
-# again no new data, uses original data
+# Construct matrix of mu samples: rows = draws, cols = cases
+mu_samples <- vapply(seq_len(nrow(d)), function(i) {
+  post$a + post$bM * d$M[i] + post$bA * d$A[i]
+}, numeric(n_draws))
 
-D_sim <- sim(m5.3, n = 10000)
-D_PI <- apply(D_sim, 2, PI)
+mu_mean <- apply(mu_samples, 2, mean)
+mu_PI   <- apply(mu_samples, 2, PI, prob = 0.89)
+
+# Posterior predictive simulations: one simulated observation per draw per case
+D_sim <- vapply(seq_len(nrow(d)), function(i) {
+  rnorm(n_draws, mu_samples[, i], post$sigma)
+}, numeric(n_draws))
+D_PI <- apply(D_sim, 2, PI, prob = 0.89)
 ```
 
 
@@ -448,33 +454,65 @@ precis(m5.3_A)
 A_seq <- seq(from = -2, to = 2, length.out = 30)
 ```
 
-然後利用 `sim()` 函數來獲取 simulated 數據：
+接下來不再使用過去的 `sim()` 便利函數，而是直接用 posterior samples 人工構造（manual）counterfactual 模擬：對每一個 A 的操縱值，先根據 posterior 抽樣得到對應的 M 分佈，再將該模擬出的 M 帶入 D 的線性預測式，生成 D 的模擬值。這樣的手動模擬與原書中 `sim()` 的邏輯等價，但更透明、也避免了因版本差異造成的函數失效。
 
 ```{r introBayes08-15, cache=TRUE}
-# prep data
-sim_dat <- data.frame( A = A_seq)
+## Manual counterfactual simulation (explicit posterior sampling; replaces historical sim(m5.3_A, ... ) helper)
+## Draw posterior samples, generate M then D for each A in A_seq.
 
-# Simulate M and then D, using A_seq
+sim_dat <- data.frame(A = A_seq)
+post_cf <- extract.samples(m5.3_A)
+n_draws <- length(post_cf$a)
 
-s <- sim( m5.3_A, data = sim_dat, vars = c("M", "D"))
+# For each A value, compute M mean and simulate M, then compute D mean and simulate D.
+sim_list_D <- vector("list", length(A_seq))
+for(j in seq_along(A_seq)) {
+  A_val <- A_seq[j]
+  mu_M_j <- post_cf$aM + post_cf$bAM * A_val
+  M_sim_j <- rnorm(n_draws, mu_M_j, post_cf$sigma_M)
+  mu_D_j <- post_cf$a + post_cf$bM * M_sim_j + post_cf$bA * A_val
+  D_sim_j <- rnorm(n_draws, mu_D_j, post_cf$sigma)
+  sim_list_D[[j]] <- D_sim_j
+}
+
+# Combine into matrix: rows = draws, cols = A values
+D_cf_mat <- do.call(cbind, sim_list_D)
+
+# Summary intervals for D
+D_cf_mean <- apply(D_cf_mat, 2, mean)
+D_cf_PI   <- apply(D_cf_mat, 2, PI, prob = 0.89)
+
+# Store for later plotting
+cf_total <- list(A = A_seq, mean = D_cf_mean, PI = D_cf_PI)
 ```
 
 
 繪製 simulated 數據的圖：
 
-```{r introBayes08-fig11, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Visualize the predicted effect of manipulating age at marriage A on divorce rate D. (Total causal effect of A on D, A -> D, and A -> M -> D bot effects included.", fig.align='center'}
-plot( sim_dat$A, colMeans(s$D), ylim = c(-2, 2), type = "l", 
-      xlab = "Manipulated A", ylab = "counterfactual D")
-shade(apply(s$D, 2, PI), sim_dat$A)
+```{r introBayes08-fig11, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Visualize the predicted effect of manipulating age at marriage A on divorce rate D. (Total causal effect of A on D, including A -> D and A -> M -> D pathways.)", fig.align='center'}
+# Manual counterfactual plot using previously computed cf_total (D counterfactuals)
+plot(cf_total$A, cf_total$mean, ylim = c(-2, 2), type = "l",
+     xlab = "Manipulated A", ylab = "counterfactual D")
+shade(cf_total$PI, cf_total$A)
 mtext("Total counterfactual effect of A on D")
 ```
 
 
 
-```{r introBayes08-fig12, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Visualize the predicted effect of manipulating age at marriage A on marriage rate M. (Simulated values of M show the estimated influence A -> M.", fig.align='center'}
-plot( sim_dat$A, colMeans(s$M), ylim = c(-2, 2), type = "l", 
-      xlab = "Manipulated A", ylab = "counterfactual M")
-shade(apply(s$M, 2, PI), sim_dat$A)
+```{r introBayes08-fig12, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="Visualize the predicted effect of manipulating age at marriage A on marriage rate M (A -> M pathway).", fig.align='center'}
+# Reconstruct counterfactual simulations for M using posterior samples post_cf
+if(!exists("post_cf")) post_cf <- extract.samples(m5.3_A)
+if(!exists("A_seq")) A_seq <- seq(from = -2, to = 2, length.out = 30)
+n_draws <- length(post_cf$a)
+M_cf_mat <- sapply(A_seq, function(A_val){
+  mu_M <- post_cf$aM + post_cf$bAM * A_val
+  rnorm(n_draws, mu_M, post_cf$sigma_M)
+})
+M_cf_mean <- colMeans(M_cf_mat)
+M_cf_PI   <- apply(M_cf_mat, 2, PI, prob = 0.89)
+plot(A_seq, M_cf_mean, ylim = c(-2, 2), type = "l",
+     xlab = "Manipulated A", ylab = "counterfactual M")
+shade(M_cf_PI, A_seq)
 mtext("Counterfactual A -> M")
 ```
 
@@ -483,12 +521,22 @@ mtext("Counterfactual A -> M")
 當然這樣的 simulation 也可以允許我們進行一些數據的總結運算。例如，把結婚年齡的中位數從 20 歲提高到 30 歲的話，帶來的因果效果 (causal effect) 可以這樣來計算；
 
 ```{r introBayes08-16, cache=TRUE}
-mean(d$MedianAgeMarriage); sd(d$MedianAgeMarriage)
-# new data frame, standardized to mean 26.1 and sd 1.24
-
-sim2_dat <- data.frame( A = (c(20, 30 )- 26.1 ) / 1.24)
-s2 <- sim(m5.3_A, data  = sim2_dat, vars = c("M", "D"))
-mean(s2$D[ , 2] - s2$D[, 1])
+# Effect of raising median age at marriage from 20 to 30 (standardized scale)
+age_mean <- 26.1
+age_sd   <- 1.24
+A_vals_std <- (c(20,30) - age_mean) / age_sd
+if(!exists("post_cf")) post_cf <- extract.samples(m5.3_A)
+n_draws <- length(post_cf$a)
+# Simulate sequentially: A -> M then M,A -> D for both A values
+simulate_D_for_A <- function(A_std){
+  mu_M <- post_cf$aM + post_cf$bAM * A_std
+  M_sim <- rnorm(n_draws, mu_M, post_cf$sigma_M)
+  mu_D <- post_cf$a + post_cf$bM * M_sim + post_cf$bA * A_std
+  rnorm(n_draws, mu_D, post_cf$sigma)
+}
+D_A20 <- simulate_D_for_A(A_vals_std[1])
+D_A30 <- simulate_D_for_A(A_vals_std[2])
+mean(D_A30 - D_A20)
 ```
 
 標準化離婚率降低了 4.5 個標準差。這是相當大的變化。
@@ -512,14 +560,21 @@ drawdag( dag5.1.1 )
 
 
 ```{r introBayes08-fig13, cache=TRUE,  fig.width=5.5, fig.height=4.8,  fig.cap="The counterfactual effect of manipulating marriage rate M on divorce rate D. Since M -> D was estimated to be very small, there is no strong trend here. By manipulating M, we break the influence of A on M, and this removes the association between M and D.", fig.align='center'}
+# Manual counterfactual simulation: manipulate M while fixing A = 0
 sim_dat <- data.frame( M = seq(from = -2 , to = 2, length.out = 30), A = 0)
-
-s <- sim(m5.3_A, data = sim_dat, vars = "D")
-
-plot(sim_dat$M, colMeans(s), ylim = c(-2, 2), type = "l", 
-     xlab = "manipulated M", ylab = "counterfactual D")
-shade(apply( s, 2, PI), sim_dat$M)
-mtext( "Total counterfactual effect of M on D")
+post_cf <- if(!exists("post_cf")) extract.samples(m5.3_A) else post_cf
+n_draws <- length(post_cf$a)
+# For each manipulated M value, simulate D from posterior
+D_M_mat <- sapply(sim_dat$M, function(M_val){
+  mu_D <- post_cf$a + post_cf$bM * M_val + post_cf$bA * 0
+  rnorm(n_draws, mu_D, post_cf$sigma)
+})
+D_M_mean <- colMeans(D_M_mat)
+D_M_PI   <- apply(D_M_mat, 2, PI, prob = 0.89)
+plot(sim_dat$M, D_M_mean, ylim = c(-2, 2), type = "l",
+  xlab = "manipulated M", ylab = "counterfactual D")
+shade(D_M_PI, sim_dat$M)
+mtext("Total counterfactual effect of M on D")
 ```
 
 ## 被掩蓋起來的關係
@@ -528,7 +583,7 @@ mtext( "Total counterfactual effect of M on D")
 
 
 ```{r introBayes08-17, cache=TRUE}
-data(milk)
+data("milk", package="rethinking")
 d <- milk
 str(d)
 ```
@@ -537,9 +592,10 @@ str(d)
 讓我們重點來看 `kcal.per.g`（每克奶含有的卡路里），`mass`（平均母體體重, kg）和 `neocortex.perc`（大腦新皮質neocortex百分比）這三個變量。通常地認為，腦新皮質含量高的哺乳動物產的奶含有的能量卡路里會較高，主要是為了使之後代的大腦發育更加充分和快速。這裡使用的數據希望能夠進一步了解這樣的問題：“奶的能量含量，這裡是以千卡為單位測量的，和大腦新皮質百分比之間的關係有多大”。讓我們先把這三個變量標準化：
 
 ```{r introBayes08-18, cache=TRUE}
-d$K <- standardize( d$kcal.per.g )
-d$N <- standardize( d$neocortex.perc )
-d$M <- standardize( log(d$mass) )
+d$K <- rethinking::standardize(d$kcal.per.g)
+d$N <- rethinking::standardize(d$neocortex.perc)
+d$M <- rethinking::standardize(log(d$mass))
+str(d)
 ```
 
 第一個能想到的模型是簡單的以新皮質百分比做預測變量，奶能量做結果變量的簡單線性回歸模型：
@@ -640,6 +696,7 @@ prior <- extract.prior( m5.5 )
 xseq <- c(-2, 2)
 mu <- link( m5.5, post = prior, data = list(N = xseq))
 
+
 plot(NULL, xlim = xseq, ylim = xseq, bty="n",
      xlab = "neocorrtex percent (std)", 
      ylab = "kilocal per g (std)", 
@@ -687,6 +744,7 @@ m5.6 <- quap(
 )
 precis(m5.6)
 ```
+
 
 體重的對數，和能量密度似乎成負關係。其關係應該比大腦皮質單獨和能量密度之間的關係要強烈一些，且方向是相反的 (圖\@ref(fig:introBayes08-fig18))。
 
@@ -788,7 +846,6 @@ plot( NULL, xlim  = range(dcc$M), ylim = range(dcc$K) ,
       main = "Counterfactual holding N = 0")
 lines( xseq, mu_mean, lwd = 2)
 shade( mu_PI, xseq )
-
 ```
 
 
@@ -814,6 +871,7 @@ drawdag(MElist)
 
 ```{r introBayes08-26, cache=TRUE}
 data("Howell1")
+
 d <- Howell1
 str(d)
 ```
@@ -899,8 +957,9 @@ precis(post, depth = 2)
 
 
 ```{r introBayes08-31, cache=TRUE}
-data(milk)
-d <- milk
+data(milk, package="rethinking")
+milk_df <- milk  # Preserve original milk dataset to avoid overwrite conflicts
+d <- milk_df      # Use d for consistency in following milk-related chunks
 levels(d$clade)
 ```
 

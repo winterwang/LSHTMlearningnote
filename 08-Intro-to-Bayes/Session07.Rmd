@@ -58,13 +58,27 @@ precis(m4.5)
 
 
 ```{r introBayes07-2, cache=TRUE}
-weight.seq <- seq( from = -2.2, to = 2, length.out = 30)
+weight.seq <- seq(from = -2.2, to = 2, length.out = 30)
 pred_dat <- list(weight_s = weight.seq, weight_s2 = weight.seq^2)
-mu <- link( m4.5, data = pred_dat)
-mu.mean <- apply(mu, 2, mean)
-mu.PI <- apply( mu, 2, PI, prob = 0.89)
-sim.height <- sim( m4.5,  data = pred_dat)
-height.PI <- apply( sim.height, 2, PI, prob = 0.89)
+
+# Obtain posterior samples
+post <- extract.samples(m4.5)
+
+# Compute posterior samples of mu for each standardized weight value
+mu.samples <- sapply(weight.seq, function(w) post$a + post$b1 * w + post$b2 * w^2)
+
+# Summaries for mu
+mu.mean <- apply(mu.samples, 2, mean)
+mu.PI   <- apply(mu.samples, 2, PI, prob = 0.89)
+
+# Manual posterior predictive simulation (height) using sigma samples
+sim.height <- sapply(seq_along(weight.seq), function(j) {
+  rnorm(length(post$a), mu.samples[, j], post$sigma)
+})
+height.PI <- apply(sim.height, 2, PI, prob = 0.89)
+
+# (Optional) retain original link-based mu for comparison if link() supports data argument
+# try({ mu.link <- link(m4.5, data = pred_dat) }, silent = TRUE)
 
 ```
 
@@ -108,19 +122,28 @@ precis(m4.6)
 ```
 
 ```{r introBayes07-5, cache=TRUE, fig.width=6, fig.height=5,  fig.cap='Polynomial (a third order, cubic) regressions of height on weight (standardized) for the height data. The solid curves show the path of mu in the model, and the shaded regions show the 89% interval of the mean (close to the solid curve), and the 89% interval of predictions (wider). ', fig.align='center'}
-weight.seq <- seq( from = -2.2, to = 2, length.out = 30)
-pred_dat <- list(weight_s = weight.seq, 
-                 weight_s2 = weight.seq^2, 
-                 weight_s3 = weight.seq^3)
-mu <- link( m4.6, data = pred_dat)
-mu.mean <- apply(mu, 2, mean)
-mu.PI <- apply( mu, 2, PI, prob = 0.89)
-sim.height <- sim( m4.6,  data = pred_dat)
-height.PI <- apply( sim.height, 2, PI, prob = 0.89)
+weight.seq <- seq(from = -2.2, to = 2, length.out = 30)
 
-plot( height ~ weight_s, d, col = col.alpha(rangi2, 0.5))
-lines( weight.seq, mu.mean )
-shade( mu.PI, weight.seq)
+# Posterior samples from cubic polynomial model
+post_cubic <- extract.samples(m4.6)
+
+# Build mu samples for each standardized weight value
+mu.samples.cubic <- sapply(weight.seq, function(w) {
+  post_cubic$a + post_cubic$b1 * w + post_cubic$b2 * w^2 + post_cubic$b3 * w^3
+})
+
+mu.mean <- apply(mu.samples.cubic, 2, mean)
+mu.PI   <- apply(mu.samples.cubic, 2, PI, prob = 0.89)
+
+# Posterior predictive simulation
+sim.height.cubic <- sapply(seq_along(weight.seq), function(j) {
+  rnorm(length(post_cubic$a), mu.samples.cubic[, j], post_cubic$sigma)
+})
+height.PI <- apply(sim.height.cubic, 2, PI, prob = 0.89)
+
+plot(height ~ weight_s, d, col = col.alpha(rangi2, 0.5))
+lines(weight.seq, mu.mean)
+shade(mu.PI, weight.seq)
 shade(height.PI, weight.seq)
 ```
 
