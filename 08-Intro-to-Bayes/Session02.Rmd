@@ -193,7 +193,7 @@ helperf <- function(n, apr, a, b, df)
 # lapply function over prior counts n and gather results into key-value pairs.
 df2 <- lapply(n, helperf, apr, a, b, df1) %>% # calculate posterior points
   do.call(rbind, args = .) %>% # combine lists 
-  gather(grp, p, -c(theta, n), factor_key = T)
+  pivot_longer(cols = -c(theta, n), names_to = "grp", values_to = "p", names_transform = list(grp = as.factor))
 
 # add correct labels for plotting
 df2$title <- factor(paste0('alpha/(alpha+beta)=0.488, alpha+beta=',df2$n))
@@ -240,9 +240,9 @@ phiq <- quantile(phi, quantiles)
 # 繪製事後樣本（及轉換的比值比）的 histogram 
 
 # merge the data into one data frame for plotting
-df1 <- data.frame(phi,theta) %>% gather()
+df1 <- data.frame(phi,theta) %>% pivot_longer(everything(), names_to = "key", values_to = "value")
 # merge quantiles into one data frame for plotting
-df2 <- data.frame(phi = phiq, theta = thetaq) %>% gather()
+df2 <- data.frame(phi = phiq, theta = thetaq) %>% pivot_longer(everything(), names_to = "key", values_to = "value")
 
 ggplot() +
   geom_histogram(data = df1, aes(value), bins = 30) +
@@ -297,7 +297,7 @@ df1$nc_po <- po / sum(po)
 
 # gather the data frame into key-value pairs
 # and change variable names for plotting
-df2 <- gather(df1, grp, p, -theta, factor_key = T) 
+df2 <- pivot_longer(df1, cols = -theta, names_to = "grp", values_to = "p", names_transform = list(grp = as.factor)) 
 levels(df2$grp) <- c('Posterior with uniform prior',
                      'Non-conjugate prior', 'Non-conjugate posterior')
 ggplot(data = df2) +

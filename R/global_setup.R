@@ -13,23 +13,35 @@ options(
 # 2. Packages (grouped):
 .pkgs <- c(
   # authoring / formatting
-  "knitr", "kableExtra", "kfigr",
-  # data wrangling & tidyverse
-  "tidyverse", "plyr",
+  "knitr", "kableExtra", "kfigr", "stargazer",
+  # data wrangling & tidyverse (plyr MUST load before tidyverse to avoid dplyr masking)
+  "plyr", "tidyverse",
   # survival / clinical
   "survival", "survminer", "Epi", "KMsurv", "flexsurv", "cmprsk", "mstate", "eha",
   # modeling & regression
-  "MASS", "lme4", "nlme", "sandwich", "lmtest", "gnm", "margins", "clubSandwich", "car",
-  # Bayesian / MCMC
-  "coda", "rjags", "R2jags", "runjags", "ggmcmc", "MCMCpack", "brms", "tidybayes", "rethinking",
+  "MASS", "lme4", "lmerTest", "nlme", "sandwich", "lmtest", "gnm", "margins", "clubSandwich", "car",
+  # Bayesian / MCMC (CRAN-only subset)
+  "coda", "ggmcmc", "MCMCpack",
   # visualization
   "ggplot2", "ggthemes", "ggsci", "ggrepel", "patchwork", "scatterplot3d", "plotly", "ggdag",
+  "ggfortify",
   # stats & misc
-  "mvtnorm", "DescTools", "limma", "binomTools", "BSDA", "FSA", "exact2x2", "dagitty", "ATE", 
-  "tableone", "Hmisc", "ROCR", "LogisticDx", "HLMdiag", "FactoMineR", "factoextra", "jtools", 
-  "uwIntroStats", "epiR", "epiDisplay", "epitools", "psych", "TailRank", "splines", "gridExtra", 
-  "grid", "codetools", "tufte", "haven", "shiny"
+  "mvtnorm", "DescTools", "BSDA", "FSA", "exact2x2", "dagitty",
+  "tableone", "Hmisc", "ROCR", "generalhoslem", "HLMdiag", "FactoMineR", "factoextra", "jtools",
+  "epiR", "epiDisplay", "epitools", "psych", "TailRank", "splines", "gridExtra",
+  "grid", "codetools", "tufte", "haven", "shiny", "ellipse", "gtools", "binom", "ATE"
 )
+
+# Packages needing special toolchains — load if available, do NOT auto-install
+# rjags/R2jags/runjags need JAGS CLI (brew install jags)
+# brms/tidybayes need rstan + C++ toolchain
+# rethinking needs install_github("rmcelreath/rethinking") + rstan
+# limma is Bioconductor: BiocManager::install("limma")
+.pkgs_optional <- c("rjags", "R2jags", "runjags", "brms", "tidybayes", "rethinking", "limma", "mcmcplots", "ggthemr")
+# NOTE: Removed deprecated/archived packages:
+#   binomTools  -> replaced by binom
+#   LogisticDx  -> replaced by generalhoslem (Hosmer-Lemeshow test)
+#   uwIntroStats -> removed (use base R / Hmisc)
 
 # 3. Install missing (quiet)
 pkg_available <- function(p) {
@@ -61,6 +73,16 @@ loaded_pkgs <- vapply(.pkgs, function(p) {
 
 if (any(!loaded_pkgs)) {
   warning("Packages failed to load: ", paste(names(loaded_pkgs)[!loaded_pkgs], collapse = ", "))
+}
+
+# 4b. Load optional packages (no auto-install, warning only)
+loaded_opt <- vapply(.pkgs_optional, function(p) {
+  suppressWarnings(suppressPackageStartupMessages(require(p, character.only = TRUE, quietly = TRUE)))
+}, logical(1))
+
+if (any(!loaded_opt)) {
+  message("Optional packages not available (install manually): ",
+          paste(names(loaded_opt)[!loaded_opt], collapse = ", "))
 }
 
 # 5. Shared hooks / global objects
