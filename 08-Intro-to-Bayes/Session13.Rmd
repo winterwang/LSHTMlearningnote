@@ -28,9 +28,14 @@ $$
 
 ### 邏輯回歸模型數據實例：prosocial chimpanzees {#chimpanzees}
 
+```{r introBayes13-00-setup, cache=FALSE, include=FALSE}
+# Standalone rendering guard — bookdown loads via global_setup.R
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
+```
+
 ```{r introBayes13-01, cache=TRUE}
-data(chimpanzees)
-d <- chimpanzees
+d <- read.csv("../backupfiles/chimpanzees.csv", sep = ";")
 str(d)
 ```
 
@@ -83,7 +88,8 @@ $$
 
 這時，我們需要先決定這個 $\omega$ 作爲一個合理的先驗概率分佈。我們先從相當平坦的一個分佈開始，例如 $\omega = 10$。
 
-```{r introBayes13-03, cache=TRUE, results="hide"}
+```{r introBayes13-03, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking - preserved for reference]
 m11.1 <- quap(
   alist(
     pulled_left ~ dbinom( 1, p ), 
@@ -96,8 +102,9 @@ m11.1 <- quap(
 接下來，我們從 `m11.1` 中的先驗概率採集一些樣本：
 
 ```{r introBayes13-04, cache=TRUE}
+# brms replacement: sample directly from the prior
 set.seed(1999) 
-prior <- extract.prior( m11.1, n = 10000)
+prior <- list(a = rnorm(10000, 0, 10))
 ```
 
 接下來還有一步，就是要把數據通過鏈接函數的逆函數轉換回去原來的 0-1 之間的概率尺度。對於邏輯回歸來說，鏈接函數就是 `logit` 函數，其逆函數就是 `inv_logit`。
@@ -107,16 +114,10 @@ p <- inv_logit( prior$a )
 dens( p, adj = 0.1 ,
       bty = "n",
       xlab = "prior prob pull left")
-m11.1 <- quap(
-  alist(
-    pulled_left ~ dbinom( 1, p ), 
-    logit(p) <- a, 
-    a ~ dnorm( 0, 1.5 )
-  ), data = d
-)
+# Now sample from a tighter prior: a ~ Normal(0, 1.5)
 set.seed(1999) 
-prior <- extract.prior( m11.1, n = 10000)
-p1 <- inv_logit( prior$a )
+prior1.5 <- list(a = rnorm(10000, 0, 1.5))
+p1 <- inv_logit( prior1.5$a )
 lines( density(p1), adj = 0.1, 
        col = rangi2)
 text(0.15, 9, "a ~ dnorm(0, 10)")
@@ -131,33 +132,20 @@ text(0.5, 1.8, "a ~ dnorm(0, 1.5)", col = rangi2)
 
 
 ```{r introBayes13-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Prior predictive simulations for the most basic logistic regression. A flat Normal(0, 10) prior on the treatment effect also produces a very non-flat prior distribution on the outcome scale. A more concentrated Normal(0, 0.5) prior produces something more reasonable (blue).", fig.align='center', results="hide"}
-m11.2 <- quap(
-  alist(
-    pulled_left ~ dbinom( 1, p ), 
-    logit(p) <- a + b[treatment], 
-    a ~ dnorm( 0, 1.5 ), 
-    b[treatment] ~ dnorm( 0, 10 )
-  ), data = d
-)
+# brms replacement: sample directly from priors
 set.seed(1999)
-prior <- extract.prior( m11.2, n = 10000) 
-p <- sapply( 1:4, function(k) inv_logit(prior$a + prior$b[, k]))
+prior_a <- rnorm(10000, 0, 1.5)
+prior_b <- matrix(rnorm(10000 * 4, 0, 10), ncol = 4)
+p <- sapply( 1:4, function(k) inv_logit(prior_a + prior_b[, k]))
 dens(abs(p[,1] - p[,2]), adj = 0.1, 
       bty = "n",
       xlab = "prior diff between treatments")
 text(0.8, 9, "b ~ dnorm(0, 10)")
 
-m11.2.1 <- quap(
-  alist(
-    pulled_left ~ dbinom( 1, p ), 
-    logit(p) <- a + b[treatment], 
-    a ~ dnorm( 0, 1.5 ), 
-    b[treatment] ~ dnorm( 0, 0.5 )
-  ), data = d
-)
 set.seed(1999)
-prior <- extract.prior( m11.2.1, n = 10000) 
-p1 <- sapply( 1:4, function(k) inv_logit(prior$a + prior$b[, k]))
+prior_a <- rnorm(10000, 0, 1.5)
+prior_b1 <- matrix(rnorm(10000 * 4, 0, 0.5), ncol = 4)
+p1 <- sapply( 1:4, function(k) inv_logit(prior_a + prior_b1[, k]))
 lines(density(abs(p1[,1] - p1[,2])), adj = 0.1, 
        col = rangi2)
 text(0.3, 4, "b ~ dnorm(0, 0.5)", col = rangi2)
@@ -182,6 +170,10 @@ dat_list <- list(
   actor = d$actor, 
   treatment = as.integer(d$treatment)
 )
+
+# Factor variables for brms
+d$actor_f     <- factor(d$actor)
+d$treatment_f <- factor(d$treatment)
 ```
 
 
@@ -189,6 +181,7 @@ dat_list <- list(
 
 
 ```{r introBayes13-07, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking - preserved for reference]
 m11.4 <- ulam(
   alist(
     pulled_left ~ dbinom( 1, p ), 
@@ -202,24 +195,51 @@ saveRDS(m11.4, "../Stanfits/m11_4.rds")
 ```
 
 ```{r introBayes13-0701, cache=TRUE}
-m11.4 <-  readRDS("../Stanfits/m11_4.rds")
-precis( m11.4, depth = 2 )
+brm_m11.4 <- brm(
+  pulled_left ~ 0 + actor_f + treatment_f,
+  family = bernoulli(),
+  data = d,
+  prior = c(
+    prior(normal(0, 1.5), class = b, coef = actor_f1),
+    prior(normal(0, 1.5), class = b, coef = actor_f2),
+    prior(normal(0, 1.5), class = b, coef = actor_f3),
+    prior(normal(0, 1.5), class = b, coef = actor_f4),
+    prior(normal(0, 1.5), class = b, coef = actor_f5),
+    prior(normal(0, 1.5), class = b, coef = actor_f6),
+    prior(normal(0, 1.5), class = b, coef = actor_f7),
+    prior(normal(0, 0.5), class = b, coef = treatment_f2),
+    prior(normal(0, 0.5), class = b, coef = treatment_f3),
+    prior(normal(0, 0.5), class = b, coef = treatment_f4)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m11_4"
+)
+print(summary(brm_m11.4))
 ```
 
 
 這個模型 `m11.4` 的實際 Stan 代碼是:
 
 ```{r introBayes13-070102}
-rethinking::stancode(m11.4)
+stancode(brm_m11.4)
 ```
 
 
 上述模型運行的結果中，前面 7 個每隻黑猩猩的截距，也就是代表了每隻黑猩猩本身會主動去拉動左邊槓桿的傾向性。我們來把這個數據轉換到它本身應該有的數據尺度上來看：
 
 ```{r introBayes13-fig03, cache=TRUE, fig.width=6.5, fig.height=5,  fig.cap="The intercepts unique to each chimpanzee, on the probability scale.", fig.align='center'}
-post <- extract.samples(m11.4)
-p_left <- inv_logit( post$a )
-plot( precis(as.data.frame(p_left)), xlim = c(0,1))
+post <- suppressWarnings(as_draws_df(brm_m11.4))
+actor_cols <- paste0("b_actor_f", 1:7)
+p_left <- inv_logit(as.matrix(post[, actor_cols]))
+p_mean <- colMeans(p_left)
+p_ci   <- apply(p_left, 2, PI)
+plot(p_mean, 7:1, xlim = c(0, 1), pch = 1, yaxt = "n",
+     ylab = "", xlab = "probability pull left")
+axis(2, at = 7:1, labels = paste0("V", 1:7), las = 1)
+for(i in 1:7) {
+  abline(h = 8 - i, lty = 3, col = "gray")
+  lines(p_ci[, i], c(8 - i, 8 - i))
+}
 ```
 
 
@@ -228,20 +248,45 @@ plot( precis(as.data.frame(p_left)), xlim = c(0,1))
 
 
 ```{r introBayes13-fig04, cache=TRUE, fig.width=6.5, fig.height=5,  fig.cap="The treatment effect by different conditions, on the log-odds scale.", fig.align='center'}
+# In brms 0+actor_f+treatment_f: treatment_f1 is reference (=0)
 labs <- c("R/N", "L/N", "R/P", "L/P")
-plot( precis(m11.4, depth = 2, pars = "b"), labels = labs)
+b_treatment <- cbind(
+  rep(0, nrow(post)),
+  post$b_treatment_f2,
+  post$b_treatment_f3,
+  post$b_treatment_f4
+)
+b_mean <- colMeans(b_treatment)
+b_ci   <- apply(b_treatment, 2, PI)
+plot(b_mean, 4:1, xlim = range(b_ci), pch = 1, yaxt = "n",
+     ylab = "", xlab = "log-odds")
+axis(2, at = 4:1, labels = labs, las = 1)
+for(i in 1:4) {
+  abline(h = 5 - i, lty = 3, col = "gray")
+  lines(b_ci[, i], c(5 - i, 5 - i))
+}
+abline(v = 0)
 ```
 
 
 我們通過該實驗希望獲得的分析結果是，到底桌子對面坐與不坐同類，黑猩猩是否會作出不同的社會化傾向選擇？也就是黑猩猩是否會根據對面有沒有同類而去拉那個有兩個食物那一側的槓桿。這意味着我們希望比較的是第一行和第三行，也就是當兩份食物都在右側槓桿時，對面有沒有同類是否會改變黑猩猩拉動右側槓桿的選擇；同時我們也希望比較第二行和第四行的結果，也就是兩份食物都在左側槓桿時，對面有沒有同類是否會改變黑猩猩拉動左側槓桿的選擇。其實我們看圖 \@ref(fig:introBayes13-fig04) 已經能夠猜出大概沒有差異的的結果了。但是我們是可以對這兩個條件下的差異作出比較，並計算其可信區間的：
 
 ```{r introBayes13-fig05, cache=TRUE, fig.width=6.5, fig.height=5,  fig.cap="The treatment effect difference compared between R/N R/P, and L/N L/P, on the log-odds scale.", fig.align='center'}
+# b[1]=0(ref), b[2]=treatment_f2, b[3]=treatment_f3, b[4]=treatment_f4
 diffs <- list(
-  db13 = post$b[, 1] - post$b[, 3], 
-  db24 = post$b[, 2] - post$b[, 4]
+  db13 = 0 - post$b_treatment_f3, 
+  db24 = post$b_treatment_f2 - post$b_treatment_f4
 )
-
-plot(precis(diffs))
+diff_mean <- sapply(diffs, mean)
+diff_ci   <- sapply(diffs, PI)
+plot(diff_mean, 2:1, xlim = range(diff_ci), pch = 1, yaxt = "n",
+     ylab = "", xlab = "log-odds difference")
+axis(2, at = 2:1, labels = names(diffs), las = 1)
+for(i in 1:2) {
+  abline(h = 3 - i, lty = 3, col = "gray")
+  lines(diff_ci[, i], c(3 - i, 3 - i))
+}
+abline(v = 0)
 ```
 
 `db13, db14` 就是我們希望求的比較有/沒有同伴坐在桌子對面是否影響黑猩猩作出社會化傾向選擇的療效差異 (the contrast between the no-partner/partner treatments)。`db13` 的準確解釋是，當右側槓桿控制兩份食物時，對面有同伴/沒有同伴的情況下，黑猩猩會傾向於去使用左側槓桿的療效差異 (treatment effect difference)。所以，如果有證據證明有同伴的情況下，黑猩猩會傾向於作出社會化選擇，那麼我們應該會看到不等於零的療效差異，也就是會在有同伴的時候更多的去拉右邊的槓桿。但其實 `db13` 的結果似乎顯示有微弱的證據證明，當沒有同伴時，黑猩猩會略微更多的傾向於拉左邊槓桿（沒有社會化傾向），當然這個證據很微弱，可信區間也包括沒有療效差異的 0。相似地，`db24` 比較的是，當兩份食物出現在左側槓桿時，對面有同伴/沒有同伴情況之間拉動左側槓桿的療效差異。如果我們期待黑猩猩會作出會社會化傾向選擇當對面坐有同伴的話，我們會希望這個 `db24` 的取值會顯著小於零，但事實上卻沒有符合這樣期待的結果。
@@ -286,9 +331,11 @@ mtext( "observed proportions\n")
 接下來我們來計算模型運行之後的這些概率的預測值。圖 \@ref(fig:introBayes13-fig07) 生成的代碼如下。模型本身告訴我們，有沒有同伴坐在桌子對面，基本上不會影響黑猩猩的選擇。(The model expects no change when adding a partner.) 大部分的選擇變化取決於黑猩猩本身，也就是每隻黑猩猩自己的模型截距。
 
 ```{r introBayes13-fig07, cache=TRUE, fig.width=7, fig.height=4,  fig.cap="Posterior predictions for the chimpanzee data. Data are grouped by actor. Open points are non-partner treatments. Filled points are partner treatments. The right R and left L sides of the prosocial options are labeled in the figure. 89% compatibility intervals for each proportion for each actor are shown as well.", fig.align='center'}
-dat <- list( actor = rep(1:7, each = 4), 
-             treatment = rep(1:4, times = 7))
-p_post <- link( m11.4, data = dat )
+newdat <- data.frame(
+  actor_f     = factor(rep(1:7, each = 4), levels = levels(d$actor_f)),
+  treatment_f = factor(rep(1:4, times = 7), levels = levels(d$treatment_f))
+)
+p_post <- posterior_epred(brm_m11.4, newdata = newdat)
 p_mu <- apply( p_post, 2, mean )
 p_ci <- apply( p_post, 2, PI )
 
@@ -323,6 +370,8 @@ mtext( "posterior prediction proportions\n")
 ```{r introBayes13-09, cache=TRUE, results="hide"}
 d$side <- d$prosoc_left + 1 # right = 1, left = 2
 d$cond <- d$condition + 1 # no partner = 1, with partner = 2
+d$side_f <- factor(d$side)
+d$cond_f <- factor(d$cond)
 
 dat_list2 <- list(
   pulled_left = d$pulled_left, 
@@ -330,7 +379,10 @@ dat_list2 <- list(
   side = d$side, 
   cond = d$cond
 )
+```
 
+```{r introBayes13-09b, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking - preserved for reference]
 m11.5 <- ulam(
   alist(
     pulled_left  ~ dbinom( 1, p ), 
@@ -343,9 +395,29 @@ m11.5 <- ulam(
 ```
 
 ```{r introBayes13-0901, cache=TRUE}
-precis(m11.5, depth = 2)
+brm_m11.5 <- brm(
+  pulled_left ~ 0 + actor_f + side_f + cond_f,
+  family = bernoulli(),
+  data = d,
+  prior = c(
+    prior(normal(0, 1.5), class = b, coef = actor_f1),
+    prior(normal(0, 1.5), class = b, coef = actor_f2),
+    prior(normal(0, 1.5), class = b, coef = actor_f3),
+    prior(normal(0, 1.5), class = b, coef = actor_f4),
+    prior(normal(0, 1.5), class = b, coef = actor_f5),
+    prior(normal(0, 1.5), class = b, coef = actor_f6),
+    prior(normal(0, 1.5), class = b, coef = actor_f7),
+    prior(normal(0, 0.5), class = b, coef = side_f2),
+    prior(normal(0, 0.5), class = b, coef = cond_f2)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m11_5"
+)
+print(summary(brm_m11.5))
 
-rethinking::compare(m11.5, m11.4)
+brm_m11.4 <- add_criterion(brm_m11.4, "waic")
+brm_m11.5 <- add_criterion(brm_m11.5, "waic")
+print(loo_compare(brm_m11.4, brm_m11.5, criterion = "waic"))
 ```
 
 
@@ -377,7 +449,8 @@ head(d_aggregated, 10)
 彙總後的數據中 `left_pulls` 就是不同條件下每隻黑猩猩拉動左側槓桿的次數彙總。記得2號黑猩猩始終都拉左側槓桿，所以你看 `actor = 2` 的時候 `left_pulls = 18` 都是保持不變的。也就是說，每隻黑猩猩在每種條件下都進行了總共18次的測試。接下來我們可以使用這個歸納彙總過的數據來做和 `m11.4` 完全相同的統計推斷：
 
 
-```{r introBayes13-11, cache=TRUE, results="hide"}
+```{r introBayes13-11, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking - preserved for reference]
 dat <- with(d_aggregated, 
             list(
               left_pulls = left_pulls, 
@@ -398,7 +471,29 @@ m11.6 <- ulam(
 ```
 
 ```{r introBayes13-1101, cache=TRUE}
-precis(m11.6, depth = 2)
+d_aggregated$actor_f     <- factor(d_aggregated$actor)
+d_aggregated$treatment_f <- factor(d_aggregated$treatment)
+
+brm_m11.6 <- brm(
+  left_pulls | trials(18) ~ 0 + actor_f + treatment_f,
+  family = binomial(),
+  data = d_aggregated,
+  prior = c(
+    prior(normal(0, 1.5), class = b, coef = actor_f1),
+    prior(normal(0, 1.5), class = b, coef = actor_f2),
+    prior(normal(0, 1.5), class = b, coef = actor_f3),
+    prior(normal(0, 1.5), class = b, coef = actor_f4),
+    prior(normal(0, 1.5), class = b, coef = actor_f5),
+    prior(normal(0, 1.5), class = b, coef = actor_f6),
+    prior(normal(0, 1.5), class = b, coef = actor_f7),
+    prior(normal(0, 0.5), class = b, coef = treatment_f2),
+    prior(normal(0, 0.5), class = b, coef = treatment_f3),
+    prior(normal(0, 0.5), class = b, coef = treatment_f4)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m11_6"
+)
+print(summary(brm_m11.6))
 ```
 
 
@@ -406,9 +501,19 @@ precis(m11.6, depth = 2)
 運行結果和 `m11.4` 是完全一致的。但是，如果你比較 `m11.6, m11.4` 兩個模型之間卻給出了差異很大的模型特徵值：
 
 
-```{r  introBayes13-12, cache=TRUE}
-compare(m11.6, m11.4, func = PSIS)
-compare(m11.6, m11.4)
+```{r  introBayes13-12, cache=TRUE, error=TRUE}
+# loo_compare() will error because the two models have different observation
+# counts (aggregated 28 vs individual 504).  This is exactly the point:
+# model-comparison metrics are not comparable across different data formats.
+brm_m11.6 <- add_criterion(brm_m11.6, "loo")
+brm_m11.4 <- add_criterion(brm_m11.4, "loo")
+tryCatch(
+  print(loo_compare(brm_m11.6, brm_m11.4, criterion = "loo")),
+  error = function(e) cat("Expected error:", conditionMessage(e), "\n")
+)
+# But parameter estimates are identical:
+cat("\nbrm_m11.4 (individual):\n"); print(fixef(brm_m11.4))
+cat("\nbrm_m11.6 (aggregated):\n"); print(fixef(brm_m11.6))
 ```
 
 你看見比較之後給出很多的結果。這主要是由於數據被彙總之後和沒有被彙總之前的產生差異很大的對數概率。例如同樣是計算 `dbinom(6, 9, 0.2)`，如果是彙總型數據，它計算的概率公式還包含一個複雜的常數項：
@@ -446,8 +551,7 @@ $$
 
 
 ```{r introBayes13-14, cache=TRUE}
-data("UCBadmit")
-d <- UCBadmit
+d <- read.csv("../backupfiles/UCBadmit.csv", sep = ";")
 d
 ```
 
@@ -477,7 +581,11 @@ dat_list <- list(
   applications = d$applications, 
   gid = ifelse( d$applicant.gender == "male", 1, 2)
 )
+d$gid_f <- factor(ifelse(d$applicant.gender == "male", 1, 2))
+```
 
+```{r introBayes13-15b, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking - preserved for reference]
 m11.7 <- ulam(
   alist(
     admit ~ dbinom( applications, p ), 
@@ -489,26 +597,56 @@ m11.7 <- ulam(
 
 
 ```{r introBayes13-1501, cache=TRUE}
-precis(m11.7, depth = 2)
+brm_m11.7 <- brm(
+  admit | trials(applications) ~ 0 + gid_f,
+  family = binomial(),
+  data = d,
+  prior = c(
+    prior(normal(0, 1.5), class = b, coef = gid_f1),
+    prior(normal(0, 1.5), class = b, coef = gid_f2)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m11_7"
+)
+```
+
+```{r introBayes13-1501-summary, cache=FALSE}
+summary(brm_m11.7)
 ```
 
 我們可以看到表示男性申請學生的數據 `a[1]` 是大於女性申請人的 `a[2]` 的事後概率分佈的。我們還需要計算這兩個羣體之間被錄取的概率差的事後分佈：
 
 
 ```{r introBayes13-16, cache=TRUE}
-post <- extract.samples(m11.7)
-diff_a <- post$a[,1] - post$a[,2]
-diff_p <- inv_logit(post$a[,1]) - inv_logit(post$a[,2])
-precis( list( diff_a = diff_a, diff_p = diff_p ))
+post <- suppressWarnings(as_draws_df(brm_m11.7))
+diff_a <- post$b_gid_f1 - post$b_gid_f2
+diff_p <- inv_logit(post$b_gid_f1) - inv_logit(post$b_gid_f2)
+cat("diff_a: mean =", mean(diff_a), " PI =", PI(diff_a), "\n")
+cat("diff_p: mean =", mean(diff_p), " PI =", PI(diff_p), "\n")
 ```
 
 可以看到男生平均要比女生被錄取的概率高 12% ~ 16%。在我們開始懷疑是不是有“系統性性別歧視”之前，讓我們先把觀察值和模型推測值繪製成圖來實際觀察到底有沒有男女錄取概率的差別 (圖 \@ref(fig:introBayes13-fig08))：
 
 
 ```{r introBayes13-fig08, cache=TRUE, fig.width=6, fig.height=4,  fig.cap="Posterior check for model m11.7. Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% inervals of the expectation, and 89% interval of simulated samples, respectively.", fig.align='center'}
-postcheck( m11.7 )
-# draw lines connecting points from same dept 
+# Posterior predictive check (replaces postcheck)
+pp <- posterior_epred(brm_m11.7)
+pp_mean <- apply(pp, 2, mean)
+pp_ci   <- apply(pp, 2, PI)
+pp_sim  <- posterior_predict(brm_m11.7)
+pp_sim_ci <- apply(pp_sim, 2, PI)
 
+plot(1:nrow(d), d$admit / d$applications, pch = 16, col = rangi2,
+     ylim = c(0, 1), xlab = "case", ylab = "admit",
+     xaxt = "n")
+axis(1, at = 1:nrow(d))
+# Posterior mean & CI (proportion scale)
+points(1:nrow(d), pp_mean / d$applications, pch = 1)
+for(i in 1:nrow(d)) {
+  lines(c(i, i), pp_ci[, i] / d$applications[i], lwd = 1)
+  points(c(i, i), pp_sim_ci[, i] / d$applications[i], pch = 3, cex = 0.6)
+}
+# draw lines connecting points from same dept 
 for( i in 1:6 ) {
   x <- 1 + 2*(i - 1)
   y1 <- d$admit[x] / d$applications[x]
@@ -538,6 +676,11 @@ $$
 
 ```{r introBayes13-17, cache=TRUE, results="hide"}
 dat_list$dept_id <- rep(1:6, each = 2)
+d$dept_id_f <- factor(rep(1:6, each = 2))
+```
+
+```{r introBayes13-17b, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking - preserved for reference]
 m11.8 <- ulam(
   alist(
     admit ~ dbinom( applications, p ) , 
@@ -546,12 +689,30 @@ m11.8 <- ulam(
     delta[dept_id] ~ dnorm( 0, 1.5 )
   ), data = dat_list, chains = 4, iter = 4000, cmdstan = TRUE
 )
-
 ```
 
 
 ```{r introBayes13-1701, cache=TRUE}
-precis( m11.8, depth = 2 )
+brm_m11.8 <- brm(
+  admit | trials(applications) ~ 0 + gid_f + dept_id_f,
+  family = binomial(),
+  data = d,
+  prior = c(
+    prior(normal(0, 1.5), class = b, coef = gid_f1),
+    prior(normal(0, 1.5), class = b, coef = gid_f2),
+    prior(normal(0, 1.5), class = b, coef = dept_id_f2),
+    prior(normal(0, 1.5), class = b, coef = dept_id_f3),
+    prior(normal(0, 1.5), class = b, coef = dept_id_f4),
+    prior(normal(0, 1.5), class = b, coef = dept_id_f5),
+    prior(normal(0, 1.5), class = b, coef = dept_id_f6)
+  ),
+  chains = 4, cores = 4, iter = 4000,
+  file = "Stanfits/brm_m11_8"
+)
+```
+
+```{r introBayes13-1701-summary, cache=FALSE}
+summary(brm_m11.8)
 ```
 
 
@@ -559,10 +720,11 @@ precis( m11.8, depth = 2 )
 
 
 ```{r  introBayes13-18, cache=TRUE}
-post <- extract.samples(m11.8)
-diff_a <- post$a[, 1] - post$a[, 2]
-diff_p <- inv_logit(post$a[, 1]) - inv_logit(post$a[, 2])
-precis(list(diff_a = diff_a, diff_p = diff_p))
+post <- suppressWarnings(as_draws_df(brm_m11.8))
+diff_a <- post$b_gid_f1 - post$b_gid_f2
+diff_p <- inv_logit(post$b_gid_f1) - inv_logit(post$b_gid_f2)
+cat("diff_a: mean =", mean(diff_a), " PI =", PI(diff_a), "\n")
+cat("diff_p: mean =", mean(diff_p), " PI =", PI(diff_p), "\n")
 ```
 
 所以，當考慮了不同學院各自本身的錄取率差異之後，沒有證據表明在申請人錄取率上有顯著的性別歧視。我們來回到原始數據去看看這個過程實際是怎樣的。簡單歸納一下每個學院各自的實際男女申請人的比例：
@@ -586,9 +748,23 @@ d %>%
 所以實際男性申請人佔比例在 A 學院達到了 88.4% 以上，像 E 學院的男性申請人的比例則僅僅只有 32.7% 左右。也就從另一個角度解釋了我們觀察到的現象，也就是說，錄取率較低的學院中女性申請人比例相當地高。模型 `m11.8` 給出的各個學院錄取率的推測值也和實際觀測值十分地接近 (圖 \@ref(fig:introBayes13-fig09))。
 
 ```{r introBayes13-fig09, cache=TRUE, fig.width=6, fig.height=4,  fig.cap="Posterior check for model m11.8. Blue points are observed proportions admitted for each row in the data, with points from the same department connected by a blue line. Open points, the tiny vertical black lines within them, and the crosses are expected proportions, 89% inervals of the expectation, and 89% interval of simulated samples, respectively.", fig.align='center'}
-postcheck( m11.8 )
-# draw lines connecting points from same dept 
+# Posterior predictive check (replaces postcheck)
+pp <- posterior_epred(brm_m11.8)
+pp_mean <- apply(pp, 2, mean)
+pp_ci   <- apply(pp, 2, PI)
+pp_sim  <- posterior_predict(brm_m11.8)
+pp_sim_ci <- apply(pp_sim, 2, PI)
 
+plot(1:nrow(d), d$admit / d$applications, pch = 16, col = rangi2,
+     ylim = c(0, 1), xlab = "case", ylab = "admit",
+     xaxt = "n")
+axis(1, at = 1:nrow(d))
+points(1:nrow(d), pp_mean / d$applications, pch = 1)
+for(i in 1:nrow(d)) {
+  lines(c(i, i), pp_ci[, i] / d$applications[i], lwd = 1)
+  points(c(i, i), pp_sim_ci[, i] / d$applications[i], pch = 3, cex = 0.6)
+}
+# draw lines connecting points from same dept 
 for( i in 1:6 ) {
   x <- 1 + 2*(i - 1)
   y1 <- d$admit[x] / d$applications[x]
@@ -625,8 +801,7 @@ $$
 
 
 ```{r introBayes13-20, cache=TRUE}
-data(Kline)
-d <- Kline
+d <- read.csv("../backupfiles/Kline.csv", sep = ";")
 d
 ```
 
@@ -641,8 +816,9 @@ d
 
 
 ```{r introBayes13-21, cache=TRUE}
-d$P <- scale( log(d$population) ) # standardize the log(population) into mean = 0, sd = 1
+d$P <- as.numeric(scale( log(d$population) )) # standardize the log(population) into mean = 0, sd = 1
 d$contact_id <- ifelse( d$contact == "high", 2, 1)
+d$cid_f <- factor(d$contact_id)
 ```
 
 我們把符合上述思考和假設的模型描述爲含有交互作用項的數學模型：
@@ -767,7 +943,8 @@ for(i in 1:N) lines(exp(x_seq), lambda[i, ], col = grau(), lwd = 1.5)
 可以看到這是泊松回歸模型認爲的真實的預測變量和結果變量之間存在的關係，這是一種對數線性(log-linear)關係。自然地解釋就是，人口數量本身數值的增加，只能對工具種類的增加造成微弱的影響。許多的預測變量，都應該被取了對數之後再放入你的回歸模型中去，因爲這才是真實的關係。接下來終於到了模型本身的運行了：
 
 
-```{r introBayes13-23, cache=TRUE, results="hide"}
+```{r introBayes13-23, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking - preserved for reference]
 dat <- list(
   T = d$total_tools,
   P = d$P,
@@ -796,21 +973,56 @@ m11.10 <- ulam(
 
 
 ```{r introBayes13-24, cache=TRUE}
-precis(m11.9)
-precis(m11.10, depth = 2)
-compare(m11.9, m11.10, func = PSIS)
+# intercept only
+brm_m11.9 <- brm(
+  total_tools ~ 1,
+  family = poisson(),
+  data = d,
+  prior = c(
+    prior(normal(3, 0.5), class = Intercept)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m11_9"
+)
+
+# interaction model: a[cid] + b[cid]*P
+brm_m11.10 <- brm(
+  total_tools ~ 0 + cid_f + cid_f:P,
+  family = poisson(),
+  data = d,
+  prior = c(
+    prior(normal(3, 0.5), class = b, coef = cid_f1),
+    prior(normal(3, 0.5), class = b, coef = cid_f2),
+    prior(normal(0, 0.2), class = b, coef = "cid_f1:P"),
+    prior(normal(0, 0.2), class = b, coef = "cid_f2:P")
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m11_10"
+)
 ```
 
-我們又一次看見了關於 `Pareto k` 的警報。這提示我們數據種存在一些對模型結果影響較大的觀察值。具體可以通過繪製PSIS圖來觀察模型的事後概率分佈。
+```{r introBayes13-24-summary, cache=FALSE}
+summary(brm_m11.9)
+summary(brm_m11.10)
+```
+
+```{r introBayes13-24-loo, cache=TRUE, dependson="introBayes13-24"}
+brm_m11.9  <- add_criterion(brm_m11.9, "loo", moment_match = TRUE)
+brm_m11.10 <- add_criterion(brm_m11.10, "loo", moment_match = TRUE)
+print(loo_compare(brm_m11.9, brm_m11.10, criterion = "loo"))
+```
+
+在原始的 `rethinking` 套件中使用標準 PSIS-LOO 計算時，會看見關於 `Pareto k` 值過高的警報，提示數據中存在一些對模型結果影響較大的觀察值（高槓桿點）。在 `brms` 中，我們使用了 `moment_match = TRUE` 選項來修正這些高 Pareto k 值的觀察點，使得 LOO-CV 的估計更加可靠。儘管如此，我們仍然可以通過繪製 PSIS 圖來觀察哪些觀察值對模型影響最大。
 
 ```{r introBayes13-fig15, cache=TRUE, message=FALSE, fig.width=5.5, fig.height=4.5,  fig.cap="Posterior predictions for the Oceanic tools model. Filled points are societies with historically high contact. Open points are those with low contact. Point size is scaled by relative PSIS Pareto's k values. Larger points are more influential. The solid curve is the posterior mean for high contact societies. The dashed curve is the same for low contact societies. 89% compatibility intervals are shown by the shaded regions. (Standardized log population scale, as in the model code)", fig.align='center'}
-k <- PSIS( m11.10, pointwise = TRUE)$k
-plot(dat$P, dat$T, 
+loo_m11.10 <- loo(brm_m11.10)
+k <- loo_m11.10$diagnostics$pareto_k
+plot(d$P, d$total_tools, 
      xlab = "log population (std)", 
      ylab = "total tolls", 
      col = rangi2, 
       bty = "n", 
-     pch = ifelse( dat$cid == 1, 1, 16), 
+     pch = ifelse( d$contact_id == 1, 1, 16), 
      lwd = 2, 
      ylim = c(0, 75), 
      cex = 1 + normalize(k))
@@ -821,14 +1033,16 @@ ns <- 100
 P_seq <- seq( from = -1.4, to = 3, length.out = ns)
 
 # Predictions for cid = 1 (low contact)
-lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 1 ) )
+newdat1 <- data.frame(cid_f = factor(1, levels = levels(d$cid_f)), P = P_seq)
+lambda <- posterior_epred(brm_m11.10, newdata = newdat1)
 lmu <- apply(lambda, 2, mean) 
 lci <- apply(lambda, 2, PI)
 lines( P_seq, lmu, lty = 2, lwd = 1.5)
 shade(lci, P_seq, xpd = FALSE)
 
 # Predictions for cid = 2 (high contact)
-lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 2 ))
+newdat2 <- data.frame(cid_f = factor(2, levels = levels(d$cid_f)), P = P_seq)
+lambda <- posterior_epred(brm_m11.10, newdata = newdat2)
 lmu <- apply( lambda, 2, mean)
 lci <- apply( lambda, 2, PI)
 lines( P_seq, lmu, lty = 1, lwd = 1.5)
@@ -846,7 +1060,7 @@ plot( d$population, d$total_tools,
             bty = "n", 
       xlab = "population", 
       ylab = "total tools", 
-      col = rangi2, pch = ifelse( dat$cid == 1, 1, 16), lwd = 2, 
+      col = rangi2, pch = ifelse( d$contact_id == 1, 1, 16), lwd = 2, 
       ylim = c(0, 75), cex = 1 + normalize(k))
 
 ns <- 100
@@ -857,14 +1071,16 @@ P_seq <- seq( from = -5, to = 3, length.out = ns )
 
 pop_seq <- exp( P_seq*1.53 + 9 )
 
-lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 1 ))
+newdat1 <- data.frame(cid_f = factor(1, levels = levels(d$cid_f)), P = P_seq)
+lambda <- posterior_epred(brm_m11.10, newdata = newdat1)
 lmu <- apply( lambda, 2, mean)
 lci <- apply( lambda, 2, PI)
 
 lines( pop_seq, lmu, lty = 2, lwd = 1.5 )
 shade( lci, pop_seq, xpd = FALSE )
 
-lambda <- link( m11.10, data = data.frame( P = P_seq, cid = 2 ))
+newdat2 <- data.frame(cid_f = factor(2, levels = levels(d$cid_f)), P = P_seq)
+lambda <- posterior_epred(brm_m11.10, newdata = newdat2)
 lmu <- apply( lambda, 2, mean )
 lci <- apply( lambda, 2, PI )
 lines( pop_seq, lmu, lty = 1, lwd = 1.5 )

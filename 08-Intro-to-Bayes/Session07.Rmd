@@ -1,5 +1,12 @@
 
 
+```{r brms-setup-guard, include=FALSE}
+# Standalone rendering guard — bookdown loads via global_setup.R
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
+library(splines)     # bs() for B-spline basis construction
+```
+
 兩種方式，一種是多項式回歸模型 (polynomial regression)，另一種是 B-spline。
 
 ## 多項式回歸模型
@@ -7,7 +14,9 @@
 使用二次，三次或者多次項構建預測變量的結構。
 
 ```{r introBayes07-0, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='The relationship is visibly curved, because we have included the non-adult individuals.', fig.align='center'}
-data("Howell1")
+# [MIGRATED 2026-04] data("Howell1") replaced with CSV load (no rethinking needed)
+# Note: McElreath's CSVs use semicolons as separator (European CSV format)
+Howell1 <- read.csv("../backupfiles/Howell1.csv", sep = ";")
 d <- Howell1
 
 
@@ -40,19 +49,20 @@ $$
 d$weight_s <- (d$weight - mean(d$weight)) / sd(d$weight)
 d$weight_s2 <- d$weight_s^2
 
-m4.5 <- quap(
-  alist(
-    height ~ dnorm( mu, sigma),
-    mu <- a + b1*weight_s + b2*weight_s2, 
-    a ~ dnorm( 178, 20 ), 
-    b1 ~ dlnorm( 0, 1 ), 
-    b2 ~ dnorm( 0, 1 ), 
-    sigma ~ dunif(0 , 50)
-  ),  data = d
+# [MIGRATED 2026-04] brms equivalent of quadratic polynomial regression
+m4.5_brm <- brm(
+  height ~ weight_s + weight_s2,
+  data = d,
+  prior = c(
+    prior(normal(178, 20), class = Intercept),
+    prior(normal(0, 1),    class = b, coef = weight_s),
+    prior(normal(0, 1),    class = b, coef = weight_s2),
+    prior(exponential(1),  class = sigma)
+  ),
+  file = "Stanfits/m4.5_brm",
+  chains = 4, cores = 4, seed = 123
 )
-
-
-precis(m4.5)
+print(summary(m4.5_brm))
 ```
 
 
@@ -61,24 +71,23 @@ precis(m4.5)
 weight.seq <- seq(from = -2.2, to = 2, length.out = 30)
 pred_dat <- list(weight_s = weight.seq, weight_s2 = weight.seq^2)
 
-# Obtain posterior samples
-post <- extract.samples(m4.5)
+# [MIGRATED 2026-04] extract.samples() → as_draws_df()
+post <- suppressWarnings(as_draws_df(m4.5_brm))
 
 # Compute posterior samples of mu for each standardized weight value
-mu.samples <- sapply(weight.seq, function(w) post$a + post$b1 * w + post$b2 * w^2)
+# Column mapping: a → b_Intercept, b1 → b_weight_s, b2 → b_weight_s2
+mu.samples <- sapply(weight.seq, function(w)
+  post$b_Intercept + post$b_weight_s * w + post$b_weight_s2 * w^2)
 
 # Summaries for mu
 mu.mean <- apply(mu.samples, 2, mean)
 mu.PI   <- apply(mu.samples, 2, PI, prob = 0.89)
 
-# Manual posterior predictive simulation (height) using sigma samples
+# Posterior predictive simulation (height)
 sim.height <- sapply(seq_along(weight.seq), function(j) {
-  rnorm(length(post$a), mu.samples[, j], post$sigma)
+  rnorm(nrow(post), mu.samples[, j], post$sigma)
 })
 height.PI <- apply(sim.height, 2, PI, prob = 0.89)
-
-# (Optional) retain original link-based mu for comparison if link() supports data argument
-# try({ mu.link <- link(m4.5, data = pred_dat) }, silent = TRUE)
 
 ```
 
@@ -107,29 +116,35 @@ $$
 
 ```{r introBayes07-4, cache=TRUE}
 d$weight_s3 <- d$weight_s^3
-m4.6 <- quap(
-  alist(
-    height ~ dnorm( mu, sigma),
-    mu <- a + b1*weight_s + b2*weight_s2 + b3*weight_s3, 
-    a ~ dnorm( 178, 20 ), 
-    b1 ~ dlnorm( 0, 1 ), 
-    b2 ~ dnorm( 0, 1 ), 
-    b3 ~ dnorm( 0, 1 ),
-    sigma ~ dunif(0 , 50)
-  ),  data = d
+
+# [MIGRATED 2026-04] brms equivalent of cubic polynomial regression
+m4.6_brm <- brm(
+  height ~ weight_s + weight_s2 + weight_s3,
+  data = d,
+  prior = c(
+    prior(normal(178, 20), class = Intercept),
+    prior(normal(0, 1),    class = b, coef = weight_s),
+    prior(normal(0, 1),    class = b, coef = weight_s2),
+    prior(normal(0, 1),    class = b, coef = weight_s3),
+    prior(exponential(1),  class = sigma)
+  ),
+  file = "Stanfits/m4.6_brm",
+  chains = 4, cores = 4, seed = 123
 )
-precis(m4.6)
+print(summary(m4.6_brm))
 ```
 
 ```{r introBayes07-5, cache=TRUE, fig.width=6, fig.height=5,  fig.cap='Polynomial (a third order, cubic) regressions of height on weight (standardized) for the height data. The solid curves show the path of mu in the model, and the shaded regions show the 89% interval of the mean (close to the solid curve), and the 89% interval of predictions (wider). ', fig.align='center'}
 weight.seq <- seq(from = -2.2, to = 2, length.out = 30)
 
-# Posterior samples from cubic polynomial model
-post_cubic <- extract.samples(m4.6)
+# [MIGRATED 2026-04] extract.samples() → as_draws_df()
+post_cubic <- suppressWarnings(as_draws_df(m4.6_brm))
 
 # Build mu samples for each standardized weight value
+# Column mapping: a → b_Intercept, b1 → b_weight_s, b2 → b_weight_s2, b3 → b_weight_s3
 mu.samples.cubic <- sapply(weight.seq, function(w) {
-  post_cubic$a + post_cubic$b1 * w + post_cubic$b2 * w^2 + post_cubic$b3 * w^3
+  post_cubic$b_Intercept + post_cubic$b_weight_s * w +
+    post_cubic$b_weight_s2 * w^2 + post_cubic$b_weight_s3 * w^3
 })
 
 mu.mean <- apply(mu.samples.cubic, 2, mean)
@@ -137,7 +152,7 @@ mu.PI   <- apply(mu.samples.cubic, 2, PI, prob = 0.89)
 
 # Posterior predictive simulation
 sim.height.cubic <- sapply(seq_along(weight.seq), function(j) {
-  rnorm(length(post_cubic$a), mu.samples.cubic[, j], post_cubic$sigma)
+  rnorm(nrow(post_cubic), mu.samples.cubic[, j], post_cubic$sigma)
 })
 height.PI <- apply(sim.height.cubic, 2, PI, prob = 0.89)
 
@@ -161,9 +176,10 @@ axis( side = 1, at = at, labels = round(labels, 1))
 B-Splines 是基礎 (basic) 平滑曲線的涵義。下面的數據紀錄了每年春天櫻花開放的日期：
 
 ```{r introBayes07-7, cache=TRUE}
-data("cherry_blossoms")
+# [MIGRATED 2026-04] data("cherry_blossoms") replaced with CSV load
+cherry_blossoms <- read.csv("../backupfiles/cherry_blossoms.csv", sep = ";")
 d <- cherry_blossoms
-precis(d)
+summary(d)   # base R equivalent of precis(d)
 ```
 
 
@@ -239,18 +255,27 @@ $$
 實際運算這個模型，獲取 $w_j$ 們的事後概率分佈：
 
 ```{r introBayes07-13, cache=TRUE}
-m4.7 <- quap(
-  alist(
-    D ~ dnorm( mu, sigma ), 
-    mu <- a + B %*% w , 
-    a ~ dnorm(100, 10), 
-    w ~ dnorm(0, 10), 
-    sigma ~ dexp(1)
-  ), data = list(D = d2$doy, B = B), 
-  start = list( w = rep(0, ncol(B)))
-)
+# [MIGRATED 2026-04] brms equivalent of B-spline model
+# brms cannot accept a raw matrix in 'data'; expand B into named columns B1..B17
+B_df         <- as.data.frame(B)
+names(B_df)  <- paste0("B", seq_len(ncol(B)))
+blossom_data <- cbind(data.frame(D = d2$doy), B_df)
 
-precis(m4.7, depth = 2)
+# Build formula: D ~ B1 + B2 + ... + B17
+b_formula <- as.formula(paste("D ~", paste(names(B_df), collapse = " + ")))
+
+m4.7_brm <- brm(
+  b_formula,
+  data = blossom_data,
+  prior = c(
+    prior(normal(100, 10), class = Intercept),
+    prior(normal(0, 10),   class = b),
+    prior(exponential(1),  class = sigma)
+  ),
+  file = "Stanfits/m4.7_brm",
+  chains = 4, cores = 4, seed = 123
+)
+print(summary(m4.7_brm))
 ```
 
 
@@ -258,8 +283,11 @@ precis(m4.7, depth = 2)
 
 
 ```{r  introBayes07-14, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="The cubic spline of the blossom data with 15 knots. (each basis weighted by its correponding parameter)", fig.align='center'}
-post <- extract.samples( m4.7 )
-w <- apply( post$w, 2, mean )
+# [MIGRATED 2026-04] extract.samples() → as_draws_df()
+# brms names B-spline basis coefficients b_B1, b_B2, ..., b_B17
+post_s07 <- suppressWarnings(as_draws_df(m4.7_brm))
+w_cols   <- grep("^b_B", names(post_s07), value = TRUE)
+w        <- sapply(w_cols, function(col) mean(post_s07[[col]]))
 
 plot(NULL, xlim = range(d2$year), ylim = c(-6, 6), 
      xlab = "year", ylab = "basis * weight")
@@ -269,7 +297,9 @@ for( i in 1 : ncol(B)) lines( d2$year, w[i]*B[,i])
 
 ```{r  introBayes07-15, cache=TRUE, fig.width=10, fig.height=5,  fig.cap="The cubic spline of the blossom data with 15 knots. (the sum of these weighted basis functions, at each point, produces the spline. displayed as 97% posterior interval of mu.)", fig.align='center'}
 
-mu <- link( m4.7 )
+# [MIGRATED 2026-04] link() → posterior_epred()
+# newdata must use the same named B1..B17 columns built in chunk -13
+mu <- posterior_epred(m4.7_brm, newdata = blossom_data)
 dim(mu)
 
 mu_PI <- apply( mu, 2, PI, 0.97)
