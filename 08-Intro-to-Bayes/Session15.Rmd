@@ -14,9 +14,14 @@
 
 ## 多層數據實例：蝌蚪和青蛙數據 multilevel tadpoles
 
+```{r introBayes15-00-setup, include=FALSE}
+# ── Guard: ensure shims + brms are available for standalone knit ──
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
+```
+
 ```{r introBayes15-01, cache=TRUE}
-data("reedfrogs")
-d <- reedfrogs
+d <- read.csv("../backupfiles/reedfrogs.csv", sep = ";")
 str(d)
 ```
 
@@ -46,6 +51,7 @@ dat <- list(
 ```
 
 ```{r introBayes15-0201, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 # approximate posterior
 
 m13.1 <- ulam(
@@ -59,9 +65,26 @@ m13.1 <- ulam(
 saveRDS(m13.1, "../Stanfits/m13_1.rds")
 ```
 
-```{r introBayes15-03, cache=TRUE}
+```{r introBayes15-0201-brms, cache=TRUE}
+# brms equivalent: fixed intercept per tank (no pooling)
+d$tank_f <- factor(d$tank)
+b13.1 <- brm(
+  surv | trials(density) ~ 0 + tank_f,
+  data = d, family = binomial,
+  prior = prior(normal(0, 1.5), class = b),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m13_1"
+)
+```
+
+```{r introBayes15-03, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.1 <- readRDS("../Stanfits/m13_1.rds")
 precis(m13.1, depth = 2)
+```
+
+```{r introBayes15-03-brms, cache=FALSE}
+summary(b13.1)
 ```
 
 你會看見模型的運算結果是告訴我們 48 個池塘本身的基線生存狀況，也就是有 48 個截距。但是 `m13.1` 並不是一個多層回歸模型，下面的模型中關鍵部分的加入才使得這個模型變得更加有意義：
@@ -79,6 +102,7 @@ $$
 上述模型中值得注意的是，除了允許不同水池的基線生存狀況，也就是截距可以各不相同，我們還允許這些截距之間存在聯繫。也就是這些截距本身是服從正（常）態分佈的，該正（常）態分佈的均值是 $\bar{\alpha}$，標準差是 $\sigma$。這個截距服從的正（常）態分佈的參數，也有自己的先驗概率分佈。我們把這樣的參數叫做超參數 hyperparameters，他們是參數的參數，他們的先驗概率分佈被叫做超先驗 hyperpriors。我們可以用下面的代碼來運行這個模型：
 
 ```{r introBayes15-04, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.2 <- ulam(
   alist(S ~ dbinom( N, p ), 
   logit(p) <- a[tank], 
@@ -90,24 +114,52 @@ m13.2 <- ulam(
 saveRDS(m13.2, "../Stanfits/m13_2.rds")
 ```
 
+```{r introBayes15-04-brms, cache=TRUE}
+# brms equivalent: varying intercept per tank (partial pooling)
+b13.2 <- brm(
+  surv | trials(density) ~ 1 + (1|tank),
+  data = d, family = binomial,
+  prior = c(
+    prior(normal(0, 1.5), class = Intercept),
+    prior(exponential(1), class = sd)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m13_2"
+)
+```
+
 先比較一下這兩個模型之間的模型信息差別：
 
-```{r introBayes15-05, cache=TRUE}
+```{r introBayes15-05, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.2 <- readRDS("../Stanfits/m13_2.rds")
 compare( m13.1, m13.2 )
 ```
 
+```{r introBayes15-05-brms, cache=FALSE}
+b13.1 <- add_criterion(b13.1, "waic")
+b13.2 <- add_criterion(b13.2, "waic")
+print(loo_compare(b13.1, b13.2, criterion = "waic"))
+```
+
 從兩個模型之間的比較結果來看，首先，`m13.2` 只有 21 個有效的參數，比起實際的參數個數 50 個少了很多。這是因爲對這些截距增加了超參數的限制之後，他們受到了更多的約束，更加趨近於彼此。我們可以看看這個模型給出的截距分佈的超參數的事後概率分佈估計：
 
-```{r  introBayes15-06, cache=TRUE}
+```{r  introBayes15-06, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 precis(m13.2, depth = 2, pars = c("a_bar", "sigma"))
+```
+
+```{r introBayes15-06-brms, cache=FALSE}
+# Intercept ≈ a_bar; sd(tank__Intercept) ≈ sigma
+posterior_summary(b13.2, pars = c("b_Intercept", "sd_tank__Intercept"))
 ```
 
 這裡的截距分佈的超參數的事後估計其實給出了十分精確的估計，其均值在 1.34 左右，標準差是1.62，這說明了不同的水池之間的關係十分近似。也就是說，我們使用這個多層回歸模型，讓模型自己從數據中去學習並獲得截距和截距之間的關係。這比起一開始我們自己給 `m13.1` 設定的標準差 `1.5` 還要激進。於是這個多層回歸模型事實上給模型參數的估計增加了更多的限制。
 
 為了加深我們對這個激進的超參數的理解，我們把這兩個模型 `m13.1, m13.2` 給出的估計結果繪製成圖形來觀察：
 
-```{r introBayes15-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Empirical proportions of surviviors in each tadpolle tank, shown by the filled blue points, plotted with the 48 per-tank parameters from the multilevel model, shown by the black circles. The dashed line locates the average proportion of survivors across all tanks. The vertical lines divide tanks with different initial densities of tadpoles: small tanks (10 tadpoles), medium tanks (25), and large tanks (35). In every tank, the posterior mean from the multilevel model is closer to the dashed line than the empirical proportion is. This reflects the pooling of information across tanks, to help with inference.", fig.align='center'}
+```{r introBayes15-fig01, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Empirical proportions of surviviors in each tadpolle tank, shown by the filled blue points, plotted with the 48 per-tank parameters from the multilevel model, shown by the black circles. The dashed line locates the average proportion of survivors across all tanks. The vertical lines divide tanks with different initial densities of tadpoles: small tanks (10 tadpoles), medium tanks (25), and large tanks (35). In every tank, the posterior mean from the multilevel model is closer to the dashed line than the empirical proportion is. This reflects the pooling of information across tanks, to help with inference.", fig.align='center', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 # extract Stan Samples
 post <- extract.samples(m13.2)
 # post <- extract.samples(m13.1)
@@ -137,28 +189,54 @@ text( 16 + 8, 0, 'medium tanks')
 text( 32 + 8, 0, 'large tanks')
 ```
 
+```{r introBayes15-fig01-brms, cache=TRUE, fig.width=6, fig.height=5, fig.cap="Empirical proportions of survivors in each tadpole tank (blue), plotted with the 48 per-tank estimates from the multilevel brms model (black circles). The dashed line shows the average survival probability across tanks. Vertical lines divide tanks by initial density. Shrinkage toward the grand mean is visible, especially in smaller tanks.", fig.align='center'}
+# brms equivalent: extract posterior samples
+post <- suppressWarnings(as_draws_df(b13.2))
+
+# tank-level intercepts: r_tank[tankID,Intercept] + Intercept
+tank_cols <- grep("^r_tank\\[", names(post), value = TRUE)
+a_tank <- sweep(as.matrix(post[, tank_cols]), 1, post$b_Intercept, "+")
+
+# mean survival probability per tank
+d$propsurv.est <- inv_logit(colMeans(a_tank))
+
+# plot
+plot(d$propsurv, ylim = c(0, 1), pch = 16, xaxt = "n",
+     xlab = "tank", ylab = "proportion survival",
+     col = rangi2, bty = "n")
+axis(1, at = c(1, 16, 32, 48), labels = c(1, 16, 32, 48))
+points(d$propsurv.est)
+abline(h = mean(inv_logit(post$b_Intercept)), lty = 2)
+abline(v = 16.5, lwd = 0.5)
+abline(v = 32.5, lwd = 0.5)
+text(8, 0, "small tanks")
+text(16 + 8, 0, "medium tanks")
+text(32 + 8, 0, "large tanks")
+```
+
 圖 \@ref(fig:introBayes15-fig01) 中，橫軸是水池的編號，從左往右依次是從 1 到 48 號水池；縱軸是水池中蝌蚪生存下來的比例。圖中藍色的點是原始數據點，也就是實際觀察值 `propsurv`。黑色的鏤空點則是模型估計的每個水池的截距。水平的橫虛線是估計的所有水池的蝌蚪存活概率的平均值 $\alpha$。而圖中的縱向的實線是把水池按照實驗開始時的蝌蚪密度計算的不同類型的池子，從小，中，到大三種類型的池子，各16個。不難注意到我們能看見多層回歸模型給出的推測值都相對觀察值更靠近總體平均生存概率。看起來似乎是黑色鏤空的圓點都更加靠近數據分佈的中心，平均值附近。這種現象又被叫做縮水現象 shrinkage，這是由於增加了超參數之後的多層回歸模型的參數估計受到的限制性的調整 regularization。其次，我們也發現在圖左側，也就是起始蝌蚪密度較小的水池裏，多層回歸模型估計的生存概率值更加靠近總體平均值，也就是縮水得更加明顯，距離觀察數據比密度大的水池要遠。也就是說，在小的水池裏，我們更加容易發現模型估計值和觀察值之間的差別，但是在其實密度大的水池中，觀察值和模型估計值更加接近。最後，如果藍色的點離虛線的總體均值越遠，它和黑色點，多層回歸模型估計值之間的差別越大。
 
 上述三種現象其實是在告訴我們一件很重要的事，也就是把信息綜合起來的話，每一個層級的參數估計都會受益得到提升和改善 (pooling information across clusters to improve estimates) 。這裏的綜合信息 pooling information 的意義是，每一個水池的數據，每一個層級的數據，都含有能提高和改善其他層級參數估計信息 each tank provides information that can be used to improve the estimates for all of the other tanks。這是因爲我們假設了每個水池的截距 log-odds 雖有變化但不獨立而是服從某個正（常）態分佈。有了這個分佈的假設，貝葉斯估計就能幫助我們共享信息給不同的數據層級。
 
 那麼，模型估計的這些青蛙的總體生存概率的分佈是怎樣的呢？我們可以從它對應的模型事後概率分佈中獲得結果繪製成圖。我們先繪製事後概率分佈中前100個 $\alpha, \sigma$ 組合的平均存活率的分佈：
 
-```{r introBayes15-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The inferred population of survival across tanks. 100 Gaussian distributions of the log-odds of survival, sampled from the posteriro of m13.2.", fig.align='center'}
-# show first 100 populations in the posterior 
+```{r introBayes15-fig02, cache=FALSE, fig.width=6, fig.height=5,  fig.cap="The inferred population of survival across tanks. 100 Gaussian distributions of the log-odds of survival, sampled from the posteriro of b13.2.", fig.align='center'}
+# show first 100 populations in the posterior
+# post already extracted above from b13.2
 plot( NULL, xlim = c(-3, 4), ylim = c(0, 0.35), 
       xlab = "log-odds survive", 
       ylab = "Density", bty = "n")
 
 for( i in 1:100 ) 
-  curve( dnorm(x, post$a_bar[i], post$sigma[i]), add = TRUE, 
+  curve( dnorm(x, post$b_Intercept[i], post$sd_tank__Intercept[i]), add = TRUE, 
          col = col.alpha("black", 0.2))
 ```
 
 圖 \@ref(fig:introBayes15-fig02) 告訴我們，均值 $\alpha$ 和它對應的標準差 $\sigma$ 都是有相當程度不確定性的 (uncertainty)。
 
-```{r  introBayes15-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Survival probabilities for 8000 new simulated tanks, averaging over the posterior distribution in previous figure.", fig.align='center'}
+```{r  introBayes15-fig03, cache=FALSE, fig.width=6, fig.height=5,  fig.cap="Survival probabilities for 8000 new simulated tanks, averaging over the posterior distribution in previous figure.", fig.align='center'}
 # sample 8000 imaginary tanks from the posterior distribution 
-sim_tanks <- rnorm(80000, post$a_bar, post$sigma)
+sim_tanks <- rnorm(8000, post$b_Intercept, post$sd_tank__Intercept)
 
 # transform to probability and visualize
 dens( inv_logit(sim_tanks), lwd = 2, adj = 0.1, 
@@ -253,6 +331,7 @@ head(dsim)
 我們來使用 Stan 運行這個部分合併結果的模型
 
 ```{r  introBayes15-12, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 dat <- list(
   Si = dsim$Si, 
   Ni = dsim$Ni, 
@@ -270,16 +349,37 @@ m13.30 <- ulam(
 saveRDS(m13.30, "../Stanfits/m13_30.rds")
 ```
 
+```{r introBayes15-12-brms, cache=TRUE}
+# brms equivalent: varying intercepts for simulated ponds
+dsim$pond_f <- factor(dsim$pond)
+b13.30 <- brm(
+  Si | trials(Ni) ~ 1 + (1|pond),
+  data = dsim, family = binomial,
+  prior = c(
+    prior(normal(0, 1.5), class = Intercept),
+    prior(exponential(1), class = sd)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m13_30"
+)
+```
+
 上面的模型運行計算的就是最基礎版本的隨機截距模型。我們來看一下它給出的 $\bar{\alpha}, \sigma$ 的事後分佈情況，下面的結果包含了六十個水池的截距，會很長：
 
-```{r introBayes15-13, cache=FALSE}
+```{r introBayes15-13, cache=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.30 <- readRDS("../Stanfits/m13_30.rds")
 precis( m13.30, depth = 2 )
 ```
 
+```{r introBayes15-13-brms, cache=FALSE}
+summary(b13.30)
+```
+
 很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去。爲了便於比較，先要計算真實的水池中蝌蚪的存活概率。最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差。然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：
 
-```{r introBayes15-fig04, cache=TRUE, fig.width=8.5, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds.", fig.align='center', message=FALSE}
+```{r introBayes15-fig04, cache=TRUE, fig.width=8.5, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds.", fig.align='center', message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.30 <- readRDS("../Stanfits/m13_30.rds")
 post <- extract.samples( m13.30 )
 dsim$p_partpool <- apply( inv_logit(post$a_pond), 2, mean)
@@ -342,6 +442,41 @@ text( 32 + 8, 0.6, 'Medium ponds (25)')
 text( 46 + 8, 0.6, 'Large ponds (35)')
 ```
 
+```{r introBayes15-fig04-brms, cache=TRUE, fig.width=8.5, fig.height=5, fig.cap="Error of no-pooling (blue) and partial pooling (black) estimates for simulated ponds. Smaller ponds produce more error, but partial pooling estimates are better on average.", fig.align='center', message=FALSE}
+# brms equivalent: extract pond-level intercepts
+post_pond <- suppressWarnings(as_draws_df(b13.30))
+pond_cols <- grep("^r_pond\\[", names(post_pond), value = TRUE)
+a_pond_mat <- sweep(as.matrix(post_pond[, pond_cols]), 1, post_pond$b_Intercept, "+")
+dsim$p_partpool <- inv_logit(colMeans(a_pond_mat))
+
+dsim <- dsim %>%
+  mutate(p_true = inv_logit(true_a),
+         nopool_error = abs(p_nopool - p_true),
+         partpool_erro = abs(p_partpool - p_true))
+
+plot(1:60, dsim$nopool_error,
+     xlab = "Pond", ylab = "absolute error", bty = "n",
+     col = rangi2, pch = 16, ylim = c(0, 0.6))
+points(1:60, dsim$partpool_erro)
+
+error_avg <- dsim %>%
+  group_by(Ni) %>%
+  summarise(nopool_avg = mean(nopool_error),
+            partpool_avg = mean(partpool_erro))
+segments(1,  error_avg$nopool_avg[1],  16, error_avg$nopool_avg[1],  col = rangi2, lwd = 2)
+segments(1,  error_avg$partpool_avg[1], 16, error_avg$partpool_avg[1], col = "black", lwd = 2, lty = 2)
+segments(17, error_avg$nopool_avg[2],  32, error_avg$nopool_avg[2],  col = rangi2, lwd = 2)
+segments(17, error_avg$partpool_avg[2], 32, error_avg$partpool_avg[2], col = "black", lwd = 2, lty = 2)
+segments(33, error_avg$nopool_avg[3],  46, error_avg$nopool_avg[3],  col = rangi2, lwd = 2)
+segments(33, error_avg$partpool_avg[3], 46, error_avg$partpool_avg[3], col = "black", lwd = 2, lty = 2)
+segments(47, error_avg$nopool_avg[4],  60, error_avg$nopool_avg[4],  col = rangi2, lwd = 2)
+segments(47, error_avg$partpool_avg[4], 60, error_avg$partpool_avg[4], col = "black", lwd = 2, lty = 2)
+
+abline(v = 16.5, lwd = 0.5); abline(v = 32.5, lwd = 0.5); abline(v = 46.5, lwd = 0.5)
+text(8, 0.6, "Tiny ponds (5)"); text(16+8, 0.6, "Small ponds (10)")
+text(32+8, 0.6, "Medium ponds (25)"); text(46+8, 0.6, "Large ponds (35)")
+```
+
 從圖 \@ref(fig:introBayes15-fig04) 中我們首先能夠直接一眼就觀察到的重要信息就是，這兩種方案，一個是完全不合併方案，一個是部分合併方案，無論是哪一種，其實對樣本量大的水池（圖中靠右側的水池）的存活概率估計誤差都比較低。這主要是因爲樣本量越多，估計得越精確。而樣本量較小的水池，途中靠左側的水池中，由於蝌蚪數量有限，即使是部分合併方案使用的隨機截距模型也給出比較大的誤差。其次，藍色線 (完全不合併方案) 幾乎總是在黑色虛線 (隨機截距模型，部分合併方案) 的上方，或者二者在大樣本時，會十分接近。當然隨機截距並不總是更加優越，只是在許許多多的計算中，從長遠來看 (in the long run) 隨機截距模型給出的結果誤差會平均地比較小。第三，藍色線和黑色虛線之間的差距在樣本量越小時，越明顯。也就是說，同樣因爲小樣本會造成結果有估計誤差，隨機截距模型給出的誤差要相對小一些。
 
 那麼，从計算機的模擬計算結果中，我們學到了什麼？記得圖 \@ref(fig:introBayes15-fig01) 中我們見過樣本量越小的池塘的模型結果更加靠近樣本均值的虛線，也就是縮水更加嚴重。但是從計算機模擬的結果來看的話，樣本量越小的池塘的存活概率估計結果是隨機截距模型能給出更加小的誤差估計。這兩個現象並不是偶然發生的。樣本量小的水池，傾向於發生模型的過度擬合 overfitting。由於樣本量較小的水池蘊含的信息量較少，所以它們的模型估計結果更加容易受到樣本均值的影響。也就是被其他樣本量更多的水池的數據的影響。當一個個的水池本身各自的樣本量都相對較多時，你可能會認爲隨機截距或者叫多層回歸模型能給出的估計結果優化就很有限。事實上即便是每個數據層級本身的樣本量也比較大的情況下，使用多層回歸模型來計算也沒有任何壞處。大樣本量的一些層級的估計結果有可能有助於改善較小樣本量層級的結果的預測以及參數的估計結果。所以，平均地看，其實始終應該使用隨機效應模型，也就是部分合併方案的策略，因爲它總是能提供較優的結果估計，而且能夠從數據本身學習獲得應該使用的超參數等用於調節 (regularization) 模型的估計和運行。
@@ -364,7 +499,7 @@ dsim$p_nopool <-  dsim$Si / dsim$Ni
 ```
 
 ```{r introBayes15-14, cache=TRUE, results="hide", eval=FALSE}
-
+# [LEGACY rethinking — preserved for reference]
 newdat <-  list(Si = dsim$Si, 
                 Ni = dsim$Ni, 
                 pond = 1:nponds)
@@ -375,9 +510,16 @@ m13.3new <- stan( fit = m13.30@stanfit,
 saveRDS(m13.3new, "../Stanfits/m13_3new.rds")
 ```
 
-一旦你的計算機已經運行好了一個模型，`m13.30`，那麼假如只需要修改模型的樣本數據，模型結構不需要改變的話，使用上述的方法會大大提升新模型的運行速度，並且保存結果在 `m13.3new` 裏面。然後你只需要使用類似的方法重新繪製新數據給出的新結果，而不需要每次再重頭運行模型本身。需要重複利用的模型運算結果已經存儲在了每個 stan 模型中的 `stanfit` 部分。只要給它新的相同變量的數據框，它就能迅速給出新的事後概率分佈結果。這是非常有用的技巧。
+一旦你的計算機已經運行好了一個模型，`m13.30`，那麼假如只需要修改模型的樣本數據，模型結構不需要改變的話，使用上述的方法會大大提升新模型的運行速度，並且保存結果在 `m13.3new` 裏面。然後你只需要使用類似的方法重新繪製新數據給出的新結果，而不需要每次再重頭運行模型本身。需要重複利用的模型運算結果已經存儲在了每個 stan 模型中的 `stanfit` 部分。只要給它新的相同變量的數據框，它就能迅速給出新的事後概率分佈結果。這是非常有用的技巧。在 `brms` 中可以用 `update()` 函數達到同樣的效果。
 
-```{r introBayes15-fig05, cache=FALSE, fig.width=8.5, fig.height=5,  fig.cap="New data was fed to m13.3 model and generate new posterior estimations.", fig.align='center', message=FALSE}
+```{r introBayes15-14-brms, cache=TRUE}
+# brms equivalent: refit with new simulated data using update()
+b13.3new <- update(b13.30, newdata = dsim,
+                   file = "Stanfits/brm_m13_3new")
+```
+
+```{r introBayes15-fig05, cache=FALSE, fig.width=8.5, fig.height=5,  fig.cap="New data was fed to m13.3 model and generate new posterior estimations.", fig.align='center', message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.3new <- readRDS("../Stanfits/m13_3new.rds")
 post <- extract.samples( m13.3new )
 dsim$p_partpool <- apply( inv_logit(post$a_pond), 2, mean)
@@ -440,13 +582,47 @@ text( 32 + 8, 0.6, 'Medium ponds (25)')
 text( 46 + 8, 0.6, 'Large ponds (35)')
 ```
 
+```{r introBayes15-fig05-brms, cache=TRUE, fig.width=8.5, fig.height=5, fig.cap="New simulated data fed to brms model. Blue = no-pooling error; black = partial pooling error.", fig.align='center', message=FALSE}
+# brms equivalent: extract pond-level intercepts from refitted model
+post_new <- suppressWarnings(as_draws_df(b13.3new))
+pond_cols_new <- grep("^r_pond\\[", names(post_new), value = TRUE)
+a_pond_new <- sweep(as.matrix(post_new[, pond_cols_new]), 1, post_new$b_Intercept, "+")
+dsim$p_partpool <- inv_logit(colMeans(a_pond_new))
+
+dsim <- dsim %>%
+  mutate(p_true = inv_logit(true_a),
+         nopool_error = abs(p_nopool - p_true),
+         partpool_erro = abs(p_partpool - p_true))
+
+plot(1:60, dsim$nopool_error,
+     xlab = "Pond", ylab = "absolute error", bty = "n",
+     col = rangi2, pch = 16, ylim = c(0, 0.6))
+points(1:60, dsim$partpool_erro)
+
+error_avg <- dsim %>%
+  group_by(Ni) %>%
+  summarise(nopool_avg = mean(nopool_error),
+            partpool_avg = mean(partpool_erro))
+segments(1,  error_avg$nopool_avg[1],  16, error_avg$nopool_avg[1],  col = rangi2, lwd = 2)
+segments(1,  error_avg$partpool_avg[1], 16, error_avg$partpool_avg[1], col = "black", lwd = 2, lty = 2)
+segments(17, error_avg$nopool_avg[2],  32, error_avg$nopool_avg[2],  col = rangi2, lwd = 2)
+segments(17, error_avg$partpool_avg[2], 32, error_avg$partpool_avg[2], col = "black", lwd = 2, lty = 2)
+segments(33, error_avg$nopool_avg[3],  46, error_avg$nopool_avg[3],  col = rangi2, lwd = 2)
+segments(33, error_avg$partpool_avg[3], 46, error_avg$partpool_avg[3], col = "black", lwd = 2, lty = 2)
+segments(47, error_avg$nopool_avg[4],  60, error_avg$nopool_avg[4],  col = rangi2, lwd = 2)
+segments(47, error_avg$partpool_avg[4], 60, error_avg$partpool_avg[4], col = "black", lwd = 2, lty = 2)
+
+abline(v = 16.5, lwd = 0.5); abline(v = 32.5, lwd = 0.5); abline(v = 46.5, lwd = 0.5)
+text(8, 0.6, "Tiny ponds (5)"); text(16+8, 0.6, "Small ponds (10)")
+text(32+8, 0.6, "Medium ponds (25)"); text(46+8, 0.6, "Large ponds (35)")
+```
+
 ## 使用多於一個類別作爲多層回歸的隨機變量 more than one type of cluster
 
 我們當然可以在同一個模型中加入更多的 $(>1)$ 分層變量。例如我們在 Chapter \@ref(chimpanzees) 看到的黑猩猩社會學數據 `data(chimpanzees)`。
 
 ```{r introBayes15-15, cache=TRUE}
-data("chimpanzees")
-d <- chimpanzees
+d <- read.csv("../backupfiles/chimpanzees.csv", sep = ";")
 str(d)
 ```
 
@@ -473,7 +649,10 @@ $$
 
 ```{r introBayes15-16, cache=TRUE}
 d <- d %>% 
-  mutate(treatment = 1 + prosoc_left + 2*condition)
+  mutate(treatment = 1 + prosoc_left + 2*condition,
+         treatment_f = factor(treatment),
+         actor_f = factor(actor),
+         block_f = factor(block))
 table(d$treatment)
 
 dat_list <- list(
@@ -485,6 +664,7 @@ dat_list <- list(
 ```
 
 ```{r introBayes15-17, cache=TRUE, results='hide', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(13) 
 
 m13.4 <- ulam(
@@ -504,20 +684,49 @@ m13.4 <- ulam(
 saveRDS(m13.4, "../Stanfits/m13_4.rds")
 ```
 
-```{r  introBayes15-18, cache=TRUE}
+```{r introBayes15-17-brms, cache=TRUE}
+# brms equivalent: varying intercepts for actor + block
+b13.4 <- brm(
+  pulled_left ~ 1 + treatment_f + (1|actor) + (1|block),
+  data = d, family = bernoulli,
+  prior = c(
+    prior(normal(0, 1.5), class = Intercept),
+    prior(normal(0, 0.5), class = b),
+    prior(exponential(1), class = sd)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m13_4"
+)
+```
+
+```{r  introBayes15-18, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.4 <- readRDS("../Stanfits/m13_4.rds")
 precis(m13.4, depth = 2)
 ```
 
+```{r introBayes15-18-brms, cache=FALSE}
+summary(b13.4)
+```
+
 首先，我們從 `n_eff` 可以看出各個參數的有效樣本量差別其實較大。這樣的現象在結構複雜的模型進行事後樣本採樣的過程中其實很常見。這可能會有許多不同的原因，其中之一是模型中可能有一個或者幾個在樣本採集時花了較多的時間在某個邊界值附近不停地採集樣本。這裏很顯然就是 `sigma_g`，它花了很多時間在它的起始值 0 附近不停地採集樣本，它的 `Rhat` 值也顯然大於 1。這些都是採樣效率低下的信號。
 
-```{r introBayes15-fig06, cache=FALSE, fig.width=5, fig.height=8,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE}
+```{r introBayes15-fig06, cache=FALSE, fig.width=5, fig.height=8,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 precis_plot( precis(m13.4, depth = 2) )
+```
+
+```{r introBayes15-fig06-brms, cache=FALSE, fig.width=6, fig.height=8, fig.cap="Caterpillar plot of brms multilevel chimpanzee model b13.4. Actor variation is much larger than block variation.", fig.align='center', message=FALSE}
+# brms equivalent: caterpillar / forest plot
+mcmc_areas(b13.4, regex_pars = c("^b_", "^sd_", "^r_actor", "^r_block"),
+           prob = 0.89, prob_outer = 0.97) +
+  theme_minimal()
 ```
 
 其次，觀察 `sigma_a` 和 `sigma_g` 會很容易就發現不同黑猩猩之間的變化顯然比不同天進行實驗的變化要顯著的多。這一現象可以用圖 \@ref(fig:introBayes15-fig07) 展示得更加清楚。
 
-```{r introBayes15-fig07, cache=FALSE, fig.width=6, fig.height=5.5,  fig.cap="Posterior distributions of the standard deviations of varying intercepts by actor (blue), and block (black).", fig.align='center', message=FALSE}
+```{r introBayes15-fig07, cache=FALSE, fig.width=6, fig.height=5.5,  fig.cap="Posterior distributions of the standard deviations of varying intercepts by actor (blue), and block (black).", fig.align='center', message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 post <- extract.samples( m13.4 )
 rethinking::dens( post$sigma_a ,
                   xlim = c(0, 4), 
@@ -534,9 +743,22 @@ text( 0.8, 02.5, 'block')
 text( 3, 0.5, 'actor', col = rangi2)
 ```
 
+```{r introBayes15-fig07-brms, cache=FALSE, fig.width=6, fig.height=5.5, fig.cap="Posterior distributions of the standard deviations of varying intercepts by actor (blue) and block (black).", fig.align='center', message=FALSE}
+# brms equivalent: compare sd_actor vs sd_block
+post_chimp <- suppressWarnings(as_draws_df(b13.4))
+dens(post_chimp$sd_actor__Intercept,
+     xlim = c(0, 4), ylim = c(0, 3.8),
+     col = rangi2, bty = "n", lwd = 2,
+     xlab = "standard deviation", ylab = "Density")
+dens(post_chimp$sd_block__Intercept, add = TRUE, lwd = 2)
+text(0.8, 2.5, "block")
+text(3, 0.5, "actor", col = rangi2)
+```
+
 這也就是說增加不同實驗 `block` 的隨機截距並沒有讓模型增加的過度擬合的風險。我們來比較一下只有一個黑猩猩隨機截距時的模型和 `m13.4` 之間的模型信息差別：
 
 ```{r  introBayes15-19, cache=TRUE, results='hide', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(14)
 m13.5 <- ulam(
   alist(
@@ -552,9 +774,31 @@ m13.5 <- ulam(
 saveRDS(m13.5, "../Stanfits/m13_5.rds")
 ```
 
-```{r  introBayes15-20, cache=TRUE}
+```{r introBayes15-19-brms, cache=TRUE}
+# brms equivalent: varying intercepts for actor only (no block)
+b13.5 <- brm(
+  pulled_left ~ 1 + treatment_f + (1|actor),
+  data = d, family = bernoulli,
+  prior = c(
+    prior(normal(0, 1.5), class = Intercept),
+    prior(normal(0, 0.5), class = b),
+    prior(exponential(1), class = sd)
+  ),
+  chains = 4, cores = 4,
+  file = "Stanfits/brm_m13_5"
+)
+```
+
+```{r  introBayes15-20, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.5 <- readRDS("../Stanfits/m13_5.rds")
 compare(m13.4, m13.5)
+```
+
+```{r introBayes15-20-brms, cache=FALSE}
+b13.4 <- add_criterion(b13.4, "waic")
+b13.5 <- add_criterion(b13.5, "waic")
+print(loo_compare(b13.4, b13.5, criterion = "waic"))
 ```
 
 從 `m13.4` 和 `m13.5` 兩個模型之間的比較結果來看，即便 `m13.4` 中多增加了 7 個未知參數，但是 `pWAIC` 的比較，也就是實際有效參數個數之間的差只有 2。這主要是因爲 `block` 的事後分佈的方差其實十分接近 0，所以表示這個 `block` 部分的隨機截距部分增加的參數的實際結果都接近 0。我們的多層回歸模型雖然可以做到增加實驗 `block` 的隨機截距，但是增加這個隨機截距對模型並沒有顯著的改善，可以說沒有太多幫助。
@@ -588,6 +832,7 @@ $$
 
 
 ```{r introBayes15-21, cache=TRUE, results='hide', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.7 <- ulam(
   alist(
     v ~ normal(0, 3), 
@@ -616,14 +861,16 @@ http://mc-stan.org/misc/warnings.html#tail-ess
 
 這個只有兩個參數需要估計的模型運行給出的事後概率分佈也十分地糟糕，上面的警告中給出了相當多的分散轉換 (divergent transitions) ，下面的模型運行結果總結也給出了特別差勁的 `n_eff, Rhat`：
 
-```{r  introBayes15-22, cache=TRUE}
+```{r  introBayes15-22, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.7 <- readRDS("../Stanfits/m13_7.rds")
 precis(m13.7)
 ```
 
 看一下它可憐的採樣軌跡圖 trace plot ：
 
-```{r introBayes15-fig08, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7)`", fig.align='center', message=FALSE}
+```{r introBayes15-fig08, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7)`", fig.align='center', message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 traceplot_ulam(m13.7)
 ```
 
@@ -648,6 +895,7 @@ $$
 很多人可能一開始不理解爲什麼要這樣寫。但是仔細想想應該不難理解，這其實是我們平時在把觀察值標準化的一個逆向過程。我們在把某個變量標準化的過程是怎樣的？通常是把它減去自己的平均值，然後除以自己的標準差。新產生的變量就是一個均值爲0，標準差是1的標準正（常）態分佈。也就是說，上面的表達式裏，我們通過 $z$，一個標準正（常）態分佈變量，把 $x$ 和 $v$ 之間的關係串聯起來。$x$ 本身的均值是零，它除以自己的標準差 $\frac{x}{\exp(v)}$ 就成爲了一個標準正（常）態的變量 $z$。經過這一番等價轉換之後模型變得可以順利在 Stan 裏被運行和採樣了。
 
 ```{r introBayes15-23, cache=TRUE, results='hide', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.7nc <- ulam(
   alist(
     v ~ normal(0, 3), 
@@ -661,14 +909,16 @@ saveRDS(m13.7nc, "../Stanfits/m13_7nc.rds")
 整個世界恢復了安靜。你看模型運行的結果也是正常的了：
 
 
-```{r  introBayes15-24, cache=TRUE}
+```{r  introBayes15-24, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.7nc <- readRDS("../Stanfits/m13_7nc.rds")
 precis(m13.7nc)
 ```
 
 
 
-```{r introBayes15-fig09, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7nc)`", fig.align='center', message=FALSE}
+```{r introBayes15-fig09, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7nc)`", fig.align='center', message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 traceplot_ulam(m13.7nc)
 ```
 
@@ -679,7 +929,8 @@ traceplot_ulam(m13.7nc)
 如果我們把此時採樣成功的 $x$ 和 $v$ 之間繪製散點圖，你就會直觀的看見這個像魔鬼一樣的漏斗的真實形狀：
 
 
-```{r introBayes15-fig10, cache=FALSE, fig.width=6, fig.height=5,  fig.cap="The devil's funnel.", fig.align='center', message=FALSE}
+```{r introBayes15-fig10, cache=FALSE, fig.width=6, fig.height=5,  fig.cap="The devil's funnel.", fig.align='center', message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 dat.sam <- extract.samples(m13.7nc)
 plot(dat.sam$x, 
      dat.sam$v, 
@@ -714,6 +965,7 @@ $$
 
 
 ```{r introBayes15-25, cache=TRUE, results='hide', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(2020)
 m13.4b <- ulam(m13.4, chains = 4, 
                cores = 4, 
@@ -724,14 +976,16 @@ saveRDS(m13.4b, "../Stanfits/m13_4b.rds")
 
 
 
-```{r  introBayes15-26, cache=TRUE}
+```{r  introBayes15-26, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.4b <- readRDS("../Stanfits/m13_4b.rds")
 divergent(m13.4b)
 ```
 
 可見修改這個 `adapt_delta` 也沒有辦法提升太多，它依然在報錯。當然偶爾也能真的解決問題，實在是在看你的運氣。而且很多時候，即使它不再通過電腦系統警告，它實際採集的事後樣本也是十分低效的。你可以觀察 `precis(m13.4b)` 給出的 `n_eff`，也就是有效樣本量其實很多都還是小於500的。實際使用4条獨立採集鏈每條500個獨立樣本的總樣本量應該在2000左右。
 
-```{r introBayes15-27, cache=TRUE}
+```{r introBayes15-27, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 precis(m13.4b, depth = 2)
 ```
 
@@ -780,6 +1034,7 @@ $$
 
 
 ```{r introBayes15-28, cache=TRUE, results='hide', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(13)
 m13.4nc <- ulam(
   alist(
@@ -805,7 +1060,8 @@ saveRDS(m13.4nc, "../Stanfits/m13_4nc.rds")
 
 `m13.4nc` 的 `n_eff` 顯然比 `m13.4` 改善很多，而且也沒有報錯：
 
-```{r introBayes15-29, cache=TRUE}
+```{r introBayes15-29, cache=TRUE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m13.4nc <- readRDS("../Stanfits/m13_4nc.rds")
 precis(m13.4nc, depth = 2)
 ```
@@ -813,7 +1069,8 @@ precis(m13.4nc, depth = 2)
 用圖形來比較 `m13.4` 和 `m13.4nc` 二者之間的 `n_eff` 更加直觀：
 
 
-```{r introBayes15-fig11, cache=TRUE, fig.width=6, fig.height=6,  fig.cap="Comparing the centered (horizontal) and non-centered (vertical) parameerizations of the multilevel chimpanzees model, m13.4. Each point is a parameter. All but two parameters lie above the diagonal, indicating better sampling for the non-centered parameterization.", fig.align='center'}
+```{r introBayes15-fig11, cache=TRUE, fig.width=6, fig.height=6,  fig.cap="Comparing the centered (horizontal) and non-centered (vertical) parameerizations of the multilevel chimpanzees model, m13.4. Each point is a parameter. All but two parameters lie above the diagonal, indicating better sampling for the non-centered parameterization.", fig.align='center', eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 precis_c <- precis( m13.4, depth = 2 )
 precis_nc <- precis( m13.4nc, depth = 2 )
 pars <- c( paste("a[", 1:7, "]", sep = ""), 
@@ -834,4 +1091,24 @@ plot( neff_table,
 abline(a = 0, b = 1, lty = 2)
 ```
 
+**brms 使用者注意**: 上述關於 divergent transitions 和非中心化參數化的討論主要針對直接使用 `ulam()`/Stan 的情況。`brms` 內部已經自動處理了非中心化的參數化 (non-centered parameterization)，大多數情況下不需要使用者手動操作。如果 `brms` 模型仍然出現 divergent transitions 警告，可以增大 `adapt_delta` 參數：
+
+```{r introBayes15-brms-note, eval=FALSE}
+# brms 中調整 adapt_delta 的方法：
+b13.4_hd <- brm(
+  pulled_left ~ 1 + treatment_f + (1|actor) + (1|block),
+  data = d, family = bernoulli,
+  control = list(adapt_delta = 0.99),
+  ...
+)
+```
+
+使用 `brms` 時，我們可以用 `bayesplot` 套件中的 `mcmc_trace()` 來檢查採樣軌跡圖，用 `mcmc_neff()` 來檢查有效樣本量：
+
+```{r introBayes15-brms-diagnostics, cache=FALSE, fig.width=7, fig.height=4, fig.cap="Trace plots for the population-level parameters and group-level standard deviations of brms model b13.4.", fig.align='center'}
+mcmc_trace(b13.4, pars = c("b_Intercept", "b_treatment_f2", "b_treatment_f3",
+                            "b_treatment_f4", "sd_actor__Intercept",
+                            "sd_block__Intercept")) +
+  theme_minimal()
+```
 
