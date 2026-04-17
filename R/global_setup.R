@@ -226,7 +226,16 @@ if (!is.na(.statapath)) {
 
 # 7. Define bugpath (project root) consistently
 if (!exists("bugpath", inherits = FALSE)) {
-  bugpath <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+  # Walk up from cwd to find project root (where _bookdown.yml lives)
+  .find_root <- function(start = getwd()) {
+    d <- normalizePath(start, winslash = "/", mustWork = FALSE)
+    while (d != dirname(d)) {
+      if (file.exists(file.path(d, "_bookdown.yml"))) return(d)
+      d <- dirname(d)
+    }
+    normalizePath(start, winslash = "/", mustWork = FALSE)
+  }
+  bugpath <- .find_root()
 }
 
 # 8. Helper to build absolute path inside project
