@@ -376,6 +376,12 @@ precis( m13.30, depth = 2 )
 summary(b13.30)
 ```
 
+下面展示所有60個水池各自的截距估計，相當於原始 `precis(depth = 2)` 的完整輸出：
+
+```{r introBayes15-13-brms-coef, cache=FALSE}
+coef(b13.30)$pond[, , "Intercept"]
+```
+
 很好，接下來就可以運算每個水池的模型預測存活概率，並且添加到我們預先設定好的實驗數據中去。爲了便於比較，先要計算真實的水池中蝌蚪的存活概率。最後一步，就是計算模型預測的存活率，和實際真實存活率之間的差距了，也叫模型估計誤差。然後把這兩個條件下的估計誤差進行繪製在同一張圖上直觀地比較：
 
 ```{r introBayes15-fig04, cache=TRUE, fig.width=8.5, fig.height=5,  fig.cap="Error of no-pooling and partial pooling estimates, for the simulated tadpole ponds. The horizontal axis displays pond number. The vertical axis measures the absolute error in the predicted proportion of survivors, compared to the true value used in the simulation. The higher the point, the worse the estimate. No-pooling shown in blue. Partial pooling shown in black. The blue and dashed black lines show the average error for each kind of estimate, across each initial density of tadpoles (pond size). Smaller ponds porduce more error, but the partial pooling estimates are better on average, especially in smaller ponds.", fig.align='center', message=FALSE, eval=FALSE}
@@ -709,6 +715,13 @@ precis(m13.4, depth = 2)
 summary(b13.4)
 ```
 
+下面是每隻黑猩猩 (actor) 和每個實驗區塊 (block) 各自的截距估計，相當於 `precis(depth = 2)` 的個體層級輸出：
+
+```{r introBayes15-18-brms-coef, cache=FALSE}
+coef(b13.4)$actor[, , "Intercept"]
+coef(b13.4)$block[, , "Intercept"]
+```
+
 首先，我們從 `n_eff` 可以看出各個參數的有效樣本量差別其實較大。這樣的現象在結構複雜的模型進行事後樣本採樣的過程中其實很常見。這可能會有許多不同的原因，其中之一是模型中可能有一個或者幾個在樣本採集時花了較多的時間在某個邊界值附近不停地採集樣本。這裏很顯然就是 `sigma_g`，它花了很多時間在它的起始值 0 附近不停地採集樣本，它的 `Rhat` 值也顯然大於 1。這些都是採樣效率低下的信號。
 
 ```{r introBayes15-fig06, cache=FALSE, fig.width=5, fig.height=8,  fig.cap="Posterior means and 89% compatibility intervals for m13.4. The greater variation across actors than blocks can be seen immediately in the a and g distributions", fig.align='center', message=FALSE, eval=FALSE}
@@ -815,6 +828,8 @@ There were 15 divergent transitions after warmup.
 
 下面是兩個簡單的實例。
 
+> **brms 使用者注意**: 上述關於 divergent transitions 和非中心化參數化的討論主要針對直接使用 `ulam()`/Stan 的情況。`brms` 內部已經自動處理了非中心化的參數化 (non-centered parameterization)，大多數情況下不需要使用者手動操作。如果 `brms` 模型仍然出現 divergent transitions 警告，可以增大 `adapt_delta` 參數（例如 `control = list(adapt_delta = 0.99)`）。以下的魔鬼漏斗實例我們使用 `rstan` 直接編寫 Stan 代碼來演示中心化與非中心化參數化的差異，因為這類純粹的聯合分佈採樣問題不屬於 `brms` 的回歸建模範疇。
+
 
 ### 魔鬼的漏斗 the devil's funnel
 
@@ -842,6 +857,26 @@ m13.7 <- ulam(
 saveRDS(m13.7, "../Stanfits/m13_7.rds")
 ```
 
+```{r introBayes15-21-rstan, cache=TRUE, results='hide', warning=FALSE, message=FALSE}
+# rstan equivalent: centered parameterization (devil's funnel)
+stan_code_centered <- "
+data { int N; }
+parameters {
+  real v;
+  real x;
+}
+model {
+  v ~ normal(0, 3);
+  x ~ normal(0, exp(v));
+}
+"
+fit_m13.7 <- rstan::stan(
+  model_code = stan_code_centered,
+  data = list(N = 1),
+  chains = 4, cores = 4
+)
+```
+
 你會很顯然看見一連串的警告，叫你去看這個看那個求助啥的：
 
 ```
@@ -867,11 +902,20 @@ m13.7 <- readRDS("../Stanfits/m13_7.rds")
 precis(m13.7)
 ```
 
+```{r introBayes15-22-rstan, cache=FALSE, warning=FALSE}
+print(summary(fit_m13.7)$summary[c("v", "x"), ])
+```
+
 看一下它可憐的採樣軌跡圖 trace plot ：
 
 ```{r introBayes15-fig08, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7)`", fig.align='center', message=FALSE, eval=FALSE}
 # [LEGACY rethinking — preserved for reference]
 traceplot_ulam(m13.7)
+```
+
+```{r introBayes15-fig08-rstan, cache=FALSE, fig.width=6, fig.height=4, fig.cap="Trace plot of the centered devil's funnel model (rstan). Note the poor mixing, especially for x.", fig.align='center', message=FALSE, warning=FALSE}
+bayesplot::mcmc_trace(fit_m13.7, pars = c("v", "x")) +
+  theme_minimal()
 ```
 
 
@@ -906,6 +950,30 @@ m13.7nc <- ulam(
 saveRDS(m13.7nc, "../Stanfits/m13_7nc.rds")
 ```
 
+```{r introBayes15-23-rstan, cache=TRUE, results='hide', warning=FALSE, message=FALSE}
+# rstan equivalent: non-centered parameterization
+stan_code_nc <- "
+data { int N; }
+parameters {
+  real v;
+  real z;
+}
+transformed parameters {
+  real x;
+  x = z * exp(v);
+}
+model {
+  v ~ normal(0, 3);
+  z ~ normal(0, 1);
+}
+"
+fit_m13.7nc <- rstan::stan(
+  model_code = stan_code_nc,
+  data = list(N = 1),
+  chains = 4, cores = 4
+)
+```
+
 整個世界恢復了安靜。你看模型運行的結果也是正常的了：
 
 
@@ -915,11 +983,20 @@ m13.7nc <- readRDS("../Stanfits/m13_7nc.rds")
 precis(m13.7nc)
 ```
 
+```{r introBayes15-24-rstan, cache=FALSE, warning=FALSE}
+print(summary(fit_m13.7nc)$summary[c("v", "z", "x"), ])
+```
+
 
 
 ```{r introBayes15-fig09, cache=FALSE, fig.width=6, fig.height=4,  fig.cap="`traceplot(m13.7nc)`", fig.align='center', message=FALSE, eval=FALSE}
 # [LEGACY rethinking — preserved for reference]
 traceplot_ulam(m13.7nc)
+```
+
+```{r introBayes15-fig09-rstan, cache=FALSE, fig.width=6, fig.height=4, fig.cap="Trace plot of the non-centered devil's funnel model (rstan). Much better mixing compared to the centered version.", fig.align='center', message=FALSE, warning=FALSE}
+bayesplot::mcmc_trace(fit_m13.7nc, pars = c("v", "z", "x")) +
+  theme_minimal()
 ```
 
 
@@ -937,6 +1014,13 @@ plot(dat.sam$x,
      bty = "n", 
      xlab = "x",
      ylab = "v")
+```
+
+```{r introBayes15-fig10-rstan, cache=FALSE, fig.width=6, fig.height=5, fig.cap="The devil's funnel (rstan). The funnel shape arises because when v is large and negative, x is tightly constrained near zero, but when v is positive, x can spread widely.", fig.align='center', message=FALSE}
+post_nc <- rstan::extract(fit_m13.7nc)
+plot(post_nc$x, post_nc$v,
+     bty = "n", xlab = "x", ylab = "v",
+     xlim = c(-4000, 4000), ylim = c(-12, 12))
 ```
 
 
@@ -1091,16 +1175,12 @@ plot( neff_table,
 abline(a = 0, b = 1, lty = 2)
 ```
 
-**brms 使用者注意**: 上述關於 divergent transitions 和非中心化參數化的討論主要針對直接使用 `ulam()`/Stan 的情況。`brms` 內部已經自動處理了非中心化的參數化 (non-centered parameterization)，大多數情況下不需要使用者手動操作。如果 `brms` 模型仍然出現 divergent transitions 警告，可以增大 `adapt_delta` 參數：
+由於 `brms` 內部自動使用非中心化參數化，上面的對比圖不直接適用。但我們可以用 `mcmc_neff()` 來檢查 `b13.4` 各參數的有效樣本比率，確認 `brms` 的自動非中心化已經產生了健康的採樣效率：
 
-```{r introBayes15-brms-note, eval=FALSE}
-# brms 中調整 adapt_delta 的方法：
-b13.4_hd <- brm(
-  pulled_left ~ 1 + treatment_f + (1|actor) + (1|block),
-  data = d, family = bernoulli,
-  control = list(adapt_delta = 0.99),
-  ...
-)
+```{r introBayes15-fig11-brms, cache=FALSE, fig.width=7, fig.height=5, fig.cap="Effective sample size ratios (neff/N) for all parameters of brms model b13.4. brms automatically uses non-centered parameterization, producing healthy sampling efficiency. Ratios near 1.0 indicate efficient sampling.", fig.align='center'}
+mcmc_neff(neff_ratio(b13.4)) +
+  yaxis_text(hjust = 1) +
+  theme_minimal()
 ```
 
 使用 `brms` 時，我們可以用 `bayesplot` 套件中的 `mcmc_trace()` 來檢查採樣軌跡圖，用 `mcmc_neff()` 來檢查有效樣本量：
