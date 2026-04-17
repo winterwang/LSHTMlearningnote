@@ -1,10 +1,10 @@
 > The most newsworthy scientific studies are the least trustworthy. Maybe popular topics attract more and worse researchers, like flies drawn to the smell of honey?
 > ~ Richard McElreath
-```{r setup-libraries, echo=FALSE, message=FALSE, warning=FALSE}
-if (!requireNamespace("ggdag", quietly = TRUE)) {
-  install.packages("ggdag")
-}
+```{r setup-libraries, include=FALSE}
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
 library(ggdag)
+library(dagitty)
 ```
 
 
@@ -67,7 +67,7 @@ head(d)
 如果我們同時使用兩腿的長度作為預測身高的變量建立簡單線性回歸模型的話，我們會期待獲得怎樣的結果？從生成數據的過程我們已知平均地，腿長度佔身高的比例是45%。所以我們其實會期待腿長度的回歸係數應該在 $10/4.5 \approx 2.2$ 左右。但事實是怎樣呢？
 
 
-```{r introBayes09-02, cache=TRUE}
+```{r introBayes09-02, eval=FALSE}
 m6.1 <- quap(
   alist(
     height ~ dnorm( mu, sigma ), 
@@ -81,26 +81,47 @@ m6.1 <- quap(
 precis(m6.1)
 ```
 
+In brms, this model is a standard multiple regression of `height` on both leg lengths:
+
+```{r introBayes09-02-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.1 <- brm(
+  height ~ leg_left + leg_right,
+  data = d,
+  prior = c(
+    prior(normal(10, 100), class = "Intercept"),
+    prior(normal(2, 10), class = "b", coef = "leg_left"),
+    prior(normal(2, 10), class = "b", coef = "leg_right"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_1"
+)
+```
+
+```{r introBayes09-02-brm-summary, cache=FALSE}
+summary(brm_m6.1)
+```
+
 左右腿的數據同時放到一個模型裡給出的結果似乎是令人困惑的。
 
 
 ```{r introBayes09-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="If both legs have almost identical lengths, and height is so strongly associated with leg length, then why is this posterior distribution so weird?", fig.align='center'}
-plot(precis(m6.1))
+mcmc_intervals(as.matrix(brm_m6.1),
+               pars = c("b_Intercept", "b_leg_left", "b_leg_right", "sigma"))
 ```
 
 我們看模型 `m6.1` 給出的 `bl, br` 的事後聯合分佈 (joint posterior distribution)：
 
 ```{r introBayes09-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior distribution of the association of each leg with hegiht, from model m6.1. Since both variables contain almost identical information, the posterior is a narrow ridge of negatively correlated values.", fig.align='center'}
-post <- extract.samples(m6.1)
-plot(bl ~ br, post, col = col.alpha(rangi2, 0.1),
-     pch = 16)
+post <- suppressWarnings(as_draws_df(brm_m6.1))
+plot(b_leg_left ~ b_leg_right, data = post, col = col.alpha(rangi2, 0.1),
+     pch = 16, xlab = "br", ylab = "bl")
 ```
 
 如圖 \@ref(fig:introBayes09-fig03) 顯示的那樣，當 `bl` 很大時，`br` 就很小，反之亦然。
 
 
 ```{r introBayes09-fig04, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The posterior distribution of the sum of the two parameters is cnetered on the proper association of eight leg with height.", fig.align='center'}
-sumblbr <- post$bl + post$br
+sumblbr <- post$b_leg_left + post$b_leg_right
 dens(sumblbr, col = rangi2, lwd = 2, xlab = "sum of bl and br")
 ```
 
@@ -108,7 +129,7 @@ dens(sumblbr, col = rangi2, lwd = 2, xlab = "sum of bl and br")
 於是我們知道我們應該從模型中去掉其中一個腿的信息，從而獲得正確的模型和計算結果：
 
 
-```{r  introBayes09-03, cache=TRUE}
+```{r  introBayes09-03, eval=FALSE}
 m6.2 <- quap(
   alist(
     height ~ dnorm( mu, sigma ), 
@@ -122,14 +143,30 @@ m6.2 <- quap(
 precis(m6.2)
 ```
 
+```{r introBayes09-03-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.2 <- brm(
+  height ~ leg_left,
+  data = d,
+  prior = c(
+    prior(normal(10, 100), class = "Intercept"),
+    prior(normal(2, 10), class = "b", coef = "leg_left"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_2"
+)
+```
+
+```{r introBayes09-03-brm-summary, cache=FALSE}
+summary(brm_m6.2)
+```
+
 
 ### 哺乳動物奶質量數據中的共線性
 
 重新打開哺乳動物奶質量數據。我們看其中的含脂肪百分比和含乳糖百分比這兩個變量。把他們標準化：
 
 ```{r introBayes09-04, cache=TRUE}
-data(milk, package="rethinking")
-d <- milk
+d <- read.csv("../backupfiles/milk.csv", sep = ";")
 d$K <- standardize( d$kcal.per.g )
 d$F <- standardize( d$perc.fat )
 d$L <- standardize( d$perc.lactose )
@@ -138,7 +175,7 @@ d$L <- standardize( d$perc.lactose )
 下面的模型使用標準化的脂肪百分比和乳糖百分比兩個變量作為預測變量來預測奶的能量密度：
 
 
-```{r introBayes09-05, cache=TRUE}
+```{r introBayes09-05, eval=FALSE}
 # kcal.per.g regressed on perc.fat
 m6.3 <- quap(
   alist(
@@ -166,9 +203,40 @@ precis( m6.3 )
 precis( m6.4 )
 ```
 
+```{r introBayes09-05-brm, cache=TRUE, results='hide', message=FALSE}
+# kcal.per.g regressed on perc.fat
+brm_m6.3 <- brm(
+  K ~ F,
+  data = d,
+  prior = c(
+    prior(normal(0, 0.2), class = "Intercept"),
+    prior(normal(0, 0.5), class = "b", coef = "F"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_3"
+)
+
+# kcal.per.g regressed on perc.lactose
+brm_m6.4 <- brm(
+  K ~ L,
+  data = d,
+  prior = c(
+    prior(normal(0, 0.2), class = "Intercept"),
+    prior(normal(0, 0.5), class = "b", coef = "L"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_4"
+)
+```
+
+```{r introBayes09-05-brm-summary, cache=FALSE}
+summary(brm_m6.3)
+summary(brm_m6.4)
+```
+
 當單獨使用其中之一作為能量密度的預測變量時，我們發現他們各自的回歸係數似乎互相成鏡像數據，一個是正的，另一個是負的。而且二者的回歸係屬的事後概率分佈都很精確，我們認為這兩個單獨變量都是可以用來預測奶能量密度的極佳預測變量。因為脂肪百分比越高，能量密度越高，反之，乳糖含量比例越高，那麼能量密度則越低。我們來看把他們兩個同時加入模型中會發生什麼現象：
 
-```{r introBayes09-06, cache=TRUE}
+```{r introBayes09-06, eval=FALSE}
 m6.5 <- quap(
   alist(
     K ~ dnorm( mu, sigma ), 
@@ -180,6 +248,24 @@ m6.5 <- quap(
   ), data = d
 )
 precis( m6.5 )
+```
+
+```{r introBayes09-06-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.5 <- brm(
+  K ~ F + L,
+  data = d,
+  prior = c(
+    prior(normal(0, 0.2), class = "Intercept"),
+    prior(normal(0, 0.5), class = "b", coef = "F"),
+    prior(normal(0, 0.5), class = "b", coef = "L"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_5"
+)
+```
+
+```{r introBayes09-06-brm-summary, cache=FALSE}
+summary(brm_m6.5)
 ```
 
 你看現在 `m6.5` 模型中同時加入了脂肪百分比，和乳糖百分比的兩個變量。都比單獨使用時給出的回歸係屬更接近 0。而且各自的事後概率分佈的標準差都比單獨使用時大了許多（幾乎兩倍）。這並非是來自計算機模擬的數據，而是真正現實中存在的奶製品測量之後的數據。脂肪百分比和乳糖百分比二者之間存在的很強的互相預測的關係。我們從他們的三點圖可以看出其中的奧妙：
@@ -209,7 +295,7 @@ h1 <- h0 + rnorm( N, 5 - 3*fungus )
 # compose a clean data frame
 d <- data.frame( h0 = h0, h1 = h1, treatment = treatment, fungus = fungus)
 head(d)
-precis(d)
+summary(d)
 ```
 
 ### 設定模型
@@ -238,7 +324,7 @@ $$
 
 ```{r  introBayes09-fig06, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Distribution density funciton of Log-Normal(0,0.25)", fig.align='center'}
 sim_p <- rlnorm(10000, 0, 0.25)
-precis(sim_p)
+summary(sim_p)
 dens( sim_p, xlim = c(0,3), adj = 0.1)
 ```
 
@@ -248,7 +334,7 @@ dens( sim_p, xlim = c(0,3), adj = 0.1)
 
 建立該模型：
 
-```{r introBayes09-08, cache=TRUE}
+```{r introBayes09-08, eval=FALSE}
 m6.6 <- quap(
   alist(
     h1 ~ dnorm(mu, sigma), 
@@ -258,6 +344,24 @@ m6.6 <- quap(
   ), data  = d
 )
 precis(m6.6)
+```
+
+In brms, this multiplicative model uses a non-linear formula. The parameter `p` represents the growth ratio $h_1 / h_0$:
+
+```{r introBayes09-08-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.6 <- brm(
+  bf(h1 ~ h0 * p, p ~ 1, nl = TRUE),
+  data = d,
+  prior = c(
+    prior(lognormal(0, 0.25), nlpar = "p", class = "b"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_6"
+)
+```
+
+```{r introBayes09-08-brm-summary, cache=FALSE}
+summary(brm_m6.6)
 ```
 
 $p$ 的事後概率分佈均值是 1.43，也就是預估平均每單位時間植物會長高大約 40%。接下來如果加入另外兩個變量，治療組，和是否出現菌落。我們會把這兩個變量對植物施加的影響使用線性回歸模型的方式加到 $p$ 上去：
@@ -277,7 +381,7 @@ $$
 
 上述模型的R代碼如下：
 
-```{r introBayes09-09, cache=TRUE}
+```{r introBayes09-09, eval=FALSE}
 m6.7 <- quap(
   alist(
     h1 ~ dnorm(mu, sigma), 
@@ -292,10 +396,32 @@ m6.7 <- quap(
 precis(m6.7)
 ```
 
+In brms, the sub-model for `p` includes treatment and fungus. Because brms does not allow a `lognormal` prior with `coef=`, we use `normal(1, 0.2)` for the intercept — this is centered on the same value and closely approximates the lognormal(0, 0.2) shape near $p \approx 1$:
+
+```{r introBayes09-09-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.7 <- brm(
+  bf(h1 ~ h0 * p,
+     p ~ 1 + treatment + fungus,
+     nl = TRUE),
+  data = d,
+  prior = c(
+    prior(normal(1, 0.2), nlpar = "p", class = "b", coef = "Intercept"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "treatment"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "fungus"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_7"
+)
+```
+
+```{r introBayes09-09-brm-summary, cache=FALSE}
+summary(brm_m6.7)
+```
+
 這裡似乎在說，治療本身對植物生長速度並無效果，但是有菌落卻對生長比例造成了負影響。可是我們明明知道菌落是否存在，是取決於治療本身的，也就是菌落是治療對土壤造成的結果之一。上述模型似乎在告訴我們，當我們知道了治療造成的結果之一 -- 是否有菌落，那麼治療本身對植物生長比例的影響就消失了。正確的模型是，我們應該把菌落這個變量從模型中拿掉，從而尋找治療對植物生長率的效果：
 
 
-```{r  introBayes09-10, cache=TRUE}
+```{r  introBayes09-10, eval=FALSE}
 m6.8 <- quap(
   alist(
     h1 ~ dnorm(mu, sigma), 
@@ -307,6 +433,25 @@ m6.8 <- quap(
   ), data = d
 )
 precis(m6.8)
+```
+
+```{r introBayes09-10-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.8 <- brm(
+  bf(h1 ~ h0 * p,
+     p ~ 1 + treatment,
+     nl = TRUE),
+  data = d,
+  prior = c(
+    prior(normal(1, 0.25), nlpar = "p", class = "b", coef = "Intercept"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "treatment"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_8"
+)
+```
+
+```{r introBayes09-10-brm-summary, cache=FALSE}
+summary(brm_m6.8)
 ```
 
 上述的分析過程和結果告訴我們，如果我們把由於治療本身造成的結果之一也錯誤地放進預測變量中的話，治療本身的效果會消失。
@@ -322,7 +467,7 @@ plant_dag <- dagitty("dag{
 }")
 coordinates( plant_dag ) <- list(x = c(H_0 = 0 , T = 2, F = 1.5, H_1 = 1), 
                                  y = c(H_0 = 0 , T = 0, F = 0, H_1 = 0))
-drawdag(plant_dag)
+plot(plant_dag)
 ```
 
 如果我們錯誤地把 $F$ 也放入預測變量中去的話，就把實際治療變量的效果這條通路給堵住了。這在因果推斷中被叫做，由於控制了 F 變量，我們錯誤地在模型中引入了 D - separation。這裡的 D，指的是 directional（方向）。D-separation 在因果推斷中指的是，某個變量在DAG圖中和其他所有變量都獨立。在本例中， 由於控制了 $F$ 而導致從治療變量 $T$ 通往結果變量 $H_1$ 之間的的通路被阻斷了 ($T \rightarrow F \rightarrow H_1$)，使得 $H_1$ 和 $T$ 之間變得失去了依賴關係（相互獨立）。
@@ -366,7 +511,10 @@ M <- rbern(N)
 fungus <- rbinom( N, size = 1, prob = 0.5 - treatment * 0.5 + 0.4 * M)
 h1 <- h0 + rnorm( N, 5 + 3 * M)
 d2 <- data.frame( h0 = h0, h1 = h1, treatment = treatment, fungus = fungus)
-precis(d2)
+summary(d2)
+```
+
+```{r introBayes09-11-quap, eval=FALSE}
 # incorrectly included fugus 
 m6.7 <- quap(
   alist(
@@ -395,6 +543,42 @@ m6.8 <- quap(
 precis(m6.8)
 ```
 
+```{r introBayes09-11-brm, cache=TRUE, results='hide', message=FALSE}
+# incorrectly included fungus
+brm_m6.7b <- brm(
+  bf(h1 ~ h0 * p,
+     p ~ 1 + treatment + fungus,
+     nl = TRUE),
+  data = d2,
+  prior = c(
+    prior(normal(1, 0.2), nlpar = "p", class = "b", coef = "Intercept"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "treatment"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "fungus"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_7b"
+)
+
+# the correct model to see the treatment effect
+brm_m6.8b <- brm(
+  bf(h1 ~ h0 * p,
+     p ~ 1 + treatment,
+     nl = TRUE),
+  data = d2,
+  prior = c(
+    prior(normal(1, 0.25), nlpar = "p", class = "b", coef = "Intercept"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "treatment"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_8b"
+)
+```
+
+```{r introBayes09-11-brm-summary, cache=FALSE}
+summary(brm_m6.7b)
+summary(brm_m6.8b)
+```
+
 此時你發現加入 `fungus` 變量依然對正確的對斷造成了干擾。使得本來不應該出現的治療效果似乎突然成了有效的促進植物生長的治療。
 
 ## 對撞因子偏倚 collider bias
@@ -408,7 +592,7 @@ grant_dag <- dagitty("dag{
 }")
 coordinates( grant_dag ) <- list(x = c(T = 0.5, S = 1, N = 1.5), 
                                  y = c(T = 0, S = 0, N = 0))
-drawdag(grant_dag)
+plot(grant_dag)
 ```
 
 
@@ -427,7 +611,7 @@ marriage_dag <- dagitty("dag{
 }")
 coordinates( marriage_dag ) <- list(x = c(H = 0.5, M = 1, A = 1.5), 
                                  y = c(H = 0, M = 0, A = 0))
-drawdag(marriage_dag)
+plot(marriage_dag)
 ```
 
 根據我們理解的理論，年齡和幸福感各自都會影響結婚與否。結婚這個變量就是一個對撞因子 (collider)。即使我們知道年齡和幸福感之間不應該存在直接的關係，但是假如我們有一個模型，結果變量是幸福感，預測變量是年齡（或者反過來）的話，在預測變量裡增加結婚這個變量會導致本來沒有關係的二者變得有“統計學關係”。這就顯然會誤導我們認為年齡增加和幸福感的增加或者減少是有關聯的（而事實上應該是無關的）。
@@ -442,8 +626,28 @@ drawdag(marriage_dag)
 
 
 ```{r introBayes09-12, cache=TRUE}
-d <- sim_happiness( seed = 1977, N_years = 1000)
-precis(d)
+# Replicate rethinking::sim_happiness() without loading the package
+sim_happiness <- function(seed = 1977, N_years = 1000, max_age = 65,
+                          N_births = 20, aom = 18) {
+  set.seed(seed)
+  H <- seq(from = -2, to = 2, length.out = N_births)
+  A <- rep(1, N_births)
+  M <- rep(0, N_births)
+  for (t in 2:N_years) {
+    A <- A + 1
+    died <- which(A > max_age)
+    if (length(died) > 0) { H <- H[-died]; A <- A[-died]; M <- M[-died] }
+    H <- c(H, seq(-2, 2, length.out = N_births))
+    A <- c(A, rep(1, N_births))
+    M <- c(M, rep(0, N_births))
+    for (i in seq_along(M))
+      if (M[i] == 0 & A[i] >= aom) M[i] <- rbinom(1, 1, inv_logit(H[i] - 4))
+  }
+  data.frame(age = A, married = M, happiness = H)
+}
+
+d <- sim_happiness(seed = 1977, N_years = 1000)
+summary(d)
 ```
 
 這個實驗性的計算機模擬數據本身包含了0-65歲的1300名實驗對象的幸福感和結婚與否的數據。
@@ -481,7 +685,7 @@ d2$A <- (d2$age - 18) / (65 - 18 )
 
 經過上述的數據處理，我們使得年齡變量 A 的範圍控制在 0-1 之間，其中 0 代表 18 歲，1 代表 65 歲。幸福感則是一個範圍在 -2, 2 之間的數值。這樣的話，假定年齡和幸福感之間呈現的是極其強烈的正關係，那麼這最極端的斜率也就是 $(2 - (-2)) / 1 = 4$。所以，一個較為合理的斜率的先驗概率分佈，可以是95%的斜率取值分佈在小於極端斜率之內的範圍。其次是為截距 $\alpha$ 設定合理的先驗概率分佈。因為 $\alpha$ 本身是年齡等於零，也就是18歲時的幸福感，我們需要這個數據能夠覆蓋所有可能的幸福感取值，-2，2 之間。那麼，標準正（常）態分佈是一個不錯的選擇。
 
-```{r introBayes09-14, cache=TRUE}
+```{r introBayes09-14, eval=FALSE}
 d2$mid <- d2$married + 1 # construct the marriage status index variable
 m6.9 <- quap(
   alist(
@@ -495,10 +699,35 @@ m6.9 <- quap(
 precis(m6.9, depth = 2)
 ```
 
+In brms, the indexed intercept `a[mid]` is handled by creating a factor variable and using `0 + mid_f` to estimate separate intercepts per marriage status:
+
+```{r introBayes09-14-brm-prep, cache=TRUE}
+d2$mid <- d2$married + 1
+d2$mid_f <- as.factor(d2$mid)
+```
+
+```{r introBayes09-14-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.9 <- brm(
+  happiness ~ 0 + mid_f + A,
+  data = d2,
+  prior = c(
+    prior(normal(0, 1), class = "b", coef = "mid_f1"),
+    prior(normal(0, 1), class = "b", coef = "mid_f2"),
+    prior(normal(0, 2), class = "b", coef = "A"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_9"
+)
+```
+
+```{r introBayes09-14-brm-summary, cache=FALSE}
+summary(brm_m6.9)
+```
+
 看，這個模型似乎很確定，年齡和幸福感是呈現負關係的。對比一下沒有假如婚姻狀態的變量的模型給出的估計結果：
 
 
-```{r introBayes09-15, cache=TRUE}
+```{r introBayes09-15, eval=FALSE}
 m6.10 <- quap(
   alist(
     happiness ~ dnorm(mu, sigma), 
@@ -509,6 +738,23 @@ m6.10 <- quap(
   ), data = d2
 )
 precis(m6.10)
+```
+
+```{r introBayes09-15-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.10 <- brm(
+  happiness ~ A,
+  data = d2,
+  prior = c(
+    prior(normal(0, 1), class = "Intercept"),
+    prior(normal(0, 2), class = "b", coef = "A"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_10"
+)
+```
+
+```{r introBayes09-15-brm-summary, cache=FALSE}
+summary(brm_m6.10)
 ```
 
 `m6.10` 才是正確的模型。它正確的給出了年齡和幸福感之間並無關係的結果。模型 `m6.9` 錯誤地把對撞因子 -- 婚姻狀況作為預測變量之一加入了模型中，而婚姻狀況在這個數據背景下，同時是年齡和幸福感的結果（common consequence of age and happiness）。結果就會像 `m6.9` 那樣，出現年齡和幸福感之間虛假的負關係 (false negative association between the two causes)。`m6.9` 告訴我們看起來似乎年齡的增長和幸福感呈現負關係，這種僅僅在模型中給出的變量之間的關係應該嚴格來說只能算是一種“統計學的關係 (statistical association)”，不能算是真實的因果關係 (causal association)。正如圖 \@ref(fig:introBayes09-fig11) 所顯示的。當已知實驗對象是已婚或者未婚，實驗對象的年齡似乎能告訴我們他/她的幸福度。看綠色點的部分，這些人都是已婚者，年齡越大，越多人結婚，那麼這個已婚人群的幸福度數值就會平均被拉低。相似的，看空白點的部分，這些人都是未婚者，年齡越大，其中幸福感較強的人都結婚而加入了已婚人群陣營，那麼剩下的人就會感覺幸福度越來越低。所以，當把人群分成未婚和已婚兩個部分的話，這兩個人群中的幸福度都隨著年齡增加而呈現下降趨勢。但是，我們知道，這並不是真實的因果關係。
@@ -528,7 +774,7 @@ precis(m6.10)
 ```{r introBayes09-fig12, cache=TRUE, fig.width=3, fig.height=3,  fig.cap="Educational achievements between parents (P), grandparents (G), and children (C).", fig.align='center'}
 dag6.3.2 <- dagitty( "dag{ G -> P; P -> C; G -> C }" )
 coordinates(dag6.3.2) <- list( x=c(G=0,P=1,C=1) , y=c(G=0,P=0,C=1) )
-drawdag( dag6.3.2 )
+plot( dag6.3.2 )
 ```
 
 如果此時我們發現，可能有一個未被測量的變量可能同時影響父母 (P)，和子女 (C)，但是對祖父母的教育程度並無直接影響，例如父母和子女生活的社區的環境 (U)，通常祖父母不一定和子女和孫輩生活在一個社區。那麼這個未觀察的社區變量就很可能會造成一個碰撞偏倚：
@@ -537,7 +783,7 @@ drawdag( dag6.3.2 )
 ```{r introBayes09-fig13, cache=TRUE, fig.width=3.3, fig.height=3,  fig.cap="Educational achievements between parents (P), grandparents (G), and children (C), with an unobserved neighborhood variable (U).", fig.align='center'}
 dag6.3.2_u <- dagitty( "dag{ G -> P; P -> C; G -> C ; U -> P ; U -> C U [unobserved]}" )
 coordinates(dag6.3.2_u) <- list( x=c(G=0,P=1,C=1,U=1.3) , y=c(G=0,P=0,C=1,U=0.5) )
-drawdag( dag6.3.2_u )
+plot( dag6.3.2_u )
 ```
 
 如果因果關係 \@ref(fig:introBayes09-fig13) 成立的話，那麼 P 就是 G 和 U 之間的對撞因子。如果此時我們建立 $G \rightarrow C$ 模型時把 $P$ 加入預測變量中，即便我們並沒有測量這個 U 變量，對撞因子偏倚也變得不可避免。
@@ -571,7 +817,7 @@ d <- data.frame(C = C, P = P, G = G, U = U)
 那麼，該怎樣設定一個模型來分析祖父母對孫輩學習成績的影響呢？我們認為祖父母的教育程度會通過父母親這條通路，影響到子女的學習成績，所以模型中應該要控制 P。那麼下面的代碼建立的是一個簡單的線性回歸模型，結果變量是 C，預測變量是 P 和 G，注意這裡我們假裝沒有測量到，也不知道 U 變量的存在：
 
 
-```{r introBayes09-18, cache=TRUE}
+```{r introBayes09-18, eval=FALSE}
 m6.11 <- quap(
   alist(
     C ~ dnorm( mu, sigma ), 
@@ -583,6 +829,24 @@ m6.11 <- quap(
 )
 
 precis(m6.11)
+```
+
+```{r introBayes09-18-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.11 <- brm(
+  C ~ P + G,
+  data = d,
+  prior = c(
+    prior(normal(0, 1), class = "Intercept"),
+    prior(normal(0, 1), class = "b", coef = "P"),
+    prior(normal(0, 1), class = "b", coef = "G"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_11"
+)
+```
+
+```{r introBayes09-18-brm-summary, cache=FALSE}
+summary(brm_m6.11)
 ```
 
 看模型 `m6.11` 給出的父母子女的學習成績的影響是多麼的顯著。甚至比我們設定的關係還要大兩倍。這並不奇怪，因為這裡給出的一部分 $P \rightarrow C$ 的關係應該歸功於 $U$，但是該模型本身不知道 $U$ 的存在。但是更令人感到驚訝的是，本來設定的祖父母不影響子女學習成績的關係在這個模型中變得顯著呈現負相關，這是有悖常識的。再怎麼說祖父母的受教育程度越高也不能給子女的學習成績帶來負面的影響才是。這個數學模型本身並沒有錯，但是它不能被賦予一個因果關係的解釋。這裏的對撞因子偏倚是如何形成的呢？
@@ -627,7 +891,7 @@ text(0.5, -2.1, "Bad neighborhoods")
 這裡，未測量的街區這一變量使得父母親受教育程度這一變量變成了對撞因子，解決對撞因子偏倚的方法其實是，認識到有未測量變量的存在，然後去獲取該變量，加入到你的模型中去：
 
 
-```{r introBayes09-19, cache=TRUE}
+```{r introBayes09-19, eval=FALSE}
 m6.12 <- quap(
   alist(
     C ~ dnorm( mu, sigma ), 
@@ -639,6 +903,25 @@ m6.12 <- quap(
 )
 
 precis(m6.12)
+```
+
+```{r introBayes09-19-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.12 <- brm(
+  C ~ P + G + U,
+  data = d,
+  prior = c(
+    prior(normal(0, 1), class = "Intercept"),
+    prior(normal(0, 1), class = "b", coef = "P"),
+    prior(normal(0, 1), class = "b", coef = "G"),
+    prior(normal(0, 1), class = "b", coef = "U"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_12"
+)
+```
+
+```{r introBayes09-19-brm-summary, cache=FALSE}
+summary(brm_m6.12)
 ```
 
 這樣子模型 `m6.12` 就能準確地給出我們模擬他們的關係的回歸係數。
@@ -658,7 +941,7 @@ coordinates(dag_6.1) <- list( x=c(X = 0, Y = 1, U = 0,
                                   A = 0.5, B = 0.5, C = 1), 
                               y=c(X = 0, Y = 0, U = -1, 
                                   A = -1.3, B = -0.7, C = -1) )
-drawdag(dag_6.1)
+plot(dag_6.1)
 ```
 
 
@@ -696,7 +979,7 @@ coordinates(dag_6.2) <- list( x=c(A = 0, D = 1, M = 0.5,
                                   S = 0, W = 1), 
                               y=c(A = 0, D = 0, M = -0.5, 
                                   S = -1, W = -1))
-drawdag(dag_6.2)
+plot(dag_6.2)
 ```
 
 圖 \@ref(fig:introBayes09-fig16) 中，

@@ -154,6 +154,8 @@ if (!exists("PI", mode = "function")) {
   dbern     <- function(x, prob, log = FALSE) dbinom(x, size = 1, prob = prob, log = log)
   grau      <- function(alpha = 0.3) col.alpha("black", alpha)
   normalize <- function(x) (x - min(x)) / (max(x) - min(x))
+  standardize <- function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
+  rbern     <- function(n, prob = 0.5) rbinom(n, size = 1, prob = prob)
   logistic  <- plogis
   dbeta2    <- function(x, prob, theta, log = FALSE)
     dbeta(x, shape1 = prob * theta, shape2 = (1 - prob) * theta, log = log)
