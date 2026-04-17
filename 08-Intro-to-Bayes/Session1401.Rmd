@@ -93,7 +93,7 @@ b12.1 <- brm(
 ```
 
 
-注意到，我們爲 `theta` 特別標註了它是被轉換過後的參數，`transpars>`，這樣 Stan 就會把 `theta` 作爲結果之一保存下來。我們可以使用採樣過後的 `m12.1` 計算其事後的男女錄取率之差:
+在 rethinking 中，我們爲 `theta` 使用了 `transpars>` 標記使 Stan 保存轉換參數。在 brms 的 `beta_binomial()` 家族中，分散程度參數被直接命名爲 `phi` 並自動保存在採樣結果中（注意這裏的 `phi` 和原模型中的 $\phi$ 不完全相同——brms 的 `phi` 直接對應原模型的 $\theta = \phi + 2$，即 brms 內部不需要加2的變換）。我們可以使用採樣過後的 `b12.1` 計算其事後的男女錄取率之差:
  
 
 ```{r introBayes14-02, cache=FALSE}
@@ -144,8 +144,10 @@ mtext("distribution of female admission rates (black); male admission rates (blu
 
 如圖 \@ref(fig:introBayes14-fig02) 所示的，我們允許了不同的錄取率，這樣一來不論男女，在不同的學院之間錄取率的差異被考慮了進來，男女之間的差異也就不那麼明顯了。同時也避免了模型錯誤地認爲女性受到了錄取上的歧視。雖然模型 `m12.1` 並不知道有學院這個變量（我們並沒有在模型中的任何地方加入學院這個變量），它依然靈活準確地給出了允許不同錄取率這一重要的方案，它使用 beta 分佈來估計該錄取概率在不同的人羣中可能的變化，我們可以再看看該模型的事後證實檢驗 (posterior validation check):
 
-```{r introBayes14-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior validation check for b12.1. As a result of widely dispersed beta distributions on the figure above, the raw data (blue) is contained within the prediction intervals.", fig.align='center'}
+```{r introBayes14-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior validation check for b12.1. As a result of widely dispersed beta distributions on the figure above, the raw data (blue) is contained within the prediction intervals. Note: unlike the rethinking postcheck() which plots admission rates (proportions 0–1 on the y-axis), brms posterior_predict() generates counts on the original scale, so the y-axis here shows the number of admissions.", fig.align='center'}
 # Posterior predictive check — replaces rethinking::postcheck()
+# Note: brms posterior_predict() returns counts (not proportions),
+# so the scale differs from the original postcheck() figure.
 yrep <- posterior_predict(b12.1)
 pred_mean <- colMeans(yrep)
 pred_ci   <- apply(yrep, 2, PI)
@@ -707,20 +709,22 @@ summary(b12.5)
 
 這裏我們暫時對每個選項本身的概率不感興趣，而是對影響結果的預測變量的回歸係數們更加感興趣。看這些回歸係數的事後概率分佈，他們每一個都很穩定地小於0。也就是每個原則都會降低選擇結果的平均值。
 
-```{r introBayes14-fig10, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The marginal posterior distributions of the slopes in b12.5.", fig.align='center'}
+```{r introBayes14-fig10, cache=TRUE, fig.width=7, fig.height=5,  fig.cap="The marginal posterior distributions of the slopes in b12.5.", fig.align='center'}
 # precis-style caterpillar plot for slope parameters
 fe <- fixef(b12.5)
 slope_idx <- !grepl("Intercept", rownames(fe))
 fe_s <- fe[slope_idx, , drop = FALSE]
 
+par(mar = c(5, 10, 2, 2))  # wider left margin for labels
 plot(fe_s[, "Estimate"], seq_len(nrow(fe_s)),
      xlim = c(-1.4, 0), pch = 1, cex = 1.2,
      xlab = "Value", ylab = "", yaxt = "n", bty = "n")
 segments(fe_s[, "Q2.5"],  seq_len(nrow(fe_s)),
          fe_s[, "Q97.5"], seq_len(nrow(fe_s)))
-axis(2, at = seq_len(nrow(fe_s)), labels = rownames(fe_s), las = 1, cex.axis = 0.8)
+axis(2, at = seq_len(nrow(fe_s)), labels = rownames(fe_s), las = 1, cex.axis = 0.9)
 abline(v = 0, lty = 3, col = "gray")
 for (h in seq_len(nrow(fe_s))) abline(h = h, lty = 3, col = "gray")
+par(mar = c(5, 4, 4, 2))  # restore default margins
 ```
 
 可以觀察到，意圖原則和接觸原則的交互作用項的回歸係數對結果的影響最大，但是我們也發現他們單獨對結果的影響都不是很大。
@@ -815,9 +819,15 @@ kI <- 0:1       # values for intention to calculate over
 
 pdat <- data.frame(action = kA, contact = kC, intention = kI)
 s <- posterior_predict(b12.5, newdata = pdat)
-simplehist(s, xlab = "response", 
-           bty = "n", 
-      main = "action = 0, contact = 0")
+# Overlay two histograms: intention=0 (black) and intention=1 (blue)
+tab0 <- table(factor(s[,1], levels = 1:7))
+tab1 <- table(factor(s[,2], levels = 1:7))
+ymax <- max(c(tab0, tab1)) * 1.1
+plot(1:7, tab0, type = "h", lwd = 4, col = "black",
+     xlab = "response", ylab = "Frequency", bty = "n",
+     xlim = c(0.5, 7.5), ylim = c(0, ymax),
+     main = "action = 0, contact = 0")
+lines(1:7 + 0.1, tab1, type = "h", lwd = 4, col = rangi2)
 ```
 
 ```{r  introBayes14-fig15, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the b12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
@@ -827,9 +837,14 @@ kI <- 0:1       # values for intention to calculate over
 
 pdat <- data.frame(action = kA, contact = kC, intention = kI)
 s <- posterior_predict(b12.5, newdata = pdat)
-simplehist(s, xlab = "response", 
-           bty = "n", 
-      main = "action = 1, contact = 0")
+tab0 <- table(factor(s[,1], levels = 1:7))
+tab1 <- table(factor(s[,2], levels = 1:7))
+ymax <- max(c(tab0, tab1)) * 1.1
+plot(1:7, tab0, type = "h", lwd = 4, col = "black",
+     xlab = "response", ylab = "Frequency", bty = "n",
+     xlim = c(0.5, 7.5), ylim = c(0, ymax),
+     main = "action = 1, contact = 0")
+lines(1:7 + 0.1, tab1, type = "h", lwd = 4, col = rangi2)
 ```
 
 
@@ -841,9 +856,14 @@ kI <- 0:1       # values for intention to calculate over
 
 pdat <- data.frame(action = kA, contact = kC, intention = kI)
 s <- posterior_predict(b12.5, newdata = pdat)
-simplehist(s, xlab = "response", 
-           bty = "n", 
-      main = "action = 0, contact = 1")
+tab0 <- table(factor(s[,1], levels = 1:7))
+tab1 <- table(factor(s[,2], levels = 1:7))
+ymax <- max(c(tab0, tab1)) * 1.1
+plot(1:7, tab0, type = "h", lwd = 4, col = "black",
+     xlab = "response", ylab = "Frequency", bty = "n",
+     xlim = c(0.5, 7.5), ylim = c(0, ymax),
+     main = "action = 0, contact = 1")
+lines(1:7 + 0.1, tab1, type = "h", lwd = 4, col = rangi2)
 ```
 
 
@@ -1003,7 +1023,7 @@ b12.6 <- brm(
 summary(b12.6)
 ```
 
-受教育程度這個變量對結果的選擇的影響整體來說是負的 `bE = -0.32`。也就是說，受教育程度最高的受試者，會傾向於不去拉動變軌的機制。然後我們來看這一系列的 `delta` 變量的運算結果。圖 \@ref(fig:introBayes14-fig18) 顯示，每個學歷的增加都多多少少地增加了學歷對結果的影響，但是其中第五層級的學歷 `SCol = Some college` 比起從高中畢業 `HSG = high school graduate` 的增加可以說微不足道。
+受教育程度這個變量對結果的選擇的影響整體來說是負的 `moedu_int = -0.05`。也就是說，受教育程度最高的受試者，會傾向於不去拉動變軌的機制。然後我們來看這一系列的 `delta` 變量的運算結果（在 brms 中對應 `simo_moedu_int1` 系列參數）。圖 \@ref(fig:introBayes14-fig18) 顯示，每個學歷的增加都多多少少地增加了學歷對結果的影響，但是其中第五層級的學歷 `SCol = Some college` 比起從高中畢業 `HSG = high school graduate` 的增加可以說微不足道。
 
 ```{r eval=FALSE}
 delta_labels <- c("Elem", "MidSch", "SHS", "HSG", 
@@ -1056,5 +1076,5 @@ summary(b12.7)
 ```
 
 
-你會看見，這時候給出的運算結果提示教育程度並不影響結果的選擇，或者影響幾乎可以忽略不計 `bE = -0.10, 89% CrI: -0.25, 0.05` 。但是很顯然這不是事實，因爲不同教育程度之間的跨度，不能認爲是一個線性的變化過程，不同的教育程度的提升之間對結果的影響並不是簡單的一成不變的 different levels have different incremental associations。
+你會看見，這時候給出的運算結果提示教育程度並不影響結果的選擇，或者影響幾乎可以忽略不計 `edu_norm = -0.12, 95% CrI: -0.30, 0.07` 。但是很顯然這不是事實，因爲不同教育程度之間的跨度，不能認爲是一個線性的變化過程，不同的教育程度的提升之間對結果的影響並不是簡單的一成不變的 different levels have different incremental associations。
 
