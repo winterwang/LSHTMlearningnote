@@ -154,6 +154,27 @@ if (!exists("PI", mode = "function")) {
   dbern     <- function(x, prob, log = FALSE) dbinom(x, size = 1, prob = prob, log = log)
   grau      <- function(alpha = 0.3) col.alpha("black", alpha)
   normalize <- function(x) (x - min(x)) / (max(x) - min(x))
+  logistic  <- plogis
+  dbeta2    <- function(x, prob, theta, log = FALSE)
+    dbeta(x, shape1 = prob * theta, shape2 = (1 - prob) * theta, log = log)
+  simplehist <- function(x, lwd = 4, ...) {
+    tab <- table(x)
+    plot(as.numeric(names(tab)), as.numeric(tab), type = "h",
+         lwd = lwd, ylab = "Frequency", ...)
+  }
+  dordlogit <- function(x, phi = 0, a, log = FALSE) {
+    a_ext <- c(-Inf, as.numeric(a), Inf)
+    p <- plogis(a_ext[x + 1] - phi) - plogis(a_ext[x] - phi)
+    if (log) return(log(p))
+    p
+  }
+  pordlogit <- function(x, phi = 0, a, log = FALSE) {
+    a <- c(as.numeric(a), Inf)
+    out <- sapply(x, function(k) plogis(a[k] - phi))
+    if (!is.matrix(out)) out <- matrix(out, nrow = length(phi))
+    if (log) return(log(out))
+    out
+  }
 }
 
 # 5. Shared hooks / global objects
