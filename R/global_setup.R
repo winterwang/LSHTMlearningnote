@@ -238,7 +238,19 @@ if (!exists("bugpath", inherits = FALSE)) {
   bugpath <- .find_root()
 }
 
-# 8. Helper to build absolute path inside project
+# 8. Strip absolute project path from rendered output (privacy)
+#    JAGS print() methods expose full bugpath in model.file — replace with "."
+if (requireNamespace("knitr", quietly = TRUE)) {
+  local({
+    hook_old <- knitr::knit_hooks$get("output")
+    knitr::knit_hooks$set(output = function(x, options) {
+      x <- gsub(bugpath, ".", x, fixed = TRUE)
+      if (is.function(hook_old)) hook_old(x, options) else x
+    })
+  })
+}
+
+# 9. Helper to build absolute path inside project
 proj_path <- function(...) file.path(bugpath, ...)
 
 # 9. DAG plotting helper — adds circles for latent/unobserved nodes
