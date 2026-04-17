@@ -232,7 +232,27 @@ if (!exists("bugpath", inherits = FALSE)) {
 # 8. Helper to build absolute path inside project
 proj_path <- function(...) file.path(bugpath, ...)
 
-# 9. Quiet confirmation message for standalone chapter renders
+# 9. DAG plotting helper — adds circles for latent/unobserved nodes
+#    (dagitty::plot.dagitty does not draw circles for latent variables)
+plot_dag <- function(dag, ...) {
+  plot(dag, ...)
+  lat <- dagitty::latents(dag)
+  if (length(lat) > 0) {
+    coords <- dagitty::coordinates(dag)
+    for (v in lat) {
+      x <- coords$x[v]
+      y <- -coords$y[v]  # plot.dagitty negates y
+      w <- strwidth(v) + strwidth("xx")
+      h <- strheight(v) + strheight("\n")
+      r <- max(w, h) / 2
+      symbols(x, y, circles = r, add = TRUE, inches = FALSE,
+              fg = "black", bg = "white", lwd = 1.5)
+      text(x, y, v)
+    }
+  }
+}
+
+# 10. Quiet confirmation message for standalone chapter renders
 if (interactive()) message("[global_setup] Loaded packages: ", sum(loaded_pkgs), " / ", length(loaded_pkgs))
 
 # Export key status objects for downstream diagnostic use (into user global env)
