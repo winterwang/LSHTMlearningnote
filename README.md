@@ -64,6 +64,7 @@ bookdown::render_book("index.Rmd", "bookdown::gitbook")
 ## 致謝
 
 - **LSHTM** 各科講師提供的講義與教材
+- **Richard McElreath** 的 [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) 教科書與開源課程材料（第八章 Sessions 06–16 的學習筆記基於此書，程式碼已從 `rethinking` 遷移至 `brms`）
 - **GitHub Copilot (Claude)** 協助完成 2026 年現代化改造，包括 rethinking → brms 遷移、全書渲染調試、臨床實驗章節撰寫、lshtm-sync 工具開發等
 
 ## 授權
