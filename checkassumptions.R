@@ -7,7 +7,7 @@ check_assumptions <- function(x, ...){
   }
   
   my_theme <- ggplot2::theme_classic() + 
-    ggplot2::theme(text=ggplot2::element_text(size=rel(3)))
+    ggplot2::theme(text=ggplot2::element_text(size=rel(1.2)))
   
   # get the residuals etc.
   rr <- broom::augment(x)

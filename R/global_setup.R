@@ -117,28 +117,32 @@ if (Sys.info()[["sysname"]] == "Darwin") {
 
 # ── 4d. rethinking compatibility shims ──
 # Lightweight base-R replacements for rethinking plotting helpers.
-# Defined once here; per-chapter guard (`if (!exists("PI"))`) prevents duplication.
-if (!exists("PI", mode = "function")) {
-  rangi2    <- "#4e79a7"
-  col.alpha <- function(col, alpha = 0.5) adjustcolor(col, alpha.f = alpha)
-  dens      <- function(x, adj = 0.5, ...) {
+# Assigned to .GlobalEnv explicitly so they survive regardless of how this
+# file is sourced (bookdown before_chapter_script, source(local=TRUE), etc.).
+# Guard: only define once per session.
+if (!exists("PI", mode = "function", envir = .GlobalEnv)) {
+  .shim_env <- .GlobalEnv
+  assign("rangi2", "#4e79a7", envir = .shim_env)
+  assign("col.alpha", function(col, alpha = 0.5) adjustcolor(col, alpha.f = alpha),
+         envir = .shim_env)
+  assign("dens", function(x, adj = 0.5, ...) {
     args <- list(...)
     add  <- isTRUE(args$add); args$add <- NULL
     d    <- density(x, adjust = adj)
     if (add) {
       line_args <- args[!names(args) %in%
         c("xlab","ylab","main","bty","xlim","ylim","axes","frame.plot")]
-      do.call(lines, c(list(d$x, d$y), line_args))
+      do.call(graphics::lines, c(list(d$x, d$y), line_args))
     } else {
       if (!"main" %in% names(args)) args$main <- ""
-      do.call(plot, c(list(d), args))
+      do.call(graphics::plot, c(list(d), args))
     }
     invisible(d)
-  }
-  PI        <- function(x, prob = 0.89) {
+  }, envir = .shim_env)
+  assign("PI", function(x, prob = 0.89) {
     a <- (1 - prob) / 2; quantile(x, probs = c(a, 1 - a), na.rm = TRUE)
-  }
-  shade     <- function(object, lim, col = col.alpha("black", 0.15), ...) {
+  }, envir = .shim_env)
+  assign("shade", function(object, lim, col = col.alpha("black", 0.15), ...) {
     if (is.matrix(object)) {
       polygon(c(lim, rev(lim)), c(object[1, ], rev(object[2, ])),
               col = col, border = NA, ...)
@@ -147,36 +151,40 @@ if (!exists("PI", mode = "function")) {
               c(object[1], object[2], object[2], object[1]),
               col = col, border = NA, ...)
     }
-  }
-  concat    <- paste0
-  inv_logit <- plogis
-  logit     <- qlogis
-  dbern     <- function(x, prob, log = FALSE) dbinom(x, size = 1, prob = prob, log = log)
-  grau      <- function(alpha = 0.3) col.alpha("black", alpha)
-  normalize <- function(x) (x - min(x)) / (max(x) - min(x))
-  standardize <- function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
-  rbern     <- function(n, prob = 0.5) rbinom(n, size = 1, prob = prob)
-  logistic  <- plogis
-  dbeta2    <- function(x, prob, theta, log = FALSE)
-    dbeta(x, shape1 = prob * theta, shape2 = (1 - prob) * theta, log = log)
-  simplehist <- function(x, lwd = 4, ...) {
+  }, envir = .shim_env)
+  assign("concat", paste0, envir = .shim_env)
+  assign("inv_logit", plogis, envir = .shim_env)
+  assign("logit", qlogis, envir = .shim_env)
+  assign("dbern", function(x, prob, log = FALSE) dbinom(x, size = 1, prob = prob, log = log),
+         envir = .shim_env)
+  assign("grau", function(alpha = 0.3) col.alpha("black", alpha), envir = .shim_env)
+  assign("normalize", function(x) (x - min(x)) / (max(x) - min(x)), envir = .shim_env)
+  assign("standardize", function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE),
+         envir = .shim_env)
+  assign("rbern", function(n, prob = 0.5) rbinom(n, size = 1, prob = prob), envir = .shim_env)
+  assign("logistic", plogis, envir = .shim_env)
+  assign("dbeta2", function(x, prob, theta, log = FALSE)
+    dbeta(x, shape1 = prob * theta, shape2 = (1 - prob) * theta, log = log),
+    envir = .shim_env)
+  assign("simplehist", function(x, lwd = 4, ...) {
     tab <- table(x)
     plot(as.numeric(names(tab)), as.numeric(tab), type = "h",
          lwd = lwd, ylab = "Frequency", ...)
-  }
-  dordlogit <- function(x, phi = 0, a, log = FALSE) {
+  }, envir = .shim_env)
+  assign("dordlogit", function(x, phi = 0, a, log = FALSE) {
     a_ext <- c(-Inf, as.numeric(a), Inf)
     p <- plogis(a_ext[x + 1] - phi) - plogis(a_ext[x] - phi)
     if (log) return(log(p))
     p
-  }
-  pordlogit <- function(x, phi = 0, a, log = FALSE) {
+  }, envir = .shim_env)
+  assign("pordlogit", function(x, phi = 0, a, log = FALSE) {
     a <- c(as.numeric(a), Inf)
     out <- sapply(x, function(k) plogis(a[k] - phi))
     if (!is.matrix(out)) out <- matrix(out, nrow = length(phi))
     if (log) return(log(out))
     out
-  }
+  }, envir = .shim_env)
+  rm(.shim_env)
 }
 
 # 5. Shared hooks / global objects
