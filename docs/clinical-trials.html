@@ -4,18 +4,18 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>第 68 章 評價模型的表現 Assessing model performance | 醫學統計學</title>
-  <meta name="description" content="第 68 章 評價模型的表現 Assessing model performance | 醫學統計學" />
+  <title>第 34 章 臨牀實驗的基本原則 | 醫學統計學</title>
+  <meta name="description" content="第 34 章 臨牀實驗的基本原則 | 醫學統計學" />
   <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="第 68 章 評價模型的表現 Assessing model performance | 醫學統計學" />
+  <meta property="og:title" content="第 34 章 臨牀實驗的基本原則 | 醫學統計學" />
   <meta property="og:type" content="book" />
   <meta property="og:image" content="/img/cover.jpg" />
   
   <meta name="github-repo" content="winterwang/LSHTMlearningnote" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="第 68 章 評價模型的表現 Assessing model performance | 醫學統計學" />
+  <meta name="twitter:title" content="第 34 章 臨牀實驗的基本原則 | 醫學統計學" />
   
   
   <meta name="twitter:image" content="/img/cover.jpg" />
@@ -30,8 +30,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="checkingGLM.html"/>
-<link rel="next" href="paired-ana.html"/>
+<link rel="prev" href="interaction.html"/>
+<link rel="next" href="sample-size.html"/>
 <script src="libs/jquery/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
 <link href="libs/gitbook/css/style.css" rel="stylesheet" />
@@ -1858,162 +1858,260 @@ div.csl-indent {
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="assess-perf" class="section level1 hasAnchor" number="68">
-<h1><span class="header-section-number">第 68 章</span> 評價模型的表現 Assessing model performance<a href="assess-perf.html#assess-perf" class="anchor-section" aria-label="Anchor link to header"></a></h1>
-<p>在廣義線性迴歸的模型表現中，還有幾個重要的概念，<strong>精準度 (calibration)，變異度 (variation)，和分辨能力 (descrimination)</strong>，本章繼續用二進制結果變量和多個共變量的廣義線性迴歸模型來理解這幾個概念。本章使用邏輯迴歸，也就是 <span class="math inline">\(\text{logit}\)</span> 鏈接方程的 GLM 來解釋，但是實際上使用其他鏈接方程時，這些概念也是一樣通用的。</p>
-<p>當用邏輯迴歸模型擬合了觀測數據。我們可以通過擬合的模型來計算每個觀測對象的預測“成功”概率 (the predicted probability of “success” for each subject)。當使用 <span class="math inline">\(\text{logit}\)</span> 作鏈接方程時，每個人的預測概率 (predicted probability) 爲：</p>
-<p><span class="math display">\[
-\hat\pi_i = \frac{\text{exp}(\hat\alpha + \hat\beta_1x_{i1} + \cdots + \hat\beta_px_{ip})}{1+\text{exp}(\hat\alpha + \hat\beta_1x_{i1} + \cdots + \hat\beta_px_{ip})}
-\]</span></p>
-<div id="calibration" class="section level2 hasAnchor" number="68.1">
-<h2><span class="header-section-number">68.1</span> 精準度 calibration<a href="assess-perf.html#calibration" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<p>模型具有良好的精準度時，其計算獲得的每個觀測對象的預測概率，和每個觀測對象本身“成功”的<strong>概率期望值</strong>保持一致。</p>
-<p><span class="math display">\[
-E(Y|\hat\pi = p) = p
-\]</span></p>
-<p>當一個 GLM 具有良好精準度時，我們可以利用它在臨牀醫學中發揮重要的作用 (如預測患者死亡，發病或療效等)。如果模型的精準度不佳，那可能導致的嚴重後果有：治療不必要治療的“健康人”，或者漏掉應該治療的“患者”。當一個模型的預測變量只包含了分類型變量，比較觀測概率和預測概率的過程較爲簡單，比較各個分類變量的排列組合後，不同共變量類型 (covariate pattern) 的患者的觀測值和預測值即可。</p>
-<p>這裏再沿用之前 NHANES 的重度飲酒相關的數據 (Section <a href="checkingGLM.html#NHANESdrinker">67.4</a>)來繼續下面對精準度的說明，先擬合一個只有性別作爲預測變量的邏輯迴歸模型：</p>
-<div class="sourceCode" id="cb1641"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1641-1"><a href="assess-perf.html#cb1641-1" tabindex="-1"></a>NHANES <span class="ot">&lt;-</span> <span class="fu">read_dta</span>(<span class="st">&quot;../backupfiles/nhanesglm.dta&quot;</span>)</span>
-<span id="cb1641-2"><a href="assess-perf.html#cb1641-2" tabindex="-1"></a>NHANES <span class="ot">&lt;-</span> NHANES <span class="sc">%&gt;%</span></span>
-<span id="cb1641-3"><a href="assess-perf.html#cb1641-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Gender =</span> <span class="fu">ifelse</span>(gender <span class="sc">==</span> <span class="dv">1</span>, <span class="st">&quot;Male&quot;</span>, <span class="st">&quot;Female&quot;</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb1641-4"><a href="assess-perf.html#cb1641-4" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">Gender =</span> <span class="fu">factor</span>(Gender, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;Male&quot;</span>, <span class="st">&quot;Female&quot;</span>)))</span>
-<span id="cb1641-5"><a href="assess-perf.html#cb1641-5" tabindex="-1"></a><span class="fu">with</span>(NHANES, <span class="fu">table</span>(Gender))</span></code></pre></div>
-<pre><code>## Gender
-##   Male Female 
-##   1391   1157</code></pre>
-<div class="sourceCode" id="cb1643"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1643-1"><a href="assess-perf.html#cb1643-1" tabindex="-1"></a>NHANES <span class="ot">&lt;-</span> <span class="fu">mutate</span>(NHANES, <span class="at">Heavydrinker =</span> ALQ130 <span class="sc">&gt;</span> <span class="dv">5</span>)</span>
-<span id="cb1643-2"><a href="assess-perf.html#cb1643-2" tabindex="-1"></a>Model_perf <span class="ot">&lt;-</span> <span class="fu">glm</span>(Heavydrinker <span class="sc">~</span> Gender, <span class="at">data =</span> NHANES, <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">&quot;logit&quot;</span>))</span>
-<span id="cb1643-3"><a href="assess-perf.html#cb1643-3" tabindex="-1"></a><span class="fu">logistic.display</span>(Model_perf)</span></code></pre></div>
-<pre><code>## 
-## Logistic regression predicting Heavydrinker 
-##  
-##                        OR(95%CI)         P(Wald&#39;s test) P(LR-test)
-## Gender: Female vs Male 0.17 (0.12,0.24)  &lt; 0.001        &lt; 0.001   
-##                                                                   
-## Log-likelihood = -834.1079
-## No. of observations = 2548
-## AIC value = 1672.2158</code></pre>
-<p>完成這個模型之後，在 STATA 裏可以用簡便的 <code>estat gof, table</code> 命令獲取模型擬合的觀測值和期待值表格，然而 R 裏面可以用模型的擬合值和殘差來手動獲取：</p>
-<div class="sourceCode" id="cb1645"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1645-1"><a href="assess-perf.html#cb1645-1" tabindex="-1"></a><span class="co"># [</span><span class="al">NOTE</span><span class="co">: LogisticDx archived from CRAN; using base R diagnostics]</span></span>
-<span id="cb1645-2"><a href="assess-perf.html#cb1645-2" tabindex="-1"></a><span class="co"># Observed vs fitted by covariate pattern</span></span>
-<span id="cb1645-3"><a href="assess-perf.html#cb1645-3" tabindex="-1"></a>diag_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb1645-4"><a href="assess-perf.html#cb1645-4" tabindex="-1"></a>  <span class="at">y    =</span> Model_perf<span class="sc">$</span>y,</span>
-<span id="cb1645-5"><a href="assess-perf.html#cb1645-5" tabindex="-1"></a>  <span class="at">yhat =</span> <span class="fu">fitted</span>(Model_perf)</span>
-<span id="cb1645-6"><a href="assess-perf.html#cb1645-6" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
-<span id="cb1645-7"><a href="assess-perf.html#cb1645-7" tabindex="-1"></a>  <span class="fu">group_by</span>(yhat) <span class="sc">%&gt;%</span> </span>
-<span id="cb1645-8"><a href="assess-perf.html#cb1645-8" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">y_obs =</span> <span class="fu">sum</span>(y), <span class="at">y_exp =</span> <span class="fu">sum</span>(yhat), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
-<span id="cb1645-9"><a href="assess-perf.html#cb1645-9" tabindex="-1"></a>diag_df</span></code></pre></div>
-<pre><code>## # A tibble: 2 × 4
-##     yhat     n y_obs y_exp
-##    &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1 0.0363  1157    42  42.0
-## 2 0.179   1391   249 249.</code></pre>
-<div class="sourceCode" id="cb1647"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1647-1"><a href="assess-perf.html#cb1647-1" tabindex="-1"></a><span class="co"># obtain Pearson&#39;s test statistics</span></span>
-<span id="cb1647-2"><a href="assess-perf.html#cb1647-2" tabindex="-1"></a>chi2 <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">residuals</span>(Model_perf, <span class="at">type =</span> <span class="st">&quot;pearson&quot;</span>)<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb1647-3"><a href="assess-perf.html#cb1647-3" tabindex="-1"></a>   pval <span class="ot">&lt;-</span> <span class="fu">pchisq</span>(chi2, <span class="dv">1</span>, <span class="at">lower.tail=</span><span class="cn">FALSE</span>)</span>
-<span id="cb1647-4"><a href="assess-perf.html#cb1647-4" tabindex="-1"></a>   <span class="fu">data.frame</span>(<span class="at">test=</span><span class="st">&quot;Pearson chi2(1)&quot;</span>,<span class="at">chi.sq=</span>chi2,<span class="at">pvalue=</span>pval)</span></code></pre></div>
-<pre><code>##              test chi.sq pvalue
-## 1 Pearson chi2(1)   2548      0</code></pre>
-<p>在這個只有性別作預測變量的邏輯迴歸模型裏，當然只有男，女，兩種共變量模式 (covariate patterns)。此時，模型的精準度100% (<code>y</code> 是觀測值， <code>yhat</code> 是期待值)。接下來，再在模型中加入一個是否體重超重的二進制變量。再獲取其觀測值和期待值表格如下：</p>
-<div class="sourceCode" id="cb1649"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1649-1"><a href="assess-perf.html#cb1649-1" tabindex="-1"></a>NHANES <span class="ot">&lt;-</span> <span class="fu">mutate</span>(NHANES, <span class="at">highbmi =</span> bmi <span class="sc">&gt;</span> <span class="dv">25</span>)</span>
-<span id="cb1649-2"><a href="assess-perf.html#cb1649-2" tabindex="-1"></a>Model_perf <span class="ot">&lt;-</span> <span class="fu">glm</span>(Heavydrinker <span class="sc">~</span> Gender <span class="sc">+</span> highbmi, <span class="at">data =</span> NHANES, <span class="at">family =</span> binomial)</span>
-<span id="cb1649-3"><a href="assess-perf.html#cb1649-3" tabindex="-1"></a><span class="fu">logistic.display</span>(Model_perf)</span></code></pre></div>
-<pre><code>## 
-## Logistic regression predicting Heavydrinker 
-##  
-##                        crude OR(95%CI)   adj. OR(95%CI)    P(Wald&#39;s test) P(LR-test)
-## Gender: Female vs Male 0.17 (0.12,0.24)  0.17 (0.12,0.24)  &lt; 0.001        &lt; 0.001   
-##                                                                                     
-## highbmi                1.21 (0.93,1.58)  1.11 (0.84,1.46)  0.456          0.453     
-##                                                                                     
-## Log-likelihood = -833.8269
-## No. of observations = 2548
-## AIC value = 1673.6539</code></pre>
-<div class="sourceCode" id="cb1651"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1651-1"><a href="assess-perf.html#cb1651-1" tabindex="-1"></a><span class="co"># [</span><span class="al">NOTE</span><span class="co">: LogisticDx archived from CRAN; using base R diagnostics]</span></span>
-<span id="cb1651-2"><a href="assess-perf.html#cb1651-2" tabindex="-1"></a>diag_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb1651-3"><a href="assess-perf.html#cb1651-3" tabindex="-1"></a>  <span class="at">y    =</span> Model_perf<span class="sc">$</span>y,</span>
-<span id="cb1651-4"><a href="assess-perf.html#cb1651-4" tabindex="-1"></a>  <span class="at">yhat =</span> <span class="fu">fitted</span>(Model_perf)</span>
-<span id="cb1651-5"><a href="assess-perf.html#cb1651-5" tabindex="-1"></a>) <span class="sc">%&gt;%</span> </span>
-<span id="cb1651-6"><a href="assess-perf.html#cb1651-6" tabindex="-1"></a>  <span class="fu">group_by</span>(yhat) <span class="sc">%&gt;%</span> </span>
-<span id="cb1651-7"><a href="assess-perf.html#cb1651-7" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">y_obs =</span> <span class="fu">sum</span>(y), <span class="at">y_exp =</span> <span class="fu">sum</span>(yhat), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
-<span id="cb1651-8"><a href="assess-perf.html#cb1651-8" tabindex="-1"></a>diag_df</span></code></pre></div>
-<pre><code>## # A tibble: 4 × 4
-##     yhat     n y_obs y_exp
-##    &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1 0.0340   426    13  14.5
-## 2 0.0376   731    29  27.5
-## 3 0.169    430    74  72.5
-## 4 0.184    961   175 176.</code></pre>
-<div class="sourceCode" id="cb1653"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1653-1"><a href="assess-perf.html#cb1653-1" tabindex="-1"></a><span class="co"># obtain Pearson&#39;s test statistics</span></span>
-<span id="cb1653-2"><a href="assess-perf.html#cb1653-2" tabindex="-1"></a>chi2 <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">residuals</span>(Model_perf, <span class="at">type =</span> <span class="st">&quot;pearson&quot;</span>)<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb1653-3"><a href="assess-perf.html#cb1653-3" tabindex="-1"></a>   pval <span class="ot">&lt;-</span> <span class="fu">pchisq</span>(chi2, <span class="dv">1</span>, <span class="at">lower.tail=</span><span class="cn">FALSE</span>)</span>
-<span id="cb1653-4"><a href="assess-perf.html#cb1653-4" tabindex="-1"></a>   <span class="fu">data.frame</span>(<span class="at">test=</span><span class="st">&quot;Pearson chi2(1)&quot;</span>,<span class="at">chi.sq=</span>chi2,<span class="at">pvalue=</span>pval)</span></code></pre></div>
-<pre><code>##              test chi.sq pvalue
-## 1 Pearson chi2(1)   2545      0</code></pre>
-<p>此時的模型有 4 種共變量模式 (covariate patterns)，其實就是性別和超重與否的四種排列組合。這裏報告的 <code>Pearson's test statisitics</code>
-我們在前一章講邏輯迴歸殘差的部分有講過，它就是 Pearson 標準化殘差的平方和。此處它的卡方檢驗，檢驗零假設是“模型制定正確”。所以，我們無足夠的證據 <span class="math inline">\((p=0.58)\)</span> 來反對零假設，數據觀測值和模型的期待值似乎也較爲吻合。</p>
-<p>但是一旦模型裏加入了新的連續型變量，整個模型的共變量模式 (covariate patterns)，將會變得很難進行上面的觀測值和期待值的比較，由於加入的連續型變量會導致模型的共變量模式變得越來越多，甚至接近與樣本量個數 <span class="math inline">\(n\)</span>，也就是每個共變量模式的樣本越來越小，直至等於 <span class="math inline">\(1\)</span>。連續型變量的模型中我們 Hosmer-Lemeshow 檢驗 (Section <a href="model-comparison.html#gof">61.4</a>) 而不是 Pearson 統計檢驗量。</p>
+<div id="clinical-trials" class="section level1 hasAnchor" number="34">
+<h1><span class="header-section-number">第 34 章</span> 臨牀實驗的基本原則<a href="clinical-trials.html#clinical-trials" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<div id="CT-principles" class="section level2 hasAnchor" number="34.1">
+<h2><span class="header-section-number">34.1</span> 臨牀實驗的基本原則 Principles of clinical trials<a href="clinical-trials.html#CT-principles" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>臨牀實驗 (clinical trial) 是一種計劃好的實驗，目的是評估一種或多種治療方法對特定疾病患者的效益。設計良好的臨牀實驗是評估治療效果最嚴謹的方法。臨牀實驗的主要目標是提供關於治療<strong>療效 (efficacy)</strong> 和<strong>安全性 (safety)</strong> 的可靠證據。這裏需要區分兩個概念：</p>
+<ul>
+<li><strong>療效 (efficacy)</strong>：指在理想條件下（例如所有患者都按照預定方案接受治療時），干預措施所能達到的效果。</li>
+<li><strong>有效性 (effectiveness)</strong>：指通過常規臨牀實踐提供治療時，干預措施實際能達到的效果。</li>
+</ul>
+<p>大多數大規模臨牀實驗屬於<strong>務實型 (pragmatic)</strong> 的，也就是說，它們關注的是在真實臨牀情境中治療策略的效果，而不是在嚴格控制的理想環境中的表現。</p>
 </div>
-<div id="可解釋因變量的變異度及-r2-決定係數" class="section level2 hasAnchor" number="68.2">
-<h2><span class="header-section-number">68.2</span> 可解釋因變量的變異度及 <span class="math inline">\(R^2\)</span> 決定係數<a href="assess-perf.html#%E5%8F%AF%E8%A7%A3%E9%87%8B%E5%9B%A0%E8%AE%8A%E9%87%8F%E7%9A%84%E8%AE%8A%E7%95%B0%E5%BA%A6%E5%8F%8A-r2-%E6%B1%BA%E5%AE%9A%E4%BF%82%E6%95%B8" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<p>精準度的確重要，但是模型精準度好，只代表它和過去擬合它的觀測數據之間關係接近，不代表它能準確地預測其他的個體的概率。前文中只有性別作爲預測變量的邏輯迴歸模型就是實例，它和擬合的觀測數據做到了 100% 完美擬合，但是不用大腦思考也知道，除了性別還有其他更多的能預測一個人是否是重度飲酒者的變量，且擁有能提升模型的擬合程度的潛質。只有性別作預測變量的邏輯迴歸模型，最大的問題在於，它只能解釋個體之間<strong>重度飲酒者概率</strong>的<strong>變異度(variation)</strong>中極少的部分。事實上，它<strong>只能解釋能夠用性別解釋的個體之間重度飲酒者概率的變異度</strong>。所以，此處打算引伸出的概念就是類似簡單線性迴歸中的 <span class="math inline">\(R^2\)</span> 決定係數 (Section <a href="ANOVA.html#Rsquare">29.2.3</a>) 的定義。</p>
-<p>你應該還能記得，在簡單線性迴歸中決定係數 <span class="math inline">\(R^2\)</span> 的含義是因變量的平方和 (平方和) 中能被模型解釋的部分：</p>
-<p><span class="math display">\[
-R^2 = \frac{SS_{REG}}{SS_{yy}} = \frac{\sum_{i=1}^n(\hat{y}_i-\bar{y})^2}{\sum_{i=1}^n(y_i-\bar{y})^2} = 1-\frac{\sum_{i=1}^n(y_i-\hat{y}_i)^2}{\sum_{i=1}^n(y_i-\bar{y})^2}
-\]</span></p>
-<p>許多前人嘗試過試圖將線性迴歸的決定係數概念擴展到廣義線性迴歸模型中來，但是目前爲止的嘗試都不太成功。所以，只有一些借鑑了簡單線性迴歸的的決定係數思想的概念，得到了擴展，但是要注意，他們本身和決定係數是有區別的。</p>
-<p><strong>“假決定係數 (pseudo-R2)”</strong>，別名 McFadden 的似然比係數 (McFadden’s likelihood ratio index) <br> <span class="math display">\[R^r_{\text{McFadden}} = 1 - \frac{\ell_c}{\ell_\text{null}}\]</span> <br> 其中 <span class="math inline">\(\ell_c, \ell_{\text{null}}\)</span> 分別是模型的極大似然值 和零模型時的極大似然值。<br> 假決定係數，之所以被冠名“假”，因爲這個係數你也可以在簡單線性迴歸下計算，但是其大小常常和一般我們熟知的決定係數結果有些差距。所以，常有人質疑其到底是否可用 (因爲它在現實生活中根本不可能取到 <span class="math inline">\(0\)</span> 或 <span class="math inline">\(1\)</span>)。</p>
-<p>在 R 裏，擬合了邏輯迴歸以後通常也不會報告假決定係數值的大小。所以想要獲得它，需要 <code>DescTools::PseudoR2()</code> 命令來獲取：</p>
-<div class="sourceCode" id="cb1655"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1655-1"><a href="assess-perf.html#cb1655-1" tabindex="-1"></a><span class="fu">PseudoR2</span>(Model_perf)</span></code></pre></div>
-<pre><code>## McFadden 
-##  0.07875</code></pre>
-<p>上文中包含了性別和是否超重的模型的假決定係數只有區區 <span class="math inline">\(0.0785\)</span>，可見，只有性別和是否超重兩個變量只能解釋結果變量變異度中極少的部分。</p>
+<div id="臨牀實驗的關鍵設計要素" class="section level2 hasAnchor" number="34.2">
+<h2><span class="header-section-number">34.2</span> 臨牀實驗的關鍵設計要素<a href="clinical-trials.html#%E8%87%A8%E7%89%80%E5%AF%A6%E9%A9%97%E7%9A%84%E9%97%9C%E9%8D%B5%E8%A8%AD%E8%A8%88%E8%A6%81%E7%B4%A0" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>一項臨牀實驗要能得出可靠的結論，在設計上必須具備以下幾個特徵：</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>有對照 (Controlled)</strong>
+<br> 任何干預都需要和一個或多個其他干預進行比較。通常是將新的治療方法和標準療法進行比較。在藥物治療的實驗中，常常會設置安慰劑對照 (placebo control)。</p></li>
+<li><p><strong>隨機化 (Randomised)</strong>
+<br> 治療之間的比較必須是公平的，結果的可靠性取決於我們在多大程度上避免了偏倚 (bias)——不論是有意的還是無意的。隨機化是關鍵：患者被隨機分配到某一治療組，使得分配方案無法被事先預測。</p></li>
+<li><p><strong>足夠大的規模 (Large)</strong>
+<br> 患者對治療的反應差異很大。爲了獲得對治療效果的精確估計，需要有足夠大的樣本量。</p></li>
+</ol>
 </div>
-<div id="分辨能力-descrimination" class="section level2 hasAnchor" number="68.3">
-<h2><span class="header-section-number">68.3</span> 分辨能力 descrimination<a href="assess-perf.html#%E5%88%86%E8%BE%A8%E8%83%BD%E5%8A%9B-descrimination" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div id="敏感度和特異度" class="section level3 hasAnchor" number="68.3.1">
-<h3><span class="header-section-number">68.3.1</span> 敏感度和特異度<a href="assess-perf.html#%E6%95%8F%E6%84%9F%E5%BA%A6%E5%92%8C%E7%89%B9%E7%95%B0%E5%BA%A6" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>評價一個邏輯迴歸的表現，最後的一個手段是，看這個模型對觀測對象的分辨能力。也就是，當我們人爲地指定一個概率值 <span class="math inline">\(p\)</span> 作爲是否患病的閾值，那麼，觀測對象通過模型計算獲得的概率，已經觀測對象本身的觀測概率之間，其實可以用診斷學的敏感度和特異度的概念來評價模型對於觀測對象的分別能力到底如何。所以邏輯迴歸模型的敏感度就是，病例中通過模型計算被判斷爲陽性的概率；特異度是，非病例中，通過模型計算本判斷爲陰性的概率。這個敏感度特異度當然會隨着我們選擇的閾值而變化。</p>
-<p>圖 <a href="assess-perf.html#fig:ROClogistic">68.1</a> 所示的是，將性別， BMI，和年齡三個變量放入邏輯迴歸模型之後，模型對於觀察對象的分辨能力的 ROC 示意圖。計算所得的 ROC 曲線下面積爲 0.7484。如果一個模型是失敗的，那麼其曲線下面積爲 (接近) 0.5。也就是會十分貼近 <span class="math inline">\(y=x\)</span> 的直線。</p>
-<div class="sourceCode" id="cb1657"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1657-1"><a href="assess-perf.html#cb1657-1" tabindex="-1"></a>Model_perf <span class="ot">&lt;-</span> <span class="fu">glm</span>(Heavydrinker <span class="sc">~</span> Gender <span class="sc">+</span> bmi <span class="sc">+</span> ageyrs, <span class="at">data =</span> NHANES, <span class="at">family =</span> binomial)</span>
-<span id="cb1657-2"><a href="assess-perf.html#cb1657-2" tabindex="-1"></a>ROC_graph <span class="ot">&lt;-</span> <span class="fu">lroc</span>(Model_perf, <span class="at">grid.col =</span> <span class="st">&quot;grey&quot;</span>, <span class="at">lwd =</span> <span class="dv">3</span>, <span class="at">frame =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:ROClogistic"></span>
-<img src="bookdown_files/figure-html/ROClogistic-1.png" alt="Receiver operating curve for model for heavy drinking with gender, age, and BMI" width="100%" />
-<p class="caption">
-圖 68.1: Receiver operating curve for model for heavy drinking with gender, age, and BMI
-</p>
+<div id="臨牀實驗中的治療類型" class="section level2 hasAnchor" number="34.3">
+<h2><span class="header-section-number">34.3</span> 臨牀實驗中的治療類型<a href="clinical-trials.html#%E8%87%A8%E7%89%80%E5%AF%A6%E9%A9%97%E4%B8%AD%E7%9A%84%E6%B2%BB%E7%99%82%E9%A1%9E%E5%9E%8B" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>臨牀實驗可以評估的治療或干預類型非常多樣，例如：</p>
+<ul>
+<li><strong>藥物療法</strong>：如 Mwanza 的一項實驗研究了阿昔洛韋 (acyclovir) 抑制單純疱疹病毒 (HSV) 是否能降低 HIV 高危女性的 HIV 感染率。</li>
+<li><strong>醫療器械</strong>：如藥物洗脫支架 (drug-eluting stent) 治療冠心病。</li>
+<li><strong>手術治療</strong>：如膝關節骨性關節炎的骨科手術。</li>
+<li><strong>其他干預</strong>：如腎移植中的遠端缺血預處理 (remote ischaemic preconditioning)。</li>
+<li><strong>教育干預</strong>：如坦桑尼亞的 MEMA kwa Vijana 試驗，評估青少年性健康教育是否能降低 HIV 感染。</li>
+<li><strong>篩檢 (Screening)</strong>：如英國的 UKCTOCS 試驗，評估卵巢癌篩檢是否能降低死亡率。</li>
+<li><strong>疫苗</strong>：如 RTS,S/AS01 瘧疾疫苗試驗。</li>
+</ul>
 </div>
-<div class="sourceCode" id="cb1658"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1658-1"><a href="assess-perf.html#cb1658-1" tabindex="-1"></a>ROC_graph<span class="sc">$</span>auc</span></code></pre></div>
-<pre><code>## [1] 0.7484</code></pre>
-<p>曲線下面積，AUC 的另一個有用的意義是，從觀測對象中任意選取兩個人，一個是病例 <span class="math inline">\((y_i = 1)\)</span>，一個是非病例 <span class="math inline">\((y_j = 0)\)</span>，那麼曲線下面積就是模型能夠正確將這兩個對象按照是否患病的可能性進行排序的概率。 <span class="math inline">\(\text{AUC} = \text{Pr}(\pi_i &gt; \pi_j | y_i = 1 \&amp; y_j = 0)\)</span></p>
-<p>ROC 曲線本身有自己的優點，也有許多侷限性。最近有另外一個用於診斷的新型曲線–預測曲線<span class="citation">(<a href="#ref-Pepe2007">Pepe et al. 2007</a>)</span>。預測曲線繪製的是，觀測對象的擬合後概率 <span class="math inline">\(\hat\pi_i\)</span> 和這個概率在所有觀察對象的擬合後概率的百分位數 (percentile) 之間的曲線。一個模型，如果給許多對象相似的概率，那麼不能說這個模型的分辨能力足夠好。同時，此圖也能一目瞭然讓人看到大概多少對象的患病概率是大於一定水平的。</p>
-<div class="sourceCode" id="cb1660"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1660-1"><a href="assess-perf.html#cb1660-1" tabindex="-1"></a>Predictive <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">fitted</span>(Model_perf), <span class="fu">rank</span>(<span class="fu">fitted</span>(Model_perf))<span class="sc">/</span><span class="dv">2548</span>)</span>
-<span id="cb1660-2"><a href="assess-perf.html#cb1660-2" tabindex="-1"></a><span class="fu">names</span>(Predictive) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;hatpi&quot;</span>, <span class="st">&quot;percentile&quot;</span>)</span>
-<span id="cb1660-3"><a href="assess-perf.html#cb1660-3" tabindex="-1"></a><span class="fu">ggplot</span>(Predictive, <span class="fu">aes</span>(<span class="at">x =</span> percentile, <span class="at">y =</span> hatpi)) <span class="sc">+</span> <span class="fu">geom_line</span>() <span class="sc">+</span></span>
-<span id="cb1660-4"><a href="assess-perf.html#cb1660-4" tabindex="-1"></a>  <span class="fu">ylim</span>(<span class="dv">0</span>, <span class="fl">0.4</span>) <span class="sc">+</span></span>
-<span id="cb1660-5"><a href="assess-perf.html#cb1660-5" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Risk percentile&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Heavy drinker risk&quot;</span>)  <span class="sc">+</span> <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
-<span id="cb1660-6"><a href="assess-perf.html#cb1660-6" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">17</span>),</span>
-<span id="cb1660-7"><a href="assess-perf.html#cb1660-7" tabindex="-1"></a>       <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>),</span>
-<span id="cb1660-8"><a href="assess-perf.html#cb1660-8" tabindex="-1"></a>  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>))</span></code></pre></div>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:predictiveness"></span>
-<img src="bookdown_files/figure-html/predictiveness-1.png" alt="Predictiveness curve for model for heavy drinking with gender, age, and BMI as covariate" width="100%" />
-<p class="caption">
-圖 68.2: Predictiveness curve for model for heavy drinking with gender, age, and BMI as covariate
-</p>
+<div id="臨牀實驗的經費來源" class="section level2 hasAnchor" number="34.4">
+<h2><span class="header-section-number">34.4</span> 臨牀實驗的經費來源<a href="clinical-trials.html#%E8%87%A8%E7%89%80%E5%AF%A6%E9%A9%97%E7%9A%84%E7%B6%93%E8%B2%BB%E4%BE%86%E6%BA%90" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>大規模臨牀實驗需要龐大的預算，主要的經費來源可以分爲兩大類：</p>
+<ol style="list-style-type: decimal">
+<li><strong>商業贊助 (commercially sponsored)</strong>：資金來自製藥公司或醫療器械公司。</li>
+<li><strong>公共資助 (publicly funded)</strong>：資金來自政府機構（如英國的 NIHR、美國的 NIH）或慈善團體（如 Cancer Research UK）。</li>
+</ol>
 </div>
-<p>圖 <a href="assess-perf.html#fig:predictiveness">68.2</a> 所示的是，性別，年齡，BMI作爲共變量的邏輯迴歸模型的預測變量，預測重度飲酒概率的模型給出的預測曲線。從圖中可見，大多數人的概率值各不相同。而且，圖中也能告訴我們大約 20% 的觀測對象其重度飲酒的概率大於 0.2。</p>
+<div id="CT-ethics" class="section level2 hasAnchor" number="34.5">
+<h2><span class="header-section-number">34.5</span> 醫學倫理 Medical ethics<a href="clinical-trials.html#CT-ethics" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>隨機對照試驗是在人類參與者身上進行的實驗，因此會引起重要的倫理問題。<strong>赫爾辛基宣言 (Declaration of Helsinki)</strong> 是關於在人類參與者身上進行醫學研究的國際性建議，所有的臨牀實驗都應當遵守。其基本原則包括：</p>
+<ul>
+<li>不應有任何患者因爲參與實驗而遭受損害。</li>
+<li>不應有任何患者被拒絕已知有效的治療。然而，「已知有效」是基於客觀證據，而非主觀信念。</li>
+</ul>
+<p>參與者需要在充分了解實驗的情況下提供<strong>知情同意 (informed consent)</strong>，包括潛在的風險。不過在某些情況下，知情同意並不容易獲得，例如涉及幼兒的實驗，或者急性心肌梗死 (ST-elevation myocardial infarction) 患者需要緊急介入治療的情況——此時可能需要使用<strong>延遲知情同意 (delayed consent)</strong> 的方式。</p>
+<p>在許多國家，實驗需要獲得<strong>獨立倫理委員會 (Research Ethics Committee)</strong> 的批准。此外，<strong>藥品監管機構 (Regulatory Authority)</strong> 也負責確保獲批上市的產品是有效的且安全性經過適當評估，例如英國的 MHRA、美國的 FDA、歐洲的 EMA。</p>
+</div>
+<div id="CT-protocol" class="section level2 hasAnchor" number="34.6">
+<h2><span class="header-section-number">34.6</span> 實驗方案 Trial protocol<a href="clinical-trials.html#CT-protocol" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>實驗方案 (trial protocol) 是任何臨牀實驗的核心文件。它提供了科學設計的細節以及實驗的實際組織安排。Pocock (Clinical Trials: A Practical Approach) 建議一個方案至少應包括以下 14 項內容：</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">項目</th>
+<th align="left">內容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">背景與總體目標 (Background &amp; general aims)</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">具體目標 (Specific objectives)</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">患者選擇標準 (Patient selection criteria)</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">治療方案 (Treatment schedules)</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">患者評估方法 (Methods of patient evaluation)</td>
+</tr>
+<tr class="even">
+<td align="left">6</td>
+<td align="left">實驗設計：對照、盲法、隨機化 (Trial design)</td>
+</tr>
+<tr class="odd">
+<td align="left">7</td>
+<td align="left">患者註冊與隨機化 (Registration and randomisation)</td>
+</tr>
+<tr class="even">
+<td align="left">8</td>
+<td align="left">患者知情同意 (Patient consent)</td>
+</tr>
+<tr class="odd">
+<td align="left">9</td>
+<td align="left">所需樣本量 (Required size of study)</td>
+</tr>
+<tr class="even">
+<td align="left">10</td>
+<td align="left">實驗進度監測 (Monitoring of trial progress)</td>
+</tr>
+<tr class="odd">
+<td align="left">11</td>
+<td align="left">表單與數據管理 (Forms and data handling)</td>
+</tr>
+<tr class="even">
+<td align="left">12</td>
+<td align="left">方案偏離 (Protocol deviations)</td>
+</tr>
+<tr class="odd">
+<td align="left">13</td>
+<td align="left">統計分析計劃 (Plans for statistical analysis)</td>
+</tr>
+<tr class="even">
+<td align="left">14</td>
+<td align="left">行政職責 (Administrative responsibilities)</td>
+</tr>
+</tbody>
+</table>
+<p>實驗方案的主要作用包括：爲實驗的執行提供指南、幫助獲得經費、取得倫理審查批准，以及爲參與和監測實驗的人員提供有用的信息來源。事實上，方案中涉及的許多內容，在撰寫最終報告時會直接構成引言、背景和方法部分。</p>
+<div id="定義參與者治療和結局" class="section level3 hasAnchor" number="34.6.1">
+<h3><span class="header-section-number">34.6.1</span> 定義參與者、治療和結局<a href="clinical-trials.html#%E5%AE%9A%E7%BE%A9%E5%8F%83%E8%88%87%E8%80%85%E6%B2%BB%E7%99%82%E5%92%8C%E7%B5%90%E5%B1%80" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>實驗方案中另一個重要的組成部分是明確定義合格的患者、治療方案和結局指標。</p>
+<p><strong>合格患者 (eligible patients)</strong>：需要有可靠的診斷。納入和排除標準的設定需要謹慎權衡——如果過於嚴格，可能限制招募的患者人數，結果也難以推廣 (generalisable)；如果過於寬泛，則可能難以解讀結果適用於哪些人羣。</p>
+<p><strong>治療方案</strong>：需要提供治療的具體細節，例如精確的給藥方案，或在實驗期間可能發生的劑量調整。比較通常是新治療與對照治療之間進行，對照可以是標準療法 (active standard) 或安慰劑/無治療 (placebo/no treatment)。</p>
+<p><strong>結局指標 (outcome measures)</strong>：需要在方案中明確指定<strong>主要結局 (primary outcome)</strong> 和<strong>次要結局 (secondary outcome)</strong>，並制定清晰的、可客觀評估的定義。有時需要由<strong>獨立事件評審委員會 (event validation committee)</strong> 來減少觀察者之間的變異。</p>
 </div>
 </div>
-<div id="practical-11" class="section level2 hasAnchor" number="68.4">
-<h2><span class="header-section-number">68.4</span> Practical 11<a href="assess-perf.html#practical-11" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<p>本次練習題中我們將會探索模型表現的評估方法和可能出現的問題。數據是前文中使用的 <code>nhanesglm.dta</code>。</p>
-<div class="sourceCode" id="cb1661"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1661-1"><a href="assess-perf.html#cb1661-1" tabindex="-1"></a>NHANES <span class="ot">&lt;-</span> <span class="fu">read_dta</span>(<span class="st">&quot;../backupfiles/nhanesglm.dta&quot;</span>)</span></code></pre></div>
+<div id="CT-control" class="section level2 hasAnchor" number="34.7">
+<h2><span class="header-section-number">34.7</span> 對照組的必要性 The need for a control group<a href="clinical-trials.html#CT-control" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>沒有對照組的臨牀實驗幾乎沒有什麼用處。爲什麼？因爲我們無法將新治療的效果和其他原因造成的效果區分開來。這些其他原因可能包括：</p>
+<ul>
+<li>隨時間的自然改善 (natural improvement over time)</li>
+<li>均值回歸 (regression to the mean)</li>
+<li>安慰劑效應 / 關懷效應 (placebo effect / tender loving care)</li>
+</ul>
+<p>一個很好的例子是膝關節骨科手術的實驗：在這個實驗中，180 名患者被隨機分配到兩個手術干預組或一個<strong>假手術 (sham surgery)</strong> 對照組。結果顯示手術對疼痛評分 (0-100) 的改善並不比假手術好多少。如果這個實驗沒有設置對照組，我們可能會錯誤地認爲手術是有效的，因爲所有組的患者疼痛都有所減輕。</p>
+</div>
+<div id="CT-randomisation" class="section level2 hasAnchor" number="34.8">
+<h2><span class="header-section-number">34.8</span> 隨機化 Randomisation<a href="clinical-trials.html#CT-randomisation" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="什麼是隨機化" class="section level3 hasAnchor" number="34.8.1">
+<h3><span class="header-section-number">34.8.1</span> 什麼是隨機化<a href="clinical-trials.html#%E4%BB%80%E9%BA%BC%E6%98%AF%E9%9A%A8%E6%A9%9F%E5%8C%96" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>隨機化是臨牀實驗的<strong>核心設計特徵</strong>。透過隨機化，參與者被分配到某一治療組（包括安慰劑組）完全是靠隨機的方式，這確保了每個患者的治療分配無法被事先預測。例如在一個兩組實驗中，每個患者通常有相同的機率被分到任意一組——在概念上就像拋硬幣，儘管在實踐中會使用更加精密的方法。</p>
+</div>
+<div id="爲什麼隨機化很重要" class="section level3 hasAnchor" number="34.8.2">
+<h3><span class="header-section-number">34.8.2</span> 爲什麼隨機化很重要<a href="clinical-trials.html#%E7%88%B2%E4%BB%80%E9%BA%BC%E9%9A%A8%E6%A9%9F%E5%8C%96%E5%BE%88%E9%87%8D%E8%A6%81" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>隨機化之所以重要，是因爲它能確保各組之間在<strong>已知和未知的基線因素 (baseline factors)</strong> 上具有相似性。這樣一來，治療組之間觀察到的任何結局差異，都可以可靠地歸因於正在研究的治療方法，而非其他原因。</p>
+</div>
+<div id="非隨機化方法的缺陷" class="section level3 hasAnchor" number="34.8.3">
+<h3><span class="header-section-number">34.8.3</span> 非隨機化方法的缺陷<a href="clinical-trials.html#%E9%9D%9E%E9%9A%A8%E6%A9%9F%E5%8C%96%E6%96%B9%E6%B3%95%E7%9A%84%E7%BC%BA%E9%99%B7" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>如果使用任何非隨機的方法來分配治療，就存在有意或無意偏倚的風險。例如：</p>
+<ul>
+<li>按照患者或醫生的選擇來分配治療——醫生可能傾向於將病情較重的患者分到某一治療組，使得該組的結果看起來更差。</li>
+<li>使用可預測的系統性分配方法（如按生日、住院號末位數字分配）——由於治療分配可以被提前預測，調查者的決策可能會受到影響，不論是有意還是無意的。</li>
+</ul>
+</div>
+<div id="隨機化的困難" class="section level3 hasAnchor" number="34.8.4">
+<h3><span class="header-section-number">34.8.4</span> 隨機化的困難<a href="clinical-trials.html#%E9%9A%A8%E6%A9%9F%E5%8C%96%E7%9A%84%E5%9B%B0%E9%9B%A3" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>隨機化在某些情況下是有困難的。例如在比較截然不同的干預措施時（如侵入性手術 vs 保守療法），患者可能不願意接受隨機分配。此外，隨機化看起來似乎和臨牀醫生爲每個患者提供最佳治療的原則相矛盾——治療是基於隨機分配而非醫生的判斷。不過，<strong>臨牀均衡 (clinical equipoise)</strong> 原則指出，只要在專業醫學界對各種治療方案的優劣存在真正的不確定性，隨機化在倫理上就是合理的。</p>
 </div>
 </div>
-<h3>References</h3>
-<div id="refs" class="references csl-bib-body hanging-indent">
-<div id="ref-Pepe2007" class="csl-entry">
-Pepe, Margaret S, Ziding Feng, Ying Huang, et al. 2007. <span>“Integrating the Predictiveness of a Marker with Its Performance as a Classifier.”</span> <em>American Journal of Epidemiology</em> 167 (3): 362–68.
+<div id="CT-obs-vs-rct" class="section level2 hasAnchor" number="34.9">
+<h2><span class="header-section-number">34.9</span> 觀察性研究與臨牀實驗<a href="clinical-trials.html#CT-obs-vs-rct" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="觀察性數據庫-observational-registry" class="section level3 hasAnchor" number="34.9.1">
+<h3><span class="header-section-number">34.9.1</span> 觀察性數據庫 Observational registry<a href="clinical-trials.html#%E8%A7%80%E5%AF%9F%E6%80%A7%E6%95%B8%E6%93%9A%E5%BA%AB-observational-registry" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>臨牀實驗面臨的一個問題是結果對一般人羣的適用性 (external validity)。實驗的納排標準往往較爲嚴格，實際上只有一小部分患者有資格參加。也就是說，設計良好的實驗確保了治療之間的公平比較（<strong>內部效度 internal validity</strong> 好），但結果可能不能完全反映真實臨牀實踐中的情況（<strong>外部效度 external validity</strong> 較弱）。</p>
+<p>觀察性數據庫（如患者登記數據庫）可以提供以下有價值的信息：</p>
+<ul>
+<li>干預措施在臨牀實踐中的實際應用方式</li>
+<li>不受樣本量限制，能研究較罕見的結局指標</li>
+<li>觀察常規實踐中與干預相關的不良結局發生率</li>
+</ul>
+<p>但觀察性數據庫的主要侷限在於它無法控制<strong>選擇偏倚 (selection bias)</strong>——干預是基於臨牀判斷而非隨機化。</p>
+</div>
+<div id="隨機試驗與觀察性研究結果不一致的例子" class="section level3 hasAnchor" number="34.9.2">
+<h3><span class="header-section-number">34.9.2</span> 隨機試驗與觀察性研究結果不一致的例子<a href="clinical-trials.html#%E9%9A%A8%E6%A9%9F%E8%A9%A6%E9%A9%97%E8%88%87%E8%A7%80%E5%AF%9F%E6%80%A7%E7%A0%94%E7%A9%B6%E7%B5%90%E6%9E%9C%E4%B8%8D%E4%B8%80%E8%87%B4%E7%9A%84%E4%BE%8B%E5%AD%90" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>設計良好的臨牀實驗是確定干預效果的首選方法。以下是一些臨牀實驗推翻了之前觀察性研究結論的例子：</p>
+<ol style="list-style-type: decimal">
+<li><strong>ACTION 試驗</strong>：觀察性數據曾引起對鈣離子拮抗劑 (calcium antagonists) 安全性的擔憂，但 ACTION 試驗在 7,665 名穩定型心絞痛 (stable angina) 患者中清楚地表明，硝苯地平 (nifedipine) 不會增加主要心血管事件（包括死亡）的風險。</li>
+<li><strong>HOPE 試驗</strong>：觀察性研究暗示維生素 E 可降低心血管疾病風險，但 HOPE 試驗未能證實這一點。</li>
+<li><strong>CARET 試驗</strong>：觀察性研究暗示 <span class="math inline">\(\beta\)</span>-胡蘿蔔素和維生素 A 可能預防肺癌，但 CARET 試驗在 18,314 名吸煙者/前吸煙者中發現，這種干預不僅沒有益處，反而可能有害——相對風險爲 1.28 (95% CI: 1.04-1.57)。</li>
+<li><strong>DIG 試驗</strong>：地高辛 (digoxin) 在心衰患者中不影響死亡率。</li>
+<li><strong>CTOPP 試驗</strong>：生理性起搏器並不優於單腔起搏器。</li>
+</ol>
+<p>當然，也有觀察性研究和臨牀實驗結果一致的情況。例如，南非、肯尼亞和烏干達的三項試驗在約 11,000 名男性中證實了男性包皮環切術 (male circumcision) 對預防 HIV 的保護作用，這與先前的觀察性數據一致。</p>
+<p>不難注意到，在許多情況下，進行臨牀實驗是不可能的或不符合倫理的。例如，研究被動吸煙和肺癌的關係——我們不可能隨機分配人們去吸煙。同樣地，我們也不可能隨機分配人們的工作場所來研究石棉暴露等職業危險因素。在這些情況下，觀察性研究的價值是不可替代的。</p>
+</div>
+</div>
+<div id="CT-blinding" class="section level2 hasAnchor" number="34.10">
+<h2><span class="header-section-number">34.10</span> 盲法 Blinding (masking)<a href="clinical-trials.html#CT-blinding" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>知道患者接受的是哪種治療可能會對實驗結果產生偏倚。這種偏倚可能來自以下幾個方面：</p>
+<ol style="list-style-type: decimal">
+<li><strong>患者層面</strong>：患者可能因爲知道自己在接受新治療而獲得心理上的好處，或者因爲知道自己在對照組而感到失望。</li>
+<li><strong>研究者層面</strong>：研究者的知情可能影響對患者的其他照護，包括劑量調整或對治療組患者的更密切觀察。</li>
+<li><strong>評估者層面</strong>：負責評估結局的人員可能傾向於對接受新治療的患者記錄更有利的結果。</li>
+</ol>
+<p>爲了避免這些偏倚，許多實驗——特別是藥物實驗——被設計爲<strong>雙盲 (double blind)</strong>：患者、研究者和評估者都不知道患者接受的是哪種治療。如果沒有標準治療，患者可能被給予<strong>安慰劑 (placebo)</strong>——一種除了活性成分以外與研究藥物完全相同的製劑。只有患者不知情的實驗稱爲<strong>單盲 (single blind)</strong>。</p>
+<p>盲法的實施需要仔細的組織安排。通常由藥劑師根據預先準備好的隨機化清單來準備盲法藥物包裝，代碼在實驗結束、數據準備分析之前保持保密。不過爲了患者安全，個別患者的代碼可以被單獨揭盲。</p>
+<p>在某些情況下，盲法是困難甚至不可能的。例如在 RITA-2 試驗中，患者被隨機分配到冠脈成形術 (coronary angioplasty) 或單純藥物治療——顯然無法對患者和治療醫生實行盲法。但仍然可以通過<strong>獨立事件評審委員會</strong>來對結局評估進行盲法處理。</p>
+<div id="假手術對照-sham-controls" class="section level3 hasAnchor" number="34.10.1">
+<h3><span class="header-section-number">34.10.1</span> 假手術對照 Sham controls<a href="clinical-trials.html#%E5%81%87%E6%89%8B%E8%A1%93%E5%B0%8D%E7%85%A7-sham-controls" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>一個很有說服力的例子是腎去神經術 (renal denervation) 治療難治性高血壓的研究：</p>
+<ul>
+<li><strong>SYMPLICITY 1</strong>（非對照試驗，45 例）：收縮壓 (SBP) 在 6 個月時降低了 22 mmHg——看起來非常有效。</li>
+<li><strong>SYMPLICITY 2</strong>（隨機對照但未盲化的試驗，100 例）：治療組 SBP 降低了 32 mmHg，對照組僅降低 1 mmHg。</li>
+<li><strong>SYMPLICITY 3</strong>（隨機化 + <strong>假手術</strong>對照 + 盲法，535 例）：治療組 SBP 降低 14 mmHg，假手術組降低 12 mmHg——差異並不顯著。</li>
+</ul>
+<p>不難注意到，隨著實驗設計的改進——從無對照到有對照、從非盲法到使用假手術對照——治療效果的估計變得越來越小、越來越接近真實。</p>
+</div>
+</div>
+<div id="CT-phases" class="section level2 hasAnchor" number="34.11">
+<h2><span class="header-section-number">34.11</span> 臨牀實驗的分期 Classification of clinical trials<a href="clinical-trials.html#CT-phases" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>臨牀實驗主要分爲四期，這個分期體系最初是爲藥物開發設計的，但也適用於其他治療領域：</p>
+<ul>
+<li><strong>Phase I（第一期）</strong>：在健康志願者中評估藥物的安全性和毒理學 (clinical pharmacology and toxicology)。目的是確定適當的藥物劑量，並了解藥物在體內的代謝過程。</li>
+<li><strong>Phase II（第二期）</strong>：在少量患者中進行的小規模（通常是隨機化的）先導研究 (pilot study)，初步評估藥物的療效。</li>
+<li><strong>Phase III（第三期）</strong>：大規模的隨機對照試驗，在大量患者中評估藥物與安慰劑或標準療法相比的效益。這是確定藥物療效的關鍵階段。</li>
+<li><strong>Phase IV（第四期）</strong>：藥物獲批上市後的長期安全性監測 (post-marketing surveillance)。</li>
+</ul>
+</div>
+<div id="CT-explanatory-pragmatic" class="section level2 hasAnchor" number="34.12">
+<h2><span class="header-section-number">34.12</span> 解釋型與務實型實驗 Explanatory and pragmatic trials<a href="clinical-trials.html#CT-explanatory-pragmatic" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>臨牀實驗可以從兩種不同的角度來設計和分析：</p>
+<p><strong>解釋型實驗 (explanatory trial)</strong> 的目的是研究在理想條件下，特定治療按照方案規定接受時的<strong>真實效果 (efficacy)</strong>。分析時通常採用<strong>符合方案分析 (per-protocol analysis)</strong>，也就是只包括完全按照方案接受治療的患者。這種分析能提供科學上的知識，但有潛在的偏倚風險。</p>
+<p><strong>務實型實驗 (pragmatic trial)</strong> 的目的是評估不同治療策略的<strong>實際效果 (effectiveness)</strong>，承認並非所有患者都會遵從治療方案。分析時採用<strong>意向治療分析 (intention-to-treat analysis, ITT)</strong>——將所有隨機化的患者按照其被分配到的治療組進行分析，而不管他們實際接受了什麼治療。</p>
+<p>大多數大規模實驗是<strong>務實型</strong>的。ITT 分析的優勢在於：</p>
+<ol style="list-style-type: decimal">
+<li>不太可能導致偏倚。</li>
+<li>更接近反映治療在臨牀實踐中的實際效果——因爲在真實世界中，並非所有患者都會遵從治療。</li>
+</ol>
+<p>一個生動的例子是關於在母乳喂養嬰兒中早期引入過敏原食物的實驗：ITT 分析顯示無顯著差異（<span class="math inline">\(p = 0.32\)</span>），但 per-protocol 分析則顯示了大的差異（<span class="math inline">\(p = 0.012\)</span>）。問題在於只有 32% 的早期引入組真正遵從了方案，而延遲引入組有 88% 遵從了方案——這種不對等的遵從率使得 per-protocol 分析的結論具有很大的偏倚風險。</p>
+</div>
+<div id="CT-size" class="section level2 hasAnchor" number="34.13">
+<h2><span class="header-section-number">34.13</span> 實驗的規模 The size of trials<a href="clinical-trials.html#CT-size" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>一項成功的臨牀實驗是能提供治療療效和安全性的可靠證據的——而不是必須得到「陽性」結果的。要達到這個目標，有兩個關鍵的設計要素：</p>
+<ol style="list-style-type: decimal">
+<li><strong>避免偏倚 (avoidance of bias)</strong>：通過隨機化、對照組和盲法來實現。</li>
+<li><strong>招募足夠數量的患者</strong>：需要有足夠多的參與者，使得如果存在臨牀上重要的治療差異，實驗有很大的機率能夠檢測到它。</li>
+</ol>
+<p>需要大規模實驗才能令人信服的一個例子：在遠端缺血預處理 (remote ischaemic conditioning, RIC) 用於冠狀動脈搭橋手術的研究中，一個 329 例的單中心實驗發現 RIC 組 1 年內死亡 3 例、對照組 11 例（<span class="math inline">\(p = 0.046\)</span>），看起來效果顯著。然而，隨後的 ERICCA 試驗（1,610 例）和 RIPHeart 試驗（1,403 例）都未能證實這一結果。</p>
+<p>另一個更嚴重的例子：一項 244 例的多那酶 <span class="math inline">\(\alpha\)</span> (dornase alfa) 安慰劑對照先導研究在慢性支氣管炎患者中取得了非常鼓舞人心的結果——治療組 6 個月內死亡 11 例，安慰劑組 27 例（<span class="math inline">\(p = 0.002\)</span>）。然而，隨後在超過 5,000 例患者中進行的大規模多國試驗在計劃的期中分析 (interim analysis) 時被提前終止：治療組 3 個月內死亡 197 例，安慰劑組 163 例——不僅沒有治療效益，反而有可能有害。</p>
+<p>也就是說，從小型實驗中獲得的早期樂觀結果，在大型隨機試驗的結果出來後往往被證明是過於樂觀的。正如 Sackett 所說的：</p>
+<blockquote>
+<p>“There are only a handful of ways to do a study properly but a thousand ways to do it wrong.”</p>
+</blockquote>
+<p>也正如 Altman 的名言：</p>
+<blockquote>
+<p>“The data from a good study can be analysed in many ways, but no amount of clever analysis can compensate for problems with the design of a study.”</p>
+</blockquote>
+<p>樣本量的具體計算方法將在 Session 4 中詳細討論。</p>
 </div>
 </div>
             </section>
@@ -2021,8 +2119,8 @@ Pepe, Margaret S, Ziding Feng, Ying Huang, et al. 2007. <span>“Integrating the
           </div>
         </div>
       </div>
-<a href="checkingGLM.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="paired-ana.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="interaction.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="sample-size.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook/js/app.min.js"></script>
@@ -2053,7 +2151,7 @@ gitbook.start({
     "size": 2
   },
   "edit": {
-    "link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/09-GLM.Rmd",
+    "link": "https://github.com/winterwang/LSHTMlearningnote/edit/master/05-clinical-trials.Rmd",
     "text": "編輯"
   },
   "history": {
