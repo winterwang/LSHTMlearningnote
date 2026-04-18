@@ -1,5 +1,11 @@
 這裡的簡單筆記來自經典教學書 [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/)。
 
+```{r brms-setup-guard, include=FALSE}
+# Standalone rendering guard — bookdown loads via global_setup.R
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
+```
+
 
 ## 為什麼正（常）態分佈是正常的 why normal distribution is normal?
 
@@ -20,16 +26,17 @@ dnorm(0, 0, 0.1) # mean = 0, sd = 0.1
 
 
 ```{r introBayes06-01, cache=TRUE, message=FALSE}
-# library(rethinking)
-data("Howell1")
+# [MIGRATED 2026-04] data("Howell1") replaced with CSV load (no rethinking needed)
+# Note: McElreath's CSVs use semicolons as separator (European CSV format)
+Howell1 <- read.csv("../backupfiles/Howell1.csv", sep = ";")
 
 d <- Howell1
 str(d)
 
-precis(d)
+# precis(d)  # [LEGACY rethinking] replaced below
+summary(d)   # base R equivalent
 
 # filter out non-adults
-
 d2 <- d[ d$age >= 18, ]
 
 ```
@@ -119,11 +126,17 @@ post$prob <- exp( post$prod - max(post$prod))
 可以繪製簡單的事後均值，事後標準差的等高圖分佈，登高線本身使用上面代碼計算的身高的相對事後概率分佈。
 
 ```{r introBayes06-07, fig.asp=.7, fig.width=6,  fig.cap='Simple contour plot of the posterior means and standard deviations of height with relative posterior probability distribution. ', fig.align='center', out.width='90%', cache=TRUE}
-contour_xyz( post$mu, post$sigma, post$prob)
+# [MIGRATED 2026-04] contour_xyz() replaced with base R contour()
+prob_matrix <- matrix(post$prob, nrow = length(mu_list), ncol = length(sigma_list))
+contour(mu_list, sigma_list, prob_matrix,
+        xlab = expression(mu), ylab = expression(sigma))
 ```
 
 ```{r introBayes06-08, fig.asp=.7, fig.width=6,  fig.cap='Simple heat map plot of the posterior means and standard deviations of height with relative posterior probability distribution. ', fig.align='center', out.width='90%', cache=TRUE}
-image_xyz(post$mu, post$sigma, post$prob)
+# [MIGRATED 2026-04] image_xyz() replaced with base R image()
+prob_matrix <- matrix(post$prob, nrow = length(mu_list), ncol = length(sigma_list))
+image(mu_list, sigma_list, prob_matrix,
+      xlab = expression(mu), ylab = expression(sigma))
 ```
 
 
@@ -163,16 +176,37 @@ h_i & \sim \text{Normal}(\mu, \sigma) &\text{     [Likelihood]} \\
 $$
 
 
-```{r introBayes06-10, cache=TRUE, message=FALSE}
+```{r introBayes06-10, eval=FALSE, cache=FALSE, message=FALSE}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] quap() not available; chunk preserved for pedagogical reference.
+# See chunk introBayes06-10b below for the brms equivalent.
 flist <- alist(
   height ~ dnorm( mu, sigma ), 
   mu     ~ dnorm( 178, 20 ), 
   sigma  ~ dunif( 0 , 50 )
 )
 
-m4.1 <- quap( flist, data = d2)
+# m4.1 <- quap( flist, data = d2)
+# precis( m4.1 )
+```
 
-precis( m4.1 )
+> **關於 `quap()` 與 `brms` 的方法論差異**
+>
+> 本書的原始代碼使用 `rethinking::quap()` 進行**二次方近似**（quadratic / Laplace approximation），即用多元正態分佈來近似後驗分佈的峰值附近的曲率。遷移後的 `brms::brm()` 則使用**漢密爾頓蒙特卡羅**（Hamiltonian Monte Carlo, HMC）進行完整的 MCMC 採樣，直接從後驗分佈中抽樣。因此兩者的數值結果會有細微差異——這不是錯誤，而是方法論上的根本不同。當後驗分佈接近對稱的正態分佈時，兩者結果幾乎一致；當後驗分佈偏態或存在複雜結構時，HMC/MCMC 的結果更為準確。在本書後續所有章節中，原始 `quap()` 代碼均保留展示但設為 `eval=FALSE`，緊接著給出對應的 `brms` 實現。
+
+```{r introBayes06-10b, cache=TRUE, message=FALSE, warning=FALSE}
+# [MIGRATED 2026-04] brms equivalent of m4.1 (intercept-only Gaussian)
+# Uses file= caching: fast on re-render; first run ~1 min.
+m4.1_brms <- brm(
+  data    = d2,
+  family  = gaussian,
+  height ~ 1,
+  prior   = c(prior(normal(178, 20), class = Intercept),
+              prior(uniform(0, 50),  class = sigma, lb = 0, ub = 50)),
+  chains = 4, iter = 2000, warmup = 1000, cores = 4, seed = 42,
+  file   = "Stanfits/m4.1_brms"
+)
+print(posterior_summary(m4.1_brms)[1:2, ])
 ```
 
 
@@ -235,16 +269,16 @@ set.seed(4)
 # how many lines would you like?
 n_lines <- 100
 
-lines <-
+sim_lines <-
   tibble(n = 1:n_lines,
          a = rnorm(n_lines, mean = 178, sd = 20),
          b = rnorm(n_lines, mean = 0,   sd = 10)) %>% 
   tidyr::expand(tidyr::nesting(n, a, b), weight = range(d2$weight)) %>% 
   mutate(height = a + b * (weight - mean(d2$weight)))
 
-head(lines)
+head(sim_lines)
 
-lines %>% 
+sim_lines %>% 
   ggplot(aes(x = weight, y = height, group = n)) +
   geom_hline(yintercept = c(0, 272), linetype = 2:1, size = 1/3) +
   geom_line(alpha = 1/10) +
@@ -365,23 +399,29 @@ $$
 
 於是用這個模型來獲取我們需要的事後概率分佈的方法就顯而易見了：
 
-```{r introBayes06-18, cache=TRUE}
+```{r introBayes06-18, eval=FALSE, cache=FALSE}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] quap() not available; chunk preserved for pedagogical reference.
+# brms equivalent is chunk introBayes06-19 (b4.3).
 # define the average weight, x-bar
 xbar <- mean(d2$weight)
 
 # fit model
+# m4.3 <- quap(
+#   alist(
+#     height ~ dnorm( mu, sigma ),
+#     mu <- a + b * (weight - xbar),
+#     a ~ dnorm(178, 20),
+#     b ~ dlnorm(0, 1), 
+#     sigma ~ dunif( 0, 50 )
+#   ), data = d2
+# )
+# precis(m4.3)
+```
 
-m4.3 <- quap(
-  alist(
-    height ~ dnorm( mu, sigma ),
-    mu <- a + b * (weight - xbar),
-    a ~ dnorm(178, 20),
-    b ~ dlnorm(0, 1), 
-    sigma ~ dunif( 0, 50 )
-  ), data = d2
-)
-
-precis(m4.3)
+```{r introBayes06-18b, include=FALSE}
+# Ensure xbar is available even when 06-18 is eval=FALSE
+xbar <- mean(d2$weight)
 ```
 
 
@@ -400,38 +440,52 @@ b4.3 <-
       iter = 28000, warmup = 27000, chains = 4, cores = 4,
       seed = 4)
 
-b4.3
+print(b4.3)
 ```
 
 觀察各個參數事後樣本之間的協方差 (covariances)，幾乎可以忽略不計。
 
-```{r introBayes06-20, cache=TRUE, message=FALSE}
-round( vcov(m4.3), 3)
+```{r introBayes06-20, cache=TRUE, message=FALSE, warning=FALSE}
+# round( vcov(m4.3), 3)  # [LEGACY quap model - not available]
 
-posterior_samples(b4.3) %>%
-  dplyr::select(-lp__) %>%
-  cov() %>%
-  round(digits = 3)
+# [MIGRATED 2026-04] Use as_draws_df() instead of deprecated posterior_samples()
+suppressWarnings(
+  as_draws_df(b4.3) %>%
+    dplyr::select(b_Intercept, b_weight_c, sigma) %>%
+    cov() %>%
+    round(digits = 3)
+)
 ```
 
 
 ```{r  eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 pairs(m4.3)
 ```
 
-```{r introBayes06-21, cache=TRUE, fig.asp=.7, fig.width=6,  fig.cap='Both marginal posteriors and the covariance.', fig.align='center', out.width='90%'}
+```{r introBayes06-21, eval=FALSE, cache=FALSE, fig.asp=.7, fig.width=6,  fig.cap='Both marginal posteriors and the covariance.', fig.align='center', out.width='90%'}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] Pre-captured screenshot from quap m4.3 — img/ not in repo.
+# eval=FALSE; see introBayes06-22b for a live pairs plot from b4.3.
 knitr::include_graphics("img/fig46_15m4_3.png")
-
 ```
 
 
 
 ```{r eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 pairs(b4.3)
 ```
-```{r introBayes06-22, cache=TRUE, fig.asp=.7, fig.width=6,  fig.cap='Both marginal posteriors and the covariance.', fig.align='center', out.width='90%'}
+```{r introBayes06-22, eval=FALSE, cache=FALSE, fig.asp=.7, fig.width=6,  fig.cap='Both marginal posteriors and the covariance.', fig.align='center', out.width='90%'}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] Pre-captured screenshot — img/ not in repo.
+# eval=FALSE; see introBayes06-22b below for a live brms plot.
 knitr::include_graphics("img/fig46_16b4_3.png")
+```
 
+```{r introBayes06-22b, cache=TRUE, fig.asp=1, fig.width=7, fig.cap='Marginal posteriors and covariances from b4.3 (brms).', fig.align='center', out.width='90%'}
+# [MIGRATED 2026-04] Live pairs() plot from fitted b4.3 brms model
+pairs(b4.3, variable = c("b_Intercept", "b_weight_c", "sigma"))
 ```
 
 
@@ -439,14 +493,15 @@ knitr::include_graphics("img/fig46_16b4_3.png")
 
 繪製事後估計獲得的均值給出的回歸直線。
 
-```{r introBayes06-23, cache=TRUE, fig.asp=.7, fig.width=6,  fig.cap='Height in centimeters plotted against weight in kilograms, with the line at the posterior mean plotted in black.', fig.align='center', out.width='90%'}
-
+```{r introBayes06-23, eval=FALSE, cache=FALSE, fig.asp=.7, fig.width=6,  fig.cap='Height in centimeters plotted against weight in kilograms, with the line at the posterior mean plotted in black.', fig.align='center', out.width='90%'}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] extract.samples(m4.3) requires quap object; eval=FALSE.
+# See introBayes06-24 below for the ggplot2/brms equivalent.
 plot( height ~ weight, data = d2, col = rangi2)
 post <- extract.samples(m4.3)
 a_map <- mean(post$a)
 b_map <- mean(post$b)
 curve( a_map + b_map * (x - xbar), add =  TRUE)
-
 ```
 
 ggplot2繪圖結果：
@@ -464,55 +519,51 @@ d2 %>%
 
 為了顯示斜率和截距本身的不確定性，我們來從參數的事後聯合概率分佈中採集一些樣本出來做觀察：
 
-```{r introBayes06-25, cache=TRUE}
-post <- extract.samples( m4.3 )
+```{r introBayes06-25, cache=TRUE, warning=FALSE}
+# [MIGRATED 2026-04] extract.samples(m4.3) replaced with as_draws_df()
+# post <- extract.samples( m4.3 )  # requires quap object
+# post[1:5, ]
 
-post[1:5, ]
-
-postb <- posterior_samples(b4.3)
-postb %>% 
-  slice(1:5)
+postb <- suppressWarnings(as_draws_df(b4.3))
+suppressWarnings(
+  postb %>%
+    dplyr::select(b_Intercept, b_weight_c, sigma) %>%
+    slice(1:5)
+)
 ```
 
-這些 a, b 的無數配對，就是該線型回歸給出的事後回歸線的截距和斜率的無數的組合，每一個組合，是一條事後回歸直線。這些事後截距和事後斜率的均值，是圖 \@ref(fig:introBayes06-24) 和 \@ref(fig:introBayes06-23) 中的那條事後均值提供的直線。事實上，這些截距和斜率本身的不確定性才是更加值得關注的。
+這些 a, b 的無數配對，就是該線型回歸給出的事後回歸線的截距和斜率的無數的組合，每一個組合，是一條事後回歸直線。這些事後截距和事後斜率的均值，是圖 \@ref(fig:introBayes06-24) 和 \@ref(fig:introBayes06-24) 中的那條事後均值提供的直線。事實上，這些截距和斜率本身的不確定性才是更加值得關注的。
 
 下面的計算過程是先使用 `d2` 數據中前10個人的身高體重做相同的事後回歸直線分析，然後逐漸增加數據量，你會觀察到這些事後斜率和事後截距的不確定性在發生的一個動態變化：
 
 
-```{r introBayes06-26, cache=TRUE}
+```{r introBayes06-26, eval=FALSE, cache=FALSE}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] quap() not available; chunk preserved for pedagogical reference.
+# brms equivalents with N=10, 50, 150, 352 are in introBayes06-28.
 N <- 10
 dN <- d2[1:N, ]
-mN <- quap(
-  alist(
-    height ~ dnorm( mu, sigma ), 
-    mu <- a + b*(weight - mean(weight)), 
-    a ~ dnorm( 178, 20 ), 
-    b ~ dlnorm( 0, 1 ), 
-    sigma ~ dunif( 0, 50 )
-  ), data = dN
-)
+# mN <- quap(
+#   alist(
+#     height ~ dnorm( mu, sigma ), 
+#     mu <- a + b*(weight - mean(weight)), 
+#     a ~ dnorm( 178, 20 ), 
+#     b ~ dlnorm( 0, 1 ), 
+#     sigma ~ dunif( 0, 50 )
+#   ), data = dN
+# )
 ```
 
 
 接下來繪製 `mN` 模型中給出的事後回歸直線的一部分：
 
-```{r introBayes06-27, cache=TRUE, fig.asp=.7, fig.width=6,  fig.cap='Samples from the quadratic approximate posterior distribution for the height/weight model with 20 samples of data. 20 Lines sampled from the posterior distribution.', fig.align='center'}
+```{r introBayes06-27, eval=FALSE, cache=FALSE, fig.asp=.7, fig.width=6,  fig.cap='Samples from the quadratic approximate posterior distribution for the height/weight model with 20 samples of data. 20 Lines sampled from the posterior distribution.', fig.align='center'}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] extract.samples(mN) requires quap object; eval=FALSE.
+# See introBayes06-28 below for the brms equivalent with varying N.
 # extract 20 samples from the posterior 
-post <- extract.samples( mN, n = 20)
-
-# display raw data and sample size
-
-plot(dN$weight, dN$height, 
-     xlim = range(d2$weight), ylim = range(d2$height), 
-     col = rangi2, xlab = "weight", ylab = "height")
-mtext(concat( "N = ", N)) 
-
-# plot the lines with transparency 
-
-for ( i in 1:20) 
-  curve( post$a[i] + post$b[i] * (x - mean(dN$weight)), 
-         col = col.alpha("black", 0.3), add = TRUE)
-
+# post <- extract.samples( mN, n = 20)
+# ...
 ```
 
 增加樣本量，你只需要修改上述 `N = 10` 中的數字，然後逐個繪圖就能觀察。下面的代碼使用 `brms` 包來實現：
@@ -571,16 +622,17 @@ b4.3_352 <-
 
 
 
-```{r introBayes06-29, cache=TRUE, message=FALSE, fig.asp=.7, fig.width=10,  fig.cap='Samples from the quadratic approximate posterior distribution for the height/weight model with 20 to 352 (increasing) samples of data. 20 Lines sampled from the posterior distribution.', fig.align='center'}
-post010 <- posterior_samples(b4.3)
-post050 <- posterior_samples(b4.3_50)
-post150 <- posterior_samples(b4.3_150)
-post352 <- posterior_samples(b4.3_352)
+```{r introBayes06-29, cache=TRUE, message=FALSE, warning=FALSE, fig.asp=.7, fig.width=10,  fig.cap='Samples from the quadratic approximate posterior distribution for the height/weight model with 20 to 352 (increasing) samples of data. 20 Lines sampled from the posterior distribution.', fig.align='center'}
+# [MIGRATED 2026-04] posterior_samples() replaced with as_draws_df()
+post010 <- suppressWarnings(as_draws_df(b4.3))
+post050 <- suppressWarnings(as_draws_df(b4.3_50))
+post150 <- suppressWarnings(as_draws_df(b4.3_150))
+post352 <- suppressWarnings(as_draws_df(b4.3_352))
 p1 <- 
   ggplot(data =  d2[1:10 , ], 
          aes(x = weight_c, y = height)) +
-  geom_abline(intercept = post010[1:20, 1], 
-              slope     = post010[1:20, 2],
+  geom_abline(intercept = post010$b_Intercept[1:20], 
+              slope     = post010$b_weight_c[1:20],
               size = 1/3, alpha = .3) +
   geom_point(shape = 1, size = 2, color = "royalblue") +
   coord_cartesian(xlim = range(d2$weight_c),
@@ -590,8 +642,8 @@ p1 <-
 p2 <-
   ggplot(data =  d2[1:50 , ], 
          aes(x = weight_c, y = height)) +
-  geom_abline(intercept = post050[1:20, 1], 
-              slope     = post050[1:20, 2],
+  geom_abline(intercept = post050$b_Intercept[1:20], 
+              slope     = post050$b_weight_c[1:20],
               size = 1/3, alpha = .3) +
   geom_point(shape = 1, size = 2, color = "royalblue") +
   coord_cartesian(xlim = range(d2$weight_c),
@@ -601,8 +653,8 @@ p2 <-
 p3 <-
   ggplot(data =  d2[1:150 , ], 
          aes(x = weight_c, y = height)) +
-  geom_abline(intercept = post150[1:20, 1], 
-              slope     = post150[1:20, 2],
+  geom_abline(intercept = post150$b_Intercept[1:20], 
+              slope     = post150$b_weight_c[1:20],
               size = 1/3, alpha = .3) +
   geom_point(shape = 1, size = 2, color = "royalblue") +
   coord_cartesian(xlim = range(d2$weight_c),
@@ -612,8 +664,8 @@ p3 <-
 p4 <- 
   ggplot(data =  d2[1:352 , ], 
          aes(x = weight_c, y = height)) +
-  geom_abline(intercept = post352[1:20, 1], 
-              slope     = post352[1:20, 2],
+  geom_abline(intercept = post352$b_Intercept[1:20], 
+              slope     = post352$b_weight_c[1:20],
               size = 1/3, alpha = .3) +
   geom_point(shape = 1, size = 2, color = "royalblue") +
   coord_cartesian(xlim = range(d2$weight_c),
@@ -630,23 +682,32 @@ p4 <-
 
 可以看見，當數據越多，事後直線估計給出的穩定性越好，不確定性越小。
 
-```{r introBayes06-30, cache=TRUE}
-post <- extract.samples( m4.3 )
-mu_at50 <- post$a + post$b * (50 - xbar)
-head(mu_at50)
+```{r introBayes06-30, eval=FALSE, cache=FALSE}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] extract.samples(m4.3) requires quap object.
+# brms equivalent using b4.3_352 (full model) is shown in introBayes06-32.
+# post <- extract.samples( m4.3 )
+# mu_at50 <- post$a + post$b * (50 - xbar)
+# head(mu_at50)
 ```
 
 也就是說，當體重為 50 kg 時，身高的事後概率分佈可以繪製為：
 
-```{r introBayes06-31, cache=TRUE, fig.asp=.7, fig.width=5,  fig.cap='The quadratic approximate posterior distribution of the mean height, when weight is 50 kg. ', fig.align='center'}
-dens(mu_at50, col = rangi2, lwd = 2, xlab = "mu | weight = 50")
+```{r introBayes06-31, eval=FALSE, cache=FALSE, fig.asp=.7, fig.width=5,  fig.cap='The quadratic approximate posterior distribution of the mean height, when weight is 50 kg. ', fig.align='center'}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] mu_at50 depends on quap m4.3; eval=FALSE.
+# See introBayes06-32 below for the ggplot2/brms equivalent.
+# dens(mu_at50, col = rangi2, lwd = 2, xlab = "mu | weight = 50")
 ```
 
 相似的，完成上述圖形的不同代碼可以寫作：
 
 ```{r introBayes06-32, cache=TRUE, fig.asp=.7, fig.width=5,  fig.cap='The quadratic approximate posterior distribution of the mean height, when weight is 50 kg. ', fig.align='center'}
+# [MIGRATED 2026-04] postb is now as_draws_df(b4.3); use correct column names
+postb <- as_draws_df(b4.3_352)   # use full-data model (N=352) for this demo
+
 mu_at_50 <- postb %>% 
-  transmute(mu_at_50 = b_Intercept + b_weight_c + 5.01)
+  transmute(mu_at_50 = b_Intercept + b_weight_c * (50 - mean(d2$weight)))
 
 head(mu_at_50)
 
@@ -662,16 +723,22 @@ mu_at_50 %>%
 
 如果說你要給他增加一個可信區間，那麼當體重為 50 kg時，身高的事後預測89% 區間是：
 
-```{r introBayes06-33, cache=TRUE}
-PI(mu_at50, prob = 0.89)
+```{r introBayes06-33, eval=FALSE, cache=FALSE}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] mu_at50 depends on quap m4.3; eval=FALSE.
+# The brms equivalent (quantile of posterior mu at weight=50) is computed in 06-32.
+# PI(mu_at50, prob = 0.89)
 ```
 
 但是其實我們更希望使用這事後概率分佈來繪製平均事後截距，平均事後斜率給出的直線本身的不確定性（也就是這條直線本身的89%區間）。函數 `link()` 提供了每一名參加實驗對象的事後身高均值的分佈。
 
 
-```{r introBayes06-34, cache=TRUE}
-mu <- link( m4.3 ) 
-str(mu)
+```{r introBayes06-34, eval=FALSE, cache=FALSE}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] link() requires quap object m4.3; eval=FALSE.
+# brms equivalent uses posterior_epred(b4.3_352, newdata=...) — see introBayes06-39b.
+# mu <- link( m4.3 ) 
+# str(mu)
 ```
 
 
@@ -687,88 +754,88 @@ weight.seq <- seq( from = 25, to = 70, by = 1)
 
 使用 `link()` 函數來計算這些體重的事後身高分佈：
 
-```{r introBayes06-36, cache=TRUE}
-# use link to compute mu
-# for each sample from posterior 
-# and for each weight in weight.seq
-
-mu <- link(m4.3, data = data.frame(weight = weight.seq))
-str(mu)
+```{r introBayes06-36, eval=FALSE, cache=FALSE}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] link() requires quap object m4.3; eval=FALSE.
+# mu <- link(m4.3, data = data.frame(weight = weight.seq))
+# str(mu)
 ```
 
 
 繪製這些體重值上的預測事後身高均值：
 
-```{r introBayes06-37, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='The first 100 values in the distribution of mu at each weight value.', fig.align='center'}
-# use type = "n" to hide raw data
-plot( height ~ weight, d2, type = "n")
-
-# loop over samples and plot each mu value
-
-for ( i in 1:100)
-  points( weight.seq, mu[i, ], pch = 16, col = col.alpha(rangi2, 0.1))
+```{r introBayes06-37, eval=FALSE, cache=FALSE, fig.width=5.5, fig.height=5,  fig.cap='The first 100 values in the distribution of mu at each weight value.', fig.align='center'}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] mu from link(m4.3) not available; eval=FALSE.
+# See introBayes06-37b below for the brms posterior_epred() equivalent.
+# plot( height ~ weight, d2, type = "n")
+# for ( i in 1:100)
+#   points( weight.seq, mu[i, ], pch = 16, col = col.alpha(rangi2, 0.1))
 ```
 
-可以看到每一個體重點上的事後身高預測分佈都是一個類似圖 \@ref(fig:introBayes06-31) 那樣的正（常）態分佈。而且也能注意到，身高的事後分佈的不確定性，他們每一個體重值上的事後身高分佈的方差其實是根據不同的身高而有大小區別之分。
+```{r introBayes06-37b, cache=TRUE, fig.width=5.5, fig.height=5, fig.cap='The first 100 values in the distribution of mu at each weight value (brms posterior_epred equivalent).', fig.align='center'}
+# [MIGRATED 2026-04] brms equivalent of the link(m4.3) scatter plot
+nd37 <- data.frame(weight_c = weight.seq - mean(d2$weight))
+mu_draws <- posterior_epred(b4.3_352, newdata = nd37)  # draws × len(weight.seq)
 
-```{r introBayes06-38, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='The height data with 89% compatibility interval of the mean indicated by the shaded region. Compare this region to the distributions of blue points.', fig.align='center'}
+plot(height ~ weight, d2, type = "n",
+     xlab = "weight", ylab = "height")
+for (i in 1:100)
+  points(weight.seq, mu_draws[i, ], pch = 16, col = col.alpha(rangi2, 0.1))
+```
 
-# summarize the distribution of mu
-mu.mean <- apply( mu, 2, mean )
-mu.PI <- apply( mu, 2, PI, prob = 0.89)
+可以看到每一個體重點上的事後身高預測分佈都是一個類似圖 \@ref(fig:introBayes06-32) 那樣的正（常）態分佈。而且也能注意到，身高的事後分佈的不確定性，他們每一個體重值上的事後身高分佈的方差其實是根據不同的身高而有大小區別之分。
 
-# plot raw data
-# fading out points to make line and interval more visible 
-plot( height ~ weight, data = d2, col = col.alpha(rangi2, 0.5))
-
-# plot the MAP line, aka the mean mu for each weight 
-lines( weight.seq, mu.mean )
-
-# plot a shaded region for 89% PI
-
-shade( mu.PI, weight.seq )
+```{r introBayes06-38, eval=FALSE, cache=FALSE, fig.width=5.5, fig.height=5,  fig.cap='The height data with 89% compatibility interval of the mean indicated by the shaded region. Compare this region to the distributions of blue points.', fig.align='center'}
+# [LEGACY rethinking — preserved for reference]
+# [MIGRATED 2026-04] mu from link(m4.3) not available; eval=FALSE.
+# See introBayes06-39b for the brms equivalent.
+# mu.mean <- apply( mu, 2, mean )
+# mu.PI <- apply( mu, 2, PI, prob = 0.89)
+# ...
 ```
 
 
 考慮身高本身的方差進來：
 
-```{r introBayes06-39, cache=TRUE, fig.width=5.5, fig.height=5,  fig.cap='89% prediction interval for height, as a function of weight. The solid line is the average line for the mean height at each weight. The two shaded regions show different 89% plausible regions. The narrow shaded interval around the line is the distribution of mu. The wider shaded region represents the region within which the model expects to find 89% of actual heights in the population, at each weight.', fig.align='center'}
-## Manual posterior predictive simulation replacing sim(m4.3, data=...) which
-## failed due to unused 'data' argument in current rethinking version.
-## We construct mu for each posterior sample and weight, then simulate heights.
+```{r introBayes06-39, eval=FALSE, cache=FALSE, fig.width=5.5, fig.height=5,  fig.cap='89% prediction interval for height, as a function of weight. [LEGACY quap version; see introBayes06-39b for brms version.]', fig.align='center'}
+# [LEGACY rethinking — preserved for reference]
+## [MIGRATED 2026-04] extract.samples(m4.3) requires quap object; eval=FALSE.
+## See introBayes06-39b below for the brms/posterior_epred equivalent.
 
-post <- extract.samples(m4.3)                # list of posterior samples (a, b, sigma)
-n_samp <- length(post$a)
+# post <- extract.samples(m4.3)
+# mu.samples <- sapply(weight.seq, function(w) post$a + post$b * (w - xbar))
+# sim.height <- sapply(1:length(weight.seq), function(j) {
+#   rnorm(n_samp, mu.samples[, j], post$sigma)
+# })
+# height.PI <- apply(sim.height, 2, PI, prob = 0.89)
+# plot(height ~ weight, d2, col = col.alpha(rangi2, 0.5))
+# lines(weight.seq, mu.mean)
+# shade(mu.PI, weight.seq)
+# shade(height.PI, weight.seq)
+```
 
-# Compute posterior samples of mu for each weight value
-mu.samples <- sapply(weight.seq, function(w) post$a + post$b * (w - xbar))
+```{r introBayes06-39b, cache=TRUE, fig.width=5.5, fig.height=5, fig.cap='89% prediction interval for height as a function of weight, using brms posterior_epred/posterior_predict. The narrow shaded band is the 89% interval for the mean mu; the wider band is the 89% predictive interval for individual heights.', fig.align='center'}
+# [MIGRATED 2026-04] brms equivalent using b4.3_352 (N=352, closest to full d2)
+weight.seq <- seq(from = 25, to = 70, by = 1)
 
-# Recompute summaries if not available or mismatched
-if(!exists("mu.mean") || length(mu.mean) != length(weight.seq)) {
-  mu.mean <- apply(mu.samples, 2, mean)
-}
-if(!exists("mu.PI") || ncol(mu.PI) != length(weight.seq)) {
-  mu.PI <- apply(mu.samples, 2, PI, prob = 0.89)
-}
+# Centre weights to match model formula (height ~ 1 + weight_c)
+nd <- data.frame(weight_c = weight.seq - mean(d2$weight))
 
-# Posterior predictive heights: draw one simulated height for each posterior sample and weight
-sim.height <- sapply(1:length(weight.seq), function(j) {
-  rnorm(n_samp, mu.samples[, j], post$sigma)
-})
-height.PI <- apply(sim.height, 2, PI, prob = 0.89)
+# Posterior expected mu for each weight value
+mu_epred   <- posterior_epred(b4.3_352, newdata = nd)   # draws × weights matrix
+mu.mean    <- apply(mu_epred, 2, mean)
+mu.PI      <- apply(mu_epred, 2, PI, prob = 0.89)
 
-# Plot raw data
+# Full posterior predictive (includes sigma → prediction interval)
+y_pred     <- posterior_predict(b4.3_352, newdata = nd)
+height.PI  <- apply(y_pred, 2, PI, prob = 0.89)
+
+# Plot
 plot(height ~ weight, d2, col = col.alpha(rangi2, 0.5))
-
-# Draw posterior mean line
 lines(weight.seq, mu.mean)
-
-# Shaded 89% interval for mu (narrow band)
-shade(mu.PI, weight.seq)
-
-# Shaded 89% predictive interval for heights (wider band)
+shade(mu.PI,     weight.seq)
 shade(height.PI, weight.seq)
-
 ```
 
 

@@ -1,3 +1,10 @@
+```{r introBayes14-00-setup, cache=FALSE, include=FALSE}
+# Standalone rendering guard — bookdown loads via global_setup.R
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
+library(gtools)       # rdirichlet for Dirichlet prior visualisation
+```
+
 > It is important to get comfortable with waiting or a good approximation of the posterior, instead of using some terrible-but-fast approximation.
 > ~ Richard McElreath
 
@@ -48,6 +55,7 @@ $$
 
 
 ```{r introBayes14-01, cache=TRUE,  results="hide", message=FALSE, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 data("UCBadmit")
 d <- UCBadmit
 d$gid <- ifelse( d$applicant.gender == "male", 1L, 2L )
@@ -66,20 +74,39 @@ m12.1 <- ulam(
         ), data = dat, chains = 4, cmdstan = TRUE
 )
 saveRDS(m12.1, "../Stanfits/m12_1.rds")
+```
 
-# if you also failed compliation please see https://github.com/rmcelreath/rethinking/issues/267
+```{r introBayes14-01-brm, cache=TRUE, results="hide", message=FALSE}
+d <- read.csv("../backupfiles/UCBadmit.csv", sep = ";")
+d$gid   <- ifelse(d$applicant.gender == "male", 1L, 2L)
+d$gid_f <- factor(d$gid)
+
+b12.1 <- brm(
+  admit | trials(applications) ~ 0 + gid_f,
+  family  = beta_binomial(),
+  prior   = c(prior(normal(0, 1.5), class = b),
+              prior(exponential(1), class = phi)),
+  data    = d,
+  chains  = 4, cores = 4,
+  file    = "Stanfits/brm_m12_1"
+)
 ```
 
 
-注意到，我們爲 `theta` 特別標註了它是被轉換過後的參數，`transpars>`，這樣 Stan 就會把 `theta` 作爲結果之一保存下來。我們可以使用採樣過後的 `m12.1` 計算其事後的男女錄取率之差:
+在 rethinking 中，我們爲 `theta` 使用了 `transpars>` 標記使 Stan 保存轉換參數。在 brms 的 `beta_binomial()` 家族中，分散程度參數被直接命名爲 `phi` 並自動保存在採樣結果中（注意這裏的 `phi` 和原模型中的 $\phi$ 不完全相同——brms 的 `phi` 直接對應原模型的 $\theta = \phi + 2$，即 brms 內部不需要加2的變換）。我們可以使用採樣過後的 `b12.1` 計算其事後的男女錄取率之差:
  
 
-```{r introBayes14-02, cache=TRUE}
-m12.1 <- readRDS("../Stanfits/m12_1.rds")
+```{r introBayes14-02, cache=FALSE}
+summary(b12.1)
 
-post <- extract.samples(m12.1)
-post$da <- post$a[, 1] - post$a[, 2]
-precis(post, depth = 2)
+draws <- as_draws_df(b12.1)
+draws$da <- draws$b_gid_f1 - draws$b_gid_f2
+cat("\nDifference a[1]-a[2] (log-odds):\n")
+print(posterior::summarise_draws(
+  posterior::as_draws_df(data.frame(
+    a1 = draws$b_gid_f1, a2 = draws$b_gid_f2,
+    da = draws$da, phi = draws$phi)),
+  mean, sd, ~quantile(.x, probs = c(0.055, 0.945))))
 ```
 
 上面對 `m12.1` 的時候樣本進行的計算和比較可以看見，`a[1]` 是男性申請人被錄取的對數比值 log-odds，它的均值似乎略微比 `a[2]` 女性申請人被錄取的對數比值稍微低一些。但是，它們二者的差的事後均值 `da` 沒有顯著偏離 0，其事後概率分佈的可信區間也包括0。所以並沒有太多的證據表明男女申請人之間在這所大學的錄取率上有任何性別的歧視或者偏差。但是記得我們在前一個章節裏，使用簡單的邏輯回歸模型時，除非把學院這一變量加入預測變量中加以考慮才能獲得相似的正確答案。之前當沒有加入學院這一變量的時候，我們其實被告知男女之間有較大的錄取率的性別差，特別是女生的錄取率在表面上看起來似乎比較低。但是當我們把簡單邏輯回歸模型棄用之後，選擇使用beta二項分佈回歸模型在 `m12.1` 中之後，即使沒有把學院變量放進模型中去，依然獲得了準確的男女之間錄取率的比較結果。這是爲什麼呢？
@@ -87,27 +114,28 @@ precis(post, depth = 2)
 其實當選用 beta 二項分佈的時候，我們允許了每一行的數據，也就是每一個學院的男性申請人數據，和每一個學院的女性申請人數據分別擁有自己的截距。這些截距其實是從一個均值是 $\bar{p}_i$，分散程度是 $\theta$ 的 beta 分佈中採集而來的。我們可以直觀地繪製這個 beta 分佈的形狀來加深對 `m12.1` 模型的理解：
 
 
-```{r introBayes14-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior distributions for m12.1. The thick curves are the posterior mean beta distribution for male and female applicants. The ligher curves represents 100 combinations of bar(p) and theta sampled from the posterior.", fig.align='center'}
+```{r introBayes14-fig02, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior distributions for b12.1. The thick curves are the posterior mean beta distribution for male and female applicants. The ligher curves represents 50 combinations of bar(p) and phi sampled from the posterior.", fig.align='center'}
+draws <- as_draws_df(b12.1)
 gid <- 2
-# draw posterior mean beta distribution
 
-curve( dbeta2(x, mean(logistic(post$a[, gid])), mean(post$theta)), 
+# draw posterior mean beta distribution
+curve( dbeta2(x, mean(inv_logit(draws$b_gid_f2)), mean(draws$phi)), 
        from = 0, to = 1, ylab = "Density", xlab = "probability admit", 
        ylim = c(0, 3), lwd = 2, bty = "n")
-curve( dbeta2(x, mean(logistic(post$a[, gid - 1])), mean(post$theta)), 
+curve( dbeta2(x, mean(inv_logit(draws$b_gid_f1)), mean(draws$phi)), 
        from = 0, to = 1, ylab = "Density", xlab = "probability admit", 
        ylim = c(0, 3), lwd = 2, add =  TRUE, col = rangi2)
 # Draw 50 beta distributions sampled from posterior
 
 for( i in 1:50 ) {
-  p <- logistic( post$a[i, gid] )
-  theta <- post$theta[i]
-  curve( dbeta2(x, p, theta), add = TRUE, col = col.alpha("black", 0.2))
+  p <- inv_logit( draws$b_gid_f2[i] )
+  phi_val <- draws$phi[i]
+  curve( dbeta2(x, p, phi_val), add = TRUE, col = col.alpha("black", 0.2))
 }
 for( i in 1:50 ) {
-  p <- logistic( post$a[i, gid-1] )
-  theta <- post$theta[i]
-  curve( dbeta2(x, p, theta), add = TRUE, col = col.alpha(rangi2, 0.2))
+  p <- inv_logit( draws$b_gid_f1[i] )
+  phi_val <- draws$phi[i]
+  curve( dbeta2(x, p, phi_val), add = TRUE, col = col.alpha(rangi2, 0.2))
 }
 
 mtext("distribution of female admission rates (black); male admission rates (blue)")
@@ -116,9 +144,20 @@ mtext("distribution of female admission rates (black); male admission rates (blu
 
 如圖 \@ref(fig:introBayes14-fig02) 所示的，我們允許了不同的錄取率，這樣一來不論男女，在不同的學院之間錄取率的差異被考慮了進來，男女之間的差異也就不那麼明顯了。同時也避免了模型錯誤地認爲女性受到了錄取上的歧視。雖然模型 `m12.1` 並不知道有學院這個變量（我們並沒有在模型中的任何地方加入學院這個變量），它依然靈活準確地給出了允許不同錄取率這一重要的方案，它使用 beta 分佈來估計該錄取概率在不同的人羣中可能的變化，我們可以再看看該模型的事後證實檢驗 (posterior validation check):
 
-```{r introBayes14-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior validation check for m12.1. As a result of widely dispersed beta distributions on the figure above, the raw data (blue) is contained within the prediction intervals.", fig.align='center'}
+```{r introBayes14-fig03, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior validation check for b12.1. As a result of widely dispersed beta distributions on the figure above, the raw data (blue) is contained within the prediction intervals. Note: unlike the rethinking postcheck() which plots admission rates (proportions 0–1 on the y-axis), brms posterior_predict() generates counts on the original scale, so the y-axis here shows the number of admissions.", fig.align='center'}
+# Posterior predictive check — replaces rethinking::postcheck()
+# Note: brms posterior_predict() returns counts (not proportions),
+# so the scale differs from the original postcheck() figure.
+yrep <- posterior_predict(b12.1)
+pred_mean <- colMeans(yrep)
+pred_ci   <- apply(yrep, 2, PI)
 
-postcheck(m12.1)
+plot(1:nrow(d), d$admit, pch = 16, col = rangi2,
+     ylim = range(c(d$admit, pred_ci)),
+     xlab = "case", ylab = "admit", bty = "n",
+     main = "Posterior predictive check (b12.1)")
+points(1:nrow(d), pred_mean, pch = 1)
+for (i in 1:nrow(d)) lines(c(i, i), pred_ci[, i])
 ```
 
 
@@ -149,6 +188,7 @@ $$
 
 
 ```{r introBayes14-03, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 data(Kline)
 d <- Kline
 d$P <- standardize( log(d$population) )
@@ -174,17 +214,40 @@ m12.2 <- ulam(
 saveRDS(m12.2, "../Stanfits/m12_2.rds")
 ```
 
+```{r introBayes14-03-brm, cache=TRUE, results="hide", message=FALSE}
+d <- read.csv("../backupfiles/Kline.csv", sep = ";")
+d$cid   <- ifelse(d$contact == "high", 2L, 1L)
+d$cid_f <- factor(d$cid)
+d$logP  <- log(d$population)
 
-```{r introBayes14-04, cache=TRUE}
-m12.2 <- readRDS("../Stanfits/m12_2.rds")
-precis(m12.2, depth = 2)
+# Nonlinear formula: log(mu) = a + b*logP  ↔  mu = exp(a)*P^b
+# (g from original model absorbed into per-cid intercepts a)
+b12.2 <- brm(
+  bf(total_tools ~ a + b * logP,
+     a ~ 0 + cid_f,
+     b ~ 0 + cid_f,
+     nl = TRUE),
+  family = negbinomial(),
+  prior  = c(prior(normal(1, 1),    nlpar = "a"),
+             prior(exponential(1),  nlpar = "b", lb = 0),
+             prior(exponential(1),  class = shape)),
+  data   = d,
+  chains = 4, cores = 4,
+  file   = "Stanfits/brm_m12_2"
+)
+```
+
+
+```{r introBayes14-04, cache=FALSE}
+summary(b12.2)
 ```
 
 
 
 
 ```{r  introBayes14-fig04, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The gamma-Poisson model is much less influenced by Hawaii, because the model expects more variation. The increased variation in the size of the shaded regions are much larger than in the pure Poisson model. (Figure 53.16)", fig.align='center'}
-k <- PSIS( m12.2, pointwise = TRUE)$k
+b12.2 <- add_criterion(b12.2, "loo", moment_match = TRUE)
+k <- b12.2$criteria$loo$diagnostics$pareto_k
 
 plot( d$population, d$total_tools, 
             bty = "n", 
@@ -202,8 +265,10 @@ P_seq <- seq( from = -5, to = 3, length.out = ns )
 
 pop_seq <- exp( P_seq*1.53 + 9 )
 
-
-lambda <- link( m12.2, data = data.frame( P = pop_seq, cid = 1))
+# Low contact predictions
+newdata_low <- data.frame(logP = log(pop_seq),
+                          cid_f = factor(1, levels = levels(d$cid_f)))
+lambda <- posterior_epred(b12.2, newdata = newdata_low)
 lmu <- apply( lambda, 2, mean)
 lci <- apply( lambda, 2, PI)
 text(150000, 57, "low contact")
@@ -211,7 +276,10 @@ text(150000, 57, "low contact")
 lines( pop_seq, lmu, lty = 2, lwd = 1.5 )
 shade( lci, pop_seq, xpd = FALSE )
 
-lambda <- link( m12.2, data =  data.frame( P = pop_seq, cid = 2))
+# High contact predictions
+newdata_high <- data.frame(logP = log(pop_seq),
+                           cid_f = factor(2, levels = levels(d$cid_f)))
+lambda <- posterior_epred(b12.2, newdata = newdata_high)
 lmu <- apply( lambda, 2, mean )
 lci <- apply( lambda, 2, PI )
 lines( pop_seq, lmu, lty = 1, lwd = 1.5 )
@@ -307,6 +375,7 @@ lines(c(0, 0), c(zeros_work, zeros_total), lwd = 4, col = rangi2)
 
 
 ```{r introBayes14-06, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m12.3 <- ulam(
   alist(
     y ~ dzipois( p, lambda ), 
@@ -316,21 +385,31 @@ m12.3 <- ulam(
     al ~ dnorm( 1, 0.5 )
   ), data = list(y = y), chains = 4
 )
-
 saveRDS(m12.3, file = "../Stanfits/m12_3.rds")
 ```
 
-```{r introBayes14-07, cache=TRUE}
-m12.3 <- readRDS("../Stanfits/m12_3.rds")
-precis( m12.3 )
+```{r introBayes14-06-brm, cache=TRUE, results="hide", message=FALSE}
+b12.3 <- brm(
+  bf(y ~ 1, zi ~ 1),
+  family = zero_inflated_poisson(),
+  prior  = c(prior(normal(1, 0.5),   class = Intercept),
+             prior(normal(-1.5, 1),  class = Intercept, dpar = "zi")),
+  data   = data.frame(y = y),
+  chains = 4, cores = 4,
+  file   = "Stanfits/brm_m12_3"
+)
+```
+
+```{r introBayes14-07, cache=FALSE}
+summary(b12.3)
 ```
 
 可以計算模型中估計的這些工人偷懶的日子所佔的比例是多少：
 
-```{r introBayes14-08, cache=TRUE}
-post <- extract.samples( m12.3 )
-mean( inv_logit( post$ap )) # probability of drink/not working days
-mean( exp( post$al )) # rate finish manuscripts, when working
+```{r introBayes14-08, cache=FALSE}
+draws <- as_draws_df(b12.3)
+mean( inv_logit( draws$b_zi_Intercept )) # probability of drink/not working days
+mean( exp( draws$b_Intercept ))          # rate finish manuscripts, when working
 ```
 
 看，我們的模型給出了十分近似的結果，儘管不知道這些工人究竟在哪些天偷懶了，但是推算出大約有20%的工作日，他們是沒有在工作的。這是沒有預測變量的最基礎的截距模型，在真實情況下，會有更多的變量放在混合的兩行鏈接函數對應的預測模型中。
@@ -345,8 +424,7 @@ mean( exp( post$al )) # rate finish manuscripts, when working
 數據來自經典的[關於有軌電車的道德悖論問題](https://zh.wikipedia.org/wiki/%E6%9C%89%E8%BD%A8%E7%94%B5%E8%BD%A6%E9%9A%BE%E9%A2%98)。結果變量是 `Trolley` 數據中的 `response` 變量，它的答案是從 1-7 遞增的表示道德上認爲可以接受的程度。我們先描述一下這個結果變量的分佈情況：
 
 ```{r introBayes14-fig06, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Histogram of discrete response in the sample.", fig.align='center'}
-data("Trolley")
-d <- Trolley
+d <- read.csv("../backupfiles/Trolley.csv", sep = ";")
 simplehist( d$response, 
             xlab = "response",
             xlim = c(1,7),
@@ -481,6 +559,7 @@ $$
 
 
 ```{r introBayes14-0601, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m12.4 <- ulam(
   alist(
     R ~ dordlogit(0, cutpoints), 
@@ -490,16 +569,30 @@ m12.4 <- ulam(
 saveRDS(m12.4, file = "../Stanfits/m12_4.rds")
 ```
 
+```{r introBayes14-0601-brm, cache=TRUE, results="hide", message=FALSE}
+d$response_f <- ordered(d$response)
 
-```{r introBayes14-0701, cache=TRUE}
-m12.4 <- readRDS("../Stanfits/m12_4.rds")
-precis(m12.4, depth = 2)
+b12.4 <- brm(
+  response_f ~ 1,
+  family = cumulative("logit"),
+  prior  = prior(normal(0, 1.5), class = Intercept),
+  data   = d,
+  chains = 4, cores = 4,
+  file   = "Stanfits/brm_m12_4"
+)
+```
+
+
+```{r introBayes14-0701, cache=FALSE}
+summary(b12.4)
 ```
 
 可以看見每個截距的事後估計量都被計算得十分精確。我們可以使用邏輯函數的逆函數把累積概率簡單地計算回來：
 
-```{r introBayes14-0801, cache=TRUE}
-round( inv_logit(coef(m12.4)), 3)
+```{r introBayes14-0801, cache=FALSE}
+# Extract threshold estimates (cutpoints)
+thresholds <- fixef(b12.4)[, "Estimate"]
+round( inv_logit(thresholds), 3)
 ```
 
 
@@ -520,8 +613,8 @@ $$
 
 之所以這裏選擇用減法，是因爲如果降低累積對數比值 (log-cumulative-odds)，就需要把部分的概率質量 (probability mass) 往右側較高的結果選項處平移。這樣如果 $\beta$ 大於零，就意味着如果 $x_i$ 變大，$y_i$ 變大。如果你對此感到困惑，我們簡單計算一下，我們把 `m12.4` 的事後概率分佈的各個均值結果提取出來，然後統一減去0.5看會得到怎樣的結果：
 
-```{r  introBayes14-09, cache=TRUE}
-round( pk <- dordlogit(1:7, 0, coef(m12.4)), 2 )
+```{r  introBayes14-09, cache=FALSE}
+round( pk <- dordlogit(1:7, 0, thresholds), 2 )
 ```
 
 上述的這些概率其實意味着平均的結果選擇會是：
@@ -532,8 +625,8 @@ sum( pk*(1:7) )
 
 現在把每個選項對應的截距減去 0.5：
 
-```{r  introBayes14-11, cache=TRUE}
-round( pk <- dordlogit(1:7, 0, coef(m12.4) - 0.5 ), 2 )
+```{r  introBayes14-11, cache=FALSE}
+round( pk <- dordlogit(1:7, 0, thresholds - 0.5 ), 2 )
 ```
 
 你會發現概率質量整體往右邊平移了，選擇數值低選項的概率變得比之前小了，也就是傾向於選擇高數值的選項。此時的平均選擇結果是：
@@ -575,6 +668,7 @@ $$
 
 
 ```{r  introBayes14-13, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 dat <- list(
   R = d$response, 
   A = d$action, 
@@ -591,29 +685,53 @@ m12.5 <- ulam(
     cutpoints ~ dnorm( 0, 1.5 )
   ), data = dat, chains = 4, cores = 4
 )
-
 saveRDS(m12.5, file = "../Stanfits/m12_5.rds")
+```
+
+```{r introBayes14-13-brm, cache=TRUE, results="hide", message=FALSE}
+b12.5 <- brm(
+  response_f ~ action + contact + intention + action:intention + contact:intention,
+  family = cumulative("logit"),
+  prior  = c(prior(normal(0, 0.5), class = b),
+             prior(normal(0, 1.5), class = Intercept)),
+  data   = d,
+  chains = 4, cores = 4,
+  file   = "Stanfits/brm_m12_5"
+)
 ```
 
 
 
-```{r  introBayes14-14, cache=TRUE}
-m12.5 <- readRDS("../Stanfits/m12_5.rds")
-precis( m12.5 )
+```{r  introBayes14-14, cache=FALSE}
+summary(b12.5)
 ```
 
 
 這裏我們暫時對每個選項本身的概率不感興趣，而是對影響結果的預測變量的回歸係數們更加感興趣。看這些回歸係數的事後概率分佈，他們每一個都很穩定地小於0。也就是每個原則都會降低選擇結果的平均值。
 
-```{r introBayes14-fig10, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The marginal posterior distributions of the slopes in m12.5.", fig.align='center'}
-plot( precis(m12.5), xlim = c(-1.4, 0))
+```{r introBayes14-fig10, cache=TRUE, fig.width=7, fig.height=5,  fig.cap="The marginal posterior distributions of the slopes in b12.5.", fig.align='center'}
+# precis-style caterpillar plot for slope parameters
+fe <- fixef(b12.5)
+slope_idx <- !grepl("Intercept", rownames(fe))
+fe_s <- fe[slope_idx, , drop = FALSE]
+
+par(mar = c(5, 10, 2, 2))  # wider left margin for labels
+plot(fe_s[, "Estimate"], seq_len(nrow(fe_s)),
+     xlim = c(-1.4, 0), pch = 1, cex = 1.2,
+     xlab = "Value", ylab = "", yaxt = "n", bty = "n")
+segments(fe_s[, "Q2.5"],  seq_len(nrow(fe_s)),
+         fe_s[, "Q97.5"], seq_len(nrow(fe_s)))
+axis(2, at = seq_len(nrow(fe_s)), labels = rownames(fe_s), las = 1, cex.axis = 0.9)
+abline(v = 0, lty = 3, col = "gray")
+for (h in seq_len(nrow(fe_s))) abline(h = h, lty = 3, col = "gray")
+par(mar = c(5, 4, 4, 2))  # restore default margins
 ```
 
 可以觀察到，意圖原則和接觸原則的交互作用項的回歸係數對結果的影響最大，但是我們也發現他們單獨對結果的影響都不是很大。
 
 其中一個常見且十分有用的表達方式是使用橫軸表示預測變量，縱軸作爲所有選項的累積概率。這樣我們就可以繪製一系列的不同預測變量和結果曲線之間的示意圖。下面就來嘗試一下這樣的展示結果的方法。
 
-```{r introBayes14-fig11, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, m12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 0, and contact = 0.", fig.align='center'}
+```{r introBayes14-fig11, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, b12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 0, and contact = 0.", fig.align='center'}
 plot( NULL, type = "n", 
       bty = "n",
       xlab = "intention", 
@@ -624,32 +742,28 @@ plot( NULL, type = "n",
       yaxp = c(0, 1, 2), 
       main = "action = 0, contact = 0")
 
-# set up a data list that contains the different combinations of predictor values. 
-
 kA <- 0       # value for action
 kC <- 0       # value for contact
 kI <- 0:1     # values of intention to calculate over
-pdat <- data.frame(A = kA, 
-                   C = kC,
-                   I = kI)
-phi <- link(m12.5, data = pdat )$phi
+pdat <- data.frame(action = kA, contact = kC, intention = kI)
 
-# loop over the first 50 samples in and plot their predictions across values of intention
-# use  pordlogit to compute the cumulative probability for each possible value
+# Get linear predictor draws (phi)
+phi <- posterior_linpred(b12.5, newdata = pdat)
 
-post <- extract.samples(m12.5)
+# Get threshold draws
+draws <- as_draws_df(b12.5)
+thr_cols <- grep("^b_Intercept\\[", names(draws), value = TRUE)
+thr_mat  <- as.matrix(draws[, thr_cols])
 
 for( s in 1:50 ) {
-  pk <- pordlogit( 1:6, phi[s, ], post$cutpoints[s, ])
+  pk <- pordlogit( 1:6, phi[s, ], thr_mat[s, ])
   for( i in 1:6 ) lines(kI, pk[,i], col = grau(0.1))
 }
-
-
 ```
 
 
 
-```{r introBayes14-fig12, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, m12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 1, and contact = 0.", fig.align='center', echo=FALSE}
+```{r introBayes14-fig12, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, b12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 1, and contact = 0.", fig.align='center', echo=FALSE}
 plot( NULL, type = "n", 
       bty = "n",
       xlab = "intention", 
@@ -660,32 +774,20 @@ plot( NULL, type = "n",
       yaxp = c(0, 1, 2), 
       main = "action = 1, contact = 0")
 
-# set up a data list that contains the different combinations of predictor values. 
-
-kA <- 1       # value for action
-kC <- 0       # value for contact
-kI <- 0:1     # values of intention to calculate over
-pdat <- data.frame(A = kA, 
-                   C = kC,
-                   I = kI)
-phi <- link(m12.5, data = pdat )$phi
-
-# loop over the first 50 samples in and plot their predictions across values of intention
-# use  pordlogit to compute the cumulative probability for each possible value
-
+kA <- 1; kC <- 0; kI <- 0:1
+pdat <- data.frame(action = kA, contact = kC, intention = kI)
+phi <- posterior_linpred(b12.5, newdata = pdat)
 
 for( s in 1:50 ) {
-  pk <- pordlogit( 1:6, phi[s, ], post$cutpoints[s, ])
+  pk <- pordlogit( 1:6, phi[s, ], thr_mat[s, ])
   for( i in 1:6 ) lines(kI, pk[,i], col = grau(0.1))
 }
-
-
 ```
 
 
 
 
-```{r introBayes14-fig13, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, m12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 0, and contact = 1.", fig.align='center', echo=FALSE}
+```{r introBayes14-fig13, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Posterior predictions of the ordered categorical model with interactions, b12.5. The distribution of posterior probabilities of each outcome across values of intention for action = 0, and contact = 1.", fig.align='center', echo=FALSE}
 plot( NULL, type = "n", 
       bty = "n",
       xlab = "intention", 
@@ -694,76 +796,74 @@ plot( NULL, type = "n",
       ylim = c(0, 1), 
       xaxp = c(0, 1, 1), 
       yaxp = c(0, 1, 2), 
-      main = "action = 1, contact = 0")
+      main = "action = 0, contact = 1")
 
-# set up a data list that contains the different combinations of predictor values. 
-
-kA <- 0       # value for action
-kC <- 1     # value for contact
-kI <- 0:1     # values of intention to calculate over
-pdat <- data.frame(A = kA, 
-                   C = kC,
-                   I = kI)
-phi <- link(m12.5, data = pdat )$phi
-
-# loop over the first 50 samples in and plot their predictions across values of intention
-# use  pordlogit to compute the cumulative probability for each possible value
-
+kA <- 0; kC <- 1; kI <- 0:1
+pdat <- data.frame(action = kA, contact = kC, intention = kI)
+phi <- posterior_linpred(b12.5, newdata = pdat)
 
 for( s in 1:50 ) {
-  pk <- pordlogit( 1:6, phi[s, ], post$cutpoints[s, ])
+  pk <- pordlogit( 1:6, phi[s, ], thr_mat[s, ])
   for( i in 1:6 ) lines(kI, pk[,i], col = grau(0.1))
 }
-
-
 ```
 
 
 我們繪製了三個連續的圖\@ref(fig:introBayes14-fig11), \@ref(fig:introBayes14-fig12), \@ref(fig:introBayes14-fig13) 展示了不同的預測變量取值時，對結果選擇的預測。橫軸的 `intention` 分別取 0, 1 時，且當不同條件的 `action, contact` 固定不變時，對結果變量的影響。所以第一個圖\@ref(fig:introBayes14-fig11)，其實展示的就是不認同行動原則 (no action)，不認同接觸原則 (no contact)，也不認同意圖原則 (no intention) 人，如果變成了認同意圖原則的話，他們選擇的7個結果的變化。同理可以解釋其餘兩個圖的涵義。值得注意的是，第三張圖 \@ref(fig:introBayes14-fig13) 中其實展示的就是我們觀察到的 `contact` 和 `intention` 之間存在的交互作用。該圖也展示了不認同行動原則 (no action)，但是同時認同接觸原則 (contact = 1) 和意圖原則 (intention = 1) 的話，更多的人會傾向於選擇數值更低的結果，也就意味着這樣的受試對象其實更有可能在該試驗中選擇無視火車軋死更多的5人，也不會扣動變軌機制讓火車轉向去軋死一個另一条鐵軌上的人。另外一種直觀的方法是繪製不同預測變量情況下的結果概率柱狀圖。
 
 
-```{r  introBayes14-fig14, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center'}
+```{r  introBayes14-fig14, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the b12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center'}
 kA <- 0         # value of action
 kC <- 0         # value for contact
 kI <- 0:1       # values for intention to calculate over
 
-pdat <- data.frame(A = kA, 
-                   C = kC, 
-                   I = kI)
-s <- rethinking::sim( m12.5, data = pdat )
-simplehist(s, xlab = "response", 
-           bty = "n", 
-      main = "action = 0, contact = 0")
+pdat <- data.frame(action = kA, contact = kC, intention = kI)
+s <- posterior_predict(b12.5, newdata = pdat)
+# Overlay two histograms: intention=0 (black) and intention=1 (blue)
+tab0 <- table(factor(s[,1], levels = 1:7))
+tab1 <- table(factor(s[,2], levels = 1:7))
+ymax <- max(c(tab0, tab1)) * 1.1
+plot(1:7, tab0, type = "h", lwd = 4, col = "black",
+     xlab = "response", ylab = "Frequency", bty = "n",
+     xlim = c(0.5, 7.5), ylim = c(0, ymax),
+     main = "action = 0, contact = 0")
+lines(1:7 + 0.1, tab1, type = "h", lwd = 4, col = rangi2)
 ```
 
-```{r  introBayes14-fig15, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
+```{r  introBayes14-fig15, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the b12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
 kA <- 1         # value of action
 kC <- 0         # value for contact
 kI <- 0:1       # values for intention to calculate over
 
-pdat <- data.frame(A = kA, 
-                   C = kC, 
-                   I = kI)
-s <- rethinking::sim( m12.5, data = pdat )
-simplehist(s, xlab = "response", 
-           bty = "n", 
-      main = "action = 1, contact = 0")
+pdat <- data.frame(action = kA, contact = kC, intention = kI)
+s <- posterior_predict(b12.5, newdata = pdat)
+tab0 <- table(factor(s[,1], levels = 1:7))
+tab1 <- table(factor(s[,2], levels = 1:7))
+ymax <- max(c(tab0, tab1)) * 1.1
+plot(1:7, tab0, type = "h", lwd = 4, col = "black",
+     xlab = "response", ylab = "Frequency", bty = "n",
+     xlim = c(0.5, 7.5), ylim = c(0, ymax),
+     main = "action = 1, contact = 0")
+lines(1:7 + 0.1, tab1, type = "h", lwd = 4, col = rangi2)
 ```
 
 
 
-```{r  introBayes14-fig16, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the m12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
+```{r  introBayes14-fig16, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="The same interactions in the b12.5 model visualized as histograms of simulated outcomes. The black line segments are intention =0. The blue line segments are intention = 1. ", fig.align='center', echo=FALSE}
 kA <- 0         # value of action
 kC <- 1         # value for contact
 kI <- 0:1       # values for intention to calculate over
 
-pdat <- data.frame(A = kA, 
-                   C = kC, 
-                   I = kI)
-s <- rethinking::sim( m12.5, data = pdat )
-simplehist(s, xlab = "response", 
-           bty = "n", 
-      main = "action = 0, contact = 1")
+pdat <- data.frame(action = kA, contact = kC, intention = kI)
+s <- posterior_predict(b12.5, newdata = pdat)
+tab0 <- table(factor(s[,1], levels = 1:7))
+tab1 <- table(factor(s[,2], levels = 1:7))
+ymax <- max(c(tab0, tab1)) * 1.1
+plot(1:7, tab0, type = "h", lwd = 4, col = "black",
+     xlab = "response", ylab = "Frequency", bty = "n",
+     xlim = c(0.5, 7.5), ylim = c(0, ymax),
+     main = "action = 0, contact = 1")
+lines(1:7 + 0.1, tab1, type = "h", lwd = 4, col = rangi2)
 ```
 
 
@@ -777,10 +877,10 @@ simplehist(s, xlab = "response",
 
 
 ```{r introBayes14-15, cache=TRUE}
-data(Trolley)
-d <- Trolley
+# Reload Trolley data (same CSV as above)
+d <- read.csv("../backupfiles/Trolley.csv", sep = ";")
 
-levels(d$edu)
+levels(factor(d$edu))
 # reorder 
 
 d <- d %>% 
@@ -843,7 +943,6 @@ $$
 
 
 ```{r  introBayes14-fig17, cache=TRUE, fig.width=6, fig.height=5,  fig.cap="Simulated draws from a Dirichlet prior with alpha = {2,2,2,2,2,2,2}.  The highlighted vector is not special but just to show how much variation can exist in a single vector. This prior does not expect all the probabilities to be equal. Instead it expects that any of the probabilities could be bigger or smaller than the others.", fig.align='center', message=FALSE}
-library(gtools)
 set.seed(2020) # <- I never trust this can generate reliable results anymore
 delta <- rdirichlet(10, alpha = rep(2, 7))
 
@@ -871,6 +970,7 @@ for ( i in 1:nrow(delta) ) lines( 1:7, delta[i, ],
 
 
 ```{r introBayes14-16, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 dat <- list(
   R = d$response, 
   action = d$action,
@@ -894,6 +994,23 @@ m12.6 <- ulam(
 saveRDS(m12.6, "../Stanfits/m12_6.rds")
 ```
 
+```{r introBayes14-16-brm, cache=TRUE, results="hide", message=FALSE}
+# brms equivalent: mo() implements the same Dirichlet monotonic decomposition
+d$edu_int <- as.integer(d$edu)
+d$response_f <- ordered(d$response)
+
+b12.6 <- brm(
+  response_f ~ mo(edu_int) + action + intention + contact,
+  family = cumulative("logit"),
+  prior  = c(prior(normal(0, 1),   class = b),
+             prior(normal(0, 1.5), class = Intercept),
+             prior(dirichlet(2), class = simo, coef = "moedu_int1")),
+  data   = d,
+  chains = 4, cores = 4,
+  file   = "Stanfits/brm_m12_6"
+)
+```
+
 
 其中，
 
@@ -902,14 +1019,14 @@ saveRDS(m12.6, "../Stanfits/m12_6.rds")
 
 這個模型運行的時間會比較長，但是使用貝葉斯模型的你我都知道，有些事情是值得等待的。這就來看看模型運行的結果，先忽略掉 `kappa` 的估計結果：
 
-```{r introBayes14-17, cache=TRUE}
-m12.6 <- readRDS("../Stanfits/m12_6.rds")
-precis( m12.6, depth = 2, omit = "kappa")
+```{r introBayes14-17, cache=FALSE}
+summary(b12.6)
 ```
 
-受教育程度這個變量對結果的選擇的影響整體來說是負的 `bE = -0.32`。也就是說，受教育程度最高的受試者，會傾向於不去拉動變軌的機制。然後我們來看這一系列的 `delta` 變量的運算結果。圖 \@ref(fig:introBayes14-fig18) 顯示，每個學歷的增加都多多少少地增加了學歷對結果的影響，但是其中第五層級的學歷 `SCol = Some college` 比起從高中畢業 `HSG = high school graduate` 的增加可以說微不足道。
+受教育程度這個變量對結果的選擇的影響整體來說是負的 `moedu_int = -0.05`。也就是說，受教育程度最高的受試者，會傾向於不去拉動變軌的機制。然後我們來看這一系列的 `delta` 變量的運算結果（在 brms 中對應 `simo_moedu_int1` 系列參數）。圖 \@ref(fig:introBayes14-fig18) 顯示，每個學歷的增加都多多少少地增加了學歷對結果的影響，但是其中第五層級的學歷 `SCol = Some college` 比起從高中畢業 `HSG = high school graduate` 的增加可以說微不足道。
 
 ```{r eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 delta_labels <- c("Elem", "MidSch", "SHS", "HSG", 
                   "SCol", "Bach", "Mast", "Grad")
 pairs( m12.6, pars = "delta", labels = delta_labels)
@@ -926,6 +1043,7 @@ knitr::include_graphics("../img/fig54_18m12_6.png")
 最後我們再來跟傳統的方法比較一下這個改進之後的模型建立方法和傳統的把不同的類別做簡單的啞變量甚至是改成連續形變量的方法的結果。爲了能讓二者之間直接比較，我們需要把受教育程度這個變量改成連續型變量之後，把它標準化，使之成爲 0-1 之間的數字：
 
 ```{r introBayes14-18, cache=TRUE, results="hide", eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 dat$edu_norm <- normalize( as.integer(d$edu) )
 epiDisplay::summ(dat$edu_norm, graph = FALSE)
 
@@ -937,16 +1055,27 @@ m12.7 <- ulam(
     cutpoints ~ normal(0, 1.5)
   ), data = dat, chains = 4, cores = 4
 )
-
 # saveRDS(m12.7, "Stanfits/m12_7.rds")
-
 ```
 
-```{r  introBayes14-19, cache=TRUE}
-m12.7 <- readRDS("../Stanfits/m12_7.rds")
-precis(m12.7)
+```{r introBayes14-18-brm, cache=TRUE, results="hide", message=FALSE}
+d$edu_norm <- normalize(as.integer(d$edu))
+
+b12.7 <- brm(
+  response_f ~ edu_norm + action + intention + contact,
+  family = cumulative("logit"),
+  prior  = c(prior(normal(0, 1),   class = b),
+             prior(normal(0, 1.5), class = Intercept)),
+  data   = d,
+  chains = 4, cores = 4,
+  file   = "Stanfits/brm_m12_7"
+)
+```
+
+```{r  introBayes14-19, cache=FALSE}
+summary(b12.7)
 ```
 
 
-你會看見，這時候給出的運算結果提示教育程度並不影響結果的選擇，或者影響幾乎可以忽略不計 `bE = -0.10, 89% CrI: -0.25, 0.05` 。但是很顯然這不是事實，因爲不同教育程度之間的跨度，不能認爲是一個線性的變化過程，不同的教育程度的提升之間對結果的影響並不是簡單的一成不變的 different levels have different incremental associations。
+你會看見，這時候給出的運算結果提示教育程度並不影響結果的選擇，或者影響幾乎可以忽略不計 `edu_norm = -0.12, 95% CrI: -0.30, 0.07` 。但是很顯然這不是事實，因爲不同教育程度之間的跨度，不能認爲是一個線性的變化過程，不同的教育程度的提升之間對結果的影響並不是簡單的一成不變的 different levels have different incremental associations。
 

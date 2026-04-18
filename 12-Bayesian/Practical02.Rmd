@@ -1,3 +1,7 @@
+```{r ch12-guard-practical02, include=FALSE}
+if (!exists("bugpath", inherits = FALSE)) source("../R/global_setup.R", chdir = FALSE)
+```
+
 
 1. 拋擲硬幣試驗
 
@@ -13,7 +17,8 @@ model{
 下面的代碼展示了如何在 R 裏連接OpenBUGS進行蒙特卡羅運算和調出其結果的過程：
 
 ```{r R-OpenBUGS00, cache=TRUE, fig.width=9, fig.cap='History of the iterations.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, eval=FALSE}
-library(BRugs)
+# [LEGACY BRugs/OpenBUGS - preserved for reference; replaced by JAGS block below]
+# library(BRugs)
 
 # Step 1 check model
 modelCheck(paste(bugpath, "/backupfiles/coinmodel.txt", sep = ""))
@@ -43,8 +48,8 @@ samplesHistory("*", mfrow = c(2,1), ask=FALSE)
 
 下面的代碼展示了如何在R裏連接JAGS進行蒙特卡羅運算和調出其結果的過程：
 
-```{r JAGS00, cache=TRUE, fig.width=9, fig.cap='History of the iterations by JAGS.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
-
+```{r JAGS00, cache=TRUE, fig.width=9, fig.cap='History of the iterations by JAGS.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, eval=TRUE}
+# [LEGACY JAGS - preserved for reference]
 library(runjags)
 library(rjags)
 library(R2jags)
@@ -65,10 +70,28 @@ codaSamples <- coda.samples(
 summary(codaSamples)
 
 # Show the trace plot
-# library(mcmcplots)
+# library(mcmcplots)  # not available for R 4.5; using coda equivalents
 # ggSample <- ggs(codaSamples)
 # ggs_traceplot(ggSample)
-mcmcplots::traplot(codaSamples)
+traceplot(codaSamples)
+```
+
+下面使用 base R 進行等效的蒙特卡羅模擬（不需要 JAGS）：
+
+```{r JAGS00-baseR, cache=TRUE, fig.width=9, fig.cap='History of the iterations (base R Monte Carlo).', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+set.seed(42)
+n_sim <- 1000
+y <- rbinom(n_sim, size = 10, prob = 0.5)
+P8 <- as.numeric(y >= 8)
+
+cat("Monte Carlo simulation summary (n =", n_sim, "):\n")
+cat("P(Y >= 8) =", mean(P8), "\n")
+cat("Mean(y) =", mean(y), ", SD(y) =", sd(y), "\n\n")
+
+# Trace plots
+par(mfrow = c(2, 1), mar = c(4, 4, 2, 1))
+plot(seq_along(P8), P8, type = "l", main = "P8", xlab = "Iteration", ylab = "P8")
+plot(seq_along(y), y, type = "l", main = "y", xlab = "Iteration", ylab = "y")
 ```
 
 
@@ -123,8 +146,8 @@ for(p_ in parameters)
 
 JAGS code: 
 
-```{r JAGS01, cache=TRUE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
-
+```{r JAGS01, cache=TRUE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=FALSE, warning=FALSE, eval=TRUE}
+# [LEGACY JAGS - preserved for reference]
 
 # Step 1 check model
 jagsModel <- jags.model(file = paste(bugpath, "/backupfiles/coinmodel30.txt", sep = ""),
@@ -146,6 +169,23 @@ summary(codaSamples)
 #### PLOT THE HISTOGRAMS OF THE SAMPLED VALUES
 ggSample <- ggs(codaSamples)
 ggs_histogram(ggSample, bins = 18)
+```
+
+Base R 等效蒙特卡羅模擬：
+
+```{r JAGS01-baseR, cache=TRUE, fig.width=4, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest (base R).', fig.align='center', out.width='80%', message=FALSE, warning=FALSE}
+set.seed(42)
+n_sim <- 10000
+y <- rbinom(n_sim, size = 30, prob = 0.7)
+P15 <- as.numeric(y <= 15)
+
+cat("Monte Carlo simulation summary (n =", n_sim, "):\n")
+cat("P(Y <= 15) =", mean(P15), "\n")
+cat("Mean(y) =", mean(y), ", SD(y) =", sd(y), "\n")
+
+par(mfrow = c(1, 2))
+hist(P15, main = "P15", col = "red", breaks = 3)
+hist(y, main = "y", col = "red", breaks = 18)
 ```
 
 
@@ -215,8 +255,8 @@ hist(chain$y, main = "y sample 10000", ylab = "P(Y)",
 也可以使用JAGS完成該模型的蒙特卡羅模擬試驗計算：
 
 
-```{r JAGS02, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
-
+```{r JAGS02, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=TRUE}
+# [LEGACY JAGS - preserved for reference]
 # Step 1 check model
 jagsModel <- jags.model(file = paste(bugpath, 
                                      "/backupfiles/drug-MC.txt", sep = ""),
@@ -259,6 +299,25 @@ hist(Y$value, main = "y sample 10000", ylab = "P(Y)",
      xlab = "y", col = "red", prob = TRUE)
 ```
 
+Base R 等效蒙特卡羅模擬（drug-MC: theta~Beta(9.2,13.8), y~Bin(theta,20)）：
+
+```{r JAGS02-baseR, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution (base R Monte Carlo).', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+set.seed(42)
+n_sim <- 10000
+theta <- rbeta(n_sim, 9.2, 13.8)
+y <- rbinom(n_sim, size = 20, prob = theta)
+P.crit <- as.numeric(y >= 15)
+
+cat("P(Y >= 15) =", mean(P.crit), "\n")
+cat("Mean(theta) =", mean(theta), ", SD(theta) =", sd(theta), "\n")
+cat("Mean(y) =", mean(y), ", SD(y) =", sd(y), "\n")
+
+par(mfrow = c(1, 2))
+plot(density(theta), main = "theta sample 10000",
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(y, main = "y sample 10000", ylab = "P(Y)",
+     xlab = "y", col = "red", prob = TRUE)
+```
 
 
 如果把藥物治療的臨牀試驗例子的先驗概率分布修改一下，修改成爲一個沒有信息的均一分布 $\text{Uniform}(0, 1)$，模型的結果會有怎樣的變化呢？嘗試繪制成功次數的預測概率分布，此時"20名患者中大於或者等於15名患者有療效"這一事件發生的概率是多少？
@@ -276,7 +335,8 @@ model{
 ```
 
 
-```{r 12-JAGS-stats-4, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r 12-JAGS-stats-4, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=TRUE}
+# [LEGACY JAGS - preserved for reference]
 # Step 1 check model
 jagsModel <- jags.model(file = paste(bugpath, 
                                      "/backupfiles/drug-MCuniform.txt", sep = ""),
@@ -311,6 +371,25 @@ hist(Y$value, main = "y sample 10000", ylab = "P(Y)",
      xlab = "y", col = "red", prob = TRUE)
 ```
 
+Base R 等效蒙特卡羅模擬（uniform prior: theta~Unif(0,1), y~Bin(theta,20)）：
+
+```{r 12-JAGS-stats-4-baseR, cache=TRUE, fig.width=7, fig.height=3.5, fig.cap='Predictive distribution (base R, uniform prior).', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+set.seed(42)
+n_sim <- 10000
+theta <- runif(n_sim, 0, 1)
+y <- rbinom(n_sim, size = 20, prob = theta)
+P.crit <- as.numeric(y >= 15)
+
+cat("P(Y >= 15) =", mean(P.crit), "\n")
+cat("Mean(theta) =", mean(theta), ", SD(theta) =", sd(theta), "\n")
+
+par(mfrow = c(1, 2))
+plot(density(theta), main = "theta sample 10000",
+     ylab = "P(theta)", xlab = "theta", col = "red")
+hist(y, main = "y sample 10000", ylab = "P(Y)",
+     xlab = "y", col = "red", prob = TRUE)
+```
+
 這個條件下，"20名患者中大於或者等於15名患者有療效"這一事件發生的概率爲29.2%。
 
 3. 嘗試自己來寫一個模型。
@@ -331,7 +410,8 @@ model{
 
 分別對這個模型嘗試蒙特卡羅模擬試驗100, 1000, 和100000次，比較蒙特卡羅模擬試驗給出的概率估計和理論值的差異。
 
-```{r 12-Bayesian-stats-5, cache=TRUE, message=TRUE, warning=FALSE}
+```{r 12-Bayesian-stats-5, cache=TRUE, message=TRUE, warning=FALSE, eval=TRUE}
+# [LEGACY JAGS - preserved for reference]
 # Step 1 check model
 jagsModel <- jags.model(file = paste(bugpath, 
                                      "/backupfiles/standardnormalMC.txt", sep = ""),
@@ -372,6 +452,27 @@ summary(codaSamples)
 
 ```
 
+Base R 等效標準正態分布蒙特卡羅模擬：
+
+```{r 12-Bayesian-stats-5-baseR, cache=TRUE, message=TRUE, warning=FALSE}
+set.seed(42)
+
+mc_normal_sim <- function(n_sim) {
+  x <- rnorm(n_sim, mean = 0, sd = 1)  # dnorm(0,1) in BUGS = N(0, precision=1) = N(0, sd=1)
+  p.1 <- as.numeric(x <= -1.96)
+  p.2 <- as.numeric(x <= -2.326)
+  naive_se <- sd(x) / sqrt(n_sim)
+  cat("\nn =", n_sim, ":\n")
+  cat("  Mean(x) =", round(mean(x), 4), ", SD(x) =", round(sd(x), 4), 
+      ", Naive SE =", round(naive_se, 5), "\n")
+  cat("  P(x <= -1.96) =", mean(p.1), " (theory: 0.025)\n")
+  cat("  P(x <= -2.326) =", mean(p.2), " (theory: 0.01)\n")
+}
+
+mc_normal_sim(100)
+mc_normal_sim(1000)
+mc_normal_sim(100000)
+```
 
 我們知道理論上 $x\sim N(0,1^2)$，它的均值爲0，標準差爲1。我們也能看見蒙特卡羅模擬試驗的結果，隨着我們增加其重復取樣次數二越來越接近理論值。當取樣達到十萬次以上之後，可以看到蒙特卡羅的結果已經十分之接近真實值。在一開始剛剛重復100次蒙特卡羅時，我們可以看到`p.1, p.2`的估計還很不準確，但是類似的，當蒙特卡羅採樣次數達到十萬次以上時，這兩個概率估計也已經十分接近真實值。另外值得注意的一點是，隨着蒙特卡羅樣本量增加，`MC_error`也在變得越來越小（越來越精確）。事實上，這個`Naive SE`本身約等於$\frac{\text{sd}}{\sqrt{\text{sample size}}}$。所以對$x$來說，經過1000次蒙特卡羅計算，$\text{sd}(x) = 1.009$，那麼此時的`Naive SE`$=\frac{1.009}{\sqrt{1000}} \approx 0.0319$，十分接近計算機給出的`Naive SE =   0.03244`。`Naive SE`本身可以作爲這個$x$均值的估計精確度來理解，我們同時相信，真實的理論值會落在蒙特卡羅樣本均值$\pm 2\times$ `Naive SE`範圍內。
 
@@ -386,7 +487,8 @@ model{
 }
 ```
 
-```{r 12-Bayesian-stats-6, cache=TRUE, fig.width=3.5, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r 12-Bayesian-stats-6, cache=TRUE, fig.width=3.5, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=TRUE}
+# [LEGACY JAGS - preserved for reference]
 # Step 1 check model
 jagsModel <- jags.model(file = paste(bugpath, 
                                      "/backupfiles/MCt.txt", sep = ""),
@@ -419,6 +521,16 @@ plot(density(Y$value), main = "y sample 10000",
 
 ```
 
+Base R 等效 t 分布蒙特卡羅模擬：
+
+```{r 12-Bayesian-stats-6-baseR, cache=TRUE, fig.width=3.5, fig.height=3, fig.cap='Predictive distribution (base R, t-distribution df=4).', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+set.seed(42)
+y <- rt(10000, df = 4)
+cat("Mean(y) =", mean(y), ", SD(y) =", sd(y), "\n")
+plot(density(y), main = "y sample 10000",
+     ylab = "P(y)", xlab = "y", col = "red")
+```
+
 下面再嘗試計算一個來自均值爲1，標準差爲2的正態分布的隨機變量，它的三次方的期望值是多少。已知標準差$SD = 2$，那麼方差爲$Var = 4$，那麼翻譯成BUGS語言就是精確度爲 $\frac{1}{4} = 0.25$。
 
 ```
@@ -430,7 +542,8 @@ model{
 }
 ```
 
-```{r 12-Bayesian-stats-7, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+```{r 12-Bayesian-stats-7, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Predictive distribution of the nodes of interest.', fig.align='center', out.width='80%', message=TRUE, warning=FALSE, eval=TRUE}
+# [LEGACY JAGS - preserved for reference]
 # Step 1 check model
 jagsModel <- jags.model(file = paste(bugpath, 
                                      "/backupfiles/MCcube.txt", sep = ""),
@@ -464,6 +577,24 @@ plot(density(Y$value), main = "y sample 10000",
      ylab = "P(y)", xlab = "y", col = "red")
 
 plot(density(Ycubed$value), main = "ycubed sample 100000", 
+     ylab = "P(ycubed)", xlab = "ycubed", col = "red")
+```
+
+Base R 等效蒙特卡羅模擬（y~N(1,4), ycubed=y^3）：
+
+```{r 12-Bayesian-stats-7-baseR, cache=TRUE, fig.width=7, fig.height=3, fig.cap='Predictive distribution (base R, normal cube).', fig.align='center', out.width='80%', message=TRUE, warning=FALSE}
+set.seed(42)
+n_sim <- 10000
+y <- rnorm(n_sim, mean = 1, sd = 2)
+ycubed <- y^3
+
+cat("Mean(y) =", mean(y), ", SD(y) =", sd(y), "\n")
+cat("Mean(ycubed) =", mean(ycubed), ", SD(ycubed) =", sd(ycubed), "\n")
+
+par(mfrow = c(1, 2))
+plot(density(y), main = "y sample 10000",
+     ylab = "P(y)", xlab = "y", col = "red")
+plot(density(ycubed), main = "ycubed sample 10000",
      ylab = "P(ycubed)", xlab = "ycubed", col = "red")
 ```
 

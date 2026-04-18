@@ -1,3 +1,9 @@
+```{r brms-setup-guard-s12, include=FALSE}
+# Standalone rendering guard — bookdown loads via global_setup.R
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
+```
+
 > Understanding of chance could help us acquire wisdom. 
 > ~ Richard McElreath
 
@@ -69,31 +75,53 @@ plot(table(positions),
 這裏使用非洲大陸地理的數據 `rugged`，來作爲簡單的HMC過程的示範。
 
 ```{r introBayes12-02, cache=TRUE}
-data("rugged")
-d <- rugged
+# [MIGRATED 2026-04] data("rugged") replaced with CSV load
+d <- read.csv("../backupfiles/rugged.csv", sep = ";")
 d$log_gdp <- log(d$rgdppc_2000)
 dd <- d[ complete.cases(d$rgdppc_2000), ]
 dd$log_gdp_std <- dd$log_gdp / mean(dd$log_gdp)
 dd$rugged_std <- dd$rugged / max(dd$rugged)
 dd$cid <- ifelse( dd$cont_africa == 1, 1, 2)
+# Centred predictor and factor cid for brms interaction formula
+dd$rugged_std_c <- dd$rugged_std - 0.215
+dd$cid_f <- factor(dd$cid)
 ```
 
 之前，我們使用二次方程近似法 `quap()` 時，加入了交互作用項的模型是：
 
-```{r introBayes12-03, cache=TRUE, results="hide"}
-m8.3 <- quap(
-  alist(
-    log_gdp_std ~ dnorm(mu, sigma),
-    mu <- a[cid] + b[cid] * (rugged_std - 0.215) , 
-    a[cid] ~ dnorm( 1, 0.1 ), 
-    b[cid] ~ dnorm( 0, 0.3 ), 
-    sigma ~ dexp( 1 )
-  ), data = dd
+```{r introBayes12-03, eval=FALSE}
+# [LEGACY - eval=FALSE] quap() requires rethinking package
+# m8.3 <- quap(
+#   alist(
+#     log_gdp_std ~ dnorm(mu, sigma),
+#     mu <- a[cid] + b[cid] * (rugged_std - 0.215),
+#     a[cid] ~ dnorm(1, 0.1),
+#     b[cid] ~ dnorm(0, 0.3),
+#     sigma ~ dexp(1)
+#   ), data = dd
+# )
+```
+
+```{r introBayes12-03b, cache=TRUE, results="hide"}
+# [MIGRATED 2026-04] brms equivalent of m8.3 (quadratic approximation reference)
+m8.3_brm <- brm(
+  log_gdp_std ~ 0 + cid_f + cid_f:rugged_std_c,
+  data = dd,
+  prior = c(
+    prior(normal(1, 0.1), class = b, coef = cid_f1),
+    prior(normal(1, 0.1), class = b, coef = cid_f2),
+    prior(normal(0, 0.3), class = b, coef = cid_f1:rugged_std_c),
+    prior(normal(0, 0.3), class = b, coef = cid_f2:rugged_std_c),
+    prior(exponential(1), class = sigma)
+  ),
+  chains = 4, cores = 4, seed = 123,
+  file = "Stanfits/m8.3_brm"
 )
 ```
 
 ```{r introBayes12-0301, cache=TRUE}
-precis( m8.3, depth = 2 )
+# [MIGRATED 2026-04] precis() → print(summary())
+print(summary(m8.3_brm))
 ```
 
 
@@ -117,6 +145,7 @@ str(dat_slim)
 準備好了數據之後，接下來，我們使用 Stan 進行事後分佈樣本採集：
 
 ```{r introBayes12-05, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m9.1 <- ulam(
   alist(
     log_gdp_std ~ dnorm( mu, sigma ), 
@@ -129,15 +158,32 @@ m9.1 <- ulam(
 saveRDS(m9.1, "../Stanfits/m9_1.rds")
 ```
 
-```{r introBayes12-0501, cache=TRUE}
-m9.1 <-  readRDS("../Stanfits/m9_1.rds")
-precis(m9.1, depth =2 )
+```{r introBayes12-0501, cache=TRUE, results="hide"}
+# [MIGRATED 2026-04] ulam readRDS replaced with brm (1 chain, demonstrating single-chain HMC)
+m9.1_brm <- brm(
+  log_gdp_std ~ 0 + cid_f + cid_f:rugged_std_c,
+  data = dd,
+  prior = c(
+    prior(normal(1, 0.1), class = b, coef = cid_f1),
+    prior(normal(1, 0.1), class = b, coef = cid_f2),
+    prior(normal(0, 0.3), class = b, coef = cid_f1:rugged_std_c),
+    prior(normal(0, 0.3), class = b, coef = cid_f2:rugged_std_c),
+    prior(exponential(1), class = sigma)
+  ),
+  chains = 1, cores = 1, seed = 123,
+  file = "Stanfits/m9.1_brm"
+)
+```
+
+```{r introBayes12-0501b, cache=TRUE}
+print(summary(m9.1_brm))
 ```
 
 我們還可以使用多条採樣鏈，及使用多個計算機內核以平行計算提升效率：
 
 
 ```{r introBayes12-06, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m9.104 <- ulam(
   alist(
     log_gdp_std ~ dnorm( mu, sigma ), 
@@ -150,31 +196,49 @@ m9.104 <- ulam(
 saveRDS(m9.104, "../Stanfits/m9_104.rds")
 ```
 
-```{r introBayes12-050101, cache=TRUE}
-m9.104 <-  readRDS("../Stanfits/m9_104.rds")
+```{r introBayes12-050101, cache=TRUE, results="hide"}
+# [MIGRATED 2026-04] ulam readRDS replaced with brm (4 chains)
+m9.104_brm <- brm(
+  log_gdp_std ~ 0 + cid_f + cid_f:rugged_std_c,
+  data = dd,
+  prior = c(
+    prior(normal(1, 0.1), class = b, coef = cid_f1),
+    prior(normal(1, 0.1), class = b, coef = cid_f2),
+    prior(normal(0, 0.3), class = b, coef = cid_f1:rugged_std_c),
+    prior(normal(0, 0.3), class = b, coef = cid_f2:rugged_std_c),
+    prior(exponential(1), class = sigma)
+  ),
+  chains = 4, cores = 4, seed = 123,
+  file = "Stanfits/m9.104_brm"
+)
+```
 
-show( m9.104 )
-precis( m9.104 , depth = 2 )
+```{r introBayes12-050101b, cache=TRUE}
+# [MIGRATED 2026-04] show() + precis() → print(summary())
+print(summary(m9.104_brm))
 ```
 
 除了使用 `traceplot()` 來進行診斷給出軌跡圖之外：
 
 
-```{r  introBayes12-fig03, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Trace plot of the Markov chain from the ruggedness model, m9.1. (Gray region is warmup)", fig.align='center'}
-traceplot(m9.104)
+```{r  introBayes12-fig03, cache=TRUE, fig.width=10, fig.height=12,  fig.cap="Trace plot of the Markov chain from the ruggedness model, m9.1. (Gray region is warmup)", fig.align='center'}
+# [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()
+bayesplot::mcmc_trace(as.array(m9.104_brm), facet_args = list(ncol = 2))
 ```
 
 還可以使用 `trunkplot()` 繪製 軌跡排序圖 (trace rank plot)。
 
-```{r introBayes12-fig04, cache=TRUE, fig.width=8, fig.height=5,  fig.cap="Trunk plot of the Markov chain from the ruggedness model, m9.1.", fig.align='center'}
- trankplot( m9.104 )
+```{r introBayes12-fig04, cache=TRUE, fig.width=10, fig.height=12,  fig.cap="Trunk plot of the Markov chain from the ruggedness model, m9.1.", fig.align='center'}
+# [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()
+bayesplot::mcmc_rank_overlay(as.array(m9.104_brm), facet_args = list(ncol = 2))
 ```
 
 使用 `stancode()` 可以閱讀計算機自動生成的 Stan 代碼：
 
 
 ```{r introBayes12-07, cache=TRUE}
-stancode(m9.104)
+# [MIGRATED 2026-04] stancode() works in brms too
+cat(brms::stancode(m9.104_brm))
 ```
 
 
@@ -184,6 +248,7 @@ stancode(m9.104)
 
 
 ```{r introBayes12-08, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 y <- c(-1, 1)
 set.seed(11)
 m9.2 <- ulam(
@@ -208,20 +273,37 @@ saveRDS(m9.2, "../Stanfits/m9_2.rds")
 ##   * Using informative or weakly informative prior distributions
 ```
 
-```{r introBayes12-0801, cache=TRUE}
-m9.2 <-  readRDS("../Stanfits/m9_2.rds")
-precis(m9.2)
+```{r introBayes12-0801, cache=TRUE, results="hide"}
+# [MIGRATED 2026-04] ulam readRDS → brm with flat priors (demonstrating bad mixing)
+set.seed(11)
+y <- c(-1, 1)
+m9.2_brm <- brm(
+  y ~ 1,
+  data = list(y = y),
+  prior = c(
+    prior(normal(0, 1000), class = Intercept),
+    prior(exponential(0.0001), class = sigma)
+  ),
+  chains = 3, cores = 3, seed = 11,
+  file = "Stanfits/m9.2_brm"
+)
+```
+
+```{r introBayes12-0801b, cache=TRUE}
+print(summary(m9.2_brm))
 ```
 
 你會看見你的計算機給出的結果非常的奇怪，且有警報提示可能計算出錯。上述結果肯定是不正常的，因為觀察值 -1，和 1 的平均值應該是 0 。你看上面的結果給出的可信區間也是多麼的荒謬。可用的有效樣本量也是小的可憐。你可以看看它的軌跡圖，和軌跡排序圖是多麼地糟糕：
 
 
-```{r introBayes12-fig05, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trace plot from three trains by model m9.2. These chains are not healthy. ", fig.align='center'}
-traceplot(m9.2)
+```{r introBayes12-fig05, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trace plot from three trains by model m9.2. These chains are not healthy. ", fig.align='center'}
+# [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()
+bayesplot::mcmc_trace(as.array(m9.2_brm))
 ```
 
-```{r introBayes12-fig06, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trankplot from three chains by model 9.2. These chains are not healthy. ", fig.align='center'}
-trankplot(m9.2)
+```{r introBayes12-fig06, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trankplot from three chains by model 9.2. These chains are not healthy. ", fig.align='center'}
+# [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()
+bayesplot::mcmc_rank_overlay(as.array(m9.2_brm))
 ```
 
 
@@ -241,6 +323,7 @@ $$
 
 
 ```{r  introBayes12-09, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(11)
 m9.3 <- ulam(
   alist(
@@ -253,21 +336,37 @@ m9.3 <- ulam(
 saveRDS(m9.3, "../Stanfits/m9_3.rds")
 ```
 
-```{r introBayes12-0901, cache=TRUE}
-m9.3 <-  readRDS("../Stanfits/m9_3.rds")
-precis(m9.3)
+```{r introBayes12-0901, cache=TRUE, results="hide"}
+# [MIGRATED 2026-04] ulam readRDS → brm with weakly informative priors
+set.seed(11)
+m9.3_brm <- brm(
+  y ~ 1,
+  data = list(y = y),
+  prior = c(
+    prior(normal(1, 10), class = Intercept),
+    prior(exponential(1), class = sigma)
+  ),
+  chains = 3, cores = 3, seed = 11,
+  file = "Stanfits/m9.3_brm"
+)
+```
+
+```{r introBayes12-0901b, cache=TRUE}
+print(summary(m9.3_brm))
 ```
 
 
 可以看見，調教了一點點的先驗概率分佈之後給出的事後概率分佈估計就變得合理許多了。新的模型的軌跡圖和軌跡排序圖也變得合理許多：
 
 
-```{r introBayes12-fig07, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trace plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition.", fig.align='center'}
-traceplot(m9.3)
+```{r introBayes12-fig07, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trace plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition.", fig.align='center'}
+# [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()
+bayesplot::mcmc_trace(as.array(m9.3_brm))
 ```
 
-```{r introBayes12-fig08, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trank plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition.", fig.align='center'}
-trankplot(m9.3)
+```{r introBayes12-fig08, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trank plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition.", fig.align='center'}
+# [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()
+bayesplot::mcmc_rank_overlay(as.array(m9.3_brm))
 ```
 
 
@@ -302,6 +401,7 @@ $$
 3. 下面的代碼是上述模型的翻譯，這時 Stan 運行的時間會較長；
 
 ```{r introBayes12-11, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(384)
 m9.4 <- ulam(
   alist(
@@ -335,27 +435,45 @@ saveRDS(m9.4, "../Stanfits/m9_4.rds")
 
 
 
-```{r introBayes12-1101, cache=TRUE}
-m9.4 <-  readRDS("../Stanfits/m9_4.rds")
-precis(m9.4)
+```{r introBayes12-1101, cache=TRUE, results="hide"}
+# [MIGRATED 2026-04] ulam readRDS → brm non-linear formula with non-identifiable a1+a2
+set.seed(384)
+m9.4_brm <- brm(
+  bf(y ~ a1 + a2, a1 ~ 1, a2 ~ 1, nl = TRUE),
+  data = list(y = y),
+  prior = c(
+    prior(normal(0, 1000), nlpar = a1),
+    prior(normal(0, 1000), nlpar = a2),
+    prior(exponential(1),  class = sigma)
+  ),
+  chains = 3, cores = 3, seed = 384,
+  file = "Stanfits/m9.4_brm"
+)
+```
+
+```{r introBayes12-1101b, cache=TRUE}
+print(summary(m9.4_brm))
 ```
 
 看上面的模型給出的估計是多麼的可怕。有效樣本量竟然只有個位數。$\hat{R}$ 的估計值也是大得驚人。`a1, a2` 的取值距離0都十分遙遠，標準差也大得驚人，且它們之和十分接近 0 。這就是兩個參數之和可求，但是他們各自卻有無窮解的實例。你觀察一下上述模型的軌跡圖：
 
 
-```{r introBayes12-fig09, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trace plot from three trains by model m9.4. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples.", fig.align='center'}
-traceplot(m9.4)
+```{r introBayes12-fig09, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trace plot from three trains by model m9.4. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples.", fig.align='center'}
+# [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()
+bayesplot::mcmc_trace(as.array(m9.4_brm))
 ```
 
 
-```{r introBayes12-fig10, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trank plot from three trains by model m9.5. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples.", fig.align='center'}
-trankplot(m9.4)
+```{r introBayes12-fig10, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trank plot from three trains by model m9.5. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples.", fig.align='center'}
+# [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()
+bayesplot::mcmc_rank_overlay(as.array(m9.4_brm))
 ```
 
 
 同樣地，對先驗概率分佈加以調整之後，有助於我們的模型事後樣本的採集。
 
 ```{r introBayes12-12, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(384)
 m9.5 <- ulam(
   alist(
@@ -369,22 +487,39 @@ m9.5 <- ulam(
 saveRDS(m9.5, "../Stanfits/m9_5.rds")
 ```
 
-```{r introBayes12-1201, cache=TRUE}
-m9.5 <- readRDS("../Stanfits/m9_5.rds")
-precis(m9.5)
+```{r introBayes12-1201, cache=TRUE, results="hide"}
+# [MIGRATED 2026-04] ulam readRDS → brm non-linear formula with tighter priors
+set.seed(384)
+m9.5_brm <- brm(
+  bf(y ~ a1 + a2, a1 ~ 1, a2 ~ 1, nl = TRUE),
+  data = list(y = y),
+  prior = c(
+    prior(normal(0, 10), nlpar = a1),
+    prior(normal(0, 10), nlpar = a2),
+    prior(exponential(1), class = sigma)
+  ),
+  chains = 3, cores = 3, seed = 384,
+  file = "Stanfits/m9.5_brm"
+)
+```
+
+```{r introBayes12-1201b, cache=TRUE}
+print(summary(m9.5_brm))
 ```
 
 這時 `m9.5` 運行的速度提升了很多，且 `a1, a2` 的事後樣本估計比之前的 `m9.4` 要良好得多。軌跡圖和軌跡排序圖也要改善了很多：
 
 
-```{r introBayes12-fig11, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trace plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors", fig.align='center'}
-traceplot(m9.5)
+```{r introBayes12-fig11, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trace plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors", fig.align='center'}
+# [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()
+bayesplot::mcmc_trace(as.array(m9.5_brm))
 ```
 
 
 
-```{r introBayes12-fig12, cache=TRUE, fig.width=10, fig.height=3.5,  fig.cap="Diagnosing trank plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors", fig.align='center'}
-trankplot(m9.5)
+```{r introBayes12-fig12, cache=TRUE, fig.width=10, fig.height=8,  fig.cap="Diagnosing trank plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors", fig.align='center'}
+# [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()
+bayesplot::mcmc_rank_overlay(as.array(m9.5_brm))
 ```
 
 

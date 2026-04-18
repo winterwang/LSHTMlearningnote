@@ -1,3 +1,36 @@
+```{r session10-setup, include=FALSE}
+if (!exists("PI", mode = "function")) source("../R/global_setup.R", chdir = FALSE)
+dir.create("Stanfits", showWarnings = FALSE)
+# var2: population variance (n denominator, not n-1) — used by R² calculation
+var2 <- function(x) {
+  m <- mean(x)
+  mean((x - m)^2)
+}
+# quap_link: replicate rethinking::link() via MAP + Hessian (Laplace approx).
+# brms MCMC gives honest wide posteriors, but the book uses quap's artificially
+# tight CIs to illustrate overfitting's "false confidence" — shade shrinks as
+# polynomial degree increases, even though the model is wildly overfit.
+quap_link <- function(data, degree, mass_seq, n = 1000) {
+  X <- sapply(0:degree, function(d) data$mass_std^d)
+  X_pred <- sapply(0:degree, function(d) mass_seq^d)
+  nll <- function(par) {
+    beta <- par[1:(degree + 1)]
+    log_sigma <- par[degree + 2]
+    mu <- X %*% beta
+    -sum(dnorm(data$brain_std, mu, exp(log_sigma), log = TRUE)) -
+      dnorm(par[1], 0.5, 1, log = TRUE) -
+      sum(dnorm(par[2:(degree + 1)], 0, 10, log = TRUE)) -
+      dnorm(log_sigma, 0, 1, log = TRUE)
+  }
+  init <- c(rep(0, degree + 1), 0); init[1] <- 0.5
+  fit <- optim(init, nll, method = "BFGS", hessian = TRUE)
+  beta_idx <- 1:(degree + 1)
+  vcov_beta <- solve(fit$hessian)[beta_idx, beta_idx]
+  beta_map <- fit$par[beta_idx]
+  MASS::mvrnorm(n, beta_map, vcov_beta) %*% t(X_pred)
+}
+```
+
 ## 預測變量越多越好嗎
 
 ### 變量越多總是會提高模型的擬合程度 
@@ -64,7 +97,8 @@ b_i & \sim \text{Normal}(\mu_i, \sigma) \\
 \end{aligned}
 $$
 
-```{r introBayes10-03, cache=TRUE}
+```{r introBayes10-03, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m7.1 <- quap(
   alist(
     brain_std ~ dnorm( mu, exp(log_sigma) ), 
@@ -75,6 +109,25 @@ m7.1 <- quap(
   ), data = d
 )
 precis(m7.1)
+```
+
+The rethinking model uses `exp(log_sigma)` parameterisation, which is equivalent to a log-normal prior on $\sigma$. brms supports this directly:
+
+```{r introBayes10-03-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m7.1 <- brm(
+  brain_std ~ mass_std,
+  data = d,
+  prior = c(
+    prior(normal(0.5, 1), class = Intercept),
+    prior(normal(0, 10), class = b),
+    prior(lognormal(0, 1), class = sigma)
+  ),
+  file = "Stanfits/brm_m7_1"
+)
+```
+
+```{r introBayes10-03-brm-summary, cache=FALSE}
+summary(brm_m7.1)
 # compared with traditional OLS estimation
 m7.1_OLS <- lm(brain_std ~ mass_std, data = d)
 summary(m7.1_OLS)
@@ -82,7 +135,8 @@ summary(m7.1_OLS)
 下面的代碼計算該模型 `m7.1` 的 $R^2$。
 
 
-```{r introBayes10-04, cache=TRUE}
+```{r introBayes10-04, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(12)
 s <- rethinking::sim( m7.1 )
 r <- apply(s, 2, mean) - d$brain_std
@@ -91,9 +145,19 @@ outcome_var <- var2(d$brain_std)
 1 - resid_var / outcome_var
 ```
 
+```{r introBayes10-04-brm, cache=TRUE}
+set.seed(12)
+s <- posterior_predict(brm_m7.1)
+r <- apply(s, 2, mean) - d$brain_std
+resid_var <- var2(r)
+outcome_var <- var2(d$brain_std)
+1 - resid_var / outcome_var
+```
+
 把上面的計算過程製作成一個函數，以便重複調用：
 
-```{r introBayes10-05, cache=TRUE}
+```{r introBayes10-05, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 R2_is_bad <- function( quap_fit ){
   set.seed(12)
   s <- rethinking::sim( quap_fit, refresh = 0)
@@ -102,6 +166,17 @@ R2_is_bad <- function( quap_fit ){
 }
 
 R2_is_bad(m7.1)
+```
+
+```{r introBayes10-05-brm, cache=TRUE}
+R2_is_bad <- function(brm_fit) {
+  set.seed(12)
+  s <- posterior_predict(brm_fit)
+  r <- apply(s, 2, mean) - d$brain_std
+  1 - var2(r) / var2(d$brain_std)
+}
+
+R2_is_bad(brm_m7.1)
 ```
 
 接下來，我們把這個模型擴展開，讓它更加複雜一些，增加一個二次項，試圖提升模型擬合度。
@@ -115,7 +190,8 @@ b_i & \sim \text{Normal}(\mu_i, \sigma)\\
 \end{aligned}
 $$
 
-```{r introBayes10-06, cache=TRUE}
+```{r introBayes10-06, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m7.2 <- quap(
   alist(
     brain_std ~ dnorm( mu, exp(log_sigma) ), 
@@ -128,10 +204,28 @@ m7.2 <- quap(
 precis(m7.2, depth = 2)
 ```
 
+```{r introBayes10-06-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m7.2 <- brm(
+  brain_std ~ mass_std + I(mass_std^2),
+  data = d,
+  prior = c(
+    prior(normal(0.5, 1), class = Intercept),
+    prior(normal(0, 10), class = b),
+    prior(lognormal(0, 1), class = sigma)
+  ),
+  file = "Stanfits/brm_m7_2"
+)
+```
+
+```{r introBayes10-06-brm-summary, cache=FALSE}
+summary(brm_m7.2)
+```
+
 接下來，我們頭腦發熱狂加多次項到模型中去看會發生什麼：
 
 
-```{r introBayes10-07, cache=TRUE}
+```{r introBayes10-07, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 m7.3 <- quap(
   alist(
     brain_std ~ dnorm( mu, exp(log_sigma) ), 
@@ -176,13 +270,60 @@ m7.6 <- quap(
 )
 ```
 
+```{r introBayes10-07-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m7.3 <- brm(
+  brain_std ~ mass_std + I(mass_std^2) + I(mass_std^3),
+  data = d,
+  prior = c(
+    prior(normal(0.5, 1), class = Intercept),
+    prior(normal(0, 10), class = b),
+    prior(lognormal(0, 1), class = sigma)
+  ),
+  file = "Stanfits/brm_m7_3"
+)
+
+brm_m7.4 <- brm(
+  brain_std ~ mass_std + I(mass_std^2) + I(mass_std^3) + I(mass_std^4),
+  data = d,
+  prior = c(
+    prior(normal(0.5, 1), class = Intercept),
+    prior(normal(0, 10), class = b),
+    prior(lognormal(0, 1), class = sigma)
+  ),
+  file = "Stanfits/brm_m7_4"
+)
+
+brm_m7.5 <- brm(
+  brain_std ~ mass_std + I(mass_std^2) + I(mass_std^3) + I(mass_std^4) +
+    I(mass_std^5),
+  data = d,
+  prior = c(
+    prior(normal(0.5, 1), class = Intercept),
+    prior(normal(0, 10), class = b),
+    prior(lognormal(0, 1), class = sigma)
+  ),
+  file = "Stanfits/brm_m7_5"
+)
+
+brm_m7.6 <- brm(
+  brain_std ~ mass_std + I(mass_std^2) + I(mass_std^3) + I(mass_std^4) +
+    I(mass_std^5) + I(mass_std^6),
+  data = d,
+  prior = c(
+    prior(normal(0.5, 1), class = Intercept),
+    prior(normal(0, 10), class = b),
+    prior(lognormal(0, 1), class = sigma)
+  ),
+  file = "Stanfits/brm_m7_6"
+)
+```
+
 然後我們繪製上述每個模型給出的回歸線及其89%可信區間：
 
 ```{r introBayes10-fig02, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
-post <- extract.samples( m7.1 )
 mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
                  length.out = 100)
-l <- link( m7.1, data = list(mass_std = mass_seq))
+l <- quap_link(d, degree = 1, mass_seq)
 mu <- apply(l, 2, mean)
 ci <- apply(l, 2, PI)
 
@@ -209,10 +350,9 @@ shade(ci, mass_seq)
 #### m7.2
 
 ```{r introBayes10-fig03, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
-post <- extract.samples( m7.2 )
 mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
                  length.out = 100)
-l <- link( m7.2, data = list(mass_std = mass_seq))
+l <- quap_link(d, degree = 2, mass_seq)
 mu <- apply(l, 2, mean)
 ci <- apply(l, 2, PI)
 
@@ -239,10 +379,9 @@ shade(ci, mass_seq)
 #### m7.3
 
 ```{r introBayes10-fig04, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Third-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
-post <- extract.samples( m7.3 )
 mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
                  length.out = 100)
-l <- link( m7.3, data = list(mass_std = mass_seq))
+l <- quap_link(d, degree = 3, mass_seq)
 mu <- apply(l, 2, mean)
 ci <- apply(l, 2, PI)
 
@@ -269,10 +408,9 @@ shade(ci, mass_seq)
 #### m7.4
 
 ```{r introBayes10-fig05, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
-post <- extract.samples( m7.4 )
 mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
                  length.out = 100)
-l <- link( m7.4, data = list(mass_std = mass_seq))
+l <- quap_link(d, degree = 4, mass_seq)
 mu <- apply(l, 2, mean)
 ci <- apply(l, 2, PI)
 
@@ -300,10 +438,9 @@ shade(ci, mass_seq)
 #### m7.5
 
 ```{r introBayes10-fig06, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
-post <- extract.samples( m7.5 )
 mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
                  length.out = 100)
-l <- link( m7.5, data = list(mass_std = mass_seq))
+l <- quap_link(d, degree = 5, mass_seq)
 mu <- apply(l, 2, mean)
 ci <- apply(l, 2, PI)
 
@@ -331,10 +468,9 @@ shade(ci, mass_seq)
 #### m7.6
 
 ```{r introBayes10-fig07, cache=TRUE, fig.width=6, fig.height=5.5,  fig.cap="Second-degree polynomial linear model of increasing degree for the hominin data. The posterior mean in black, with 89% interval of the mean shaded. R^2 is diplayed.", fig.align='center'}
-post <- extract.samples( m7.6 )
 mass_seq <- seq( from = min(d$mass_std), to = max(d$mass_std), 
                  length.out = 100)
-l <- link( m7.6, data = list(mass_std = mass_seq))
+l <- quap_link(d, degree = 6, mass_seq)
 mu <- apply(l, 2, mean)
 ci <- apply(l, 2, PI)
 
@@ -423,7 +559,8 @@ $$
 讓我們回到講解治療後偏倚部分（Chapter \@ref(posttreatbias)）時分析治療組，菌落，和植物生長之間關係的三個模型 `m6.6, m6.7, m6.8`。其中，`m6.6` 是只有截距的模型，`m6.7` 是預測變量同時包含菌落存在與否及治療組兩個變量的模型，`m6.8` 是只有治療組作爲唯一預測變量的模型。這時我們可以使用 `WAIC()` 命令來獲取用於比較這幾個模型的模型信息：
 
 
-```{r introBayes10-11, cache=TRUE}
+```{r introBayes10-11, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(71)
  # number of plants 
 N <- 100
@@ -473,13 +610,76 @@ set.seed(11)
 WAIC( m6.7 )
 ```
 
+Here we re-simulate the plant growth data and fit the three models from Chapter \@ref(posttreatbias) using brms non-linear formulas. These models use a multiplicative growth ratio $p$, where $h_1 = h_0 \times p$:
+
+```{r introBayes10-11-data, cache=TRUE}
+set.seed(71)
+N <- 100
+h0 <- rnorm(N, 10, 2)
+treatment <- rep(0:1, each = N/2)
+fungus <- rbinom( N, size = 1, prob = 0.5 - treatment * 0.4)
+h1 <- h0 + rnorm( N, 5 - 3*fungus )
+d <- data.frame( h0 = h0, h1 = h1, treatment = treatment, fungus = fungus)
+```
+
+```{r introBayes10-11-brm, cache=TRUE, results='hide', message=FALSE}
+brm_m6.6_ch7 <- brm(
+  bf(h1 ~ h0 * p, p ~ 1, nl = TRUE),
+  data = d,
+  prior = c(
+    prior(lognormal(0, 0.25), nlpar = "p", class = "b"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_6_ch7"
+)
+
+brm_m6.7_ch7 <- brm(
+  bf(h1 ~ h0 * p,
+     p ~ 1 + treatment + fungus,
+     nl = TRUE),
+  data = d,
+  prior = c(
+    prior(normal(1, 0.2), nlpar = "p", class = "b", coef = "Intercept"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "treatment"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "fungus"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_7_ch7"
+)
+
+brm_m6.8_ch7 <- brm(
+  bf(h1 ~ h0 * p,
+     p ~ 1 + treatment,
+     nl = TRUE),
+  data = d,
+  prior = c(
+    prior(normal(1, 0.25), nlpar = "p", class = "b", coef = "Intercept"),
+    prior(normal(0, 0.5), nlpar = "p", class = "b", coef = "treatment"),
+    prior(exponential(1), class = "sigma")
+  ),
+  file = "Stanfits/brm_m6_8_ch7"
+)
+```
+
+```{r introBayes10-11-waic, cache=FALSE}
+brm_m6.7_ch7 <- add_criterion(brm_m6.7_ch7, "waic")
+waic(brm_m6.7_ch7)
+```
+
 如果能把這三個模型的信息放在一起比較就更好了：
 
 
-```{r  introBayes10-12, cache=TRUE}
+```{r  introBayes10-12, eval=FALSE}
+# [LEGACY rethinking — preserved for reference]
 set.seed(77)
 rethinking::compare( m6.6, m6.7, m6.8 , func = WAIC)
 # rethinking::compare( m6.6, m6.7, m6.8 , func = PSIS)
+```
+
+```{r introBayes10-12-brm, cache=FALSE}
+brm_m6.6_ch7 <- add_criterion(brm_m6.6_ch7, "waic")
+brm_m6.8_ch7 <- add_criterion(brm_m6.8_ch7, "waic")
+loo_compare(brm_m6.6_ch7, brm_m6.7_ch7, brm_m6.8_ch7, criterion = "waic")
 ```
 
 

@@ -31,12 +31,20 @@ Model_perf <- glm(Heavydrinker ~ Gender, data = NHANES, family = binomial(link =
 logistic.display(Model_perf)
 ```
 
-完成這個模型之後，在 STATA 裏可以用簡便的 `estat gof, table` 命令獲取模型擬合的觀測值和期待值表格，然而 R 裏面需要用到 [`LogisticDx`](https://cran.r-project.org/web/packages/LogisticDx/index.html) 包裏的診斷命令 `dx` 獲取 ~~(我花了好幾個小時才找到這個命令，不得不說 STATA 對於流行病的傳統計算真的是比較方便)~~：
+完成這個模型之後，在 STATA 裏可以用簡便的 `estat gof, table` 命令獲取模型擬合的觀測值和期待值表格，然而 R 裏面可以用模型的擬合值和殘差來手動獲取：
 
 ```{r 09-GLM-5, warning=FALSE, cache=TRUE}
-LogisticDx::dx(Model_perf)[, 2:6]
+# [NOTE: LogisticDx archived from CRAN; using base R diagnostics]
+# Observed vs fitted by covariate pattern
+diag_df <- data.frame(
+  y    = Model_perf$y,
+  yhat = fitted(Model_perf)
+) %>% 
+  group_by(yhat) %>% 
+  summarise(n = n(), y_obs = sum(y), y_exp = sum(yhat), .groups = "drop")
+diag_df
 # obtain Pearson's test statistics
-chi2 <- sum((LogisticDx::dx(Model_perf)$sPr)^2)
+chi2 <- sum(residuals(Model_perf, type = "pearson")^2)
    pval <- pchisq(chi2, 1, lower.tail=FALSE)
    data.frame(test="Pearson chi2(1)",chi.sq=chi2,pvalue=pval)
 ```
@@ -49,10 +57,17 @@ chi2 <- sum((LogisticDx::dx(Model_perf)$sPr)^2)
 NHANES <- mutate(NHANES, highbmi = bmi > 25)
 Model_perf <- glm(Heavydrinker ~ Gender + highbmi, data = NHANES, family = binomial)
 logistic.display(Model_perf)
-LogisticDx::dx(Model_perf)[,2:7]
+# [NOTE: LogisticDx archived from CRAN; using base R diagnostics]
+diag_df <- data.frame(
+  y    = Model_perf$y,
+  yhat = fitted(Model_perf)
+) %>% 
+  group_by(yhat) %>% 
+  summarise(n = n(), y_obs = sum(y), y_exp = sum(yhat), .groups = "drop")
+diag_df
 
 # obtain Pearson's test statistics
-chi2 <- sum((LogisticDx::dx(Model_perf)$sPr)^2)
+chi2 <- sum(residuals(Model_perf, type = "pearson")^2)
    pval <- pchisq(chi2, 1, lower.tail=FALSE)
    data.frame(test="Pearson chi2(1)",chi.sq=chi2,pvalue=pval)
 ```

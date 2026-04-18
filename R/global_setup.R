@@ -1,5 +1,11 @@
 # Global setup for LSHTMlearningnote bookdown project
 # Centralizes package loading and shared options so chapters can knit standalone.
+#
+# Package management strategy (updated 2026-04-16):
+#   Uses {pak} for all installation — parallel resolver, global cache, unified API
+#   for CRAN / Bioconductor / GitHub packages.
+#   Manual prerequisites:  brew install jags   (for Ch12 rjags/R2jags/runjags)
+#   To install ALL deps from scratch, run: source("R/install_deps.R")
 
 # 1. Core options
 options(
@@ -10,57 +16,175 @@ options(
   rgl.useNULL = TRUE
 )
 
-# 2. Packages (grouped):
-.pkgs <- c(
+# 2. Package lists
+# ---- 2a. Core CRAN packages (auto-installed via pak if missing) ----
+.pkgs_cran <- c(
   # authoring / formatting
-  "knitr", "kableExtra", "kfigr",
-  # data wrangling & tidyverse
-  "tidyverse", "plyr",
+  "knitr", "kableExtra", "kfigr", "stargazer",
+  # data wrangling (plyr MUST load before tidyverse to avoid dplyr masking)
+  "plyr", "tidyverse",
   # survival / clinical
   "survival", "survminer", "Epi", "KMsurv", "flexsurv", "cmprsk", "mstate", "eha",
   # modeling & regression
-  "MASS", "lme4", "nlme", "sandwich", "lmtest", "gnm", "margins", "clubSandwich", "car",
-  # Bayesian / MCMC
-  "coda", "rjags", "R2jags", "runjags", "ggmcmc", "MCMCpack", "brms", "tidybayes", "rethinking",
+  "MASS", "lme4", "lmerTest", "nlme", "sandwich", "lmtest", "gnm", "margins", "clubSandwich", "car",
+  # Bayesian / MCMC (CRAN-only subset)
+  "coda", "ggmcmc", "MCMCpack",
   # visualization
   "ggplot2", "ggthemes", "ggsci", "ggrepel", "patchwork", "scatterplot3d", "plotly", "ggdag",
+  "ggfortify",
   # stats & misc
-  "mvtnorm", "DescTools", "limma", "binomTools", "BSDA", "FSA", "exact2x2", "dagitty", "ATE", 
-  "tableone", "Hmisc", "ROCR", "LogisticDx", "HLMdiag", "FactoMineR", "factoextra", "jtools", 
-  "uwIntroStats", "epiR", "epiDisplay", "epitools", "psych", "TailRank", "splines", "gridExtra", 
-  "grid", "codetools", "tufte", "haven", "shiny"
+  "mvtnorm", "DescTools", "BSDA", "FSA", "exact2x2", "dagitty",
+  "tableone", "Hmisc", "ROCR", "generalhoslem", "HLMdiag", "FactoMineR", "factoextra", "jtools",
+  "epiR", "epiDisplay", "epitools", "psych", "TailRank", "splines", "gridExtra",
+  "grid", "codetools", "tufte", "haven", "shiny", "ellipse", "gtools", "binom", "ATE"
+)
+# NOTE: Removed deprecated/archived packages:
+#   binomTools  -> replaced by binom
+#   LogisticDx  -> replaced by generalhoslem (Hosmer-Lemeshow test)
+#   uwIntroStats -> removed (use base R / Hmisc)
+
+# ---- 2b. Optional packages (toolchain-dependent; skip gracefully if missing) ----
+# Prerequisites:  brew install jags     (for rjags/R2jags/runjags)
+#                 rstan + C++ toolchain  (for rethinking)
+#                 install_github("rmcelreath/rethinking") after rstan
+#                 BiocManager / pak bioc:: prefix for limma
+.pkgs_optional <- c(
+  "rjags", "R2jags", "runjags",   # Ch12: JAGS models (requires: brew install jags)
+  "rethinking",                    # Ch08: McElreath SR2 (requires: rstan)
+  "mcmcplots", "ggthemr",          # visualization extras
+  "limma"                          # Ch10: PCA (Bioconductor)
 )
 
-# 3. Install missing (quiet)
-pkg_available <- function(p) {
-  nzchar(system.file(package = p))
+# 3. Install missing CRAN packages via pak
+pkg_available <- function(p) nzchar(system.file(package = p))
+
+if (!pkg_available("pak")) {
+  install.packages("pak", repos = "https://cloud.r-project.org")
 }
 
-.install_missing <- function(pkgs) {
-  status <- vapply(pkgs, pkg_available, logical(1))
-  missing <- pkgs[!status]
+.install_missing_pak <- function(pkgs) {
+  missing <- pkgs[!vapply(pkgs, pkg_available, logical(1))]
   if (length(missing)) {
-    message("Installing missing packages: ", paste(missing, collapse = ", "))
-    install.packages(missing)
+    message("Installing missing CRAN packages via pak: ", paste(missing, collapse = ", "))
+    pak::pkg_install(missing, ask = FALSE)
   }
-  invisible(status)
 }
 
-pkg_status <- .install_missing(.pkgs)
+.install_missing_pak(.pkgs_cran)
 
-# Ensure V8 dependency for dagitty and other JS-backed packages
+# Ensure V8 dependency for dagitty
 if (!pkg_available("V8")) {
-  try(install.packages("V8"))
-  if (!pkg_available("V8")) warning("V8 still missing after attempted install; 'dagitty' may fail to load.")
+  try(pak::pkg_install("V8", ask = FALSE))
+  if (!pkg_available("V8")) warning("V8 still missing; 'dagitty' may fail to load.")
 }
 
-# 4. Load packages (safely)
-loaded_pkgs <- vapply(.pkgs, function(p) {
+# 4. Load core packages (safely)
+loaded_pkgs <- vapply(.pkgs_cran, function(p) {
   suppressWarnings(suppressPackageStartupMessages(require(p, character.only = TRUE)))
 }, logical(1))
 
 if (any(!loaded_pkgs)) {
   warning("Packages failed to load: ", paste(names(loaded_pkgs)[!loaded_pkgs], collapse = ", "))
+}
+
+# 4b. Load optional packages (no auto-install, warn only)
+loaded_opt <- vapply(.pkgs_optional, function(p) {
+  suppressWarnings(suppressPackageStartupMessages(require(p, character.only = TRUE, quietly = TRUE)))
+}, logical(1))
+
+if (any(!loaded_opt)) {
+  message("Optional packages not available: ",
+          paste(names(loaded_opt)[!loaded_opt], collapse = ", "))
+}
+
+# ── 4c. brms / Bayesian modelling ecosystem ──
+# Required for Ch06–Ch16 (Statistical Rethinking migration to brms)
+.pkgs_bayes <- c("brms", "tidybayes", "posterior", "bayesplot")
+.install_missing_pak(.pkgs_bayes)
+loaded_bayes <- vapply(.pkgs_bayes, function(p) {
+  suppressWarnings(suppressPackageStartupMessages(require(p, character.only = TRUE)))
+}, logical(1))
+if (any(!loaded_bayes)) {
+  message("Bayesian packages not available: ",
+          paste(names(loaded_bayes)[!loaded_bayes], collapse = ", "))
+}
+
+# SDK workaround for macOS 26 beta (Stan C++ compilation needs cmath)
+if (Sys.info()[["sysname"]] == "Darwin") {
+  .sdk <- "/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk"
+  if (dir.exists(.sdk)) Sys.setenv(SDKROOT = .sdk)
+}
+
+# ── 4d. rethinking compatibility shims ──
+# Lightweight base-R replacements for rethinking plotting helpers.
+# Assigned to .GlobalEnv explicitly so they survive regardless of how this
+# file is sourced (bookdown before_chapter_script, source(local=TRUE), etc.).
+# Guard: only define once per session.
+if (!exists("PI", mode = "function", envir = .GlobalEnv)) {
+  .shim_env <- .GlobalEnv
+  assign("rangi2", "#4e79a7", envir = .shim_env)
+  assign("col.alpha", function(col, alpha = 0.5) adjustcolor(col, alpha.f = alpha),
+         envir = .shim_env)
+  assign("dens", function(x, adj = 0.5, ...) {
+    args <- list(...)
+    add  <- isTRUE(args$add); args$add <- NULL
+    d    <- density(x, adjust = adj)
+    if (add) {
+      line_args <- args[!names(args) %in%
+        c("xlab","ylab","main","bty","xlim","ylim","axes","frame.plot")]
+      do.call(graphics::lines, c(list(d$x, d$y), line_args))
+    } else {
+      if (!"main" %in% names(args)) args$main <- ""
+      do.call(graphics::plot, c(list(d), args))
+    }
+    invisible(d)
+  }, envir = .shim_env)
+  assign("PI", function(x, prob = 0.89) {
+    a <- (1 - prob) / 2; quantile(x, probs = c(a, 1 - a), na.rm = TRUE)
+  }, envir = .shim_env)
+  assign("shade", function(object, lim, col = col.alpha("black", 0.15), ...) {
+    if (is.matrix(object)) {
+      polygon(c(lim, rev(lim)), c(object[1, ], rev(object[2, ])),
+              col = col, border = NA, ...)
+    } else {
+      polygon(c(lim[1], lim[1], lim[2], lim[2]),
+              c(object[1], object[2], object[2], object[1]),
+              col = col, border = NA, ...)
+    }
+  }, envir = .shim_env)
+  assign("concat", paste0, envir = .shim_env)
+  assign("inv_logit", plogis, envir = .shim_env)
+  assign("logit", qlogis, envir = .shim_env)
+  assign("dbern", function(x, prob, log = FALSE) dbinom(x, size = 1, prob = prob, log = log),
+         envir = .shim_env)
+  assign("grau", function(alpha = 0.3) col.alpha("black", alpha), envir = .shim_env)
+  assign("normalize", function(x) (x - min(x)) / (max(x) - min(x)), envir = .shim_env)
+  assign("standardize", function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE),
+         envir = .shim_env)
+  assign("rbern", function(n, prob = 0.5) rbinom(n, size = 1, prob = prob), envir = .shim_env)
+  assign("logistic", plogis, envir = .shim_env)
+  assign("dbeta2", function(x, prob, theta, log = FALSE)
+    dbeta(x, shape1 = prob * theta, shape2 = (1 - prob) * theta, log = log),
+    envir = .shim_env)
+  assign("simplehist", function(x, lwd = 4, ...) {
+    tab <- table(x)
+    plot(as.numeric(names(tab)), as.numeric(tab), type = "h",
+         lwd = lwd, ylab = "Frequency", ...)
+  }, envir = .shim_env)
+  assign("dordlogit", function(x, phi = 0, a, log = FALSE) {
+    a_ext <- c(-Inf, as.numeric(a), Inf)
+    p <- plogis(a_ext[x + 1] - phi) - plogis(a_ext[x] - phi)
+    if (log) return(log(p))
+    p
+  }, envir = .shim_env)
+  assign("pordlogit", function(x, phi = 0, a, log = FALSE) {
+    a <- c(as.numeric(a), Inf)
+    out <- sapply(x, function(k) plogis(a[k] - phi))
+    if (!is.matrix(out)) out <- matrix(out, nrow = length(phi))
+    if (log) return(log(out))
+    out
+  }, envir = .shim_env)
+  rm(.shim_env)
 }
 
 # 5. Shared hooks / global objects
@@ -110,13 +234,54 @@ if (!is.na(.statapath)) {
 
 # 7. Define bugpath (project root) consistently
 if (!exists("bugpath", inherits = FALSE)) {
-  bugpath <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+  # Walk up from cwd to find project root (where _bookdown.yml lives)
+  .find_root <- function(start = getwd()) {
+    d <- normalizePath(start, winslash = "/", mustWork = FALSE)
+    while (d != dirname(d)) {
+      if (file.exists(file.path(d, "_bookdown.yml"))) return(d)
+      d <- dirname(d)
+    }
+    normalizePath(start, winslash = "/", mustWork = FALSE)
+  }
+  bugpath <- .find_root()
 }
 
-# 8. Helper to build absolute path inside project
+# 8. Strip absolute project path from rendered output (privacy)
+#    JAGS print() methods expose full bugpath in model.file — replace with "."
+if (requireNamespace("knitr", quietly = TRUE)) {
+  local({
+    hook_old <- knitr::knit_hooks$get("output")
+    knitr::knit_hooks$set(output = function(x, options) {
+      x <- gsub(bugpath, ".", x, fixed = TRUE)
+      if (is.function(hook_old)) hook_old(x, options) else x
+    })
+  })
+}
+
+# 9. Helper to build absolute path inside project
 proj_path <- function(...) file.path(bugpath, ...)
 
-# 9. Quiet confirmation message for standalone chapter renders
+# 9. DAG plotting helper — adds circles for latent/unobserved nodes
+#    (dagitty::plot.dagitty does not draw circles for latent variables)
+plot_dag <- function(dag, ...) {
+  plot(dag, ...)
+  lat <- dagitty::latents(dag)
+  if (length(lat) > 0) {
+    coords <- dagitty::coordinates(dag)
+    for (v in lat) {
+      x <- coords$x[v]
+      y <- -coords$y[v]  # plot.dagitty negates y
+      w <- strwidth(v) + strwidth("xx")
+      h <- strheight(v) + strheight("\n")
+      r <- max(w, h) / 2
+      symbols(x, y, circles = r, add = TRUE, inches = FALSE,
+              fg = "black", bg = "white", lwd = 1.5)
+      text(x, y, v)
+    }
+  }
+}
+
+# 10. Quiet confirmation message for standalone chapter renders
 if (interactive()) message("[global_setup] Loaded packages: ", sum(loaded_pkgs), " / ", length(loaded_pkgs))
 
 # Export key status objects for downstream diagnostic use (into user global env)
