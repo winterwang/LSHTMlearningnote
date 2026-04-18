@@ -68,4 +68,4 @@ bookdown::render_book("index.Rmd", "bookdown::gitbook")
 
 ## 授權
 
-本書內容僅供學習參考。課程原始教材的版權歸 LSHTM 及各講師所有。
+本書以 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 授權釋出。課程原始教材的版權歸 LSHTM 及各講師所有，本授權僅適用於作者的原創評論、翻譯、程式碼和補充內容。
