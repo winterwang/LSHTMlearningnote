@@ -1,7 +1,5 @@
 # 醫學統計學 — LSHTMlearningnote
 
-[![DOI](https://zenodo.org/badge/110611527.svg)](https://zenodo.org/badge/latestdoi/110611527)
-
 📖 **線上閱讀**: [wangcc.me/LSHTMlearningnote](https://wangcc.me/LSHTMlearningnote/)
 
 這是我在**倫敦衛生與熱帶醫學院 (LSHTM)** 攻讀醫學統計學碩士課程時的學習筆記，以中文撰寫，部分術語保留英文原文。全書使用 [bookdown](https://bookdown.org/) 編譯，包含大量 R 程式碼、LaTeX 數學推導和實際數據分析範例。
