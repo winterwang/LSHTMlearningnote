@@ -39,8 +39,8 @@
 - **R 程式碼修復**：修復了數十個因 R 版本升級導致的棄用警告和錯誤（`size=` → `linewidth=`、`aes_string()` → `aes()` 等）
 - **全書重新渲染**：完成 4 輪完整渲染（P1–P4），解決了 Bayesian/Survival/GLM 章節的各類編譯問題
 
-### 新增內容
-- **臨床實驗基本原則 (Ch05 Session01)**：從 LSHTM 講義 PDF 完整轉寫，涵蓋隨機化、盲法、假手術對照 (SYMPLICITY)、試驗分期、解釋型 vs 務實型實驗等核心概念
+### 新增內容 
+- **[臨床實驗基本原則](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-principles) (Ch05 Session01)**：從 LSHTM 講義 PDF 完整轉寫，涵蓋隨機化、盲法、假手術對照 (SYMPLICITY)、試驗分期、解釋型 vs 務實型實驗等核心概念 (2026-04-18)
 
 ### 基礎設施
 - **GitHub Pages 部署**：`docs/` 目錄直接託管，推送即部署
@@ -63,7 +63,7 @@ bookdown::render_book("index.Rmd", "bookdown::gitbook")
 
 - **LSHTM** 各科講師提供的講義與教材
 - **Richard McElreath** 的 [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/) 教科書與開源課程材料（第八章 Sessions 06–16 的學習筆記基於此書，程式碼已從 `rethinking` 遷移至 `brms`）
-- **GitHub Copilot (Claude)** 協助完成 2026 年現代化改造，包括 rethinking → brms 遷移、全書渲染調試、臨床實驗章節撰寫、lshtm-sync 工具開發等
+- **GitHub Copilot (Claude)** 協助完成 2026 年現代化改造，包括 rethinking → brms 遷移、全書渲染調試、部分章節撰寫、lshtm-sync 工具開發等
 
 ## 授權
 
