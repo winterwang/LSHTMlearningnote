@@ -16,7 +16,7 @@
 | 02 | 統計推斷 Inference | 假設檢驗、信賴區間、似然函數 |
 | 03 | 統計分析方法 Analytical Techniques | t 檢驗、ANOVA、卡方檢驗 |
 | 04 | 線性迴歸 Linear Regression | OLS、殘差診斷、交互作用 |
-| 05 | 臨床實驗 Clinical Trials | 隨機化、盲法、樣本量計算 |
+| 05 | 臨床實驗 Clinical Trials | 隨機化、盲法、樣本量計算、ANCOVA |
 | 06 | 穩健統計方法 Robust Statistics | Bootstrap、置換檢驗 |
 | 08 | 貝葉斯統計入門 Intro to Bayesian | 先驗/後驗、brms、MCMC |
 | 09 | 廣義線性迴歸 GLM | Logistic、Poisson、偏差 |
@@ -40,6 +40,8 @@
 - **全書重新渲染**：完成 4 輪完整渲染（P1–P4），解決了 Bayesian/Survival/GLM 章節的各類編譯問題
 
 ### 新增內容 
+- **[基線調整與 ANCOVA](https://wangcc.me/LSHTMlearningnote/baseline-adjustment-using-ancova.html#CT-ANCOVA-intro) (Ch05 Session11)**：比較 POST/CHANGE/ANCOVA 三種分析方法的統計性質，涵蓋條件偏倚、回歸到均值、精確度公式推導、Lord's Paradox，並附詳細計算步驟 (2026-04-19)
+- **[血壓臨床試驗 ANCOVA 實作](https://wangcc.me/LSHTMlearningnote/baseline-adjustment-using-ancova.html#CT-prac11) (Ch05 Practical11)**：將 Stata 實作完整轉換為 R，包含描述統計、散佈圖、相關矩陣、三種方法比較、假設檢驗與 CHANGE+基線=ANCOVA 的數學證明 (2026-04-19)
 - **[臨床實驗基本原則](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-principles) (Ch05 Session01)**：涵蓋隨機化、盲法、假手術對照 (SYMPLICITY)、試驗分期、解釋型 vs 務實型實驗等核心概念 (2026-04-18)
 - **[HRT 與冠心病實作](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-prac01) (Ch05 Practical01)**：比較 Grodstein 觀察性研究與 WHI 隨機對照試驗的結論差異，探討混雜、選擇偏差與盲法問題 (2026-04-18)
 
