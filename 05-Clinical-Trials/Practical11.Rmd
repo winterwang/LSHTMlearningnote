@@ -1,0 +1,247 @@
+
+
+## 練習：血壓臨牀試驗的 ANCOVA 分析 {#CT-ANCOVA-practical}
+
+### 背景 Background {#CT-ANCOVA-prac-background}
+
+數據來自一項隨機對照試驗，比較一種降壓藥 (active drug) 和安慰劑 (placebo) 對收縮壓 (systolic blood pressure, SBP) 的效果。55 位患者在基線和隨訪結束時各測量一次收縮壓。
+
+數據檔案 `SBP.dta` 包含三個變量：
+
+- `drug`：治療組（1 = Active，0 = Placebo）
+- `presbp`：基線收縮壓 (mmHg)
+- `postsbp`：隨訪後收縮壓 (mmHg)
+
+
+### 讀取數據 {#CT-ANCOVA-prac-data}
+
+```{r ancova-prac-load, message=FALSE}
+library(haven)
+library(tidyverse)
+
+SBP <- read_dta("../backupfiles/SBP.dta") %>%
+  mutate(
+    drug = factor(drug, levels = c(0, 1), labels = c("Placebo", "Active")),
+    change = postsbp - presbp
+  )
+
+str(SBP)
+```
+
+
+### Q1 (i) 描述性統計 {#CT-ANCOVA-prac-q1i}
+
+**問題**：計算各組的描述性統計量，填入下表。
+
+```{r ancova-prac-summary}
+SBP %>%
+  group_by(drug) %>%
+  summarise(
+    n = n(),
+    pre_mean  = mean(presbp),  pre_sd  = sd(presbp),
+    post_mean = mean(postsbp), post_sd = sd(postsbp),
+    chg_mean  = mean(change),  chg_sd  = sd(change)
+  ) %>%
+  knitr::kable(digits = 1, col.names = c(
+    "Treatment", "n",
+    "Pre Mean", "Pre SD",
+    "Post Mean", "Post SD",
+    "Change Mean", "Change SD"
+  ))
+```
+
+Active 組的基線血壓稍高（156.9 vs 150.1 mmHg），但 Active 組的變化量明顯更大（$-17.8$ vs $-4.0$ mmHg）。
+
+
+### Q1 (ii) 線性關係的圖形檢查 {#CT-ANCOVA-prac-q1ii}
+
+**問題**：用圖形檢查治療前後血壓之間是否存在線性關係。
+
+```{r ancova-prac-scatter, fig.cap="各治療組的基線 vs 治療後收縮壓散佈圖，附線性擬合線。兩組的關係大致呈線性。"}
+ggplot(SBP, aes(x = presbp, y = postsbp, colour = drug)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Baseline SBP (mmHg)", y = "Post-treatment SBP (mmHg)",
+       colour = "Treatment") +
+  theme_bw()
+```
+
+從圖中可以看出，兩組的基線與治療後血壓之間大致呈線性關係。
+
+
+### Q1 (iii) 相關矩陣與回歸到均值 {#CT-ANCOVA-prac-q1iii}
+
+**問題**：分別計算各治療組中基線血壓、治療後血壓和變化量之間的相關矩陣。畫出變化量對基線血壓的散佈圖。
+
+```{r ancova-prac-corr}
+SBP %>%
+  group_by(drug) %>%
+  summarise(
+    cor_post_pre   = cor(postsbp, presbp),
+    cor_change_pre = cor(change, presbp)
+  ) %>%
+  knitr::kable(digits = 4, col.names = c(
+    "Treatment", "r(post, pre)", "r(change, pre)"
+  ))
+```
+
+也可以用 `cor.test()` 分別檢驗各組的相關係數：
+
+```{r ancova-prac-cortest}
+# Placebo 組
+with(SBP[SBP$drug == "Placebo", ], cor.test(postsbp, presbp))
+with(SBP[SBP$drug == "Placebo", ], cor.test(change, presbp))
+
+# Active 組
+with(SBP[SBP$drug == "Active", ], cor.test(postsbp, presbp))
+with(SBP[SBP$drug == "Active", ], cor.test(change, presbp))
+```
+
+```{r ancova-prac-change-plot, fig.cap="各治療組的變化量 vs 基線收縮壓。兩組都呈現負相關——回歸到均值現象。"}
+ggplot(SBP, aes(x = presbp, y = change, colour = drug)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(x = "Baseline SBP (mmHg)", y = "Change in SBP (mmHg)",
+       colour = "Treatment") +
+  theme_bw()
+```
+
+兩組中變化量和基線血壓都呈負相關——這就是回歸到均值 (regression to the mean) 的表現：基線值高的受試者，平均變化量更負（血壓下降更多）；基線值低的受試者，變化量接近零甚至為正。從圖中還可以看出 Active 組的平均變化量明顯低於 Placebo 組。
+
+
+### Q2 安慰劑組的配對 $t$ 檢驗 {#CT-ANCOVA-prac-q2}
+
+**問題**：僅針對安慰劑組，檢驗平均變化量是否為零，以及變化量與基線血壓的相關是否為零。以下解讀是否正確？
+
+> "雖然治療後血壓和基線血壓之間沒有整體差異，但有證據表明安慰劑治療降低了基線血壓較高的受試者的血壓。"
+
+```{r ancova-prac-q2}
+# 安慰劑組的配對 t 檢驗
+placebo <- SBP %>% filter(drug == "Placebo")
+t.test(placebo$change, mu = 0)
+```
+
+配對 $t$ 檢驗顯示安慰劑組的平均變化量和零沒有顯著差異（$|t| = 1.54$，$p = 0.13$）。但變化量和基線血壓的相關係數顯著不為零（$r = -0.525$，$p = 0.003$）。
+
+上面的解讀是一個**常見錯誤**。基線高的人血壓確實下降更多，但這不是安慰劑的治療效果，而是回歸到均值造成的統計假象。這也說明了為什麼沒有隨機對照組的「前後比較」設計 (before-and-after study) 很容易產生誤導性的結論。
+
+
+### Q3 三種分析方法的比較 {#CT-ANCOVA-prac-q3}
+
+**問題**：用 POST、CHANGE、ANCOVA 三種方法分析數據。哪種方法的標準誤最小？
+
+#### POST：比較治療後均值
+
+```{r ancova-prac-post}
+# POST: 雙樣本 t 檢驗比較治療後血壓
+post_test <- t.test(postsbp ~ drug, data = SBP, var.equal = TRUE)
+post_test
+
+# 也可以用線性回歸
+post_lm <- lm(postsbp ~ drug, data = SBP)
+summary(post_lm)
+```
+
+#### CHANGE：比較變化量均值
+
+```{r ancova-prac-change}
+# CHANGE: 雙樣本 t 檢驗比較變化量
+change_test <- t.test(change ~ drug, data = SBP, var.equal = TRUE)
+change_test
+
+change_lm <- lm(change ~ drug, data = SBP)
+summary(change_lm)
+```
+
+#### ANCOVA：調整基線血壓
+
+```{r ancova-prac-ancova}
+# ANCOVA: 治療後血壓 ~ 治療組 + 基線血壓
+ancova_lm <- lm(postsbp ~ drug + presbp, data = SBP)
+summary(ancova_lm)
+```
+
+#### 三種方法的彙總
+
+```{r ancova-prac-q3-summary}
+results <- data.frame(
+  Method   = c("POST", "CHANGE", "ANCOVA"),
+  Estimate = c(coef(post_lm)["drugActive"],
+               coef(change_lm)["drugActive"],
+               coef(ancova_lm)["drugActive"]),
+  SE       = c(summary(post_lm)$coefficients["drugActive", "Std. Error"],
+               summary(change_lm)$coefficients["drugActive", "Std. Error"],
+               summary(ancova_lm)$coefficients["drugActive", "Std. Error"]),
+  t_value  = c(summary(post_lm)$coefficients["drugActive", "t value"],
+               summary(change_lm)$coefficients["drugActive", "t value"],
+               summary(ancova_lm)$coefficients["drugActive", "t value"]),
+  p_value  = c(summary(post_lm)$coefficients["drugActive", "Pr(>|t|)"],
+               summary(change_lm)$coefficients["drugActive", "Pr(>|t|)"],
+               summary(ancova_lm)$coefficients["drugActive", "Pr(>|t|)"])
+)
+
+knitr::kable(results, digits = c(0, 2, 2, 2, 4),
+             col.names = c("Method", "Estimate (A-P)", "SE", "|t|", "p-value"))
+```
+
+ANCOVA 的標準誤最小（$SE = 3.43$），精確度最高。
+
+#### 條件偏倚的估計
+
+```{r ancova-prac-bias}
+beta_hat <- coef(ancova_lm)["presbp"]
+d0 <- mean(SBP$presbp[SBP$drug == "Active"]) - mean(SBP$presbp[SBP$drug == "Placebo"])
+
+cat("d0 (Active - Placebo baseline difference):", round(d0, 1), "mmHg\n")
+cat("beta_hat:", round(beta_hat, 3), "\n\n")
+cat("Estimated conditional bias in POST:  ", round(beta_hat * d0, 2), "mmHg\n")
+cat("Estimated conditional bias in CHANGE:", round(-(1 - beta_hat) * d0, 2), "mmHg\n")
+```
+
+$\hat{\beta} = 0.536$ 離 0（POST 的隱含設定）和 1（CHANGE 的隱含設定）都有相當距離，所以兩種方法的條件偏倚都不小。如果要寫論文發表，應該報告 ANCOVA 的結果。
+
+
+### Q4 檢驗 ANCOVA 的假設 {#CT-ANCOVA-prac-q4}
+
+ANCOVA 隱含了兩個假設：平行回歸線和線性關係。
+
+#### (i) 檢驗平行回歸線（交互作用項）
+
+```{r ancova-prac-q4i}
+# 加入交互作用項
+ancova_interact <- lm(postsbp ~ drug * presbp, data = SBP)
+summary(ancova_interact)
+```
+
+`drug:presbp` 的交互作用項不顯著（$p = 0.71$），沒有證據反對平行回歸線的假設。也就是說，降壓藥的治療效果在不同基線血壓水平上大致相同。
+
+#### (ii) 檢驗線性假設（二次項）
+
+```{r ancova-prac-q4ii}
+# 加入 presbp 的二次項
+SBP <- SBP %>% mutate(presbp2 = presbp^2)
+ancova_quad <- lm(postsbp ~ drug + presbp + presbp2, data = SBP)
+summary(ancova_quad)
+```
+
+二次項 `presbp2` 不顯著（$p = 0.39$），沒有證據反對線性假設。
+
+
+### Q5 CHANGE 調整基線 = ANCOVA {#CT-ANCOVA-prac-q5}
+
+**問題**：如果把 CHANGE（$x_1 - x_0$）當作結局，同時調整基線值，會發生什麼？
+
+```{r ancova-prac-q5}
+# ANCOVA: postsbp ~ drug + presbp
+cat("=== ANCOVA (outcome = postsbp) ===\n")
+summary(lm(postsbp ~ drug + presbp, data = SBP))$coefficients
+
+# CHANGE adjusted for baseline: change ~ drug + presbp
+cat("\n=== CHANGE adjusted for baseline (outcome = change) ===\n")
+summary(lm(change ~ drug + presbp, data = SBP))$coefficients
+```
+
+兩個模型中，治療效果的估計值和標準誤完全一樣（$\hat{\gamma} = -10.61$，$SE = 3.43$）。唯一的差異是 `presbp` 的係數：ANCOVA 中是 $\hat{\beta} = 0.536$，CHANGE 模型中是 $\hat{\beta}^* = -0.464$。
+
+這背後的代數在 Session 11 中已經推導過：CHANGE 模型 $x_1 - x_0 = \beta_0 + \gamma \cdot \text{drug} + \beta^* \cdot x_0$ 等價於 $x_1 = \beta_0 + \gamma \cdot \text{drug} + (\beta^* + 1) \cdot x_0$，而 $\beta^* + 1 = -0.464 + 1 = 0.536 = \hat{\beta}$，正好就是 ANCOVA 的 `presbp` 係數。也就是說，CHANGE 調整基線後和 ANCOVA 本質上是同一個模型。
