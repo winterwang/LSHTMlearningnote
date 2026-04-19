@@ -40,7 +40,8 @@
 - **全書重新渲染**：完成 4 輪完整渲染（P1–P4），解決了 Bayesian/Survival/GLM 章節的各類編譯問題
 
 ### 新增內容 
-- **[臨床實驗基本原則](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-principles) (Ch05 Session01)**：從 LSHTM 講義 PDF 完整轉寫，涵蓋隨機化、盲法、假手術對照 (SYMPLICITY)、試驗分期、解釋型 vs 務實型實驗等核心概念 (2026-04-18)
+- **[臨床實驗基本原則](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-principles) (Ch05 Session01)**：涵蓋隨機化、盲法、假手術對照 (SYMPLICITY)、試驗分期、解釋型 vs 務實型實驗等核心概念 (2026-04-18)
+- **[HRT 與冠心病實作](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-prac01) (Ch05 Practical01)**：比較 Grodstein 觀察性研究與 WHI 隨機對照試驗的結論差異，探討混雜、選擇偏差與盲法問題 (2026-04-18)
 
 ### 基礎設施
 - **GitHub Pages 部署**：`docs/` 目錄直接託管，推送即部署
