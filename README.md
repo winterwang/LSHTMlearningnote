@@ -39,8 +39,10 @@
 - **R 程式碼修復**：修復了數十個因 R 版本升級導致的棄用警告和錯誤（`size=` → `linewidth=`、`aes_string()` → `aes()` 等）
 - **全書重新渲染**：完成 4 輪完整渲染（P1–P4），解決了 Bayesian/Survival/GLM 章節的各類編譯問題
 
-### 新增內容 - **[穩健統計方法導論](https://wangcc.me/LSHTMlearningnote/robust-statistical-methods.html#RS-session01) (Ch06 Session01)**：涵蓋穩健方法的定義與目標，以血糖、甲狀腺素、淋巴球數據為例探討偏態與離群值問題，複習抽樣分布/假設檢驗/信賴區間，討論 t 檢驗假設與殘差分析 (2026-04-29)
-- **[穩健統計方法實作](https://wangcc.me/LSHTMlearningnote/robust-statistical-methods.html#RS-prac01) (Ch06 Practical01)**：偏態數據的 CI 計算與圖形診斷、離群值對相關分析的影響、檢定-信賴區間等價性的數值驗證、Monte Carlo 模擬比較三種情境下的覆蓋率 (2026-04-29)- **[基線調整與 ANCOVA](https://wangcc.me/LSHTMlearningnote/baseline-adjustment-using-ancova.html#CT-ANCOVA-intro) (Ch05 Session11)**：比較 POST/CHANGE/ANCOVA 三種分析方法的統計性質，涵蓋條件偏倚、回歸到均值、精確度公式推導、Lord's Paradox，並附詳細計算步驟 (2026-04-19)
+### 新增內容
+- **[穩健統計方法導論](https://wangcc.me/LSHTMlearningnote/robust-statistical-methods.html#RS-session01) (Ch06 Session01)**：涵蓋穩健方法的定義與目標，以血糖、甲狀腺素、淋巴球數據為例探討偏態與離群值問題，複習抽樣分布/假設檢驗/信賴區間，討論 t 檢驗假設與殘差分析 (2026-04-29)
+- **[穩健統計方法實作](https://wangcc.me/LSHTMlearningnote/robust-statistical-methods.html#RS-prac01) (Ch06 Practical01)**：偏態數據的 CI 計算與圖形診斷、離群值對相關分析的影響、檢定-信賴區間等價性的數值驗證、Monte Carlo 模擬比較三種情境下的覆蓋率 (2026-04-29)
+- **[基線調整與 ANCOVA](https://wangcc.me/LSHTMlearningnote/baseline-adjustment-using-ancova.html#CT-ANCOVA-intro) (Ch05 Session11)**：比較 POST/CHANGE/ANCOVA 三種分析方法的統計性質，涵蓋條件偏倚、回歸到均值、精確度公式推導、Lord's Paradox，並附詳細計算步驟 (2026-04-19)
 - **[血壓臨床試驗 ANCOVA 實作](https://wangcc.me/LSHTMlearningnote/baseline-adjustment-using-ancova.html#CT-prac11) (Ch05 Practical11)**：將 Stata 實作完整轉換為 R，包含描述統計、散佈圖、相關矩陣、三種方法比較、假設檢驗與 CHANGE+基線=ANCOVA 的數學證明 (2026-04-19)
 - **[臨床實驗基本原則](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-principles) (Ch05 Session01)**：涵蓋隨機化、盲法、假手術對照 (SYMPLICITY)、試驗分期、解釋型 vs 務實型實驗等核心概念 (2026-04-18)
 - **[HRT 與冠心病實作](https://wangcc.me/LSHTMlearningnote/clinical-trials.html#CT-prac01) (Ch05 Practical01)**：比較 Grodstein 觀察性研究與 WHI 隨機對照試驗的結論差異，探討混雜、選擇偏差與盲法問題 (2026-04-18)
