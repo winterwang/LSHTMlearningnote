@@ -1,0 +1,399 @@
+
+## 背景 Background {#CT-prac02-background}
+
+**病例管理 (case management)** 是社區精神健康服務的核心模式：病例管理者統籌協調患者所需的一切照護——社區精神科醫師、住院服務、社會服務一併包辦。針對重症精神疾病患者（以精神分裂症 schizophrenia 為主），一個直覺上合理的假設是：若縮小每位管理者的案量 (caseload)，患者的預後應當更好，尤其是非裔加勒比裔 (African-Caribbean) 族群。
+
+本實習的情景是在南倫敦開展的一項隨機對照試驗 (randomised controlled trial, RCT)：
+
+- **強化病例管理 Intensive case management (I)**：每位管理者的案量約 12 人
+- **標準病例管理 Standard case management (S)**：每位管理者的案量約 30 人
+
+南倫敦的社區精神科照護以「社區精神健康團隊 (community mental health team)」為單位組織。研究區域內有兩個團隊：**Central Wandsworth (CW)** 和 **North Battersea (NB)**。患者的入組速率約為每週 4 人，案量會隨時間逐步累積。
+
+研究者希望隨機化能在以下三個因素上保持平衡：
+
+| 分層因素 | 水平 |
+|:---:|:---:|
+| 社區精神健康團隊 (team) | CW vs NB |
+| 族裔 (ethnicity) | 非裔加勒比裔 (A-C) vs 白人及其他 (W/O) |
+| 性別 (sex) | 男 (M) vs 女 (F) |
+
+三個二分因素組合，共 2 × 2 × 2 = **8 個分層**。
+
+本次實習所用的隨機數字來自下面這份 250 個隨機數字的表格，規則如下：
+
+- **簡單隨機化**：0–4 = 強化 (A = Intensive)，5–9 = 標準 (B = Standard)
+- **隨機置換區組**（大小為 4）：數字 1–6 對應六種區組排列，忽略 0 和 7–9
+
+| 區組數字 | 排列 |
+|:---:|:---:|
+| 1 | AABB |
+| 2 | ABAB |
+| 3 | ABBA |
+| 4 | BAAB |
+| 5 | BABA |
+| 6 | BBAA |
+
+```{r CT-p02-randtable, echo=FALSE, include=FALSE}
+# 將 250 個隨機數字存為向量，按 PDF 原始順序
+rand_table <- c(
+  7,0,2,8,9, 9,4,2,6,3,
+  6,1,5,6,6, 0,5,8,0,1,
+  9,9,7,9,1, 2,1,0,6,0,
+  5,1,6,7,3, 6,6,3,7,9,
+  6,5,4,4,1, 3,8,2,4,4,
+  8,1,4,8,9, 9,5,2,6,7,
+  1,4,4,8,6, 6,6,4,6,8,
+  7,1,5,6,9, 4,4,8,8,9,
+  5,5,7,0,2, 5,3,6,3,8,
+  9,9,4,1,8, 0,5,3,9,0,
+  5,1,5,3,5, 6,3,8,5,2,
+  5,3,9,2,2, 3,8,8,2,8,
+  6,4,8,3,7, 5,3,9,8,2,
+  0,8,9,1,1, 2,6,2,5,7,
+  6,9,9,6,3, 6,2,3,3,3,
+  0,8,4,0,3, 1,2,5,2,3,
+  9,0,6,5,8, 0,0,0,6,3,
+  5,3,2,1,2, 1,8,7,7,2,
+  0,2,1,8,2, 0,9,2,5,3,
+  5,1,2,8,8, 2,2,0,4,4,
+  2,3,2,0,8, 3,2,0,6,3,
+  3,5,6,0,8, 3,1,8,6,4,
+  2,7,0,8,4, 5,5,7,5,3,
+  5,5,1,9,9, 5,1,0,4,9,
+  5,2,9,3,6, 4,6,8,6,8
+)
+```
+
+**250 個隨機數字表（25 行 × 10 列）：**
+
+```{r CT-p02-randtable-display, echo=FALSE}
+# 以 25 行 × 10 列矩陣顯示隨機數字表
+rand_mat <- matrix(rand_table, nrow = 25, ncol = 10, byrow = TRUE)
+colnames(rand_mat) <- paste0("Col", 1:10)
+rownames(rand_mat) <- paste0("Row", 1:25)
+knitr::kable(rand_mat, align = "c")
+```
+
+
+## 問題 1：簡單隨機化 Simple Randomisation {#CT-prac02-q1}
+
+**問題**：用簡單隨機化為以下 15 位患者分配治療。
+
+以下是 15 位患者的基本資料，我們的任務是為每位患者決定分配至強化 (A/I) 還是標準 (B/S) 病例管理。
+
+```{r CT-p02-q1-simple, echo=TRUE}
+# 患者基本資料
+patients <- data.frame(
+  患者 = 1:15,
+  團隊 = c("CW","NB","NB","NB","CW","CW","CW","CW","NB","NB","CW","CW","NB","NB","CW"),
+  族裔 = c("A-C","W/O","W/O","W/O","A-C","W/O","A-C","W/O","A-C","W/O","W/O","W/O","A-C","A-C","A-C"),
+  性別 = c("M","M","F","M","M","F","M","M","M","F","F","M","F","M","F")
+)
+
+# 從第 76 個位置開始（隨機選取的起始點，對應 PDF 中圈出的 "9"）
+# rand_table[76] = 9, 之後依序取 15 個數字
+start_idx <- 76
+rand_digits <- rand_table[start_idx:(start_idx + 14)]
+cat("取得的 15 個隨機數字：\n", rand_digits, "\n")
+
+# 0-4 = A (Intensive)，5-9 = B (Standard)
+allocation_q1 <- ifelse(rand_digits <= 4, "I", "S")
+patients$隨機數字 <- rand_digits
+patients$分配_Q1  <- allocation_q1
+
+knitr::kable(patients,
+  col.names = c("患者", "團隊", "族裔", "性別", "隨機數字", "分配"),
+  caption = "問題 1：簡單隨機化結果"
+)
+```
+
+```{r CT-p02-q1-balance, echo=FALSE}
+# 平衡評估
+tab_q1 <- data.frame(
+  因素 = c("總計", "團隊 CW", "團隊 NB",
+           "族裔 A-C", "族裔 W/O",
+           "性別 M", "性別 F"),
+  強化_I = c(
+    sum(allocation_q1 == "I"),
+    sum(allocation_q1 == "I" & patients$團隊 == "CW"),
+    sum(allocation_q1 == "I" & patients$團隊 == "NB"),
+    sum(allocation_q1 == "I" & patients$族裔 == "A-C"),
+    sum(allocation_q1 == "I" & patients$族裔 == "W/O"),
+    sum(allocation_q1 == "I" & patients$性別 == "M"),
+    sum(allocation_q1 == "I" & patients$性別 == "F")
+  ),
+  標準_S = c(
+    sum(allocation_q1 == "S"),
+    sum(allocation_q1 == "S" & patients$團隊 == "CW"),
+    sum(allocation_q1 == "S" & patients$團隊 == "NB"),
+    sum(allocation_q1 == "S" & patients$族裔 == "A-C"),
+    sum(allocation_q1 == "S" & patients$族裔 == "W/O"),
+    sum(allocation_q1 == "S" & patients$性別 == "M"),
+    sum(allocation_q1 == "S" & patients$性別 == "F")
+  )
+)
+knitr::kable(tab_q1,
+  col.names = c("因素與水平", "強化 (I)", "標準 (S)"),
+  caption = "問題 1：簡單隨機化平衡評估"
+)
+```
+
+不難注意到，15 人中只有 `r sum(allocation_q1 == "I")` 人被分配到強化組，`r sum(allocation_q1 == "S")` 人被分配到標準組——整體就已不平衡。更嚴重的是性別：男性中只有 `r sum(allocation_q1 == "I" & patients$性別 == "M")` 人進入強化組，`r sum(allocation_q1 == "S" & patients$性別 == "F")` 名女性進入標準組，純粹出於偶然。才 15 個人，兩組的基線面貌就已相去甚遠——這不是哪裡出了錯，而是 50:50 的拋硬幣在小樣本下本來就會這樣。
+
+
+## 問題 2–3：分層隨機化清單與患者分配 Stratified Randomisation {#CT-prac02-q2q3}
+
+**問題 2**：為 8 個分層各自制定一份置換區組大小為 4 的隨機化清單。
+**問題 3**：用這份清單對 15 名患者進行分配。
+
+### 8 個分層的定義
+
+三個二分因素（團隊 × 族裔 × 性別）產生 8 個分層：
+
+```{r CT-p02-q2-strata-def, echo=FALSE}
+strata_def <- data.frame(
+  分層 = 1:8,
+  性別 = c("M","M","M","M","F","F","F","F"),
+  族裔 = c("A-C","A-C","W/O","W/O","A-C","A-C","W/O","W/O"),
+  團隊 = c("CW","NB","CW","NB","CW","NB","CW","NB")
+)
+knitr::kable(strata_def, caption = "8 個分層的定義（性別 × 族裔 × 團隊）")
+```
+
+### 為每個分層分配區組
+
+使用與問題 1 相同的隨機數字序列，跳過 0 及 7–9，依序為 8 個分層各取一個有效數字（1–6），對應一種區組排列：
+
+```{r CT-p02-q2-strata-list, echo=TRUE}
+# 區組排列映射
+block_map <- c("1" = "AABB", "2" = "ABAB", "3" = "ABBA",
+               "4" = "BAAB", "5" = "BABA", "6" = "BBAA")
+
+# 從 start_idx 開始，篩選出有效數字（1-6），取前 8 個
+valid_digits <- rand_table[rand_table >= 1 & rand_table <= 6]
+# 使用與 Q1 相同序列，從第 76 個位置的後續序列中篩選
+seq_from76 <- rand_table[76:length(rand_table)]
+valid_from76 <- seq_from76[seq_from76 >= 1 & seq_from76 <= 6]
+strata_digits <- valid_from76[1:8]
+
+strata_def$區組數字 <- strata_digits
+strata_def$區組排列 <- block_map[as.character(strata_digits)]
+
+knitr::kable(strata_def[, c("分層","性別","族裔","團隊","區組數字","區組排列")],
+  caption = "問題 2：各分層對應的置換區組排列"
+)
+```
+
+### 為 15 名患者分配治療
+
+```{r CT-p02-q3-allocate, echo=TRUE}
+# 為每位患者判斷分層號
+get_stratum <- function(sex, eth, team) {
+  s <- ifelse(sex == "M", 0, 4)
+  e <- ifelse(eth == "A-C", 0, 2)
+  t <- ifelse(team == "CW", 1, 2)
+  s + e + t
+}
+
+patients$分層 <- mapply(get_stratum,
+  patients$性別, patients$族裔, patients$團隊)
+
+# 追蹤每個分層已使用的位置
+stratum_pos <- rep(0, 8)
+
+allocate_stratified <- function(stratum, block_seq) {
+  pos <- stratum_pos[stratum] + 1
+  stratum_pos[stratum] <<- pos
+  substr(block_seq[stratum], pos, pos)
+}
+
+allocation_q3 <- mapply(function(s) {
+  allocate_stratified(s, strata_def$區組排列)
+}, patients$分層)
+
+# A = Intensive (I), B = Standard (S)
+allocation_q3_label <- ifelse(allocation_q3 == "A", "I", "S")
+
+patients$區組序列 <- strata_def$區組排列[patients$分層]
+patients$分配_Q3  <- allocation_q3_label
+
+knitr::kable(
+  patients[, c("患者","團隊","族裔","性別","分層","區組序列","分配_Q3")],
+  col.names = c("患者","團隊","族裔","性別","分層","區組排列","分配"),
+  caption = "問題 3：分層隨機化分配結果"
+)
+```
+
+
+## 問題 4：分層隨機化的平衡評估 {#CT-prac02-q4}
+
+**問題**：整體及各因素的平衡情況如何？
+
+```{r CT-p02-q4-balance, echo=FALSE}
+tab_q3 <- data.frame(
+  因素 = c("總計", "團隊 CW", "團隊 NB",
+           "族裔 A-C", "族裔 W/O",
+           "性別 M", "性別 F"),
+  強化_I = c(
+    sum(allocation_q3_label == "I"),
+    sum(allocation_q3_label == "I" & patients$團隊 == "CW"),
+    sum(allocation_q3_label == "I" & patients$團隊 == "NB"),
+    sum(allocation_q3_label == "I" & patients$族裔 == "A-C"),
+    sum(allocation_q3_label == "I" & patients$族裔 == "W/O"),
+    sum(allocation_q3_label == "I" & patients$性別 == "M"),
+    sum(allocation_q3_label == "I" & patients$性別 == "F")
+  ),
+  標準_S = c(
+    sum(allocation_q3_label == "S"),
+    sum(allocation_q3_label == "S" & patients$團隊 == "CW"),
+    sum(allocation_q3_label == "S" & patients$團隊 == "NB"),
+    sum(allocation_q3_label == "S" & patients$族裔 == "A-C"),
+    sum(allocation_q3_label == "S" & patients$族裔 == "W/O"),
+    sum(allocation_q3_label == "S" & patients$性別 == "M"),
+    sum(allocation_q3_label == "S" & patients$性別 == "F")
+  )
+)
+knitr::kable(tab_q3,
+  col.names = c("因素與水平", "強化 (I)", "標準 (S)"),
+  caption = "問題 4：分層隨機化平衡評估"
+)
+```
+
+不難注意到，按分層來看每個層內確實比問題 1 更均勻，這是區組排列局部保證的結果。但整體人數仍可能有偏斜，原因並不難理解：若前幾位患者各屬不同分層，每人的分配仍是獨立的 50:50，區組的結構這時完全發揮不了作用。更棘手的是**未完成的區組 (incomplete blocks)**——區組大小設為 4，但某些分層只進來了 1–2 名患者，整個區組永遠填不滿，不平衡就這樣留了下來。也就是說，分層隨機化的平衡保證取決於各分層能否累積足夠患者來填滿區組，樣本量小的時候這個前提很容易失守。
+
+
+## 問題 5：最小化法分配 Minimisation {#CT-prac02-q5}
+
+**問題**：用最小化法為相同的 15 名患者分配治療（使用非隨機版本，即以概率 1 分配給差距更大的那一組）。
+
+最小化法的邏輯是：每次新患者入組時，計算「若分配到 I 組，則 I 組在各因素上的邊際合計增加多少」，選擇邊際合計**更小**（即目前相對落後）的一組。當兩組得分相等時，採用簡單隨機化決定。
+
+```{r CT-p02-q5-minim, echo=TRUE}
+# 初始化邊際計數表：行=因素水平，列=Intensive/Standard
+margins <- data.frame(
+  水平      = c("CW","NB","A-C","W/O","M","F"),
+  Intensive = rep(0L, 6),
+  Standard  = rep(0L, 6),
+  stringsAsFactors = FALSE
+)
+rownames(margins) <- margins$水平
+
+# 第一位患者用簡單隨機化 → 按解答分配為 Intensive
+set.seed(2017)
+alloc_minim <- character(15)
+alloc_minim[1] <- "Intensive"
+for (fac in c(patients$團隊[1], patients$族裔[1], patients$性別[1])) {
+  margins[fac, "Intensive"] <- margins[fac, "Intensive"] + 1L
+}
+
+# 患者 2–15：依最小化法分配
+for (i in 2:15) {
+  lvs <- c(patients$團隊[i], patients$族裔[i], patients$性別[i])
+
+  score_I <- sum(margins[lvs, "Intensive"])
+  score_S <- sum(margins[lvs, "Standard"])
+
+  chosen <- if (score_I < score_S) {
+    "Intensive"
+  } else if (score_S < score_I) {
+    "Standard"
+  } else {
+    sample(c("Intensive","Standard"), 1)   # 相等時隨機
+  }
+
+  alloc_minim[i] <- chosen
+  for (fac in lvs) {
+    margins[fac, chosen] <- margins[fac, chosen] + 1L
+  }
+}
+
+# 轉為 I/S 標籤供展示
+alloc_minim_label <- ifelse(alloc_minim == "Intensive", "I", "S")
+patients$分配_Q5 <- alloc_minim_label
+
+knitr::kable(
+  patients[, c("患者","團隊","族裔","性別","分配_Q5")],
+  col.names = c("患者","團隊","族裔","性別","分配"),
+  caption = "問題 5：最小化法分配結果"
+)
+```
+
+患者 4 和患者 11 計算時兩組得分相等，由隨機決定。在實際操作中，應事先指定隨機機制（比如查隨機數表），而非臨時拋硬幣。
+
+
+## 問題 6：最小化法的平衡評估 {#CT-prac02-q6}
+
+**問題**：最小化法最終的整體及各因素平衡情況如何？
+
+```{r CT-p02-q6-balance, echo=FALSE}
+tab_q5 <- data.frame(
+  因素 = c("總計", "團隊 CW", "團隊 NB",
+           "族裔 A-C", "族裔 W/O",
+           "性別 M", "性別 F"),
+  強化_I = c(
+    sum(alloc_minim_label == "I"),
+    sum(alloc_minim_label == "I" & patients$團隊 == "CW"),
+    sum(alloc_minim_label == "I" & patients$團隊 == "NB"),
+    sum(alloc_minim_label == "I" & patients$族裔 == "A-C"),
+    sum(alloc_minim_label == "I" & patients$族裔 == "W/O"),
+    sum(alloc_minim_label == "I" & patients$性別 == "M"),
+    sum(alloc_minim_label == "I" & patients$性別 == "F")
+  ),
+  標準_S = c(
+    sum(alloc_minim_label == "S"),
+    sum(alloc_minim_label == "S" & patients$團隊 == "CW"),
+    sum(alloc_minim_label == "S" & patients$團隊 == "NB"),
+    sum(alloc_minim_label == "S" & patients$族裔 == "A-C"),
+    sum(alloc_minim_label == "S" & patients$族裔 == "W/O"),
+    sum(alloc_minim_label == "S" & patients$性別 == "M"),
+    sum(alloc_minim_label == "S" & patients$性別 == "F")
+  )
+)
+knitr::kable(tab_q5,
+  col.names = c("因素與水平", "強化 (I)", "標準 (S)"),
+  caption = "問題 6：最小化法平衡評估"
+)
+```
+
+15 名患者看下來，我們會發現每個因素的差距幾乎都壓縮到了 0 或 1。也就是說，只要邊際計數表還在，最小化法幾乎不可能讓任何一個因素嚴重失衡，這正是前兩種方法在這個樣本量下做不到的事。代價則在另一個面向：若要問「女性 × A-C 族裔 × NB 中心」這個特定格子有沒有平衡，最小化法無法給出保證，因為演算法的眼睛只盯著各因素的邊際合計，格子內部的分布不在它的視野裡。
+
+
+## 問題 7–10：討論 Discussion {#CT-prac02-discussion}
+
+### 問題 7：兩種方法的優缺點 {#CT-prac02-q7}
+
+**問題**：比較分層隨機化與最小化法的優缺點。
+
+| 面向 | 分層隨機化 | 最小化法 |
+|:----:|:----------:|:--------:|
+| 操作難度 | 相對簡單；可提前製備信封 | 需要統計師或程式，每次入組都要計算 |
+| 邊際平衡 | 層數少時尚可；層數多時很難 | 即使因素多，邊際平衡通常很好 |
+| 聯合分層平衡 | 每層內由區組保證 | 無保證（可能在特定組合內失衡） |
+| 多中心適用性 | 容易：每中心提前製備清單 | 需要中央辦公室即時計算 |
+| 可預測性風險 | 固定區組大小時有風險 | 相對難以預測，但仍可被估算 |
+
+分層隨機化的操作優勢在於可以「預先備好信封」——各中心拿著清單自行操作，不需要打電話回統計中心。最小化法則相反：每次入組都要查當前的計數表才能決定分配，只要各中心分開管理，計數就會對不上，所以幾乎必須走中央聯絡的路線。
+
+### 問題 8：如果再加入患者年齡這個因素 {#CT-prac02-q8}
+
+**問題**：哪種方法能更好地延伸，納入患者年齡這個額外的分層因素？
+
+若將年齡二分（如 ≤40 vs >40），分層數從 8 增加到 16；若再加上中心，分層數呈指數級增長，很快超過可管理的上限。相比之下，最小化法只需在邊際計數表中增加「年齡 ≤40」和「年齡 >40」兩行，計算量的增加完全可控。因素再多，結構都不會變。
+
+### 問題 9：實際如何組織隨機化？ {#CT-prac02-q9}
+
+**問題**：在實踐中應如何組織這項試驗的隨機化工作？
+
+這個試驗背景是真實的——南倫敦案量試驗 (UK700 Trial) 同時跑了兩個子試驗，一個用分層隨機化，另一個用最小化法。
+
+- **分層隨機化試驗**：研究者每次有患者需要入組時打電話給統計中心，提供患者資料，立即從預製清單中拿到試驗 ID 和治療分配。
+- **最小化法試驗**：研究者每週將待入組患者清單傳真給統計中心，統計師 Ian White 用 MINIM 軟體完成計算後，把結果傳真回來。
+
+由於入組並不緊急，每週一次的批量處理完全夠用。這也說明最小化法在實踐中不需要複雜的實時系統，一個可靠的中央聯絡機制加上專用軟體就足夠了。
+
+### 問題 10：中途加入兩個新中心 {#CT-prac02-q10}
+
+**問題**：West Battersea 和 South Battersea 兩個新團隊在試驗中途加入，兩種方法各自如何應對？
+
+兩種方法都能在試驗中途納入新中心。分層隨機化只需為新增的分層組合製備新清單，已有分層不受影響——West Battersea 和 South Battersea 各拿一套新清單，入組照常走。最小化法直接在計數表中加入這兩個中心作為新水平，初始計數為 0，下一位來自新中心的患者入組時就會被納入計算。
