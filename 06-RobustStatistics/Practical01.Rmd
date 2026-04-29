@@ -1,0 +1,214 @@
+
+
+## 背景 Background {#RS-p01-background}
+
+本次實作練習涵蓋穩健統計方法中最基本的三個議題：偏態數據 (skewed data) 對常規信賴區間的影響、離群值 (outliers) 對相關分析的影響，以及假設檢驗與信賴區間之間的等價關係。最後的模擬題（選做）讓我們通過蒙地卡羅模擬親眼觀察假設違反對 $t$ 檢驗第一型錯誤率的影響。
+
+
+## 問題 1：偏態數據 {#RS-p01-q1}
+
+**問題**：以下為 24 名 I 型糖尿病患者的空腹血糖 (fasting blood glucose) 數據（mmol/l）[@Altman1991, p.172]。計算平均值的 95% 信賴區間，並評估常規正態信賴區間在此情境下是否恰當。
+
+```{r RS-p01-q1-glucose-ci, echo=TRUE}
+glucose <- c(10.3, 9.5, 12.2, 15.1, 10.8, 19.0, 16.1, 8.1,
+              8.8, 6.7, 12.5,  4.2, 15.3,  7.2,  9.3, 8.6,
+              5.3, 6.7,  5.2, 13.3,  7.5,  4.9, 19.5, 11.1)
+
+# 常規正態信賴區間
+t.test(glucose)
+```
+
+這個信賴區間是建立在正態假設之上的。我們先用一些摘要統計量和圖形來探索數據的分佈形態：
+
+```{r RS-p01-q1-glucose-summary, echo=TRUE}
+# 計算偏度的輔助函數
+skew <- function(x) {
+  n <- length(x)
+  m3 <- mean((x - mean(x))^3)
+  s3 <- sd(x)^3
+  n / ((n-1)*(n-2)) * sum((x - mean(x))^3) / s3
+}
+
+data.frame(
+  mean     = mean(glucose),
+  median   = median(glucose),
+  sd       = sd(glucose),
+  skewness = skew(glucose)
+)
+```
+
+不難注意到中位數 (`r round(median(glucose), 1)`) 明顯小於平均數 (`r round(mean(glucose), 1)`)，這暗示數據向右偏斜（或者存在向右方的離群值）。
+
+```{r RS-p01-q1-glucose-boxplot, echo=TRUE, fig.cap='Box plot of fasting blood glucose levels', fig.align='center'}
+boxplot(glucose, ylab = "Glucose (mmol/l)", col = "lightblue")
+```
+
+```{r RS-p01-q1-glucose-qqplot, echo=TRUE, fig.cap='Normal Q-Q plot of fasting blood glucose levels', fig.align='center'}
+qqnorm(glucose, pch = 16, col = "steelblue")
+qqline(glucose, col = "red")
+```
+
+箱線圖和 Q-Q 圖都清楚地顯示樣本數據是右偏的。由於樣本量只有 24，正態假設下的均值信賴區間在這裡可能不太恰當。如果樣本量足夠大，即使有這種程度的偏態，根據中央極限定理，常規正態信賴區間仍然是可以接受的。
+
+
+## 問題 2：離群值 {#RS-p01-q2}
+
+**問題**：以下數據來自 @Dunn1992，12 名臨床心理學學生在某一天和三天後各完成一次 12 題版 General Health Questionnaire (GHQ)，分數範圍為 0–36。探索數據分佈、信賴區間的適當性，以及離群值對相關的影響。
+
+```{r RS-p01-q2-ghq-read, echo=TRUE}
+library(haven)
+ghq <- read_dta("../backupfiles/ghq.dta")
+ghq$diff <- ghq$GHQ2 - ghq$GHQ1
+ghq
+```
+
+先看各變數的摘要統計量：
+
+```{r RS-p01-q2-ghq-summary, echo=TRUE}
+data.frame(
+  variable = c("GHQ1", "GHQ2", "diff"),
+  mean     = c(mean(ghq$GHQ1), mean(ghq$GHQ2), mean(ghq$diff)),
+  median   = c(median(ghq$GHQ1), median(ghq$GHQ2), median(ghq$diff)),
+  sd       = c(sd(ghq$GHQ1), sd(ghq$GHQ2), sd(ghq$diff)),
+  skewness = c(skew(ghq$GHQ1), skew(ghq$GHQ2), skew(ghq$diff))
+)
+```
+
+GHQ1 和 GHQ2 的偏度都很高，中位數和平均數差距明顯。用箱線圖更清楚：
+
+```{r RS-p01-q2-ghq-boxplot, echo=TRUE, fig.cap='Box plots of GHQ scores at time 1 and time 2', fig.align='center'}
+boxplot(ghq$GHQ1, ghq$GHQ2, names = c("GHQ1", "GHQ2"),
+        ylab = "GHQ Score", col = c("lightblue", "lightyellow"))
+```
+
+如果要計算個別變數均值的 95% 信賴區間：
+
+```{r RS-p01-q2-ghq-ci, echo=TRUE}
+t.test(ghq$GHQ1)
+t.test(ghq$GHQ2)
+```
+
+由於 GHQ1 和 GHQ2 都是強烈偏態的，常規正態信賴區間在此不太適合。但是如果看兩次測量的**差值** (diff)，情況就好多了：
+
+```{r RS-p01-q2-diff-boxplot, echo=TRUE, fig.cap='Box plot of GHQ difference (time 2 - time 1)', fig.align='center'}
+boxplot(ghq$diff, ylab = "GHQ2 - GHQ1", col = "lightgreen")
+```
+
+差值的分佈相對對稱，偏度也小得多。也就是說，儘管個別變數本身可能嚴重偏離正態，它們之間的差值卻可能表現得好得多——配對 $t$ 檢驗和相應的信賴區間是可以接受的：
+
+```{r RS-p01-q2-diff-ci, echo=TRUE}
+t.test(ghq$diff)
+```
+
+接下來看 GHQ1 和 GHQ2 之間的相關：
+
+```{r RS-p01-q2-ghq-corr, echo=TRUE}
+cor.test(ghq$GHQ1, ghq$GHQ2)
+```
+
+相關係數為 `r round(cor(ghq$GHQ1, ghq$GHQ2), 4)`，相當高。看一下散佈圖：
+
+```{r RS-p01-q2-ghq-scatter, echo=TRUE, fig.cap='Scatter plot of GHQ1 vs GHQ2', fig.align='center'}
+plot(ghq$GHQ2, ghq$GHQ1, xlab = "GHQ2", ylab = "GHQ1",
+     pch = 16, col = "steelblue")
+```
+
+不難注意到右上方有兩個離群值（GHQ1 = 22 的兩個觀察）。把它們排除後重新計算相關：
+
+```{r RS-p01-q2-ghq-corr-no-outlier, echo=TRUE}
+keep <- ghq$GHQ1 < 20
+cor.test(ghq$GHQ1[keep], ghq$GHQ2[keep])
+```
+
+排除離群值後相關係數從 `r round(cor(ghq$GHQ1, ghq$GHQ2), 4)` 降到了 `r round(cor(ghq$GHQ1[ghq$GHQ1 < 20], ghq$GHQ2[ghq$GHQ1 < 20]), 4)`，下降幅度不小。這提出了一個問題：我們能否使用對離群值和線性假設較不敏感的穩健相關估計方法？
+
+
+## 問題 3：假設檢驗與信賴區間的關係 {#RS-p01-q3}
+
+**問題**：利用 $t$ 檢驗與信賴區間之間的等價關係，通過系統地嘗試不同的零假設值 $\theta_0$，手動構造 diff 平均值的 95% 信賴區間（精確到 0.1），並與直接計算的結果比較。
+
+先回顧一下直接計算的 95% 信賴區間：
+
+```{r RS-p01-q3-diff-ci-direct, echo=TRUE}
+t.test(ghq$diff)$conf.int
+```
+
+信賴區間的定義告訴我們：$100(1-\alpha)\%$ 信賴區間就是那些在 $100\alpha\%$ 水準下零假設 $H_0: \theta = \theta_0$ 不被拒絕的 $\theta_0$ 值的集合。我們可以遍歷一系列 $\theta_0$ 值，記錄哪些被拒絕、哪些不被拒絕：
+
+```{r RS-p01-q3-ci-by-ttest, echo=TRUE}
+theta_seq <- seq(-3.0, 2.0, by = 0.1)
+p_values <- sapply(theta_seq, function(theta0) {
+  t.test(ghq$diff, mu = theta0)$p.value
+})
+result <- data.frame(theta_0 = theta_seq, p_value = round(p_values, 4))
+# 顯示邊界附近的值
+result[result$p_value > 0.03 & result$p_value < 0.08, ]
+```
+
+從輸出中可以看到，$\theta_0 = -2.2$ 和 $\theta_0 = 1.5$ 的 $p$ 值剛好落在 0.05 以下（被拒絕），而 $\theta_0 = -2.1$ 和 $\theta_0 = 1.4$ 的 $p$ 值略高於 0.05（不被拒絕）。也就是說精確到 0.1 的 95% 信賴區間約為 $(-2.1, 1.5)$。
+
+這和直接用 `t.test` 得到的信賴區間一致，因為 `t.test` 本身就是用 $t$ 分佈解析地構造信賴區間的。我們在後面的課程中會看到，這個思路對穩健方法特別有用——只要有一個有效的假設檢驗程序，就可以透過這個等價關係構造出信賴區間。
+
+
+## 問題 4（選做）：$t$ 檢驗的蒙地卡羅模擬 {#RS-p01-q4}
+
+**問題**：通過模擬觀察當 $t$ 檢驗的假設被違反時，第一型錯誤率會如何變化。分別考慮三種情境：(1) 兩組都是標準正態，(2) 變異數不等，(3) 一組偏態。
+
+```{r RS-p01-q4-simulation, echo=TRUE, cache=TRUE}
+set.seed(1234)
+n_sim <- 10000
+
+# 模擬函數：返回 p < 0.05 的比例
+sim_ttest <- function(n, gen_x2 = function(n) rnorm(n)) {
+  p_values <- replicate(n_sim, {
+    x1 <- rnorm(n)
+    x2 <- gen_x2(n)
+    t.test(x1, x2, var.equal = TRUE)$p.value
+  })
+  mean(p_values < 0.05)
+}
+
+# 三種情境 × 三種樣本量
+scenarios <- list(
+  "Both N(0,1)"      = function(n) rnorm(n, 0, 1),
+  "N(0,5)"           = function(n) rnorm(n, 0, 5),
+  "exp(N(0,1))-shift" = function(n) exp(rnorm(n)) - exp(0.5)
+)
+
+sample_sizes <- c(10, 100, 1000)
+
+results <- expand.grid(
+  scenario = names(scenarios),
+  n = sample_sizes,
+  stringsAsFactors = FALSE
+)
+results$prop_p05 <- NA
+
+for (i in seq_len(nrow(results))) {
+  results$prop_p05[i] <- sim_ttest(
+    n = results$n[i],
+    gen_x2 = scenarios[[results$scenario[i]]]
+  )
+}
+
+# 整理成表格
+library(tidyr)
+results_wide <- results %>%
+  pivot_wider(names_from = scenario, values_from = prop_p05)
+results_wide
+```
+
+```{r RS-p01-q4-results-table, echo=FALSE}
+knitr::kable(results_wide, digits = 3,
+             caption = "Proportion of p-values < 0.05 under different simulation scenarios",
+             col.names = c("n", "Both N(0,1)", "N(0,5)", "Skewed"))
+```
+
+從模擬結果中可以觀察到幾個要點：
+
+1. 當兩組都是標準正態分佈（假設完全成立）時，$p < 0.05$ 的比例非常接近名義水準 5%，無論樣本量如何。
+2. 當變異數不等時（第二種情境），$n = 10$ 下第一型錯誤率會略微偏離 5%（約 6%），但偏離幅度不算太大。
+3. 當一組是偏態分佈（第三種情境），$n = 10$ 下第一型錯誤率明顯偏高（接近 10%），這說明同時存在偏態和變異數不等時，$t$ 檢驗變得不可靠。
+4. 隨著樣本量增加到 100 和 1000，即使假設被違反，第一型錯誤率也會逐漸回到名義水準。這是中央極限定理在起作用。
+
+也就是說，假設違反確實會導致 $t$ 檢驗不可靠，但違反的程度必須相當嚴重才會引起實質性的問題。而且隨著樣本量的增加，這個問題會因為中央極限定理而逐漸消失。
