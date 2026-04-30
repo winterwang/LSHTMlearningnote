@@ -1,0 +1,265 @@
+
+## 背景 Background {#RS-p02-background}
+
+本次實作練習直接延續 Session 2 的理論內容，以三個具體例子操作秩次非參數方法：首先用配對 GHQ 數據示範符號檢驗和 Wilcoxon 符號秩和檢驗（同時示範以「翻轉」方式構造信賴區間），接著以血友病淋巴球計數數據比較 Pearson 和 Spearman 相關係數對離群值的敏感度，最後（選做）把 WMW 檢驗應用到甲狀腺素數據。
+
+數據來源：@Dunn1992；@Altman1991。
+
+```{r RS-p02-setup, echo=FALSE, message=FALSE, warning=FALSE}
+library(haven)
+library(BSDA)
+library(dplyr)
+library(ggplot2)
+```
+
+
+## 問題 1：符號檢驗 {#RS-p02-q1}
+
+**背景**：12 名臨床心理學學生在某天和三天後各完成一次 12 題版 General Health Questionnaire (GHQ)，分數範圍 0–36。我們希望檢驗兩次測量的分佈是否有差異。
+
+```{r RS-p02-q1-read, echo=TRUE}
+ghq <- read_dta("../backupfiles/ghq.dta")
+# 計算差值（第二次 - 第一次）
+ghq$diff <- ghq$GHQ2 - ghq$GHQ1
+ghq
+```
+
+**問題**：用配對 $t$ 檢驗做初步分析，並評估差值的分佈。
+
+```{r RS-p02-q1-ttest, echo=TRUE}
+t.test(ghq$GHQ1, ghq$GHQ2, paired = TRUE)
+```
+
+不難注意到，差值的平均值接近零，$p$ 值為 0.69，並無證據顯示兩次測量的均值不同。接著我們來看差值本身的分佈形態：
+
+```{r RS-p02-q1-diffcheck, echo=TRUE}
+# 差值的摘要
+summary(ghq$diff)
+table(ghq$diff)  # 看各差值的頻次
+```
+
+可以看到差值中有 2 個等於零（這兩個觀測在符號檢驗中會被剔除）。分佈形態相對均衡，偏度不大。
+
+**手算符號檢驗**：
+
+差值中有 6 個正、4 個負、2 個零。剔除零值後，$n=10$，檢驗統計量 $X = \min(6, 4) = 4$。查 Neave 統計表（$n=10$，$\alpha_2=10\%$ 欄位）臨界值為 1，而 $X=4>1$，故 $p>0.1$，無法拒絕零假設。
+
+用 R 實作符號檢驗：
+
+```{r RS-p02-q1-signtest, echo=TRUE}
+# BSDA::SIGN.test 等價於 Stata 的 signtest
+BSDA::SIGN.test(ghq$diff, md = 0, alternative = "two.sided", conf.level = 0.95)
+```
+
+`SIGN.test` 額外輸出了插值法 (interpolated) 的信賴區間，這是一個方便的附加功能。不難注意到雙側 $p$ 值約 0.75，與手算結果一致，同樣無證據拒絕中位差值為零的零假設。
+
+也就是說，配對 $t$ 檢驗和符號檢驗的結論是一致的，這在差值分佈比較對稱時是可以預期的。符號檢驗放棄了差值的大小資訊，效能會比 $t$ 檢驗低一些；但它的假設前提也最少，只要差值來自連續分佈即可。
+
+
+## 問題 2：Wilcoxon 符號秩和檢驗 {#RS-p02-q2}
+
+**問題**：對同一組 GHQ 差值進行 Wilcoxon 符號秩和檢驗，並嘗試用翻轉方式構造 95% 信賴區間。
+
+**手算步驟**：
+
+先計算各差值（排除零值）的絕對值排序，然後給正值和負值分別賦予帶正負號的排序。
+
+```{r RS-p02-q2-byhand, echo=TRUE}
+# 排除差值為零的觀測，計算絕對差值的秩
+ghq_nonzero <- ghq[ghq$diff != 0, ]
+ghq_nonzero$abs_diff <- abs(ghq_nonzero$diff)
+ghq_nonzero$rank_abs <- rank(ghq_nonzero$abs_diff)
+ghq_nonzero$signed_rank <- sign(ghq_nonzero$diff) * ghq_nonzero$rank_abs
+
+# 顯示完整表格
+ghq_nonzero[order(ghq_nonzero$rank_abs), c("GHQ1", "GHQ2", "diff", "abs_diff", "rank_abs", "signed_rank")]
+```
+
+```{r RS-p02-q2-sums, echo=TRUE}
+S_plus  <- sum(ghq_nonzero$signed_rank[ghq_nonzero$signed_rank > 0])
+S_minus <- abs(sum(ghq_nonzero$signed_rank[ghq_nonzero$signed_rank < 0]))
+cat("S+ =", S_plus, "  S- =", S_minus, "\n")
+cat("檢驗統計量 min(S+, S-) =", min(S_plus, S_minus), "\n")
+```
+
+此處 $S^+ = 25.5$，$S^- = 29.5$（注意 $S^+ + S^- = n(n+1)/2 = 55$），檢驗統計量為 $\min(25.5, 29.5) = 25.5$。查表（$n=10$，Neave p.29）可知 $p>0.1$。
+
+**用 R 進行 Wilcoxon 符號秩和檢驗**（精確法與正態近似法）：
+
+```{r RS-p02-q2-wilcox-exact, echo=TRUE}
+# 精確法（資料有 ties，R 自動使用正態近似）
+wilcox.test(ghq$GHQ1, ghq$GHQ2, paired = TRUE)
+```
+
+```{r RS-p02-q2-wilcox-normal, echo=TRUE}
+# 無連續性校正的正態近似
+wilcox.test(ghq$GHQ1, ghq$GHQ2, paired = TRUE, exact = FALSE, correct = FALSE)
+```
+
+不難注意到，雖然精確法中由於有相同值（ties）而自動切換為正態近似，幾種做法給出的 $p$ 值都在 0.75–0.88 之間，結論一致：無證據顯示 GHQ 差值的中位數不等於零。
+
+三種方法（$t$ 檢驗、符號檢驗、Wilcoxon 符號秩和檢驗）在此數據上給出了相似的答案，這也是預期之中的——差值的分佈本身相當對稱，所以三種方法都在做類似的事。唯一的區別是符號檢驗的效能相對最低，因為它完全放棄了差值大小的資訊。
+
+**以翻轉 Wilcoxon 檢驗構造 95% 信賴區間**：
+
+95% 信賴區間是所有令 $p \geqslant 0.05$ 的 $\theta_0$ 值的集合。做法是把 $\theta_0$ 加到 GHQ2 上（等價於把 $-\theta_0$ 加到差值上），然後重複 Wilcoxon 符號秩和檢驗。
+
+```{r RS-p02-q2-ci-inversion, echo=TRUE}
+# 嘗試 theta0 的範圍，找出 p >= 0.05 的邊界
+theta_seq <- seq(-2.5, 3.0, by = 0.5)
+pvals <- sapply(theta_seq, function(th) {
+  # 把 theta0 加到 GHQ2 上，等價於測試差值中位數是否為 theta0
+  ghq2_shifted <- ghq$GHQ2 + th
+  wilcox.test(ghq$GHQ1, ghq2_shifted, paired = TRUE,
+              exact = FALSE, correct = FALSE)$p.value
+})
+ci_tab <- data.frame(theta0 = theta_seq, p_value = round(pvals, 4))
+ci_tab
+```
+
+```{r RS-p02-q2-ci-summary, echo=TRUE}
+# 取 p >= 0.05 的 theta0 範圍
+ci_tab[ci_tab$p_value >= 0.05, ]
+```
+
+也就是說，粗略的 95% 信賴區間大約是 $(-1.5,\; 2.0)$，與基於 $t$ 分佈的 95% 信賴區間 $(-1.45,\; 2.12)$ 十分接近。當差值分佈不太偏斜時，兩種方法的信賴區間自然趨於一致——這個例子清楚展示了符號秩和「翻轉」策略的實際可操作性。
+
+
+## 問題 3：Spearman 秩相關係數 {#RS-p02-q3}
+
+**背景**：使用 28 名血友病患者的 T4 和 T8 淋巴球計數（$\times10^9/\ell$），比較 Pearson 和 Spearman 相關係數，特別觀察離群值的影響。
+
+```{r RS-p02-q3-read, echo=TRUE}
+t4t8 <- read.csv("../backupfiles/t4t8.csv", header = TRUE)
+head(t4t8)
+```
+
+先看散點圖，識別潛在的離群值：
+
+```{r RS-p02-q3-scatter, echo=TRUE, fig.cap='T4 和 T8 淋巴球計數散點圖（全部 28 名患者）', fig.align='center', out.width='70%'}
+plot(t4t8$th4, t4t8$th8,
+     xlab = "T4 count (×10⁹/ℓ)", ylab = "T8 count (×10⁹/ℓ)",
+     pch = 16, col = "steelblue", main = "T4 vs T8 lymphocyte counts")
+```
+
+不難注意到右上角有 1–2 個點，T8 明顯高於其他患者，可以視為潛在離群值。
+
+**Pearson 和 Spearman 相關係數（含全部 28 個觀測）**：
+
+```{r RS-p02-q3-corr-all, echo=TRUE}
+pearson_all  <- cor(t4t8$th4, t4t8$th8, method = "pearson")
+spearman_all <- cor(t4t8$th4, t4t8$th8, method = "spearman")
+cat("Pearson r  (全部):", round(pearson_all, 4), "\n")
+cat("Spearman ρ (全部):", round(spearman_all, 4), "\n")
+
+# 附帶顯著性檢定
+cor.test(t4t8$th4, t4t8$th8, method = "pearson")
+cor.test(t4t8$th4, t4t8$th8, method = "spearman")
+```
+
+此時 Pearson $r = 0.719$，Spearman $\rho = 0.628$，兩者都顯示顯著的正相關。
+
+**剔除兩個 T8 > 1 的離群點後重新計算**：
+
+```{r RS-p02-q3-drop-outliers, echo=TRUE}
+t4t8_trimmed <- t4t8[t4t8$th8 <= 1, ]
+cat("剔除後剩餘觀測數:", nrow(t4t8_trimmed), "\n")
+
+pearson_trim  <- cor(t4t8_trimmed$th4, t4t8_trimmed$th8, method = "pearson")
+spearman_trim <- cor(t4t8_trimmed$th4, t4t8_trimmed$th8, method = "spearman")
+cat("Pearson r  (剔除後):", round(pearson_trim, 4), "\n")
+cat("Spearman ρ (剔除後):", round(spearman_trim, 4), "\n")
+```
+
+```{r RS-p02-q3-compare, echo=TRUE}
+# 整理成對比表格
+data.frame(
+  方法     = c("Pearson r", "Spearman ρ"),
+  全部n28  = c(round(pearson_all, 4), round(spearman_all, 4)),
+  剔除後n26 = c(round(pearson_trim, 4), round(spearman_trim, 4)),
+  變化幅度 = c(round(pearson_trim - pearson_all, 4),
+               round(spearman_trim - spearman_all, 4))
+)
+```
+
+也就是說，兩個離群值對 Pearson 相關係數的影響要大得多：從 0.719 降至 0.519，下降了約 0.20；而 Spearman $\rho$ 只從 0.628 降至 0.542，下降約 0.09。這清楚地說明了 Pearson 相關係數對離群值遠比 Spearman 秩相關敏感——後者用的是排序而非真實數值，極端值的影響被「壓縮」到只相差一兩個排名的程度。事實上，這正是 Spearman 秩相關作為穩健替代指標的核心優勢。
+
+
+## 選做問題：Wilcoxon–Mann–Whitney (WMW) 檢驗 {#RS-p02-opt}
+
+**背景**：使用 16 名甲狀腺功能低下嬰兒的血清甲狀腺素 (nmol/l) 數據，比較「輕微或無症狀組」(group 1) 與「顯著症狀組」(group 2) 之間的甲狀腺素水平分佈。
+
+```{r RS-p02-opt-read, echo=TRUE}
+thyroid <- read.csv("../backupfiles/thyroid.csv", header = TRUE)
+# 確認組別編碼
+table(thyroid$group)
+```
+
+先用兩樣本 $t$ 檢驗作為參考：
+
+```{r RS-p02-opt-ttest, echo=TRUE}
+t.test(thyr ~ group, data = thyroid, var.equal = TRUE)
+```
+
+兩側 $p$ 值約 0.31，無顯著差異。
+
+**手算 WMW 統計量**：
+
+```{r RS-p02-opt-byhand, echo=TRUE}
+thyroid$rank_thyr <- rank(thyroid$thyr)
+thyroid_sorted <- thyroid[order(thyroid$rank_thyr), ]
+thyroid_sorted[, c("group", "thyr", "rank_thyr")]
+```
+
+```{r RS-p02-opt-wmw-calc, echo=TRUE}
+# 較小組 = 顯著症狀組（n=7）
+group2 <- thyroid[thyroid$group == "Marked symptoms", ]
+n_small <- nrow(group2)  # 7
+n_large <- nrow(thyroid) - n_small  # 9
+
+W1 <- sum(rank(thyroid$thyr)[thyroid$group == "Marked symptoms"])
+U1 <- W1 - n_small * (n_small + 1) / 2
+U_stat <- min(U1, n_small * n_large - U1)
+
+cat("W1 =", W1, "\n")
+cat("U1 =", U1, "  nm - U1 =", n_small * n_large - U1, "\n")
+cat("WMW 統計量 U =", U_stat, "\n")
+```
+
+查表（Neave p.30，$n_1=7$，$n_2=9$）得 $p>0.1$，與 $t$ 檢驗方向一致。
+
+**用 R 實作 WMW 檢驗**（正態近似法）：
+
+```{r RS-p02-opt-wilcox, echo=TRUE}
+# 帶連續性校正（R 預設）
+wilcox.test(thyr ~ group, data = thyroid)
+# 不帶連續性校正（等價於 Stata ranksum）
+wilcox.test(thyr ~ group, data = thyroid, exact = FALSE, correct = FALSE)
+```
+
+$p$ 值約為 0.40–0.42，與精確檢驗和 $t$ 檢驗的結論一致：無足夠證據拒絕兩組甲狀腺素水平位移為零的零假設。
+
+**以翻轉構造近似 95% 信賴區間**：
+
+若假設兩組差異完全來自位移 $\Delta$，可以將 group 2 的數值加上不同的 $-\Delta$ 後重複 WMW 檢驗，找出 $p \geqslant 0.05$ 的 $\Delta$ 範圍：
+
+```{r RS-p02-opt-ci, echo=TRUE}
+delta_seq <- seq(-10, 40, by = 5)
+pvals_wmw <- sapply(delta_seq, function(d) {
+  thyr_shifted <- thyroid$thyr
+  thyr_shifted[thyroid$group == "Marked symptoms"] <-
+    thyr_shifted[thyroid$group == "Marked symptoms"] + d
+  wilcox.test(thyr_shifted[thyroid$group != "Marked symptoms"],
+              thyr_shifted[thyroid$group == "Marked symptoms"],
+              exact = FALSE, correct = FALSE)$p.value
+})
+wmw_ci_tab <- data.frame(delta = delta_seq, p_value = round(pvals_wmw, 4))
+wmw_ci_tab[wmw_ci_tab$p_value >= 0.05, ]
+```
+
+```{r RS-p02-opt-ttest-ci, echo=TRUE}
+# 對比 t 檢驗的 95% 信賴區間
+t.test(thyr ~ group, data = thyroid, var.equal = TRUE)$conf.int
+```
+
+WMW 翻轉信賴區間和 $t$ 檢驗信賴區間的範圍在相同量級，但 WMW 區間通常更寬，反映了其放棄絕對數值大小資訊的代價。在這個例子中，兩組的樣本量較小（7 和 9 人），且 Marked symptoms 組的標準差遠大於另一組（37.5 vs 14.2），正態假設和等方差假設都存在疑問，這也正是 WMW 方法在此情境下有其價值的原因。
