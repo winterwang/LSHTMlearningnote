@@ -40,6 +40,9 @@
 - **全書重新渲染**：完成 4 輪完整渲染（P1–P4），解決了 Bayesian/Survival/GLM 章節的各類編譯問題
 
 ### 新增內容
+- **[基於秩次的非參數檢驗](https://wangcc.me/LSHTMlearningnote/rank-tests.html) (Ch06 Session02)**：充實符號檢驗中位數信賴區間、Wilcoxon 正態近似均值與方差推導、配對數據應用、Kendall τ 相關係數、95.5% ARE 詳細說明；修復 ggplot2 `linewidth` 棄用警告 (2026-04-30)
+- **[秩次檢驗實作](https://wangcc.me/LSHTMlearningnote/rank-tests.html#RS-prac02) (Ch06 Practical02)**：符號檢驗 (GHQ 數據)、Wilcoxon 符號秩和檢驗與 CI 反轉、Spearman vs Pearson 相關係數的離群值比較、WMW 檢驗 (甲狀腺數據) (2026-04-30)
+- **章節結構重組 (Ch06)**：將排列置換法從 Session02 獨立為 Session03、自助重抽法移至 Session04、新增 Session05 佔位 (Sandwich Estimator) (2026-04-30)
 - **[穩健統計方法導論](https://wangcc.me/LSHTMlearningnote/robust-intro.html) (Ch06 Session01)**：涵蓋穩健方法的定義與目標，以血糖、甲狀腺素、淋巴球數據為例探討偏態與離群值問題，複習抽樣分布/假設檢驗/信賴區間，討論 t 檢驗假設與殘差分析 (2026-04-29)
 - **[穩健統計方法實作](https://wangcc.me/LSHTMlearningnote/robust-intro.html#RS-prac01) (Ch06 Practical01)**：偏態數據的 CI 計算與圖形診斷、離群值對相關分析的影響、檢定-信賴區間等價性的數值驗證、Monte Carlo 模擬比較三種情境下的覆蓋率 (2026-04-29)
 - **[基線調整與 ANCOVA](https://wangcc.me/LSHTMlearningnote/baseline-adjustment-using-ancova.html#CT-ANCOVA-intro) (Ch05 Session11)**：比較 POST/CHANGE/ANCOVA 三種分析方法的統計性質，涵蓋條件偏倚、回歸到均值、精確度公式推導、Lord's Paradox，並附詳細計算步驟 (2026-04-19)
