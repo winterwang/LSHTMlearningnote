@@ -40,6 +40,8 @@
 - **全書重新渲染**：完成 4 輪完整渲染（P1–P4），解決了 Bayesian/Survival/GLM 章節的各類編譯問題
 
 ### 新增內容
+- **[排列置換法筆記](https://wangcc.me/LSHTMlearningnote/permutation.html) (Ch06 Session03)**：充實血壓臨床試驗排列置換範例、可置換性定義、單側/雙側 p 值計算、Monte Carlo 誤差、連續變量排列、Spearman 精確排列檢驗、保守檢驗定義 (2026-04-30)
+- **[排列置換法實作](https://wangcc.me/LSHTMlearningnote/permutation.html#RS-prac03) (Ch06 Practical03)**：甲狀腺素數據的 t 統計量/均值差/秩次排列置換檢驗、精確 WMW 檢驗、頭痛數據 Pearson/Spearman 相關排列檢驗、五種方法 p 值比較總結 (2026-04-30)
 - **[基於秩次的非參數檢驗](https://wangcc.me/LSHTMlearningnote/rank-tests.html) (Ch06 Session02)**：充實符號檢驗中位數信賴區間、Wilcoxon 正態近似均值與方差推導、配對數據應用、Kendall τ 相關係數、95.5% ARE 詳細說明；修復 ggplot2 `linewidth` 棄用警告 (2026-04-30)
 - **[秩次檢驗實作](https://wangcc.me/LSHTMlearningnote/rank-tests.html#RS-prac02) (Ch06 Practical02)**：符號檢驗 (GHQ 數據)、Wilcoxon 符號秩和檢驗與 CI 反轉、Spearman vs Pearson 相關係數的離群值比較、WMW 檢驗 (甲狀腺數據) (2026-04-30)
 - **章節結構重組 (Ch06)**：將排列置換法從 Session02 獨立為 Session03、自助重抽法移至 Session04、新增 Session05 佔位 (Sandwich Estimator) (2026-04-30)

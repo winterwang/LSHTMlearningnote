@@ -10,11 +10,62 @@ Good[@good2006permutation] 曾經提出假設檢驗構建的步驟，這裡引�
 
 本章要介紹的排列置換法 (permutation)，和下一章會介紹的自助重抽法 (bootstrap) ，需要大量的計算機的計算，和較強的電腦性能。這兩種方法有一個共同的特徵，它們都利用手頭獲得的樣本數據輔助生成**樣本分佈**，同時對該數據的分佈或者特質不進行假設。也就是用在上面羅列步驟的第4步。其餘的步驟則與一般的參數假設檢驗完全相同。
 
+排列置換法利用的核心假設是**可置換性 (exchangeability)**：在零假設條件下，觀察數據的組別標籤可以任意對調而不影響觀察結果。在隨機對照試驗中，這個假設有很強的依據——因為隨機分組本身就保證了在零假設條件下受試者在各組之間是可置換的。
+
+## 從血壓試驗理解排列置換法
+
+在介紹技術細節之前，我們先用一個簡單的雙盲隨機對照試驗來建立直觀理解。假設我們有一個比較標準降壓藥和新替代藥的小型試驗：16 名受試者中 9 人被隨機分配到標準治療組，7 人到新治療組，每人服藥一個月後測量收縮壓 (SBP)。觀察到的數據如下：
+
+```{r RS-s03-bp-data, echo=TRUE}
+bp <- data.frame(
+  sbp   = c(134, 145, 149, 125, 118, 159, 110, 142, 136,
+            125, 118, 128, 124, 110, 124, 126),
+  treat = c(rep("standard", 9), rep("new", 7))
+)
+# 觀察到的均值差
+T_obs <- mean(bp$sbp[bp$treat == "standard"]) - mean(bp$sbp[bp$treat == "new"])
+cat("T_obs = Y_bar_standard - Y_bar_new =", round(T_obs, 2), "\n")
+```
+
+我們想檢驗零假設 $H_0: T = 0$（兩種藥物效果無差異）。排列置換法的思路是：如果零假設為真，那麼每個人的血壓值跟他被分到哪一組無關。也就是說，我們可以把這 16 個人的組別標籤打亂重新分配，計算每一種分配方式下的均值差 $T$，這些 $T$ 的集合就構成了零假設下的樣本分佈。
+
+用數學語言來說，可置換性要求的是：如果將觀察值排列為 $Y_1, Y_2, \ldots, Y_9$ (標準組), $Y_{10}, \ldots, Y_{16}$ (新藥組)，在零假設下，$\{Y_{\sigma(1)}, Y_{\sigma(2)}, \ldots, Y_{\sigma(16)}\}$ 對任意標籤排列 $\sigma(\cdot)$ 都具有相同的聯合分佈。
+
+```{r RS-s03-bp-perm, echo=TRUE, cache=TRUE}
+set.seed(123)
+N <- 10000
+T_perm <- replicate(N, {
+  perm_treat <- sample(bp$treat)
+  mean(bp$sbp[perm_treat == "standard"]) - mean(bp$sbp[perm_treat == "new"])
+})
+
+# 雙側 p 值
+p_perm <- sum(abs(T_perm) >= abs(T_obs)) / N
+cat("排列置換法 p 值 =", p_perm, "\n")
+cat("參數 t 檢驗 p 值 =", t.test(sbp ~ treat, data = bp, var.equal = TRUE)$p.value, "\n")
+```
+
+```{r RS-s03-bp-hist, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='血壓試驗：排列置換法下均值差的樣本分佈。黑色垂直線為觀察值 T_obs。', fig.align='center', out.width='80%'}
+hist(T_perm, breaks = 50, main = "", xlab = "T (mean difference)", col = "lightgrey", border = "white")
+abline(v = T_obs, lwd = 2, col = "black")
+abline(v = -T_obs, lwd = 2, col = "black", lty = 2)
+legend("topright", legend = c("T_obs", "-T_obs"), lty = c(1, 2), lwd = 2)
+```
+
+不難注意到，觀察到的均值差 `r round(T_obs, 2)` 位於樣本分佈的尾部，排列置換法和參數 $t$ 檢驗的 $p$ 值相當接近。但在這裡我們**完全不需要**假設數據來自正態分佈——排列置換法只依賴可置換性這一條件。
+
+### 單側與雙側 $p$ 值的計算
+
+從排列產生的統計量 $(T_1, T_2, \ldots, T_N)$ 中，我們計算正方向超出觀察值的比例 $P^+ = P(T_i > T_0)$ 和負方向超出的比例 $P^- = P(T_i < -T_0)$，雙側 $p$ 值就是 $p = P^+ + P^-$。如果排列分佈是對稱的，雙側 $p$ 值大約等於單側 $p$ 值的兩倍，但**不總是**如此。
+
+### Monte Carlo 誤差
+
+需要注意的是，除非窮舉所有可能的排列組合（精確排列），否則我們得到的 $p$ 值是一個**估計值**，受到蒙地卡羅 (Monte Carlo) 誤差的影響。排列次數 $N$ 越大，這個誤差就越小。$p$ 值的標準誤約為 $\text{SE}(\hat{p}) = \sqrt{\hat{p}(1-\hat{p})/N}$，對應的 95% 信賴區間為 $\hat{p} \pm 1.96 \times \text{SE}(\hat{p})$。實際操作中，使用 1000 次排列可以得到粗略的估計，10000 次以上通常就足夠精確了。
 
 
-##  直接上實例
+##  甲狀腺素數據實例
 
-之前用過的甲亢數據：
+前面用血壓試驗建立了直觀理解，現在我們回到之前用過的甲狀腺素數據，更仔細地走一遍排列置換法的操作流程：
 
 ```{r 06-RobustStatistic-26, echo=FALSE, cache=TRUE}
 dt <- read.csv("../backupfiles/thyroid.csv", header = T)
@@ -154,23 +205,75 @@ A test is said to be _exact_ with respect to a compound hypothesis if the probab
 
 一個大家都聽說過的精確檢驗的例子就是 Fisher 精確檢驗法 (也是一種排列置換檢驗)。**所有的排列置換檢驗法都是精確檢驗法。**
 
-## 基於排序置換檢驗法計算信賴區間
+值得補充的是，一個檢驗如果第一型錯誤率永遠不超過 $\alpha$，就稱它是**保守的** (conservative)。精確檢驗都是保守的，但反過來不一定成立。
+
+### 連續變量的排列置換檢驗
+
+排列置換法不只能用於兩組比較，也同樣適用於兩個連續變量之間關係的推斷。假設我們有兩個連續變量 $X$ 和 $Y$，想要檢驗它們的相關係數是否為零。在零假設 (無相關) 條件下，$X$ 和 $Y$ 的配對方式無關緊要，所以我們可以固定 $Y$ 不動，隨機排列 $X$ 的值（或反過來），重新計算每次排列下的相關係數，以此構造零假設下的樣本分佈。後面的實作練習 (Practical 03) 會示範 Pearson 和 Spearman 相關係數的排列置換檢驗。
+
+### 一個小型精確排列的例子：Spearman 相關係數
+
+為了更深入理解排列置換法的原理，我們來看一個改編自 Sprent & Smeeton [@SprentSmeeton2007] 的例子。假設有 4 對觀察值 $(\{x_1, y_1\}, \{x_2, y_2\}, \{x_3, y_3\}, \{x_4, y_4\})$，計算出 Spearman 相關係數 $r_s = 0.8$。假設沒有相同值 (ties)，我們可以列出 $r_s$ 的精確排列分佈。
+
+由於 Spearman 相關係數只看秩次，我們不需要知道原始觀察值，只要考慮秩次的配對 $(\{r_{x1}, r_{y1}\}, \{r_{x2}, r_{y2}\}, \{r_{x3}, r_{y3}\}, \{r_{x4}, r_{y4}\})$。$x$ 的秩次固定為 $1, 2, 3, 4$，$y$ 的秩次有 $4! = 24$ 種排列方式。
+
+```{r RS-s03-spearman-exact, echo=TRUE}
+# 列出所有 4! = 24 種 y-秩次排列，計算對應的 Spearman 相關
+library(combinat)
+y_perms <- permn(4)
+rs_values <- sapply(y_perms, function(yranks) {
+  cor(1:4, yranks, method = "spearman")
+})
+
+# 整理結果表
+perm_df <- data.frame(
+  ry1 = sapply(y_perms, "[", 1),
+  ry2 = sapply(y_perms, "[", 2),
+  ry3 = sapply(y_perms, "[", 3),
+  ry4 = sapply(y_perms, "[", 4),
+  rs  = round(rs_values, 1)
+)
+perm_df <- perm_df[order(-perm_df$rs), ]
+kable(perm_df, row.names = FALSE, align = "c",
+      caption = "4 對秩次的所有排列組合及對應的 Spearman 相關係數") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered")) %>%
+  scroll_box(width = "500px", height = "400px", extra_css = "margin-left: auto; margin-right: auto;")
+```
+
+```{r RS-s03-spearman-exact-hist, echo=TRUE, fig.asp=.7, fig.width=5, fig.cap='4 對秩次下 Spearman 相關係數的精確排列分佈', fig.align='center', out.width='70%'}
+hist(rs_values, breaks = seq(-1.1, 1.1, by = 0.2), main = "",
+     xlab = expression(r[s]), col = "lightblue", border = "white")
+abline(v = 0.8, col = "red", lwd = 2)
+```
+
+從這 24 個排列中可以看到：$r_s = 0.8$ 出現 3 次，$r_s = 1.0$ 出現 1 次，$r_s = -0.8$ 出現 3 次，$r_s = -1.0$ 出現 1 次。檢驗 $\rho = 0$ 的雙側 $p$ 值就是 $|r_s| \geq 0.8$ 的比例：
+
+```{r RS-s03-spearman-exact-pval, echo=TRUE}
+p_exact <- sum(abs(rs_values) >= 0.8) / 24
+cat("精確雙側 p 值 = ", p_exact, " = ", sum(abs(rs_values) >= 0.8), "/24\n")
+```
+
+也就是說，即使我們觀察到 $r_s = 0.8$ 這樣看似很強的相關，在只有 4 對觀察值的情況下仍然無法得出統計學上顯著的結論。事實上，即使 $r_s = 1.0$（最強的完美正相關），雙側 $p$ 值也只有 $2/24 \approx 0.083$。換句話說，從 4 對觀察值中，**不可能**得到在 0.05 水準下顯著的 Spearman 相關係數。
+
+## 基於排列置換檢驗法計算信賴區間
 
 基於排序置換檢驗法的信賴區間計算，是一個有些許繁瑣的過程。我們可以設定多個不同的 $N_{NULL}$ ，但是樣本分佈相同的零假設時的統計量。計算相應的 $p$ 值，95% 信賴區間就是 $p$ 值保持大於等於 $0.05$的 $N_{NULL}$ 取值範圍。計算量將會是很大的。
 
 用前面的例子來解釋就是，我們可以假設兩組之間甲狀腺素的差異是 $T_{NULL} = 10$，然後將第二組的觀察值全部加上10 (或者將第一組的觀察值全部減去10)，然後用前面描述的方法來檢驗兩組之間的差是否等於零，獲取 $p$ 值。然後用不同的 $T_{NULL}$ 取值，重複這個過程，直到找到上限和下限的 $T_{NULL}$ 值，他們的檢驗 $p$ 值都是0.05。
 
 
-## 排序置換法的優缺點
+## 排列置換法的優缺點
 
 優點：
 
 1. 數據如果大大偏離了參數檢驗法的假設 (完全不是正態分佈)，本法則十分適用，且結果穩健 Robust；
-2. 所有的排序置換法計算的 $p$ 值都是**精確**不需要近似的；
-3. 排序置換法十分可靠，結果不會偏離對應的參數檢驗法，但是當你的數據樣本量很小，無法使用參數檢驗進行理想的統計分析時，排序置換法是極佳的選擇。
+2. 所有的排列置換法計算的 $p$ 值都是**精確**不需要近似的；
+3. 排列置換法十分可靠，結果不會偏離對應的參數檢驗法，即使樣本量很小也能有效使用，此時對應的參數檢驗可能因為漸近近似不夠準確而不理想。
 
 缺點：
 
-1. 可置換原則必須得到滿足；
-2. 消耗極大的運算能力，當數據量大時，計算過程將會很緩慢；(Windows的話可能直接就死機了，笑)
-3. 用排序置換法計算信賴區間的過程比檢驗本身還好耗時費力。
+1. 可置換原則必須得到滿足，而在觀察性研究中這個條件可能難以驗證；
+2. 消耗極大的運算能力，當數據量大時，計算過程將會很緩慢；
+3. 用排列置換法計算信賴區間的過程比檢驗本身還耗時費力。
+
+排列置換法與參數檢驗、自助重抽法之間更詳細的比較，可以參見 Good [@good2006permutation, p.63]。

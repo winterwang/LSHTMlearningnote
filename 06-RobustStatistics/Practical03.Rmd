@@ -1,0 +1,308 @@
+
+## 背景 Background {#RS-p03-background}
+
+本次實作練習延續 Session 3 的排列置換法理論，分兩個部分進行操作。第一部分用甲狀腺素數據（Practical 2 中用過的 Wilcoxon–Mann–Whitney 檢驗例子）示範兩組比較的排列置換檢驗，探索不同檢驗統計量的選擇和排列次數對結果的影響。第二部分以頭痛緩解交叉試驗數據示範連續變量相關係數的排列置換檢驗，比較 Pearson 和 Spearman 相關係數的表現。
+
+數據來源：@Altman1991。
+
+```{r RS-p03-setup, echo=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+library(kableExtra)
+```
+
+
+## 第一部分：兩組比較 {#RS-p03-part1}
+
+### 問題 1：用 $t$ 統計量進行排列置換檢驗 {#RS-p03-q1}
+
+**背景**：以下為 16 名甲狀腺功能減退 (hypothyroid) 嬰兒的血清甲狀腺素水平 (nmol/l)，按症狀嚴重程度分為兩組。我們在 Practical 2 中已經用 WMW 檢驗分析過這個數據（精確 $p = 0.424$，正態近似 $p = 0.397$），雙樣本 $t$ 檢驗的 $p$ 值為 0.307。現在我們來用排列置換法重新分析。
+
+```{r RS-p03-q1-data, echo=TRUE}
+dt <- read.csv("../backupfiles/thyroid.csv", header = TRUE)
+kable(dt, align = "c", caption = "Serum thyroxine levels (nmol/l)") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = FALSE)
+```
+
+**問題**：以 $t$ 統計量為檢驗統計量，進行 1000 次排列置換檢驗。在 R 中，排列置換法的基本思路是：用 `sample()` 對觀察值隨機排列（無放回），再按原有的分組標籤計算統計量，用 `replicate()` 重複此過程多次。
+
+```{r RS-p03-q1-tstat, echo=TRUE}
+# 觀察數據的 t 統計量
+t_obs <- t.test(dt$thyr ~ dt$group, var.equal = TRUE)$statistic
+cat("觀察數據的 t 統計量 =", t_obs, "\n")
+```
+
+進行 1000 次排列置換。每一次排列中，我們對甲狀腺素觀察值隨機重排（無放回），然後按照原始的分組標籤計算 $t$ 統計量：
+
+```{r RS-p03-q1-perm1000, echo=TRUE, cache=TRUE}
+set.seed(1)
+dist_t <- replicate(1000, {
+  t.test(sample(dt$thyr, length(dt$thyr), FALSE) ~ dt$group, var.equal = TRUE)$statistic
+})
+
+# 排列分佈的摘要
+summary(dist_t)
+```
+
+```{r RS-p03-q1-hist, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='1000 次排列置換下 t 統計量的樣本分佈', fig.align='center', out.width='80%'}
+hist(dist_t, breaks = 50, main = "", xlab = "t statistic", col = "lightgrey", border = "white")
+abline(v = t_obs, lwd = 2, col = "red")
+```
+
+計算排列置換法的 $p$ 值：
+
+```{r RS-p03-q1-pval, echo=TRUE}
+p_perm <- sum(abs(dist_t) >= abs(t_obs)) / 1000
+cat("排列置換法 p 值 (1000次排列) =", p_perm, "\n")
+cat("t 檢驗 p 值 =", t.test(dt$thyr ~ dt$group, var.equal = TRUE)$p.value, "\n")
+```
+
+排列置換法的 $p$ 值與 $t$ 檢驗的結果 ($p = 0.307$) 接近。$p$ 值本身的精度受到排列次數的影響，用 1000 次排列得到的 $p$ 值有一定的 Monte Carlo 誤差。$p$ 值估計的標準誤為：
+
+```{r RS-p03-q1-se, echo=TRUE}
+se_p <- sqrt(p_perm * (1 - p_perm) / 1000)
+cat("SE(p) =", round(se_p, 4), "\n")
+cat("95% CI for p: (", round(p_perm - 1.96*se_p, 4), ",", round(p_perm + 1.96*se_p, 4), ")\n")
+```
+
+
+### 問題 2：排列次數的影響 {#RS-p03-q2}
+
+**問題**：分別用 100 次和 10000 次排列重複上面的分析，觀察結果有何變化。
+
+```{r RS-p03-q2-reps100, echo=TRUE, cache=TRUE}
+# 100 次排列
+set.seed(1)
+dist_100 <- replicate(100, {
+  t.test(sample(dt$thyr, length(dt$thyr), FALSE) ~ dt$group, var.equal = TRUE)$statistic
+})
+p_100 <- sum(abs(dist_100) >= abs(t_obs)) / 100
+se_100 <- sqrt(p_100 * (1 - p_100) / 100)
+cat("100 次排列: p =", p_100, ", SE =", round(se_100, 4),
+    ", 95% CI: (", round(p_100 - 1.96*se_100, 3), ",", round(p_100 + 1.96*se_100, 3), ")\n")
+```
+
+```{r RS-p03-q2-reps10000, echo=TRUE, cache=TRUE}
+# 10000 次排列
+set.seed(1)
+dist_10000 <- replicate(10000, {
+  t.test(sample(dt$thyr, length(dt$thyr), FALSE) ~ dt$group, var.equal = TRUE)$statistic
+})
+p_10000 <- sum(abs(dist_10000) >= abs(t_obs)) / 10000
+se_10000 <- sqrt(p_10000 * (1 - p_10000) / 10000)
+cat("10000 次排列: p =", p_10000, ", SE =", round(se_10000, 4),
+    ", 95% CI: (", round(p_10000 - 1.96*se_10000, 3), ",", round(p_10000 + 1.96*se_10000, 3), ")\n")
+```
+
+不難注意到，隨著排列次數增加，$p$ 值趨向穩定，標準誤和信賴區間寬度明顯縮小。也就是說，排列次數越多，Monte Carlo 誤差越小，$p$ 值的估計越精確。在實際應用中，1000 次排列可以給出大致的估計，但如果需要精確結果（例如在正式報告中），建議使用 10000 次以上。
+
+
+### 問題 3：改用均值差作為檢驗統計量 {#RS-p03-q3}
+
+**問題**：將檢驗統計量從 $t$ 統計量改為均值差 $T = \bar{Y}_1 - \bar{Y}_2$，是否會影響排列置換檢驗的結果？
+
+```{r RS-p03-q3-meandiff, echo=TRUE, cache=TRUE}
+# 觀察數據的均值差
+obs_diff <- diff(by(dt$thyr, dt$group, mean))
+cat("觀察數據均值差 =", obs_diff, "\n")
+
+set.seed(1)
+dist_diff <- replicate(1000, {
+  diff(by(sample(dt$thyr, length(dt$thyr), FALSE), dt$group, mean))
+})
+
+p_diff <- sum(abs(dist_diff) >= abs(obs_diff)) / 1000
+cat("排列置換法 p 值 (均值差) =", p_diff, "\n")
+```
+
+結果完全相同。這是因為在等方差假設下的 $t$ 統計量和均值差是單調變換的關係——均值差越大，$t$ 值也越大。排列置換法中，我們只關心統計量的相對大小排序，所以單調變換不影響 $p$ 值。事實上，由於排列置換法的統計推斷完全透過排列過程來實現，我們**不需要**統計量的標準誤或精確分佈形態，因此選用任何能合理反映組間差異的統計量都可以。
+
+
+### 問題 4：以 WMW 統計量進行排列置換 {#RS-p03-q4}
+
+**問題**：使用秩次進行排列置換檢驗，與 Session 2 的精確 Wilcoxon–Mann–Whitney 檢驗作比較。
+
+前一章提到過，WMW 檢驗本質上就是一個排列置換檢驗——使用精確法計算 WMW 檢驗時，其實就是在列舉所有排列下秩和統計量的分佈。我們可以用排列置換法來驗證這一點：
+
+```{r RS-p03-q4-rank-perm, echo=TRUE, cache=TRUE}
+# 先計算秩次
+dt$rank_thyr <- rank(dt$thyr)
+
+# 觀察數據的秩均值差
+obs_rank_diff <- diff(by(dt$rank_thyr, dt$group, mean))
+cat("觀察數據秩均值差 =", obs_rank_diff, "\n")
+
+# 排列置換
+set.seed(1)
+dist_rank <- replicate(1000, {
+  diff(by(sample(dt$rank_thyr, length(dt$rank_thyr), FALSE), dt$group, mean))
+})
+
+p_rank <- sum(abs(dist_rank) >= abs(obs_rank_diff)) / 1000
+cat("排列置換法 p 值 (秩次) =", p_rank, "\n")
+```
+
+```{r RS-p03-q4-wmw-compare, echo=TRUE}
+# 與精確 WMW 檢驗比較
+wmw <- wilcox.test(dt$thyr ~ dt$group, exact = TRUE)
+cat("精確 WMW p 值 =", wmw$p.value, "\n")
+```
+
+排列置換法基於秩次的 $p$ 值與精確 WMW 檢驗的 $p$ 值存在差異。這是因為 1000 次隨機排列只是所有 $\binom{16}{7} = 11440$ 種排列的一個隨機抽樣，存在 Monte Carlo 誤差。如果我們把排列次數增加到 10000 次：
+
+```{r RS-p03-q4-rank-10000, echo=TRUE, cache=TRUE}
+set.seed(1)
+dist_rank_10k <- replicate(10000, {
+  diff(by(sample(dt$rank_thyr, length(dt$rank_thyr), FALSE), dt$group, mean))
+})
+p_rank_10k <- sum(abs(dist_rank_10k) >= abs(obs_rank_diff)) / 10000
+cat("排列置換法 p 值 (秩次, 10000次) =", p_rank_10k, "\n")
+```
+
+也就是說，增加排列次數後，估計值更接近精確 WMW 的結果，進一步驗證了 WMW 檢驗與秩次排列置換檢驗的等價關係。Good [@good2006permutation] 說得好："99% of common non-parametric tests are permutation tests in which the observations have been replaced by ranks."
+
+
+## 第二部分：相關係數的排列置換檢驗 {#RS-p03-part2}
+
+### 問題 5：Pearson 相關係數 {#RS-p03-q5}
+
+**背景**：以下數據來自一個頭痛緩解交叉試驗。13 名受試者在試驗的第一期和第二期分別使用不同的止痛藥治療頭痛，記錄了每期疼痛緩解的總評分 (TOTPAR, total pain relief)，分別為 `totpar1`（第一期）和 `totpar2`（第二期）。主觀疼痛測量素來不太穩定，我們想檢驗兩期測量之間的相關性是否為零。
+
+```{r RS-p03-q5-data, echo=TRUE}
+headache <- read.csv("../backupfiles/headache.csv")
+headache
+```
+
+先用常規方法計算 Pearson 相關係數，並進行假設檢驗：
+
+```{r RS-p03-q5-pearson, echo=TRUE}
+# Pearson 相關
+r_pearson <- cor(headache$totpar1, headache$totpar2, method = "pearson")
+cat("Pearson r =", round(r_pearson, 4), "\n")
+
+# 常規正態假設下的顯著性檢驗（等價於線性回歸的斜率檢驗）
+cor.test(headache$totpar1, headache$totpar2, method = "pearson")
+```
+
+也可以透過線性回歸來得到相同的 $p$ 值：
+
+```{r RS-p03-q5-regression, echo=TRUE}
+summary(lm(totpar1 ~ totpar2, data = headache))$coefficients
+```
+
+**排列置換檢驗**：在零假設（無相關）條件下，兩個變量的配對方式無關緊要，所以我們固定 `totpar2` 不動，隨機排列 `totpar1` 的值，計算每次排列下的 Pearson 相關係數：
+
+```{r RS-p03-q5-perm-pearson, echo=TRUE, cache=TRUE}
+set.seed(1)
+dist_pearson <- replicate(1000, {
+  cor(sample(headache$totpar1, length(headache$totpar1), FALSE),
+      headache$totpar2, method = "pearson")
+})
+
+p_perm_pearson <- sum(abs(dist_pearson) >= abs(r_pearson)) / 1000
+cat("排列置換法 p 值 (Pearson) =", p_perm_pearson, "\n")
+```
+
+```{r RS-p03-q5-perm-hist, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='1000 次排列置換下 Pearson 相關係數的樣本分佈', fig.align='center', out.width='80%'}
+hist(dist_pearson, breaks = 50, main = "", xlab = "Pearson r", col = "lightgrey", border = "white")
+abline(v = r_pearson, lwd = 2, col = "red")
+abline(v = -r_pearson, lwd = 2, col = "red", lty = 2)
+```
+
+不難注意到，排列置換法和常規正態假設下的 $p$ 值很接近，都指向存在一定的正相關證據。
+
+
+### 問題 6：Spearman 秩相關係數 {#RS-p03-q6}
+
+**問題**：用 Spearman 秩相關係數重複上述分析，比較 Pearson 和 Spearman 的結論差異。
+
+```{r RS-p03-q6-spearman, echo=TRUE}
+# Spearman 相關
+r_spearman <- cor(headache$totpar1, headache$totpar2, method = "spearman")
+cat("Spearman rho =", round(r_spearman, 4), "\n")
+
+# 常規 Spearman 檢驗
+cor.test(headache$totpar1, headache$totpar2, method = "spearman")
+```
+
+```{r RS-p03-q6-perm-spearman, echo=TRUE, cache=TRUE}
+set.seed(1)
+dist_spearman <- replicate(1000, {
+  cor(sample(headache$totpar1, length(headache$totpar1), FALSE),
+      headache$totpar2, method = "spearman")
+})
+
+p_perm_spearman <- sum(abs(dist_spearman) >= abs(r_spearman)) / 1000
+cat("排列置換法 p 值 (Spearman) =", p_perm_spearman, "\n")
+```
+
+```{r RS-p03-q6-perm-hist-spearman, echo=TRUE, fig.asp=.7, fig.width=6, fig.cap='1000 次排列置換下 Spearman 相關係數的樣本分佈', fig.align='center', out.width='80%'}
+hist(dist_spearman, breaks = 50, main = "", xlab = "Spearman rho", col = "lightblue", border = "white")
+abline(v = r_spearman, lwd = 2, col = "red")
+abline(v = -r_spearman, lwd = 2, col = "red", lty = 2)
+```
+
+排列置換法的 Spearman $p$ 值同樣與常規方法接近。值得注意的是，Pearson 相關係數顯示存在統計學顯著的相關 ($p < 0.05$)，而 Spearman 相關係數的 $p$ 值較大，未達到顯著水準。Pearson 衡量的是線性關聯強度，而 Spearman 衡量的是單調關聯強度（基於秩次）。當數據中存在離群值或非線性但單調的趨勢時，二者的結論可能會有所不同。
+
+
+### 問題 7：排列哪個變量？ {#RS-p03-q7}
+
+**問題**：在上面的分析中我們排列的是 `totpar1`。如果改為排列 `totpar2`，結果是否完全相同？
+
+```{r RS-p03-q7-permute-other, echo=TRUE, cache=TRUE}
+# 排列 totpar2（固定 totpar1）
+set.seed(1)
+dist_pearson_v2 <- replicate(1000, {
+  cor(headache$totpar1,
+      sample(headache$totpar2, length(headache$totpar2), FALSE),
+      method = "pearson")
+})
+
+p_perm_v2 <- sum(abs(dist_pearson_v2) >= abs(r_pearson)) / 1000
+cat("排列 totpar1 的 p 值 =", p_perm_pearson, "\n")
+cat("排列 totpar2 的 p 值 =", p_perm_v2, "\n")
+```
+
+兩個 $p$ 值可能存在微小差異。這並不是因為排列哪個變量本身有差別——從理論上來說，排列 $X$ 或排列 $Y$ 的效果完全等價。差異的原因是 Monte Carlo 誤差：雖然使用了相同的隨機種子 `set.seed(1)`，但 `sample()` 產生的具體排列序列不同，因此隨機抽到的 1000 個排列組合也不同。
+
+```{r RS-p03-q7-increase-reps, echo=TRUE, cache=TRUE}
+# 增加排列次數到 10000 次驗證
+set.seed(1)
+dist_p1_10k <- replicate(10000, {
+  cor(sample(headache$totpar1, length(headache$totpar1), FALSE),
+      headache$totpar2, method = "pearson")
+})
+set.seed(1)
+dist_p2_10k <- replicate(10000, {
+  cor(headache$totpar1,
+      sample(headache$totpar2, length(headache$totpar2), FALSE),
+      method = "pearson")
+})
+
+cat("排列 totpar1 (10000次):", sum(abs(dist_p1_10k) >= abs(r_pearson)) / 10000, "\n")
+cat("排列 totpar2 (10000次):", sum(abs(dist_p2_10k) >= abs(r_pearson)) / 10000, "\n")
+```
+
+也就是說，當排列次數足夠多時，不論排列哪個變量，得到的 $p$ 值都會收斂到同一個值。
+
+
+### 總結 {#RS-p03-summary}
+
+```{r RS-p03-summary-table, echo=FALSE}
+summary_df <- data.frame(
+  Method = c("雙樣本 t 檢驗", "排列置換 (t 統計量)", "排列置換 (均值差)",
+             "精確 WMW", "排列置換 (秩次)"),
+  p_value = c(
+    round(t.test(dt$thyr ~ dt$group, var.equal = TRUE)$p.value, 3),
+    p_perm,
+    p_diff,
+    round(wmw$p.value, 3),
+    p_rank
+  )
+)
+kable(summary_df, format = "html", col.names = c("方法", "甲狀腺素數據 p 值"),
+      align = "lc",
+      caption = "甲狀腺素數據：不同方法的 p 值比較") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = FALSE)
+```
+
+從上面的比較中可以看到幾個要點：排列置換法與對應的參數和非參數方法給出一致的結論；選用不同的檢驗統計量（$t$ 統計量、均值差）不影響排列置換法的 $p$ 值；WMW 檢驗本質上就是秩次的排列置換檢驗。排列置換法的最大優勢是不依賴分佈假設，只依賴可置換性這一條件，在小樣本或分佈偏離正態時是很有價值的替代方法。
