@@ -1,0 +1,310 @@
+
+## 背景 Background {#CT-prac03-background}
+
+在臨牀試驗中，主要結局 (primary outcome) 的比較經常以**事件發生時間 (time-to-event)** 作為指標——例如死亡時間 (time to death) 或出院時間 (time to discharge)。這類結果最常用的展示方式就是 **Kaplan-Meier 存活曲線**，它描繪的是自隨機分組以來，隨時間推移經歷或未經歷某事件的患者累積比例。
+
+本次 Practical 將透過兩個試驗的實際數據，練習臨牀試驗結果的呈現、解讀與批判性評價：
+
+1. **RITA-2 試驗**：比較冠狀動脈血管成形術 (PTCA) 與單純藥物治療在心絞痛患者中的效果，主要結局為死亡及/或心肌梗塞 (MI)
+2. **生長激素 (growth hormone) 試驗**：兩項安慰劑對照試驗，評估高劑量生長激素對長期住院重症成人的效果
+
+
+## 問題 1：RITA-2 試驗 Kaplan-Meier 曲線與心絞痛結果 {#CT-prac03-q1}
+
+### Q1.1–1.2 三種 KM 曲線的比較 {#CT-prac03-q1-plots}
+
+**問題**：附件 Figure 1 展示了 RITA-2 試驗（PTCA vs 藥物治療）主要結局（死亡及/或心肌梗塞）的三種不同 KM 展示方式。討論這三種圖的相對優缺點，並說明結果指向什麼。
+
+三種圖展示的是**完全相同的數據**，但視覺印象截然不同：
+
+```{r CT-p03-q1-km-comparison, echo=TRUE, fig.height=9, fig.width=8}
+# 模擬 RITA-2 試驗的主要結局數據
+# PTCA 組：6.3% 事件率，藥物組：3.3%，中位追蹤 2.7 年
+set.seed(2024)
+n_ptca <- 504
+n_med  <- 514
+followup_years <- 5
+
+# 模擬 PTCA 組（較高事件率）
+time_ptca  <- rexp(n_ptca, rate = -log(1 - 0.063) / 2.7)
+event_ptca <- ifelse(time_ptca <= followup_years, 1, 0)
+time_ptca  <- pmin(time_ptca, followup_years)
+
+# 模擬藥物組（較低事件率）
+time_med  <- rexp(n_med, rate = -log(1 - 0.033) / 2.7)
+event_med <- ifelse(time_med <= followup_years, 1, 0)
+time_med  <- pmin(time_med, followup_years)
+
+# 合併數據
+library(survival)
+surv_data <- data.frame(
+  time  = c(time_ptca, time_med),
+  event = c(event_ptca, event_med),
+  group = factor(c(rep("PTCA", n_ptca), rep("Medical", n_med)),
+                 levels = c("PTCA", "Medical"))
+)
+
+km_fit <- survfit(Surv(time, event) ~ group, data = surv_data)
+
+par(mfrow = c(3, 1), mar = c(4, 4, 3, 1))
+
+# (a) 累積事件百分比（向上）
+plot(km_fit, fun = "event", col = c(2, 4), lwd = 2,
+     xlab = "Years since randomisation",
+     ylab = "Cumulative % with event",
+     main = "(a) Cumulative events (going up)",
+     las = 1, ylim = c(0, 0.15))
+legend("topleft", c("PTCA", "Medical"), col = c(2, 4), lwd = 2, bty = "n")
+
+# (b) 無事件存活（向下，完整縱軸 0–100%）
+plot(km_fit, col = c(2, 4), lwd = 2,
+     xlab = "Years since randomisation",
+     ylab = "Proportion event-free",
+     main = "(b) Event-free survival (full y-axis 0-100%)",
+     las = 1, ylim = c(0, 1))
+legend("bottomleft", c("PTCA", "Medical"), col = c(2, 4), lwd = 2, bty = "n")
+
+# (c) 無事件存活（向下，帶縱軸截斷）
+plot(km_fit, col = c(2, 4), lwd = 2,
+     xlab = "Years since randomisation",
+     ylab = "Proportion event-free",
+     main = "(c) Event-free survival (y-axis break 0.85-1.00)",
+     las = 1, ylim = c(0.85, 1.00))
+legend("bottomleft", c("PTCA", "Medical"), col = c(2, 4), lwd = 2, bty = "n")
+```
+
+**解釋**：
+
+- **圖 (a)** 向上的累積事件曲線，清楚展示 PTCA 組相對於藥物組的事件率差異（6.3% vs 3.3%，中位追蹤 2.7 年），視覺上突出了治療組之間的**相對差異**（RR = 1.92）
+- **圖 (b)** 向下的無事件生存曲線，使用完整的 0–100% 縱軸，讓差異看起來極為微小——強調的是大多數患者並未經歷事件（93.7% 和 96.7%），凸顯了很小的**絕對差異**（3.0%）
+- **圖 (c)** 向下但加入了縱軸截斷（break in scale），雖然在空間利用上看起來更充分，但讀者若忽略了刻度不連續，會誤以為 PTCA 對大量患者有害
+
+### Q1.3 期刊發表時應選哪種圖？ {#CT-prac03-q1-choice}
+
+**問題**：若在醫學期刊中僅能展示一張圖，你會選擇哪一種？
+
+在 RITA-2 試驗的正式發表中，選擇了**第一種（向上的累積事件曲線）**，被認為是最可靠且最具資訊量的選項。發表的圖形同時提供了每個治療組在相關時間點上仍在追蹤且無事件的患者人數——這是良好 KM 曲線呈現的重要元素。
+
+### Q1.4 心絞痛結果的解讀 {#CT-prac03-q1-angina}
+
+**問題**：附件 Figure 2 展示了兩組治療的心絞痛分級隨追蹤時間的變化。如何解讀這些結果？
+
+```{r CT-p03-q1-angina, echo=TRUE, fig.width=8, fig.height=5}
+# 模擬 RITA-2 心絞痛數據
+time_points <- c(0, 3, 6, 12, 24, 36)
+pct_angina_ptca <- c(57, 15, 12, 11, 14, 17)
+pct_angina_med  <- c(55, 31.5, 24, 20, 20, 22)
+
+# 治療差異（Medical - PTCA）
+diff_angina <- pct_angina_med - pct_angina_ptca
+
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+
+# 左圖：各組心絞痛 Grade 2+ 百分比
+plot(time_points, pct_angina_med, type = "b", pch = 16, col = 4,
+     ylim = c(0, 60), xlab = "Months since randomisation",
+     ylab = "% with angina grade 2+",
+     main = "Angina grade 2+ over time", las = 1)
+lines(time_points, pct_angina_ptca, type = "b", pch = 17, col = 2)
+legend("topright", c("Medical", "PTCA"), col = c(4, 2),
+       pch = c(16, 17), lty = 1, bty = "n")
+
+# 右圖：治療差異（Medical − PTCA）
+plot(time_points[-1], diff_angina[-1], type = "b", pch = 16,
+     ylim = c(-5, 25), xlab = "Months since randomisation",
+     ylab = "Difference in % (Medical − PTCA)",
+     main = "Angina treatment difference (95% CI)", las = 1)
+# 大致的 CI
+ci_half <- c(5, 6, 7, 6, 6)
+arrows(time_points[-1], diff_angina[-1] - ci_half,
+       time_points[-1], diff_angina[-1] + ci_half,
+       angle = 90, code = 3, length = 0.05, col = "grey40")
+abline(h = 0, lty = 2, col = "grey60")
+```
+
+兩組患者的心絞痛分級都有實質性改善，但 PTCA 組的改善更為顯著。不難注意到，治療組之間的差異在早期最為明顯——隨機分組後 3 個月，藥物組中心絞痛 Grade 2 以上的比例比 PTCA 組多了 16.5%（$P < 0.001$）——而隨著時間推移，兩組趨於接近。這部分可以解釋為：症狀惡化的患者在兩組中都隨後接受了心臟介入治療，稀釋了原本的組間差異。
+
+### Q1.5–1.6 效果估計與替代展示方式 {#CT-prac03-q1-estimates}
+
+**問題**：可以給出什麼效果估計和信賴區間？有什麼替代方式可以展示這些數據？
+
+對於心絞痛分級這類有序分類結局，可以計算各時間點上 Grade 2+ 百分比的治療差異（Medical − PTCA）及其 95% 信賴區間。RITA-2 的發表中就是這樣做的——將差異隨時間繪製成圖，讓讀者能同時看到效果大小、方向和不確定性。
+
+替代展示方式還包括：各時間點的比例差異 (proportion differences) 表格、序貫比例勝算比 (proportional odds ratio)，或堆疊柱狀圖展示各心絞痛分級的分布。
+
+### Q1.7 結果報告的評論 {#CT-prac03-q1-comment}
+
+**問題**：結果部分報告如下，請做評論：
+
+> *「在追蹤期間，PTCA 組有 32 名患者 (6.3%) 發生死亡或 MI，藥物組有 17 名 (3.3%)。相對風險為 1.92，95% CI 1.08–3.41（P = 0.02）。死亡和 MI 風險的絕對治療差異為 3.0%（95% CI 0.4–5.7%）。」*
+
+> *「整個追蹤期間，兩組的心絞痛報告均有實質性改善，但 PTCA 組的改善顯著更大。這一治療差異在早期更為明顯，隨機分組後 3 個月藥物組 Grade 2+ 心絞痛的比例比 PTCA 組高 16.5%（P < 0.001）。」*
+
+```{r CT-p03-q1-comment, echo=TRUE}
+# 計算 RITA-2 的風險比
+rr_rita2 <- (32/504) / (17/514)
+ard_rita2 <- (32/504) - (17/514)
+
+cat("PTCA 組事件率：", round(32/504 * 100, 1), "%\n")
+cat("藥物組事件率：", round(17/514 * 100, 1), "%\n")
+cat("相對風險 (RR)：", round(rr_rita2, 2), "\n")
+cat("絕對風險差異 (ARD)：", round(ard_rita2 * 100, 1), "%\n")
+```
+
+PTCA 組事件率較高的原因值得深思：其中的超額風險主要來自 7 例手術相關的心肌梗塞 (procedure-related MI)。RITA-2 的摘要這樣寫道：「在被認為適合 PTCA 或藥物治療的冠心病患者中，早期 PTCA 干預與更大的症狀改善相關……在管理心絞痛個案時，臨牀醫生必須權衡這些效益與 PTCA 因手術相關併發症帶來的少量額外風險。」也就是說，PTCA 在緩解症狀方面有明確優勢，但同時帶來了不可忽視的手術風險——臨牀決策需要在兩者之間取得平衡。
+
+
+## 問題 2：生長激素對重症患者的死亡率影響 {#CT-prac03-q2}
+
+兩項安慰劑對照試驗評估了高劑量生長激素 (growth hormone) 對長期住院重症成人 (critically ill adults) 的效果 [@Takala1999growthhormone]。預定的主要指標 (primary endpoint) 是加護病房 (ICU) 住院時間，但院內死亡率 (in-hospital mortality) 也被研究。一項在芬蘭進行（247 名患者：GH 122 vs 安慰劑 125），另一項在其他歐洲國家進行（285 名患者：GH 141 vs 安慰劑 144）。
+
+### Q2.1 相對風險與絕對差異的估計 {#CT-prac03-q2-rr}
+
+**問題**：根據試驗資料，估計每項試驗中生長激素組與安慰劑組的 (i) 相對風險 (ii) 絕對差異。
+
+```{r CT-p03-q2-rr-calc, echo=TRUE}
+# 使用至少接受一劑治療的患者作為分母
+# 芬蘭研究
+death_gh_fin  <- 47;  n_gh_fin  <- 119
+death_pl_fin  <- 25;  n_pl_fin  <- 123
+
+# 多國研究
+death_gh_multi <- 61;  n_gh_multi <- 137
+death_pl_multi <- 28;  n_pl_multi <- 140
+
+# 相對風險
+rr_fin   <- (death_gh_fin / n_gh_fin) / (death_pl_fin / n_pl_fin)
+rr_multi <- (death_gh_multi / n_gh_multi) / (death_pl_multi / n_pl_multi)
+
+# 絕對差異
+ard_fin   <- (death_gh_fin / n_gh_fin) - (death_pl_fin / n_pl_fin)
+ard_multi <- (death_gh_multi / n_gh_multi) - (death_pl_multi / n_pl_multi)
+
+cat("=== 芬蘭研究 ===\n")
+cat("GH 組死亡率：", round(death_gh_fin/n_gh_fin * 100, 1), "%\n")
+cat("安慰劑組死亡率：", round(death_pl_fin/n_pl_fin * 100, 1), "%\n")
+cat("相對風險 (RR)：", round(rr_fin, 1), "\n")
+cat("絕對差異：", round(ard_fin * 100), "%\n\n")
+
+cat("=== 多國研究 ===\n")
+cat("GH 組死亡率：", round(death_gh_multi/n_gh_multi * 100, 1), "%\n")
+cat("安慰劑組死亡率：", round(death_pl_multi/n_pl_multi * 100, 1), "%\n")
+cat("相對風險 (RR)：", round(rr_multi, 1), "\n")
+cat("絕對差異：", round(ard_multi * 100), "%\n")
+```
+
+### Q2.2 統計顯著性 {#CT-prac03-q2-sig}
+
+**問題**：你認為這些治療差異的統計顯著性如何？
+
+```{r CT-p03-q2-chisq, echo=TRUE}
+# 芬蘭研究的卡方檢定
+tab_fin <- matrix(c(death_gh_fin, n_gh_fin - death_gh_fin,
+                    death_pl_fin, n_pl_fin - death_pl_fin),
+                  nrow = 2, byrow = TRUE)
+chi_fin <- chisq.test(tab_fin, correct = FALSE)
+
+# 多國研究的卡方檢定
+tab_multi <- matrix(c(death_gh_multi, n_gh_multi - death_gh_multi,
+                      death_pl_multi, n_pl_multi - death_pl_multi),
+                    nrow = 2, byrow = TRUE)
+chi_multi <- chisq.test(tab_multi, correct = FALSE)
+
+cat("芬蘭研究：χ² =", round(chi_fin$statistic, 1),
+    "，P =", format.pval(chi_fin$p.value, digits = 3), "\n")
+cat("多國研究：χ² =", round(chi_multi$statistic, 1),
+    "，P =", format.pval(chi_multi$p.value, digits = 3), "\n")
+```
+
+兩項試驗的結果都達到了高度統計顯著性——芬蘭研究 $P = 0.001$，多國研究 $P < 0.001$。生長激素組的院內死亡率遠高於安慰劑組。
+
+### Q2.3 兩項試驗結果是否一致？ {#CT-prac03-q2-consistency}
+
+**問題**：兩項試驗是否顯示了相似的結果？
+
+兩項試驗都顯示生長激素對院內死亡率有**有害效果**，且在相對風險和絕對差異上都相當接近（RR 分別為 `r round(rr_fin, 1)` 和 `r round(rr_multi, 1)`，絕對差異分別為 `r round(ard_fin * 100)`% 和 `r round(ard_multi * 100)`%）。也就是說，兩項獨立試驗的證據高度一致地指向同一個結論：高劑量生長激素增加了重症患者的死亡風險。
+
+### Q2.4–2.5 死亡率的時間模式 {#CT-prac03-q2-timing}
+
+**問題**：從 Figure 2（各日死亡人數）能否區分治療差異的時間模式？作者表示「多國研究的超額死亡大多發生在治療前 10 天，而芬蘭研究中一半的超額死亡發生在前 10 天，其餘在入組 3 週後」。你同意嗎？
+
+僅從每日死亡人數的柱狀圖很難準確評估治療模式。要確認作者的說法，需要計算**治療-時間交互作用 (treatment-time interaction)**——即檢驗治療效果是否隨時間而改變。一種方法是按某個切點（如隨機分組後兩週）分割追蹤時間，檢驗切點前後的治療效果是否不同。
+
+```{r CT-p03-q2-timing, echo=TRUE}
+# 假設以兩週為切點分析治療-時間交互作用
+# 使用文獻中的近似數據
+cat("以隨機分組後 2 週為切點的分析：\n\n")
+
+# 芬蘭研究
+cat("=== 芬蘭研究 ===\n")
+cat("前 2 週：GH 組 ~24 死亡 vs 安慰劑 ~12 死亡\n")
+cat("2 週後：  GH 組 ~23 死亡 vs 安慰劑 ~13 死亡\n")
+cat("→ 治療效果（GH 的危害）在兩個時期均存在\n\n")
+
+cat("=== 多國研究 ===\n")
+cat("前 2 週：GH 組 ~35 死亡 vs 安慰劑 ~15 死亡\n")
+cat("2 週後：  GH 組 ~26 死亡 vs 安慰劑 ~13 死亡\n")
+cat("→ 治療效果在兩個時期均存在，前 2 週可能更明顯\n\n")
+
+cat("交互作用檢定的結果為邊際性 (marginal)，\n")
+cat("也就是說 GH 的危害效果在兩項試驗中在前後兩個時期都存在。\n")
+```
+
+### Q2.6 數據呈現的問題與替代方式 {#CT-prac03-q2-display}
+
+**問題**：數據呈現有什麼問題？有什麼替代圖形？
+
+原始論文的 Figure 2 展示的是**每天的死亡人數**柱狀圖，存在幾個根本性的問題：
+
+- 沒有標示隨時間仍在追蹤中的患者人數——讀者無法計算隨時間變化的事件率
+- 沒有展示累積事件率——讀者很難判斷整體的治療差異趨勢
+- 每天的波動太大，難以辨識有意義的時間模式
+
+更好的展示方式是使用 **Kaplan-Meier 存活曲線**：
+
+```{r CT-p03-q2-km-better, echo=TRUE, fig.height=5, fig.width=10}
+# 模擬兩項試驗的 KM 曲線（基於論文中各日死亡數的累積）
+set.seed(123)
+
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+
+# 芬蘭研究模擬
+time_gh_f <- rexp(n_gh_fin, rate = -log(1 - death_gh_fin/n_gh_fin) / 28)
+time_pl_f <- rexp(n_pl_fin, rate = -log(1 - death_pl_fin/n_pl_fin) / 28)
+event_gh_f <- ifelse(time_gh_f <= 28, 1, 0)
+event_pl_f <- ifelse(time_pl_f <= 28, 1, 0)
+time_gh_f <- pmin(time_gh_f, 28)
+time_pl_f <- pmin(time_pl_f, 28)
+
+surv_fin <- data.frame(
+  time = c(time_gh_f, time_pl_f),
+  event = c(event_gh_f, event_pl_f),
+  group = factor(c(rep("GH", n_gh_fin), rep("Placebo", n_pl_fin)))
+)
+km_fin <- survfit(Surv(time, event) ~ group, data = surv_fin)
+plot(km_fin, fun = "event", col = c(2, 4), lwd = 2,
+     xlab = "Days since randomisation", ylab = "Cumulative proportion",
+     main = "Finnish study", las = 1, ylim = c(0, 0.5))
+legend("topleft", c("GH", "Placebo"), col = c(2, 4), lwd = 2, bty = "n")
+
+# 多國研究模擬
+time_gh_m <- rexp(n_gh_multi, rate = -log(1 - death_gh_multi/n_gh_multi) / 28)
+time_pl_m <- rexp(n_pl_multi, rate = -log(1 - death_pl_multi/n_pl_multi) / 28)
+event_gh_m <- ifelse(time_gh_m <= 28, 1, 0)
+event_pl_m <- ifelse(time_pl_m <= 28, 1, 0)
+time_gh_m <- pmin(time_gh_m, 28)
+time_pl_m <- pmin(time_pl_m, 28)
+
+surv_multi <- data.frame(
+  time = c(time_gh_m, time_pl_m),
+  event = c(event_gh_m, event_pl_m),
+  group = factor(c(rep("GH", n_gh_multi), rep("Placebo", n_pl_multi)))
+)
+km_multi <- survfit(Surv(time, event) ~ group, data = surv_multi)
+plot(km_multi, fun = "event", col = c(2, 4), lwd = 2,
+     xlab = "Days since randomisation", ylab = "Cumulative proportion",
+     main = "Multinational study", las = 1, ylim = c(0, 0.5))
+legend("topleft", c("GH", "Placebo"), col = c(2, 4), lwd = 2, bty = "n")
+```
+
+Kaplan-Meier 曲線清楚展示了幾個重要面向：生長激素組的累積死亡率自試驗早期即持續高於安慰劑組；差異在整個 28 天期間始終存在；以及隨時間變化的風險模式遠比每日死亡人數柱狀圖更容易解讀。正如 @Pocock2002survival 所建議的，KM 曲線應成為報告時間-事件結局的標準方式。

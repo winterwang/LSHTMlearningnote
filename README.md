@@ -40,6 +40,8 @@
 - **全書重新渲染**：完成 4 輪完整渲染（P1–P4），解決了 Bayesian/Survival/GLM 章節的各類編譯問題
 
 ### 新增內容
+- **[試驗結果的報告](https://wangcc.me/LSHTMlearningnote/reporting-trials.html#CT-reporting-intro) (Ch05 Session03)**：CONSORT 聲明與流程圖、P 值與信賴區間的陷阱、相對 vs 絕對效益、NNT/NNH、KM 曲線呈現方式、統計結果的語言表述（Pocock & Ware 六情境框架）、發表偏倚與 Symplicity 系列教訓 (2026-05-01)
+- **[試驗報告實作](https://wangcc.me/LSHTMlearningnote/reporting-trials.html#CT-prac03) (Ch05 Practical03)**：RITA-2 試驗三種 KM 圖比較與心絞痛結果解讀、生長激素重症試驗的 RR/ARD 計算與卡方檢定、KM 替代展示方式 (2026-05-01)
 - **[排列置換法筆記](https://wangcc.me/LSHTMlearningnote/permutation.html) (Ch06 Session03)**：充實血壓臨床試驗排列置換範例、可置換性定義、單側/雙側 p 值計算、Monte Carlo 誤差、連續變量排列、Spearman 精確排列檢驗、保守檢驗定義 (2026-04-30)
 - **[排列置換法實作](https://wangcc.me/LSHTMlearningnote/permutation.html#RS-prac03) (Ch06 Practical03)**：甲狀腺素數據的 t 統計量/均值差/秩次排列置換檢驗、精確 WMW 檢驗、頭痛數據 Pearson/Spearman 相關排列檢驗、五種方法 p 值比較總結 (2026-04-30)
 - **[基於秩次的非參數檢驗](https://wangcc.me/LSHTMlearningnote/rank-tests.html) (Ch06 Session02)**：充實符號檢驗中位數信賴區間、Wilcoxon 正態近似均值與方差推導、配對數據應用、Kendall τ 相關係數、95.5% ARE 詳細說明；修復 ggplot2 `linewidth` 棄用警告 (2026-04-30)
