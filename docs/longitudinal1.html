@@ -23,7 +23,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2026-05-01" />
+<meta name="date" content="2026-05-02" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2165,8 +2165,8 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 <p>也正是由於觀測值的協方差矩陣是如此地對稱，該模型被命名爲復合對稱模型 compound symmetric model。</p>
 <p><strong>Adult height measures 數據</strong></p>
 <p>有(閒人)花了數十年時間追蹤隨訪了近2000名女性在 26 歲，36歲，43歲，53歲時的身高。忽略掉可能存在的測量誤差，研究者想知道是否隨着年齡增加，女性的身高會縮水。這些女性在這些年齡時的身高數據總結如下:</p>
-<div class="sourceCode" id="cb2277"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2277-1"><a href="longitudinal1.html#cb2277-1" tabindex="-1"></a>height <span class="ot">&lt;-</span> <span class="fu">read_dta</span>(<span class="st">&quot;../backupfiles/height.dta&quot;</span>)</span>
-<span id="cb2277-2"><a href="longitudinal1.html#cb2277-2" tabindex="-1"></a>epiDisplay<span class="sc">::</span><span class="fu">summ</span>(height[, <span class="dv">2</span><span class="sc">:</span><span class="dv">5</span>])</span></code></pre></div>
+<div class="sourceCode" id="cb2266"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2266-1"><a href="longitudinal1.html#cb2266-1" tabindex="-1"></a>height <span class="ot">&lt;-</span> <span class="fu">read_dta</span>(<span class="st">&quot;../backupfiles/height.dta&quot;</span>)</span>
+<span id="cb2266-2"><a href="longitudinal1.html#cb2266-2" tabindex="-1"></a>epiDisplay<span class="sc">::</span><span class="fu">summ</span>(height[, <span class="dv">2</span><span class="sc">:</span><span class="dv">5</span>])</span></code></pre></div>
 <pre><code>## 
 ## No. of observations = 2187
 ## 
@@ -2176,28 +2176,28 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 ## 3 ht43      1567 162.28 162.1   5.96   140    180   
 ## 4 ht53      1462 161.56 161.5   5.96   134.3  179.6</code></pre>
 <p>原則上每個女性在所有的時間應該都有身高測量值才對，我們暫且認爲擁有缺失測量值的時間點是完全隨機的。先計算樣本中數據完整部分的女性身高在四個時間點時的方差協方差矩陣:</p>
-<div class="sourceCode" id="cb2279"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2279-1"><a href="longitudinal1.html#cb2279-1" tabindex="-1"></a><span class="fu">var</span>(height[, <span class="dv">2</span><span class="sc">:</span><span class="dv">5</span>], <span class="at">use =</span> <span class="st">&quot;complete.obs&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2268"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2268-1"><a href="longitudinal1.html#cb2268-1" tabindex="-1"></a><span class="fu">var</span>(height[, <span class="dv">2</span><span class="sc">:</span><span class="dv">5</span>], <span class="at">use =</span> <span class="st">&quot;complete.obs&quot;</span>)</span></code></pre></div>
 <pre><code>##       ht26  ht36  ht43  ht53
 ## ht26 39.81 34.76 34.48 34.13
 ## ht36 34.76 34.46 33.36 33.09
 ## ht43 34.48 33.36 34.33 32.95
 ## ht53 34.13 33.09 32.95 34.22</code></pre>
 <p>要給這個數據擬合混合對稱模型 (compound symmetry model)，需要先把數據從寬變長，之後爲每個測量身高的時間點生成一個啞變量，然後擬合無截距式的隨機截距模型:</p>
-<div class="sourceCode" id="cb2281"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2281-1"><a href="longitudinal1.html#cb2281-1" tabindex="-1"></a><span class="co"># 把數據格式從寬變長</span></span>
-<span id="cb2281-2"><a href="longitudinal1.html#cb2281-2" tabindex="-1"></a>hei_long <span class="ot">&lt;-</span> height <span class="sc">%&gt;%</span></span>
-<span id="cb2281-3"><a href="longitudinal1.html#cb2281-3" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(<span class="sc">-</span>id, <span class="sc">-</span>bw, <span class="sc">-</span>mht), <span class="at">names_to =</span> <span class="st">&quot;key&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb2281-4"><a href="longitudinal1.html#cb2281-4" tabindex="-1"></a>    <span class="fu">separate</span>(key, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">&quot;Height&quot;</span>, <span class="st">&quot;H_Age&quot;</span>), <span class="at">sep =</span> <span class="dv">2</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb2281-5"><a href="longitudinal1.html#cb2281-5" tabindex="-1"></a>      <span class="fu">arrange</span>(id, H_Age, bw, mht) <span class="sc">%&gt;%</span></span>
-<span id="cb2281-6"><a href="longitudinal1.html#cb2281-6" tabindex="-1"></a>        <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> Height, <span class="at">values_from =</span> value)</span>
-<span id="cb2281-7"><a href="longitudinal1.html#cb2281-7" tabindex="-1"></a></span>
-<span id="cb2281-8"><a href="longitudinal1.html#cb2281-8" tabindex="-1"></a><span class="co"># 生成四個年齡時間點數據的啞變量</span></span>
-<span id="cb2281-9"><a href="longitudinal1.html#cb2281-9" tabindex="-1"></a>hei_long <span class="ot">&lt;-</span> hei_long <span class="sc">%&gt;%</span></span>
-<span id="cb2281-10"><a href="longitudinal1.html#cb2281-10" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Age_1 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">26</span>, <span class="dv">1</span>, <span class="dv">0</span>), </span>
-<span id="cb2281-11"><a href="longitudinal1.html#cb2281-11" tabindex="-1"></a>         <span class="at">Age_2 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">36</span>, <span class="dv">1</span>, <span class="dv">0</span>),</span>
-<span id="cb2281-12"><a href="longitudinal1.html#cb2281-12" tabindex="-1"></a>         <span class="at">Age_3 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">43</span>, <span class="dv">1</span>, <span class="dv">0</span>),</span>
-<span id="cb2281-13"><a href="longitudinal1.html#cb2281-13" tabindex="-1"></a>         <span class="at">Age_4 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">53</span>, <span class="dv">1</span>, <span class="dv">0</span>))</span>
-<span id="cb2281-14"><a href="longitudinal1.html#cb2281-14" tabindex="-1"></a>M_hei <span class="ot">&lt;-</span> <span class="fu">lmer</span>(ht <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> Age_1 <span class="sc">+</span> Age_2 <span class="sc">+</span> Age_3 <span class="sc">+</span> Age_4 <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id), <span class="at">data =</span> hei_long, <span class="at">REML =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2281-15"><a href="longitudinal1.html#cb2281-15" tabindex="-1"></a><span class="fu">summary</span>(M_hei)</span></code></pre></div>
+<div class="sourceCode" id="cb2270"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2270-1"><a href="longitudinal1.html#cb2270-1" tabindex="-1"></a><span class="co"># 把數據格式從寬變長</span></span>
+<span id="cb2270-2"><a href="longitudinal1.html#cb2270-2" tabindex="-1"></a>hei_long <span class="ot">&lt;-</span> height <span class="sc">%&gt;%</span></span>
+<span id="cb2270-3"><a href="longitudinal1.html#cb2270-3" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(<span class="sc">-</span>id, <span class="sc">-</span>bw, <span class="sc">-</span>mht), <span class="at">names_to =</span> <span class="st">&quot;key&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2270-4"><a href="longitudinal1.html#cb2270-4" tabindex="-1"></a>    <span class="fu">separate</span>(key, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">&quot;Height&quot;</span>, <span class="st">&quot;H_Age&quot;</span>), <span class="at">sep =</span> <span class="dv">2</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2270-5"><a href="longitudinal1.html#cb2270-5" tabindex="-1"></a>      <span class="fu">arrange</span>(id, H_Age, bw, mht) <span class="sc">%&gt;%</span></span>
+<span id="cb2270-6"><a href="longitudinal1.html#cb2270-6" tabindex="-1"></a>        <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> Height, <span class="at">values_from =</span> value)</span>
+<span id="cb2270-7"><a href="longitudinal1.html#cb2270-7" tabindex="-1"></a></span>
+<span id="cb2270-8"><a href="longitudinal1.html#cb2270-8" tabindex="-1"></a><span class="co"># 生成四個年齡時間點數據的啞變量</span></span>
+<span id="cb2270-9"><a href="longitudinal1.html#cb2270-9" tabindex="-1"></a>hei_long <span class="ot">&lt;-</span> hei_long <span class="sc">%&gt;%</span></span>
+<span id="cb2270-10"><a href="longitudinal1.html#cb2270-10" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Age_1 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">26</span>, <span class="dv">1</span>, <span class="dv">0</span>), </span>
+<span id="cb2270-11"><a href="longitudinal1.html#cb2270-11" tabindex="-1"></a>         <span class="at">Age_2 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">36</span>, <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb2270-12"><a href="longitudinal1.html#cb2270-12" tabindex="-1"></a>         <span class="at">Age_3 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">43</span>, <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb2270-13"><a href="longitudinal1.html#cb2270-13" tabindex="-1"></a>         <span class="at">Age_4 =</span> <span class="fu">ifelse</span>(H_Age <span class="sc">==</span> <span class="dv">53</span>, <span class="dv">1</span>, <span class="dv">0</span>))</span>
+<span id="cb2270-14"><a href="longitudinal1.html#cb2270-14" tabindex="-1"></a>M_hei <span class="ot">&lt;-</span> <span class="fu">lmer</span>(ht <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> Age_1 <span class="sc">+</span> Age_2 <span class="sc">+</span> Age_3 <span class="sc">+</span> Age_4 <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id), <span class="at">data =</span> hei_long, <span class="at">REML =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2270-15"><a href="longitudinal1.html#cb2270-15" tabindex="-1"></a><span class="fu">summary</span>(M_hei)</span></code></pre></div>
 <pre><code>## Linear mixed model fit by REML. t-tests use Satterthwaite&#39;s method [&#39;lmerModLmerTest&#39;]
 ## Formula: ht ~ 0 + Age_1 + Age_2 + Age_3 + Age_4 + (1 | id)
 ##    Data: hei_long
@@ -2228,10 +2228,10 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 ## Age_2 0.933            
 ## Age_3 0.931 0.933      
 ## Age_4 0.928 0.930 0.931</code></pre>
-<div class="sourceCode" id="cb2283"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2283-1"><a href="longitudinal1.html#cb2283-1" tabindex="-1"></a><span class="co"># 檢驗三個年齡點的身高均值是否相同用下面的方法: </span></span>
-<span id="cb2283-2"><a href="longitudinal1.html#cb2283-2" tabindex="-1"></a><span class="fu">linearHypothesis</span>(M_hei, <span class="fu">c</span>(<span class="st">&quot;Age_1 - Age_2 = 0&quot;</span>, </span>
-<span id="cb2283-3"><a href="longitudinal1.html#cb2283-3" tabindex="-1"></a>                          <span class="st">&quot;Age_1 - Age_3 = 0&quot;</span>, </span>
-<span id="cb2283-4"><a href="longitudinal1.html#cb2283-4" tabindex="-1"></a>                          <span class="st">&quot;Age_1 - Age_4 = 0&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb2272"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2272-1"><a href="longitudinal1.html#cb2272-1" tabindex="-1"></a><span class="co"># 檢驗三個年齡點的身高均值是否相同用下面的方法: </span></span>
+<span id="cb2272-2"><a href="longitudinal1.html#cb2272-2" tabindex="-1"></a><span class="fu">linearHypothesis</span>(M_hei, <span class="fu">c</span>(<span class="st">&quot;Age_1 - Age_2 = 0&quot;</span>, </span>
+<span id="cb2272-3"><a href="longitudinal1.html#cb2272-3" tabindex="-1"></a>                          <span class="st">&quot;Age_1 - Age_3 = 0&quot;</span>, </span>
+<span id="cb2272-4"><a href="longitudinal1.html#cb2272-4" tabindex="-1"></a>                          <span class="st">&quot;Age_1 - Age_4 = 0&quot;</span>))</span></code></pre></div>
 <pre><code>## 
 ## Linear hypothesis test:
 ## Age_1 - Age_2 = 0
@@ -2256,24 +2256,24 @@ Y_{ij} = \sum_{h=1}^n\beta_{0h} I_{i = h,j} + u_{0j} + e_{ij}
 \end{array} \right)
 \]</span></p>
 <p>分析這個模型第二層階級殘差，和第一層階級殘差可以計算並做圖 <a href="longitudinal1.html#fig:5-level2-res">79.1</a> <a href="longitudinal1.html#fig:5-level1-res">79.2</a> 如下:</p>
-<div class="sourceCode" id="cb2285"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2285-1"><a href="longitudinal1.html#cb2285-1" tabindex="-1"></a><span class="co"># refit the model with lme</span></span>
-<span id="cb2285-2"><a href="longitudinal1.html#cb2285-2" tabindex="-1"></a>M_hei <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> ht <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> Age_1 <span class="sc">+</span> Age_2 <span class="sc">+</span> Age_3 <span class="sc">+</span> Age_4, <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> id, </span>
-<span id="cb2285-3"><a href="longitudinal1.html#cb2285-3" tabindex="-1"></a>             <span class="at">data =</span> hei_long, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action=</span>na.omit)</span>
-<span id="cb2285-4"><a href="longitudinal1.html#cb2285-4" tabindex="-1"></a><span class="co"># individual level standardized residuals</span></span>
-<span id="cb2285-5"><a href="longitudinal1.html#cb2285-5" tabindex="-1"></a>ehat_st <span class="ot">&lt;-</span> <span class="fu">residuals</span>(M_hei, <span class="at">type =</span> <span class="st">&quot;normalized&quot;</span>, <span class="at">level =</span> <span class="dv">1</span>)</span>
-<span id="cb2285-6"><a href="longitudinal1.html#cb2285-6" tabindex="-1"></a></span>
-<span id="cb2285-7"><a href="longitudinal1.html#cb2285-7" tabindex="-1"></a><span class="co"># extract the EB uhat (level 2 EB residual)</span></span>
-<span id="cb2285-8"><a href="longitudinal1.html#cb2285-8" tabindex="-1"></a>uhat_eb <span class="ot">&lt;-</span> <span class="fu">ranef</span>(M_hei)<span class="sc">$</span><span class="st">`</span><span class="at">(Intercept)</span><span class="st">`</span></span>
-<span id="cb2285-9"><a href="longitudinal1.html#cb2285-9" tabindex="-1"></a></span>
-<span id="cb2285-10"><a href="longitudinal1.html#cb2285-10" tabindex="-1"></a><span class="co"># standardized level 2 residuals</span></span>
-<span id="cb2285-11"><a href="longitudinal1.html#cb2285-11" tabindex="-1"></a><span class="do">### count number of measures for each women</span></span>
-<span id="cb2285-12"><a href="longitudinal1.html#cb2285-12" tabindex="-1"></a>Nmeas <span class="ot">&lt;-</span> <span class="dv">4</span></span>
-<span id="cb2285-13"><a href="longitudinal1.html#cb2285-13" tabindex="-1"></a><span class="do">### shrinkage factor </span></span>
-<span id="cb2285-14"><a href="longitudinal1.html#cb2285-14" tabindex="-1"></a>R <span class="ot">=</span> <span class="fl">5.992</span><span class="sc">^</span><span class="dv">2</span><span class="sc">/</span>(<span class="fl">5.992</span><span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fl">1.409</span><span class="sc">^</span><span class="dv">2</span><span class="sc">/</span>Nmeas)</span>
-<span id="cb2285-15"><a href="longitudinal1.html#cb2285-15" tabindex="-1"></a><span class="do">### use shrinkage factor calculate variance of uhat_eb</span></span>
-<span id="cb2285-16"><a href="longitudinal1.html#cb2285-16" tabindex="-1"></a>var_eb <span class="ot">&lt;-</span> R <span class="sc">*</span> <span class="fl">5.992</span><span class="sc">^</span><span class="dv">2</span></span>
-<span id="cb2285-17"><a href="longitudinal1.html#cb2285-17" tabindex="-1"></a><span class="do">### standardize uhat</span></span>
-<span id="cb2285-18"><a href="longitudinal1.html#cb2285-18" tabindex="-1"></a>uhat_st <span class="ot">&lt;-</span> uhat_eb<span class="sc">/</span><span class="fu">sqrt</span>(var_eb)</span></code></pre></div>
+<div class="sourceCode" id="cb2274"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2274-1"><a href="longitudinal1.html#cb2274-1" tabindex="-1"></a><span class="co"># refit the model with lme</span></span>
+<span id="cb2274-2"><a href="longitudinal1.html#cb2274-2" tabindex="-1"></a>M_hei <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> ht <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> Age_1 <span class="sc">+</span> Age_2 <span class="sc">+</span> Age_3 <span class="sc">+</span> Age_4, <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> id, </span>
+<span id="cb2274-3"><a href="longitudinal1.html#cb2274-3" tabindex="-1"></a>             <span class="at">data =</span> hei_long, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action=</span>na.omit)</span>
+<span id="cb2274-4"><a href="longitudinal1.html#cb2274-4" tabindex="-1"></a><span class="co"># individual level standardized residuals</span></span>
+<span id="cb2274-5"><a href="longitudinal1.html#cb2274-5" tabindex="-1"></a>ehat_st <span class="ot">&lt;-</span> <span class="fu">residuals</span>(M_hei, <span class="at">type =</span> <span class="st">&quot;normalized&quot;</span>, <span class="at">level =</span> <span class="dv">1</span>)</span>
+<span id="cb2274-6"><a href="longitudinal1.html#cb2274-6" tabindex="-1"></a></span>
+<span id="cb2274-7"><a href="longitudinal1.html#cb2274-7" tabindex="-1"></a><span class="co"># extract the EB uhat (level 2 EB residual)</span></span>
+<span id="cb2274-8"><a href="longitudinal1.html#cb2274-8" tabindex="-1"></a>uhat_eb <span class="ot">&lt;-</span> <span class="fu">ranef</span>(M_hei)<span class="sc">$</span><span class="st">`</span><span class="at">(Intercept)</span><span class="st">`</span></span>
+<span id="cb2274-9"><a href="longitudinal1.html#cb2274-9" tabindex="-1"></a></span>
+<span id="cb2274-10"><a href="longitudinal1.html#cb2274-10" tabindex="-1"></a><span class="co"># standardized level 2 residuals</span></span>
+<span id="cb2274-11"><a href="longitudinal1.html#cb2274-11" tabindex="-1"></a><span class="do">### count number of measures for each women</span></span>
+<span id="cb2274-12"><a href="longitudinal1.html#cb2274-12" tabindex="-1"></a>Nmeas <span class="ot">&lt;-</span> <span class="dv">4</span></span>
+<span id="cb2274-13"><a href="longitudinal1.html#cb2274-13" tabindex="-1"></a><span class="do">### shrinkage factor </span></span>
+<span id="cb2274-14"><a href="longitudinal1.html#cb2274-14" tabindex="-1"></a>R <span class="ot">=</span> <span class="fl">5.992</span><span class="sc">^</span><span class="dv">2</span><span class="sc">/</span>(<span class="fl">5.992</span><span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fl">1.409</span><span class="sc">^</span><span class="dv">2</span><span class="sc">/</span>Nmeas)</span>
+<span id="cb2274-15"><a href="longitudinal1.html#cb2274-15" tabindex="-1"></a><span class="do">### use shrinkage factor calculate variance of uhat_eb</span></span>
+<span id="cb2274-16"><a href="longitudinal1.html#cb2274-16" tabindex="-1"></a>var_eb <span class="ot">&lt;-</span> R <span class="sc">*</span> <span class="fl">5.992</span><span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb2274-17"><a href="longitudinal1.html#cb2274-17" tabindex="-1"></a><span class="do">### standardize uhat</span></span>
+<span id="cb2274-18"><a href="longitudinal1.html#cb2274-18" tabindex="-1"></a>uhat_st <span class="ot">&lt;-</span> uhat_eb<span class="sc">/</span><span class="fu">sqrt</span>(var_eb)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:5-level2-res"></span>
 <img src="bookdown_files/figure-html/5-level2-res-1.png" alt="Standardized cluster level residuals (intercept) from the compound symmetry model" width="80%" />
 <p class="caption">
@@ -2318,12 +2318,12 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 \]</span></p>
 <p><strong>Adult height measures 數據</strong></p>
 <p>利用上面的理論，來對身高數據擬合另一個混合效應模型:</p>
-<div class="sourceCode" id="cb2286"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2286-1"><a href="longitudinal1.html#cb2286-1" tabindex="-1"></a><span class="co"># 對年齡中心化到以 26 歲爲起點</span></span>
-<span id="cb2286-2"><a href="longitudinal1.html#cb2286-2" tabindex="-1"></a>hei_long <span class="ot">&lt;-</span> hei_long <span class="sc">%&gt;%</span></span>
-<span id="cb2286-3"><a href="longitudinal1.html#cb2286-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">age =</span> <span class="fu">as.numeric</span>(H_Age) <span class="sc">-</span> <span class="dv">26</span>)</span>
-<span id="cb2286-4"><a href="longitudinal1.html#cb2286-4" tabindex="-1"></a>M_hei_ran <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> ht <span class="sc">~</span> age, <span class="at">random =</span> <span class="sc">~</span> age <span class="sc">|</span> id, <span class="at">data =</span> hei_long, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
-<span id="cb2286-5"><a href="longitudinal1.html#cb2286-5" tabindex="-1"></a><span class="co">#M_hei_ran &lt;- lmer(ht ~ age + (age | id), data = hei_long, REML = TRUE)</span></span>
-<span id="cb2286-6"><a href="longitudinal1.html#cb2286-6" tabindex="-1"></a><span class="fu">summary</span>(M_hei_ran)</span></code></pre></div>
+<div class="sourceCode" id="cb2275"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2275-1"><a href="longitudinal1.html#cb2275-1" tabindex="-1"></a><span class="co"># 對年齡中心化到以 26 歲爲起點</span></span>
+<span id="cb2275-2"><a href="longitudinal1.html#cb2275-2" tabindex="-1"></a>hei_long <span class="ot">&lt;-</span> hei_long <span class="sc">%&gt;%</span></span>
+<span id="cb2275-3"><a href="longitudinal1.html#cb2275-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">age =</span> <span class="fu">as.numeric</span>(H_Age) <span class="sc">-</span> <span class="dv">26</span>)</span>
+<span id="cb2275-4"><a href="longitudinal1.html#cb2275-4" tabindex="-1"></a>M_hei_ran <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> ht <span class="sc">~</span> age, <span class="at">random =</span> <span class="sc">~</span> age <span class="sc">|</span> id, <span class="at">data =</span> hei_long, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
+<span id="cb2275-5"><a href="longitudinal1.html#cb2275-5" tabindex="-1"></a><span class="co">#M_hei_ran &lt;- lmer(ht ~ age + (age | id), data = hei_long, REML = TRUE)</span></span>
+<span id="cb2275-6"><a href="longitudinal1.html#cb2275-6" tabindex="-1"></a><span class="fu">summary</span>(M_hei_ran)</span></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by REML
 ##   Data: hei_long 
 ##     AIC   BIC logLik
@@ -2333,9 +2333,9 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 ##  Formula: ~age | id
 ##  Structure: General positive-definite, Log-Cholesky parametrization
 ##             StdDev  Corr  
-## (Intercept) 6.15884 (Intr)
+## (Intercept) 6.15886 (Intr)
 ## age         0.05993 -0.281
-## Residual    1.25921       
+## Residual    1.25920       
 ## 
 ## Fixed effects:  ht ~ age 
 ##              Value Std.Error   DF t-value p-value
@@ -2347,7 +2347,7 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 ## 
 ## Standardized Within-Group Residuals:
 ##       Min        Q1       Med        Q3       Max 
-## -3.938700 -0.454238 -0.006605  0.429747  5.505162 
+## -3.938699 -0.454243 -0.006604  0.429723  5.505020 
 ## 
 ## Number of Observations: 6397
 ## Number of Groups: 1980</code></pre>
@@ -2405,11 +2405,11 @@ Y_{ij} = (\beta_0 + u_{0j}) + (\beta_1 + u_{1j})t_i +e_{ij}
 Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{girl}_j + e_{ij}
 \]</span></p>
 <p>在 R 裏擬合這個模型:</p>
-<div class="sourceCode" id="cb2288"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2288-1"><a href="longitudinal1.html#cb2288-1" tabindex="-1"></a>growth <span class="ot">&lt;-</span> growth <span class="sc">%&gt;%</span></span>
-<span id="cb2288-2"><a href="longitudinal1.html#cb2288-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">age2 =</span> age<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb2288-3"><a href="longitudinal1.html#cb2288-3" tabindex="-1"></a></span>
-<span id="cb2288-4"><a href="longitudinal1.html#cb2288-4" tabindex="-1"></a>M_growth <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> weight <span class="sc">~</span> age <span class="sc">+</span> age2 <span class="sc">+</span> gender, <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> id, <span class="at">data =</span> growth, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
-<span id="cb2288-5"><a href="longitudinal1.html#cb2288-5" tabindex="-1"></a><span class="fu">summary</span>(M_growth)</span></code></pre></div>
+<div class="sourceCode" id="cb2277"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2277-1"><a href="longitudinal1.html#cb2277-1" tabindex="-1"></a>growth <span class="ot">&lt;-</span> growth <span class="sc">%&gt;%</span></span>
+<span id="cb2277-2"><a href="longitudinal1.html#cb2277-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">age2 =</span> age<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb2277-3"><a href="longitudinal1.html#cb2277-3" tabindex="-1"></a></span>
+<span id="cb2277-4"><a href="longitudinal1.html#cb2277-4" tabindex="-1"></a>M_growth <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> weight <span class="sc">~</span> age <span class="sc">+</span> age2 <span class="sc">+</span> gender, <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> id, <span class="at">data =</span> growth, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
+<span id="cb2277-5"><a href="longitudinal1.html#cb2277-5" tabindex="-1"></a><span class="fu">summary</span>(M_growth)</span></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by REML
 ##   Data: growth 
 ##     AIC   BIC logLik
@@ -2438,9 +2438,9 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 ## 
 ## Number of Observations: 198
 ## Number of Groups: 68</code></pre>
-<div class="sourceCode" id="cb2290"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2290-1"><a href="longitudinal1.html#cb2290-1" tabindex="-1"></a><span class="do">## 由於樣本量較小，這裏如果使用極大似然法估計 ML，結果就和 REML 估計的隨機效應的方差部分不太相同</span></span>
-<span id="cb2290-2"><a href="longitudinal1.html#cb2290-2" tabindex="-1"></a>M_growthml <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> weight <span class="sc">~</span> age <span class="sc">+</span> age2 <span class="sc">+</span> gender, <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> id, <span class="at">data =</span> growth, <span class="at">method =</span> <span class="st">&quot;ML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
-<span id="cb2290-3"><a href="longitudinal1.html#cb2290-3" tabindex="-1"></a><span class="fu">summary</span>(M_growthml)</span></code></pre></div>
+<div class="sourceCode" id="cb2279"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2279-1"><a href="longitudinal1.html#cb2279-1" tabindex="-1"></a><span class="do">## 由於樣本量較小，這裏如果使用極大似然法估計 ML，結果就和 REML 估計的隨機效應的方差部分不太相同</span></span>
+<span id="cb2279-2"><a href="longitudinal1.html#cb2279-2" tabindex="-1"></a>M_growthml <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> weight <span class="sc">~</span> age <span class="sc">+</span> age2 <span class="sc">+</span> gender, <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> id, <span class="at">data =</span> growth, <span class="at">method =</span> <span class="st">&quot;ML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
+<span id="cb2279-3"><a href="longitudinal1.html#cb2279-3" tabindex="-1"></a><span class="fu">summary</span>(M_growthml)</span></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by maximum likelihood
 ##   Data: growth 
 ##     AIC   BIC logLik
@@ -2471,8 +2471,8 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 ## Number of Groups: 68</code></pre>
 <p><strong>隨機截距和斜率模型</strong></p>
 <p>此時我們再來用相同的數據擬合混合效應模型，現在允許線性年齡的斜率有隨機變化:</p>
-<div class="sourceCode" id="cb2292"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2292-1"><a href="longitudinal1.html#cb2292-1" tabindex="-1"></a>M_growth_mix <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> weight <span class="sc">~</span> age <span class="sc">+</span> age2 <span class="sc">+</span> gender, <span class="at">random =</span> <span class="sc">~</span> age <span class="sc">|</span> id, <span class="at">data =</span> growth, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
-<span id="cb2292-2"><a href="longitudinal1.html#cb2292-2" tabindex="-1"></a><span class="fu">summary</span>(M_growth_mix)</span></code></pre></div>
+<div class="sourceCode" id="cb2281"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2281-1"><a href="longitudinal1.html#cb2281-1" tabindex="-1"></a>M_growth_mix <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="at">fixed =</span> weight <span class="sc">~</span> age <span class="sc">+</span> age2 <span class="sc">+</span> gender, <span class="at">random =</span> <span class="sc">~</span> age <span class="sc">|</span> id, <span class="at">data =</span> growth, <span class="at">method =</span> <span class="st">&quot;REML&quot;</span>, <span class="at">na.action =</span> na.omit)</span>
+<span id="cb2281-2"><a href="longitudinal1.html#cb2281-2" tabindex="-1"></a><span class="fu">summary</span>(M_growth_mix)</span></code></pre></div>
 <pre><code>## Linear mixed-effects model fit by REML
 ##   Data: growth 
 ##   AIC   BIC logLik
@@ -2521,22 +2521,22 @@ Y_{ij} = (\beta_0 + u_{0j}) + \beta_1t_{ij} + \beta_2 t_{ij}^2 + \beta_3 \text{g
 <div id="預測軌跡-predicting-trajectories" class="section level2 hasAnchor" number="79.3">
 <h2><span class="header-section-number">79.3</span> 預測軌跡 predicting trajectories<a href="longitudinal1.html#%E9%A0%90%E6%B8%AC%E8%BB%8C%E8%B7%A1-predicting-trajectories" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>比較只有隨機截距模型，和隨機系數模型給出的擬合曲線是否有差異 如圖<a href="longitudinal1.html#fig:hier05-12">79.8</a>，其實差異十分微小。可以用下面的 R 代碼:</p>
-<div class="sourceCode" id="cb2294"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2294-1"><a href="longitudinal1.html#cb2294-1" tabindex="-1"></a>growth<span class="sc">$</span>traj2 <span class="ot">&lt;-</span> <span class="fu">fitted</span>(M_growth_mix) </span>
-<span id="cb2294-2"><a href="longitudinal1.html#cb2294-2" tabindex="-1"></a>growth<span class="sc">$</span>traj1 <span class="ot">&lt;-</span> <span class="fu">fitted</span>(M_growth) </span>
-<span id="cb2294-3"><a href="longitudinal1.html#cb2294-3" tabindex="-1"></a></span>
-<span id="cb2294-4"><a href="longitudinal1.html#cb2294-4" tabindex="-1"></a>G <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(growth[growth<span class="sc">$</span>id <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">258</span>,<span class="dv">1141</span>,<span class="dv">3148</span>,<span class="dv">287</span>),], <span class="fu">aes</span>(<span class="at">x =</span> age, <span class="at">y =</span> weight)) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">19</span>, <span class="at">size =</span> <span class="dv">4</span>) <span class="sc">+</span> </span>
-<span id="cb2294-5"><a href="longitudinal1.html#cb2294-5" tabindex="-1"></a> <span class="co"># geom_line(aes(y = traj1)) + </span></span>
-<span id="cb2294-6"><a href="longitudinal1.html#cb2294-6" tabindex="-1"></a><span class="co">#  geom_line(aes(y = traj2), linetype = 2) +</span></span>
-<span id="cb2294-7"><a href="longitudinal1.html#cb2294-7" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="fu">aes</span>(<span class="at">y =</span> traj1), <span class="at">formula =</span> y <span class="sc">~</span> x <span class="sc">+</span> <span class="fu">I</span>(x<span class="sc">^</span><span class="dv">2</span>), <span class="at">se =</span> F, <span class="at">linetype =</span> <span class="dv">2</span>) <span class="sc">+</span> </span>
-<span id="cb2294-8"><a href="longitudinal1.html#cb2294-8" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="fu">aes</span>(<span class="at">y =</span> traj2), <span class="at">formula =</span> y <span class="sc">~</span> x <span class="sc">+</span> <span class="fu">I</span>(x<span class="sc">^</span><span class="dv">2</span>), <span class="at">se =</span> F)  <span class="sc">+</span></span>
-<span id="cb2294-9"><a href="longitudinal1.html#cb2294-9" tabindex="-1"></a>   <span class="fu">theme</span>(<span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>),</span>
-<span id="cb2294-10"><a href="longitudinal1.html#cb2294-10" tabindex="-1"></a>  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>),</span>
-<span id="cb2294-11"><a href="longitudinal1.html#cb2294-11" tabindex="-1"></a>  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>)) <span class="sc">+</span></span>
-<span id="cb2294-12"><a href="longitudinal1.html#cb2294-12" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">17</span>), <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>))</span>
-<span id="cb2294-13"><a href="longitudinal1.html#cb2294-13" tabindex="-1"></a></span>
-<span id="cb2294-14"><a href="longitudinal1.html#cb2294-14" tabindex="-1"></a></span>
-<span id="cb2294-15"><a href="longitudinal1.html#cb2294-15" tabindex="-1"></a>G <span class="sc">+</span>  <span class="fu">facet_wrap</span>( <span class="sc">~</span> id, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span> </span>
-<span id="cb2294-16"><a href="longitudinal1.html#cb2294-16" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">face =</span> <span class="st">&quot;bold&quot;</span>, <span class="at">size =</span> <span class="fu">rel</span>(<span class="fl">1.5</span>)))</span></code></pre></div>
+<div class="sourceCode" id="cb2283"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2283-1"><a href="longitudinal1.html#cb2283-1" tabindex="-1"></a>growth<span class="sc">$</span>traj2 <span class="ot">&lt;-</span> <span class="fu">fitted</span>(M_growth_mix) </span>
+<span id="cb2283-2"><a href="longitudinal1.html#cb2283-2" tabindex="-1"></a>growth<span class="sc">$</span>traj1 <span class="ot">&lt;-</span> <span class="fu">fitted</span>(M_growth) </span>
+<span id="cb2283-3"><a href="longitudinal1.html#cb2283-3" tabindex="-1"></a></span>
+<span id="cb2283-4"><a href="longitudinal1.html#cb2283-4" tabindex="-1"></a>G <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(growth[growth<span class="sc">$</span>id <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">258</span>,<span class="dv">1141</span>,<span class="dv">3148</span>,<span class="dv">287</span>),], <span class="fu">aes</span>(<span class="at">x =</span> age, <span class="at">y =</span> weight)) <span class="sc">+</span> <span class="fu">geom_point</span>(<span class="at">shape =</span> <span class="dv">19</span>, <span class="at">size =</span> <span class="dv">4</span>) <span class="sc">+</span> </span>
+<span id="cb2283-5"><a href="longitudinal1.html#cb2283-5" tabindex="-1"></a> <span class="co"># geom_line(aes(y = traj1)) + </span></span>
+<span id="cb2283-6"><a href="longitudinal1.html#cb2283-6" tabindex="-1"></a><span class="co">#  geom_line(aes(y = traj2), linetype = 2) +</span></span>
+<span id="cb2283-7"><a href="longitudinal1.html#cb2283-7" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="fu">aes</span>(<span class="at">y =</span> traj1), <span class="at">formula =</span> y <span class="sc">~</span> x <span class="sc">+</span> <span class="fu">I</span>(x<span class="sc">^</span><span class="dv">2</span>), <span class="at">se =</span> F, <span class="at">linetype =</span> <span class="dv">2</span>) <span class="sc">+</span> </span>
+<span id="cb2283-8"><a href="longitudinal1.html#cb2283-8" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="fu">aes</span>(<span class="at">y =</span> traj2), <span class="at">formula =</span> y <span class="sc">~</span> x <span class="sc">+</span> <span class="fu">I</span>(x<span class="sc">^</span><span class="dv">2</span>), <span class="at">se =</span> F)  <span class="sc">+</span></span>
+<span id="cb2283-9"><a href="longitudinal1.html#cb2283-9" tabindex="-1"></a>   <span class="fu">theme</span>(<span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>),</span>
+<span id="cb2283-10"><a href="longitudinal1.html#cb2283-10" tabindex="-1"></a>  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>),</span>
+<span id="cb2283-11"><a href="longitudinal1.html#cb2283-11" tabindex="-1"></a>  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">15</span>)) <span class="sc">+</span></span>
+<span id="cb2283-12"><a href="longitudinal1.html#cb2283-12" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">17</span>), <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>))</span>
+<span id="cb2283-13"><a href="longitudinal1.html#cb2283-13" tabindex="-1"></a></span>
+<span id="cb2283-14"><a href="longitudinal1.html#cb2283-14" tabindex="-1"></a></span>
+<span id="cb2283-15"><a href="longitudinal1.html#cb2283-15" tabindex="-1"></a>G <span class="sc">+</span>  <span class="fu">facet_wrap</span>( <span class="sc">~</span> id, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span> </span>
+<span id="cb2283-16"><a href="longitudinal1.html#cb2283-16" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">face =</span> <span class="st">&quot;bold&quot;</span>, <span class="at">size =</span> <span class="fu">rel</span>(<span class="fl">1.5</span>)))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:hier05-12"></span>
 <img src="bookdown_files/figure-html/hier05-12-1.png" alt="Observed weight and predicted growth profiles of four babies in the Asian growth data" width="80%" />
 <p class="caption">

@@ -23,7 +23,7 @@
 <meta name="author" content="王 超辰 Chaochen Wang" />
 
 
-<meta name="date" content="2026-05-01" />
+<meta name="date" content="2026-05-02" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2117,28 +2117,28 @@ Richard McElreath
 <li>如果，第3步中取出的貝殼個數，比石子個數多，那麼國王就二話不說，根據移島提案去往下一個島（也就是會去往比目前島嶼人口多的那個島）。如果，貝殼個數比石子個數少的話，國王需要把等同於已有貝殼個數的石子拋棄。例如說是有4個貝殼（移島提案），和6個石子（目前的島嶼），那麼國王需要拋棄4個石子，保留2個石子和4個貝殼。然後國王把這2個石子和4個貝殼放在一個黑色的袋子裏，閉着眼睛從中抽取一個物體。如果抽到貝殼，那麼國王根據移島提案去4號島嶼，如果抽到的是石子，那麼國王選擇繼續留在目前的島嶼（6號）一週時間。也就是說，此時國王根據移島提案離開目前島嶼的概率是貝殼的數量除以未丟棄石子之前的數量，也就是提案島嶼的人口除以目前島嶼的人口。</li>
 </ol>
 <p>這個 Metropolis 的策略看起來很荒誕，因爲似乎沒有半點邏輯，但是這個策略竟然是真實有效的。我們來進行一段計算機模擬以展示這個國王搬家的過程：</p>
-<div class="sourceCode" id="cb1192"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1192-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-1" tabindex="-1"></a>num_weeks <span class="ot">&lt;-</span> <span class="dv">10000</span> <span class="co"># almost 2000 years time </span></span>
-<span id="cb1192-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-2" tabindex="-1"></a>positions <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, num_weeks)</span>
-<span id="cb1192-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-3" tabindex="-1"></a>current <span class="ot">&lt;-</span> <span class="dv">10</span></span>
-<span id="cb1192-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-4" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
-<span id="cb1192-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-5" tabindex="-1"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_weeks ){</span>
-<span id="cb1192-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-6" tabindex="-1"></a>  <span class="do">## record current position</span></span>
-<span id="cb1192-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-7" tabindex="-1"></a>  positions[i] <span class="ot">&lt;-</span> current</span>
-<span id="cb1192-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-8" tabindex="-1"></a>  <span class="do">## flip coin to generate proposal</span></span>
-<span id="cb1192-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-9" tabindex="-1"></a>  proposal <span class="ot">&lt;-</span> current <span class="sc">+</span> <span class="fu">sample</span>( <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>), <span class="at">size =</span> <span class="dv">1</span> )</span>
-<span id="cb1192-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-10" tabindex="-1"></a>  <span class="do">## now make sure he loops around the archipelago</span></span>
-<span id="cb1192-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-11" tabindex="-1"></a>  <span class="cf">if</span> (proposal <span class="sc">&lt;</span> <span class="dv">1</span>) proposal <span class="ot">&lt;-</span> <span class="dv">10</span></span>
-<span id="cb1192-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-12" tabindex="-1"></a>  <span class="cf">if</span> (proposal <span class="sc">&gt;</span> <span class="dv">10</span>) proposal <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb1192-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-13" tabindex="-1"></a>  <span class="do">## move or not? </span></span>
-<span id="cb1192-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-14" tabindex="-1"></a>  prob_move <span class="ot">&lt;-</span> proposal <span class="sc">/</span> current</span>
-<span id="cb1192-15"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-15" tabindex="-1"></a>  current <span class="ot">&lt;-</span> <span class="fu">ifelse</span>( <span class="fu">runif</span>(<span class="dv">1</span>) <span class="sc">&lt;</span> prob_move, proposal, current )</span>
-<span id="cb1192-16"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-16" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb1181"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1181-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-1" tabindex="-1"></a>num_weeks <span class="ot">&lt;-</span> <span class="dv">10000</span> <span class="co"># almost 2000 years time </span></span>
+<span id="cb1181-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-2" tabindex="-1"></a>positions <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, num_weeks)</span>
+<span id="cb1181-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-3" tabindex="-1"></a>current <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb1181-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-4" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb1181-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-5" tabindex="-1"></a><span class="cf">for</span>( i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>num_weeks ){</span>
+<span id="cb1181-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-6" tabindex="-1"></a>  <span class="do">## record current position</span></span>
+<span id="cb1181-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-7" tabindex="-1"></a>  positions[i] <span class="ot">&lt;-</span> current</span>
+<span id="cb1181-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-8" tabindex="-1"></a>  <span class="do">## flip coin to generate proposal</span></span>
+<span id="cb1181-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-9" tabindex="-1"></a>  proposal <span class="ot">&lt;-</span> current <span class="sc">+</span> <span class="fu">sample</span>( <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>), <span class="at">size =</span> <span class="dv">1</span> )</span>
+<span id="cb1181-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-10" tabindex="-1"></a>  <span class="do">## now make sure he loops around the archipelago</span></span>
+<span id="cb1181-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-11" tabindex="-1"></a>  <span class="cf">if</span> (proposal <span class="sc">&lt;</span> <span class="dv">1</span>) proposal <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb1181-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-12" tabindex="-1"></a>  <span class="cf">if</span> (proposal <span class="sc">&gt;</span> <span class="dv">10</span>) proposal <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb1181-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-13" tabindex="-1"></a>  <span class="do">## move or not? </span></span>
+<span id="cb1181-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-14" tabindex="-1"></a>  prob_move <span class="ot">&lt;-</span> proposal <span class="sc">/</span> current</span>
+<span id="cb1181-15"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-15" tabindex="-1"></a>  current <span class="ot">&lt;-</span> <span class="fu">ifelse</span>( <span class="fu">runif</span>(<span class="dv">1</span>) <span class="sc">&lt;</span> prob_move, proposal, current )</span>
+<span id="cb1181-16"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1181-16" tabindex="-1"></a>}</span></code></pre></div>
 <p>把該國王前100週的行程繪製如下：</p>
-<div class="sourceCode" id="cb1193"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1193-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1193-1" tabindex="-1"></a><span class="fu">plot</span>( <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, positions[<span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>], </span>
-<span id="cb1193-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1193-2" tabindex="-1"></a>      <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
-<span id="cb1193-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1193-3" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;week&quot;</span>,</span>
-<span id="cb1193-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1193-4" tabindex="-1"></a>      <span class="at">ylab =</span> <span class="st">&quot;island&quot;</span>, </span>
-<span id="cb1193-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1193-5" tabindex="-1"></a>      <span class="at">col =</span> rangi2)</span></code></pre></div>
+<div class="sourceCode" id="cb1182"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1182-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1182-1" tabindex="-1"></a><span class="fu">plot</span>( <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, positions[<span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>], </span>
+<span id="cb1182-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1182-2" tabindex="-1"></a>      <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb1182-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1182-3" tabindex="-1"></a>      <span class="at">xlab =</span> <span class="st">&quot;week&quot;</span>,</span>
+<span id="cb1182-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1182-4" tabindex="-1"></a>      <span class="at">ylab =</span> <span class="st">&quot;island&quot;</span>, </span>
+<span id="cb1182-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1182-5" tabindex="-1"></a>      <span class="at">col =</span> rangi2)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig01"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig01-1.png" alt="Results of the king following the Metropolis algorithm. This figure shows the king's current position (vertical axis) across weeks (horizontal axis). In any particular week, it's nearly impossible to say where the king will be." width="576" />
 <p class="caption">
@@ -2146,11 +2146,11 @@ Richard McElreath
 </p>
 </div>
 <p>圖 <a href="馬可夫鏈蒙地卡羅-mcmc.html#fig:introBayes12-fig01">55.1</a> 告訴我們國王的行程幾乎看起來沒有任何規律性。但是事實上，如果你把全部100000個星期的行程總結一下，會神奇地發現國王在每個島嶼所呆的時間恰好都與其人口規模成相應的比例：</p>
-<div class="sourceCode" id="cb1194"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1194-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1194-1" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">table</span>(positions), </span>
-<span id="cb1194-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1194-2" tabindex="-1"></a>     <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
-<span id="cb1194-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1194-3" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;island&quot;</span>, </span>
-<span id="cb1194-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1194-4" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;number of weeks stayed&quot;</span>, </span>
-<span id="cb1194-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1194-5" tabindex="-1"></a>      <span class="at">col =</span> rangi2)</span></code></pre></div>
+<div class="sourceCode" id="cb1183"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1183-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1183-1" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">table</span>(positions), </span>
+<span id="cb1183-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1183-2" tabindex="-1"></a>     <span class="at">bty =</span> <span class="st">&quot;n&quot;</span>, </span>
+<span id="cb1183-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1183-3" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;island&quot;</span>, </span>
+<span id="cb1183-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1183-4" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;number of weeks stayed&quot;</span>, </span>
+<span id="cb1183-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1183-5" tabindex="-1"></a>      <span class="at">col =</span> rangi2)</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig02"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig02-1.png" alt="Results of the king following the Metropolis algorithm. This figure shows the long-run behavior of the algorithm, as the time spent on each island turns out to be proportional to its population size." width="576" />
 <p class="caption">
@@ -2170,43 +2170,43 @@ Richard McElreath
 <div id="簡單的-hmc-hamitonian-monte-carlo-ulam" class="section level2 hasAnchor" number="55.3">
 <h2><span class="header-section-number">55.3</span> 簡單的 HMC (Hamitonian Monte Carlo) <code>ulam</code><a href="馬可夫鏈蒙地卡羅-mcmc.html#%E7%B0%A1%E5%96%AE%E7%9A%84-hmc-hamitonian-monte-carlo-ulam" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>這裏使用非洲大陸地理的數據 <code>rugged</code>，來作爲簡單的HMC過程的示範。</p>
-<div class="sourceCode" id="cb1195"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1195-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] data(&quot;rugged&quot;) replaced with CSV load</span></span>
-<span id="cb1195-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-2" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;../backupfiles/rugged.csv&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>)</span>
-<span id="cb1195-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-3" tabindex="-1"></a>d<span class="sc">$</span>log_gdp <span class="ot">&lt;-</span> <span class="fu">log</span>(d<span class="sc">$</span>rgdppc_2000)</span>
-<span id="cb1195-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-4" tabindex="-1"></a>dd <span class="ot">&lt;-</span> d[ <span class="fu">complete.cases</span>(d<span class="sc">$</span>rgdppc_2000), ]</span>
-<span id="cb1195-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-5" tabindex="-1"></a>dd<span class="sc">$</span>log_gdp_std <span class="ot">&lt;-</span> dd<span class="sc">$</span>log_gdp <span class="sc">/</span> <span class="fu">mean</span>(dd<span class="sc">$</span>log_gdp)</span>
-<span id="cb1195-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-6" tabindex="-1"></a>dd<span class="sc">$</span>rugged_std <span class="ot">&lt;-</span> dd<span class="sc">$</span>rugged <span class="sc">/</span> <span class="fu">max</span>(dd<span class="sc">$</span>rugged)</span>
-<span id="cb1195-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-7" tabindex="-1"></a>dd<span class="sc">$</span>cid <span class="ot">&lt;-</span> <span class="fu">ifelse</span>( dd<span class="sc">$</span>cont_africa <span class="sc">==</span> <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
-<span id="cb1195-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-8" tabindex="-1"></a><span class="co"># Centred predictor and factor cid for brms interaction formula</span></span>
-<span id="cb1195-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-9" tabindex="-1"></a>dd<span class="sc">$</span>rugged_std_c <span class="ot">&lt;-</span> dd<span class="sc">$</span>rugged_std <span class="sc">-</span> <span class="fl">0.215</span></span>
-<span id="cb1195-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-10" tabindex="-1"></a>dd<span class="sc">$</span>cid_f <span class="ot">&lt;-</span> <span class="fu">factor</span>(dd<span class="sc">$</span>cid)</span></code></pre></div>
+<div class="sourceCode" id="cb1184"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1184-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] data(&quot;rugged&quot;) replaced with CSV load</span></span>
+<span id="cb1184-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-2" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;../backupfiles/rugged.csv&quot;</span>, <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>)</span>
+<span id="cb1184-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-3" tabindex="-1"></a>d<span class="sc">$</span>log_gdp <span class="ot">&lt;-</span> <span class="fu">log</span>(d<span class="sc">$</span>rgdppc_2000)</span>
+<span id="cb1184-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-4" tabindex="-1"></a>dd <span class="ot">&lt;-</span> d[ <span class="fu">complete.cases</span>(d<span class="sc">$</span>rgdppc_2000), ]</span>
+<span id="cb1184-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-5" tabindex="-1"></a>dd<span class="sc">$</span>log_gdp_std <span class="ot">&lt;-</span> dd<span class="sc">$</span>log_gdp <span class="sc">/</span> <span class="fu">mean</span>(dd<span class="sc">$</span>log_gdp)</span>
+<span id="cb1184-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-6" tabindex="-1"></a>dd<span class="sc">$</span>rugged_std <span class="ot">&lt;-</span> dd<span class="sc">$</span>rugged <span class="sc">/</span> <span class="fu">max</span>(dd<span class="sc">$</span>rugged)</span>
+<span id="cb1184-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-7" tabindex="-1"></a>dd<span class="sc">$</span>cid <span class="ot">&lt;-</span> <span class="fu">ifelse</span>( dd<span class="sc">$</span>cont_africa <span class="sc">==</span> <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
+<span id="cb1184-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-8" tabindex="-1"></a><span class="co"># Centred predictor and factor cid for brms interaction formula</span></span>
+<span id="cb1184-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-9" tabindex="-1"></a>dd<span class="sc">$</span>rugged_std_c <span class="ot">&lt;-</span> dd<span class="sc">$</span>rugged_std <span class="sc">-</span> <span class="fl">0.215</span></span>
+<span id="cb1184-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1184-10" tabindex="-1"></a>dd<span class="sc">$</span>cid_f <span class="ot">&lt;-</span> <span class="fu">factor</span>(dd<span class="sc">$</span>cid)</span></code></pre></div>
 <p>之前，我們使用二次方程近似法 <code>quap()</code> 時，加入了交互作用項的模型是：</p>
-<div class="sourceCode" id="cb1196"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1196-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-1" tabindex="-1"></a><span class="co"># [LEGACY - eval=FALSE] quap() requires rethinking package</span></span>
-<span id="cb1196-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-2" tabindex="-1"></a><span class="co"># m8.3 &lt;- quap(</span></span>
-<span id="cb1196-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-3" tabindex="-1"></a><span class="co">#   alist(</span></span>
-<span id="cb1196-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-4" tabindex="-1"></a><span class="co">#     log_gdp_std ~ dnorm(mu, sigma),</span></span>
-<span id="cb1196-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-5" tabindex="-1"></a><span class="co">#     mu &lt;- a[cid] + b[cid] * (rugged_std - 0.215),</span></span>
-<span id="cb1196-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-6" tabindex="-1"></a><span class="co">#     a[cid] ~ dnorm(1, 0.1),</span></span>
-<span id="cb1196-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-7" tabindex="-1"></a><span class="co">#     b[cid] ~ dnorm(0, 0.3),</span></span>
-<span id="cb1196-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-8" tabindex="-1"></a><span class="co">#     sigma ~ dexp(1)</span></span>
-<span id="cb1196-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-9" tabindex="-1"></a><span class="co">#   ), data = dd</span></span>
-<span id="cb1196-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-10" tabindex="-1"></a><span class="co"># )</span></span></code></pre></div>
-<div class="sourceCode" id="cb1197"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1197-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] brms equivalent of m8.3 (quadratic approximation reference)</span></span>
-<span id="cb1197-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-2" tabindex="-1"></a>m8<span class="fl">.3</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb1197-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-3" tabindex="-1"></a>  log_gdp_std <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> cid_f <span class="sc">+</span> cid_f<span class="sc">:</span>rugged_std_c,</span>
-<span id="cb1197-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-4" tabindex="-1"></a>  <span class="at">data =</span> dd,</span>
-<span id="cb1197-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-5" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
-<span id="cb1197-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-6" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1),</span>
-<span id="cb1197-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2),</span>
-<span id="cb1197-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1<span class="sc">:</span>rugged_std_c),</span>
-<span id="cb1197-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2<span class="sc">:</span>rugged_std_c),</span>
-<span id="cb1197-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-10" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
-<span id="cb1197-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-11" tabindex="-1"></a>  ),</span>
-<span id="cb1197-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-12" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">123</span>,</span>
-<span id="cb1197-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-13" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m8.3_brm&quot;</span></span>
-<span id="cb1197-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-14" tabindex="-1"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb1198"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1198-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1198-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] precis() → print(summary())</span></span>
-<span id="cb1198-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1198-2" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m8<span class="fl">.3</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1185"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1185-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-1" tabindex="-1"></a><span class="co"># [LEGACY - eval=FALSE] quap() requires rethinking package</span></span>
+<span id="cb1185-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-2" tabindex="-1"></a><span class="co"># m8.3 &lt;- quap(</span></span>
+<span id="cb1185-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-3" tabindex="-1"></a><span class="co">#   alist(</span></span>
+<span id="cb1185-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-4" tabindex="-1"></a><span class="co">#     log_gdp_std ~ dnorm(mu, sigma),</span></span>
+<span id="cb1185-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-5" tabindex="-1"></a><span class="co">#     mu &lt;- a[cid] + b[cid] * (rugged_std - 0.215),</span></span>
+<span id="cb1185-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-6" tabindex="-1"></a><span class="co">#     a[cid] ~ dnorm(1, 0.1),</span></span>
+<span id="cb1185-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-7" tabindex="-1"></a><span class="co">#     b[cid] ~ dnorm(0, 0.3),</span></span>
+<span id="cb1185-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-8" tabindex="-1"></a><span class="co">#     sigma ~ dexp(1)</span></span>
+<span id="cb1185-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-9" tabindex="-1"></a><span class="co">#   ), data = dd</span></span>
+<span id="cb1185-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1185-10" tabindex="-1"></a><span class="co"># )</span></span></code></pre></div>
+<div class="sourceCode" id="cb1186"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1186-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] brms equivalent of m8.3 (quadratic approximation reference)</span></span>
+<span id="cb1186-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-2" tabindex="-1"></a>m8<span class="fl">.3</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb1186-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-3" tabindex="-1"></a>  log_gdp_std <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> cid_f <span class="sc">+</span> cid_f<span class="sc">:</span>rugged_std_c,</span>
+<span id="cb1186-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-4" tabindex="-1"></a>  <span class="at">data =</span> dd,</span>
+<span id="cb1186-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-5" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
+<span id="cb1186-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-6" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1),</span>
+<span id="cb1186-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2),</span>
+<span id="cb1186-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1<span class="sc">:</span>rugged_std_c),</span>
+<span id="cb1186-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2<span class="sc">:</span>rugged_std_c),</span>
+<span id="cb1186-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-10" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
+<span id="cb1186-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-11" tabindex="-1"></a>  ),</span>
+<span id="cb1186-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-12" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">123</span>,</span>
+<span id="cb1186-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-13" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m8.3_brm&quot;</span></span>
+<span id="cb1186-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1186-14" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1187"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1187-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1187-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] precis() → print(summary())</span></span>
+<span id="cb1187-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1187-2" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m8<span class="fl">.3</span>_brm))</span></code></pre></div>
 <pre><code>##  Family: gaussian 
 ##   Links: mu = identity 
 ## Formula: log_gdp_std ~ 0 + cid_f + cid_f:rugged_std_c 
@@ -2233,43 +2233,43 @@ Richard McElreath
 <li>先處理所有需要中心化或者重新更改尺度的變量。</li>
 <li>重新製作一個不含有多餘變量的數據集。（推薦）</li>
 </ol>
-<div class="sourceCode" id="cb1200"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1200-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-1" tabindex="-1"></a>dat_slim <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb1200-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-2" tabindex="-1"></a>  <span class="at">log_gdp_std =</span> dd<span class="sc">$</span>log_gdp_std, </span>
-<span id="cb1200-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-3" tabindex="-1"></a>  <span class="at">rugged_std =</span> dd<span class="sc">$</span>rugged_std,</span>
-<span id="cb1200-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-4" tabindex="-1"></a>  <span class="at">cid =</span> <span class="fu">as.integer</span>(dd<span class="sc">$</span>cid)</span>
-<span id="cb1200-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-5" tabindex="-1"></a>)</span>
-<span id="cb1200-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-6" tabindex="-1"></a><span class="fu">str</span>(dat_slim)</span></code></pre></div>
+<div class="sourceCode" id="cb1189"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1189-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1189-1" tabindex="-1"></a>dat_slim <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb1189-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1189-2" tabindex="-1"></a>  <span class="at">log_gdp_std =</span> dd<span class="sc">$</span>log_gdp_std, </span>
+<span id="cb1189-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1189-3" tabindex="-1"></a>  <span class="at">rugged_std =</span> dd<span class="sc">$</span>rugged_std,</span>
+<span id="cb1189-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1189-4" tabindex="-1"></a>  <span class="at">cid =</span> <span class="fu">as.integer</span>(dd<span class="sc">$</span>cid)</span>
+<span id="cb1189-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1189-5" tabindex="-1"></a>)</span>
+<span id="cb1189-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1189-6" tabindex="-1"></a><span class="fu">str</span>(dat_slim)</span></code></pre></div>
 <pre><code>## List of 3
 ##  $ log_gdp_std: num [1:170] 0.88 0.965 1.166 1.104 0.915 ...
 ##  $ rugged_std : num [1:170] 0.138 0.553 0.124 0.125 0.433 ...
 ##  $ cid        : int [1:170] 1 2 2 2 2 2 2 2 2 1 ...</code></pre>
 <p>準備好了數據之後，接下來，我們使用 Stan 進行事後分佈樣本採集：</p>
-<div class="sourceCode" id="cb1202"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1202-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
-<span id="cb1202-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-2" tabindex="-1"></a>m9<span class="fl">.1</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
-<span id="cb1202-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-3" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
-<span id="cb1202-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-4" tabindex="-1"></a>    log_gdp_std <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
-<span id="cb1202-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-5" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a[cid] <span class="sc">+</span> b[cid] <span class="sc">*</span> ( rugged_std <span class="sc">-</span> <span class="fl">0.215</span> ) , </span>
-<span id="cb1202-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-6" tabindex="-1"></a>    a[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), </span>
-<span id="cb1202-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-7" tabindex="-1"></a>    b[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), </span>
-<span id="cb1202-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-8" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
-<span id="cb1202-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-9" tabindex="-1"></a>  ), <span class="at">data =</span> dat_slim, <span class="at">chains =</span> <span class="dv">1</span> , <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
-<span id="cb1202-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-10" tabindex="-1"></a>)</span>
-<span id="cb1202-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1202-11" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.1</span>, <span class="st">&quot;../Stanfits/m9_1.rds&quot;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb1203"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1203-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS replaced with brm (1 chain, demonstrating single-chain HMC)</span></span>
-<span id="cb1203-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-2" tabindex="-1"></a>m9<span class="fl">.1</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb1203-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-3" tabindex="-1"></a>  log_gdp_std <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> cid_f <span class="sc">+</span> cid_f<span class="sc">:</span>rugged_std_c,</span>
-<span id="cb1203-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-4" tabindex="-1"></a>  <span class="at">data =</span> dd,</span>
-<span id="cb1203-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-5" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
-<span id="cb1203-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-6" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1),</span>
-<span id="cb1203-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2),</span>
-<span id="cb1203-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1<span class="sc">:</span>rugged_std_c),</span>
-<span id="cb1203-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2<span class="sc">:</span>rugged_std_c),</span>
-<span id="cb1203-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-10" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
-<span id="cb1203-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-11" tabindex="-1"></a>  ),</span>
-<span id="cb1203-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-12" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">1</span>, <span class="at">cores =</span> <span class="dv">1</span>, <span class="at">seed =</span> <span class="dv">123</span>,</span>
-<span id="cb1203-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-13" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.1_brm&quot;</span></span>
-<span id="cb1203-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-14" tabindex="-1"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb1204"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1204-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1204-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.1</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1191"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1191-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
+<span id="cb1191-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-2" tabindex="-1"></a>m9<span class="fl">.1</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1191-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-3" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1191-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-4" tabindex="-1"></a>    log_gdp_std <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
+<span id="cb1191-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-5" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a[cid] <span class="sc">+</span> b[cid] <span class="sc">*</span> ( rugged_std <span class="sc">-</span> <span class="fl">0.215</span> ) , </span>
+<span id="cb1191-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-6" tabindex="-1"></a>    a[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), </span>
+<span id="cb1191-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-7" tabindex="-1"></a>    b[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), </span>
+<span id="cb1191-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-8" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb1191-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-9" tabindex="-1"></a>  ), <span class="at">data =</span> dat_slim, <span class="at">chains =</span> <span class="dv">1</span> , <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
+<span id="cb1191-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-10" tabindex="-1"></a>)</span>
+<span id="cb1191-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1191-11" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.1</span>, <span class="st">&quot;../Stanfits/m9_1.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1192"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1192-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS replaced with brm (1 chain, demonstrating single-chain HMC)</span></span>
+<span id="cb1192-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-2" tabindex="-1"></a>m9<span class="fl">.1</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb1192-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-3" tabindex="-1"></a>  log_gdp_std <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> cid_f <span class="sc">+</span> cid_f<span class="sc">:</span>rugged_std_c,</span>
+<span id="cb1192-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-4" tabindex="-1"></a>  <span class="at">data =</span> dd,</span>
+<span id="cb1192-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-5" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
+<span id="cb1192-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-6" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1),</span>
+<span id="cb1192-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2),</span>
+<span id="cb1192-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1<span class="sc">:</span>rugged_std_c),</span>
+<span id="cb1192-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2<span class="sc">:</span>rugged_std_c),</span>
+<span id="cb1192-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-10" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
+<span id="cb1192-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-11" tabindex="-1"></a>  ),</span>
+<span id="cb1192-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-12" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">1</span>, <span class="at">cores =</span> <span class="dv">1</span>, <span class="at">seed =</span> <span class="dv">123</span>,</span>
+<span id="cb1192-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-13" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.1_brm&quot;</span></span>
+<span id="cb1192-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1192-14" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1193"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1193-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1193-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.1</span>_brm))</span></code></pre></div>
 <pre><code>##  Family: gaussian 
 ##   Links: mu = identity 
 ## Formula: log_gdp_std ~ 0 + cid_f + cid_f:rugged_std_c 
@@ -2292,33 +2292,33 @@ Richard McElreath
 ## and Tail_ESS are effective sample size measures, and Rhat is the potential
 ## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <p>我們還可以使用多条採樣鏈，及使用多個計算機內核以平行計算提升效率：</p>
-<div class="sourceCode" id="cb1206"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1206-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
-<span id="cb1206-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-2" tabindex="-1"></a>m9<span class="fl">.104</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
-<span id="cb1206-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-3" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
-<span id="cb1206-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-4" tabindex="-1"></a>    log_gdp_std <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
-<span id="cb1206-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-5" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a[cid] <span class="sc">+</span> b[cid] <span class="sc">*</span> ( rugged_std <span class="sc">-</span> <span class="fl">0.215</span> ) , </span>
-<span id="cb1206-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-6" tabindex="-1"></a>    a[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), </span>
-<span id="cb1206-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-7" tabindex="-1"></a>    b[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), </span>
-<span id="cb1206-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-8" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
-<span id="cb1206-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-9" tabindex="-1"></a>  ), <span class="at">data =</span> dat_slim, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span> , <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
-<span id="cb1206-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-10" tabindex="-1"></a>)</span>
-<span id="cb1206-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-11" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.104</span>, <span class="st">&quot;../Stanfits/m9_104.rds&quot;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb1207"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1207-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS replaced with brm (4 chains)</span></span>
-<span id="cb1207-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-2" tabindex="-1"></a>m9<span class="fl">.104</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb1207-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-3" tabindex="-1"></a>  log_gdp_std <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> cid_f <span class="sc">+</span> cid_f<span class="sc">:</span>rugged_std_c,</span>
-<span id="cb1207-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-4" tabindex="-1"></a>  <span class="at">data =</span> dd,</span>
-<span id="cb1207-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-5" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
-<span id="cb1207-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-6" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1),</span>
-<span id="cb1207-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2),</span>
-<span id="cb1207-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1<span class="sc">:</span>rugged_std_c),</span>
-<span id="cb1207-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2<span class="sc">:</span>rugged_std_c),</span>
-<span id="cb1207-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-10" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
-<span id="cb1207-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-11" tabindex="-1"></a>  ),</span>
-<span id="cb1207-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-12" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">123</span>,</span>
-<span id="cb1207-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-13" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.104_brm&quot;</span></span>
-<span id="cb1207-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1207-14" tabindex="-1"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb1208"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1208-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1208-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] show() + precis() → print(summary())</span></span>
-<span id="cb1208-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1208-2" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.104</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1195"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1195-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
+<span id="cb1195-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-2" tabindex="-1"></a>m9<span class="fl">.104</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1195-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-3" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1195-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-4" tabindex="-1"></a>    log_gdp_std <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
+<span id="cb1195-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-5" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a[cid] <span class="sc">+</span> b[cid] <span class="sc">*</span> ( rugged_std <span class="sc">-</span> <span class="fl">0.215</span> ) , </span>
+<span id="cb1195-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-6" tabindex="-1"></a>    a[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), </span>
+<span id="cb1195-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-7" tabindex="-1"></a>    b[cid] <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), </span>
+<span id="cb1195-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-8" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb1195-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-9" tabindex="-1"></a>  ), <span class="at">data =</span> dat_slim, <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span> , <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
+<span id="cb1195-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-10" tabindex="-1"></a>)</span>
+<span id="cb1195-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1195-11" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.104</span>, <span class="st">&quot;../Stanfits/m9_104.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1196"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1196-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS replaced with brm (4 chains)</span></span>
+<span id="cb1196-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-2" tabindex="-1"></a>m9<span class="fl">.104</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb1196-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-3" tabindex="-1"></a>  log_gdp_std <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> cid_f <span class="sc">+</span> cid_f<span class="sc">:</span>rugged_std_c,</span>
+<span id="cb1196-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-4" tabindex="-1"></a>  <span class="at">data =</span> dd,</span>
+<span id="cb1196-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-5" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
+<span id="cb1196-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-6" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1),</span>
+<span id="cb1196-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="fl">0.1</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2),</span>
+<span id="cb1196-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f1<span class="sc">:</span>rugged_std_c),</span>
+<span id="cb1196-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="fl">0.3</span>), <span class="at">class =</span> b, <span class="at">coef =</span> cid_f2<span class="sc">:</span>rugged_std_c),</span>
+<span id="cb1196-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-10" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
+<span id="cb1196-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-11" tabindex="-1"></a>  ),</span>
+<span id="cb1196-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-12" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">4</span>, <span class="at">cores =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">123</span>,</span>
+<span id="cb1196-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-13" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.104_brm&quot;</span></span>
+<span id="cb1196-14"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1196-14" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1197"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1197-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] show() + precis() → print(summary())</span></span>
+<span id="cb1197-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1197-2" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.104</span>_brm))</span></code></pre></div>
 <pre><code>##  Family: gaussian 
 ##   Links: mu = identity 
 ## Formula: log_gdp_std ~ 0 + cid_f + cid_f:rugged_std_c 
@@ -2341,8 +2341,8 @@ Richard McElreath
 ## and Tail_ESS are effective sample size measures, and Rhat is the potential
 ## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <p>除了使用 <code>traceplot()</code> 來進行診斷給出軌跡圖之外：</p>
-<div class="sourceCode" id="cb1210"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1210-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1210-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
-<span id="cb1210-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1210-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.104</span>_brm), <span class="at">facet_args =</span> <span class="fu">list</span>(<span class="at">ncol =</span> <span class="dv">2</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb1199"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1199-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1199-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
+<span id="cb1199-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1199-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.104</span>_brm), <span class="at">facet_args =</span> <span class="fu">list</span>(<span class="at">ncol =</span> <span class="dv">2</span>))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig03"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig03-1.png" alt="Trace plot of the Markov chain from the ruggedness model, m9.1. (Gray region is warmup)" width="960" />
 <p class="caption">
@@ -2350,8 +2350,8 @@ Richard McElreath
 </p>
 </div>
 <p>還可以使用 <code>trunkplot()</code> 繪製 軌跡排序圖 (trace rank plot)。</p>
-<div class="sourceCode" id="cb1211"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1211-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1211-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
-<span id="cb1211-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1211-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.104</span>_brm), <span class="at">facet_args =</span> <span class="fu">list</span>(<span class="at">ncol =</span> <span class="dv">2</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb1200"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1200-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
+<span id="cb1200-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1200-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.104</span>_brm), <span class="at">facet_args =</span> <span class="fu">list</span>(<span class="at">ncol =</span> <span class="dv">2</span>))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig04"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig04-1.png" alt="Trunk plot of the Markov chain from the ruggedness model, m9.1." width="960" />
 <p class="caption">
@@ -2359,8 +2359,8 @@ Richard McElreath
 </p>
 </div>
 <p>使用 <code>stancode()</code> 可以閱讀計算機自動生成的 Stan 代碼：</p>
-<div class="sourceCode" id="cb1212"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1212-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] stancode() works in brms too</span></span>
-<span id="cb1212-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-2" tabindex="-1"></a><span class="fu">cat</span>(brms<span class="sc">::</span><span class="fu">stancode</span>(m9<span class="fl">.104</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1201"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1201-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1201-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] stancode() works in brms too</span></span>
+<span id="cb1201-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1201-2" tabindex="-1"></a><span class="fu">cat</span>(brms<span class="sc">::</span><span class="fu">stancode</span>(m9<span class="fl">.104</span>_brm))</span></code></pre></div>
 <pre><code>## // generated with brms 2.23.0
 ## functions {
 ## }
@@ -2400,18 +2400,18 @@ Richard McElreath
 <div id="調教你的模型" class="section level2 hasAnchor" number="55.4">
 <h2><span class="header-section-number">55.4</span> 調教你的模型<a href="馬可夫鏈蒙地卡羅-mcmc.html#%E8%AA%BF%E6%95%99%E4%BD%A0%E7%9A%84%E6%A8%A1%E5%9E%8B" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>有些模型給出的事後概率密度十分的寬且不準確，這常常是由於不加思索地給予所謂的“無信息先驗概率分佈”，也就是常見的平先驗概率分佈 (flat priors)。你可能會發現它給出的事後樣本採集鏈十分的野蠻，一會兒非常大，一會兒非常地小。下面是一個最簡單的例子，它用於計算兩個來自高斯分佈的觀察值 -1，和 1 的事後均值和標準差，使用的就是典型的平分佈作爲先驗概率分佈：</p>
-<div class="sourceCode" id="cb1214"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1214-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
-<span id="cb1214-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-2" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb1214-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
-<span id="cb1214-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-4" tabindex="-1"></a>m9<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
-<span id="cb1214-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-5" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
-<span id="cb1214-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-6" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
-<span id="cb1214-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-7" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> alpha, </span>
-<span id="cb1214-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-8" tabindex="-1"></a>    alpha <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span> , <span class="dv">1000</span> ),</span>
-<span id="cb1214-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-9" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="fl">0.0001</span>)</span>
-<span id="cb1214-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-10" tabindex="-1"></a>  ), <span class="at">data  =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
-<span id="cb1214-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-11" tabindex="-1"></a>)</span>
-<span id="cb1214-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-12" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.2</span>, <span class="st">&quot;../Stanfits/m9_2.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1203"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1203-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
+<span id="cb1203-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-2" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb1203-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
+<span id="cb1203-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-4" tabindex="-1"></a>m9<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1203-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-5" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1203-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-6" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
+<span id="cb1203-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-7" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> alpha, </span>
+<span id="cb1203-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-8" tabindex="-1"></a>    alpha <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span> , <span class="dv">1000</span> ),</span>
+<span id="cb1203-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-9" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="fl">0.0001</span>)</span>
+<span id="cb1203-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-10" tabindex="-1"></a>  ), <span class="at">data  =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
+<span id="cb1203-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-11" tabindex="-1"></a>)</span>
+<span id="cb1203-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1203-12" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.2</span>, <span class="st">&quot;../Stanfits/m9_2.rds&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling Stan program...
 ## 
 ## Warning: 70 of 1500 (5.0%) transitions ended with a divergence.
@@ -2420,20 +2420,20 @@ Richard McElreath
 ##   * Increasing adapt_delta closer to 1 (default is 0.8) 
 ##   * Reparameterizing the model (e.g. using a non-centered parameterization)
 ##   * Using informative or weakly informative prior distributions</code></pre>
-<div class="sourceCode" id="cb1216"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1216-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm with flat priors (demonstrating bad mixing)</span></span>
-<span id="cb1216-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
-<span id="cb1216-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-3" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb1216-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-4" tabindex="-1"></a>m9<span class="fl">.2</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb1216-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-5" tabindex="-1"></a>  y <span class="sc">~</span> <span class="dv">1</span>,</span>
-<span id="cb1216-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-6" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
-<span id="cb1216-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-7" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
-<span id="cb1216-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">1000</span>), <span class="at">class =</span> Intercept),</span>
-<span id="cb1216-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="fl">0.0001</span>), <span class="at">class =</span> sigma)</span>
-<span id="cb1216-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-10" tabindex="-1"></a>  ),</span>
-<span id="cb1216-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-11" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">11</span>,</span>
-<span id="cb1216-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-12" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.2_brm&quot;</span></span>
-<span id="cb1216-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-13" tabindex="-1"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb1217"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1217-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1217-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.2</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1205"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1205-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm with flat priors (demonstrating bad mixing)</span></span>
+<span id="cb1205-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
+<span id="cb1205-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-3" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb1205-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-4" tabindex="-1"></a>m9<span class="fl">.2</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb1205-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-5" tabindex="-1"></a>  y <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb1205-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-6" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
+<span id="cb1205-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-7" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
+<span id="cb1205-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">1000</span>), <span class="at">class =</span> Intercept),</span>
+<span id="cb1205-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="fl">0.0001</span>), <span class="at">class =</span> sigma)</span>
+<span id="cb1205-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-10" tabindex="-1"></a>  ),</span>
+<span id="cb1205-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-11" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">11</span>,</span>
+<span id="cb1205-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-12" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.2_brm&quot;</span></span>
+<span id="cb1205-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1205-13" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1206"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1206-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1206-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.2</span>_brm))</span></code></pre></div>
 <pre><code>## Warning: Parts of the model have not converged (some Rhats are &gt; 1.05). Be careful when analysing
 ## the results! We recommend running more iterations and/or setting stronger priors.</code></pre>
 <pre><code>## Warning: There were 352 divergent transitions after warmup. Increasing adapt_delta above 0.8 may
@@ -2457,16 +2457,16 @@ Richard McElreath
 ## and Tail_ESS are effective sample size measures, and Rhat is the potential
 ## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <p>你會看見你的計算機給出的結果非常的奇怪，且有警報提示可能計算出錯。上述結果肯定是不正常的，因為觀察值 -1，和 1 的平均值應該是 0 。你看上面的結果給出的可信區間也是多麼的荒謬。可用的有效樣本量也是小的可憐。你可以看看它的軌跡圖，和軌跡排序圖是多麼地糟糕：</p>
-<div class="sourceCode" id="cb1221"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1221-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
-<span id="cb1221-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.2</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1210"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1210-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1210-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
+<span id="cb1210-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1210-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.2</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig05"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig05-1.png" alt="Diagnosing trace plot from three trains by model m9.2. These chains are not healthy. " width="960" />
 <p class="caption">
 圖 55.5: Diagnosing trace plot from three trains by model m9.2. These chains are not healthy.
 </p>
 </div>
-<div class="sourceCode" id="cb1222"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1222-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1222-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
-<span id="cb1222-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1222-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.2</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1211"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1211-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1211-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
+<span id="cb1211-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1211-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.2</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig06"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig06-1.png" alt="Diagnosing trankplot from three chains by model 9.2. These chains are not healthy. " width="960" />
 <p class="caption">
@@ -2483,30 +2483,30 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 \end{aligned}
 \]</span></p>
 <p>我們僅僅是給均值，和對應的標準差增加了一點點比平概率分佈多一些信息的分佈。於是這個模型可以變成：</p>
-<div class="sourceCode" id="cb1223"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1223-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
-<span id="cb1223-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
-<span id="cb1223-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-3" tabindex="-1"></a>m9<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
-<span id="cb1223-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-4" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
-<span id="cb1223-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-5" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
-<span id="cb1223-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-6" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> alpha, </span>
-<span id="cb1223-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-7" tabindex="-1"></a>    alpha <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">1</span>, <span class="dv">10</span>), </span>
-<span id="cb1223-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-8" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
-<span id="cb1223-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-9" tabindex="-1"></a>  ), <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
-<span id="cb1223-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-10" tabindex="-1"></a>)</span>
-<span id="cb1223-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1223-11" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.3</span>, <span class="st">&quot;../Stanfits/m9_3.rds&quot;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb1224"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1224-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm with weakly informative priors</span></span>
-<span id="cb1224-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
-<span id="cb1224-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-3" tabindex="-1"></a>m9<span class="fl">.3</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb1224-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-4" tabindex="-1"></a>  y <span class="sc">~</span> <span class="dv">1</span>,</span>
-<span id="cb1224-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-5" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
-<span id="cb1224-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-6" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
-<span id="cb1224-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="dv">10</span>), <span class="at">class =</span> Intercept),</span>
-<span id="cb1224-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
-<span id="cb1224-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-9" tabindex="-1"></a>  ),</span>
-<span id="cb1224-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-10" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">11</span>,</span>
-<span id="cb1224-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-11" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.3_brm&quot;</span></span>
-<span id="cb1224-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1224-12" tabindex="-1"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb1225"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1225-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1225-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.3</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1212"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1212-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
+<span id="cb1212-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
+<span id="cb1212-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-3" tabindex="-1"></a>m9<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1212-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-4" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1212-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-5" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ), </span>
+<span id="cb1212-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-6" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> alpha, </span>
+<span id="cb1212-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-7" tabindex="-1"></a>    alpha <span class="sc">~</span> <span class="fu">dnorm</span>(<span class="dv">1</span>, <span class="dv">10</span>), </span>
+<span id="cb1212-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-8" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb1212-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-9" tabindex="-1"></a>  ), <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
+<span id="cb1212-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-10" tabindex="-1"></a>)</span>
+<span id="cb1212-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1212-11" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.3</span>, <span class="st">&quot;../Stanfits/m9_3.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1213"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1213-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm with weakly informative priors</span></span>
+<span id="cb1213-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">11</span>)</span>
+<span id="cb1213-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-3" tabindex="-1"></a>m9<span class="fl">.3</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb1213-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-4" tabindex="-1"></a>  y <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb1213-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-5" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
+<span id="cb1213-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-6" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
+<span id="cb1213-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">1</span>, <span class="dv">10</span>), <span class="at">class =</span> Intercept),</span>
+<span id="cb1213-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
+<span id="cb1213-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-9" tabindex="-1"></a>  ),</span>
+<span id="cb1213-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-10" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">11</span>,</span>
+<span id="cb1213-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-11" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.3_brm&quot;</span></span>
+<span id="cb1213-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1213-12" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1214"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1214-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1214-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.3</span>_brm))</span></code></pre></div>
 <pre><code>##  Family: gaussian 
 ##   Links: mu = identity 
 ## Formula: y ~ 1 
@@ -2526,16 +2526,16 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 ## and Tail_ESS are effective sample size measures, and Rhat is the potential
 ## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <p>可以看見，調教了一點點的先驗概率分佈之後給出的事後概率分佈估計就變得合理許多了。新的模型的軌跡圖和軌跡排序圖也變得合理許多：</p>
-<div class="sourceCode" id="cb1227"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1227-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
-<span id="cb1227-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.3</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1216"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1216-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
+<span id="cb1216-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1216-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.3</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig07"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig07-1.png" alt="Diagnosing trace plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition." width="960" />
 <p class="caption">
 圖 55.7: Diagnosing trace plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition.
 </p>
 </div>
-<div class="sourceCode" id="cb1228"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1228-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
-<span id="cb1228-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.3</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1217"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1217-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1217-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
+<span id="cb1217-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1217-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.3</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig08"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig08-1.png" alt="Diagnosing trank plot from three trains by model m9.3. These chains are much better. Adding weakly informative priors in m9.3 clears up the condition." width="960" />
 <p class="caption">
@@ -2549,8 +2549,8 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 <ol style="list-style-type: decimal">
 <li>我們先從標準正（常）態分佈中隨機抽取100個觀察數據；</li>
 </ol>
-<div class="sourceCode" id="cb1229"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1229-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1229-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">41</span>)</span>
-<span id="cb1229-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1229-2" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">100</span>, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1218"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1218-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1218-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">41</span>)</span>
+<span id="cb1218-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1218-2" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">100</span>, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> <span class="dv">1</span>)</span></code></pre></div>
 <ol start="2" style="list-style-type: decimal">
 <li>我們“錯誤地”使用下面的模型；</li>
 </ol>
@@ -2567,18 +2567,18 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 <ol start="3" style="list-style-type: decimal">
 <li>下面的代碼是上述模型的翻譯，這時 Stan 運行的時間會較長；</li>
 </ol>
-<div class="sourceCode" id="cb1230"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1230-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
-<span id="cb1230-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
-<span id="cb1230-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-3" tabindex="-1"></a>m9<span class="fl">.4</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
-<span id="cb1230-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-4" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
-<span id="cb1230-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-5" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ),</span>
-<span id="cb1230-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-6" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a1 <span class="sc">+</span> a2, </span>
-<span id="cb1230-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-7" tabindex="-1"></a>    a1 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">1000</span> ),</span>
-<span id="cb1230-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-8" tabindex="-1"></a>    a2 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">1000</span> ), </span>
-<span id="cb1230-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-9" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
-<span id="cb1230-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-10" tabindex="-1"></a>  ), <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
-<span id="cb1230-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-11" tabindex="-1"></a>)</span>
-<span id="cb1230-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1230-12" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.4</span>, <span class="st">&quot;../Stanfits/m9_4.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1219"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1219-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
+<span id="cb1219-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
+<span id="cb1219-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-3" tabindex="-1"></a>m9<span class="fl">.4</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1219-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-4" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1219-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-5" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ),</span>
+<span id="cb1219-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-6" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a1 <span class="sc">+</span> a2, </span>
+<span id="cb1219-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-7" tabindex="-1"></a>    a1 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">1000</span> ),</span>
+<span id="cb1219-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-8" tabindex="-1"></a>    a2 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">1000</span> ), </span>
+<span id="cb1219-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-9" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb1219-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-10" tabindex="-1"></a>  ), <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
+<span id="cb1219-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-11" tabindex="-1"></a>)</span>
+<span id="cb1219-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1219-12" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.4</span>, <span class="st">&quot;../Stanfits/m9_4.rds&quot;</span>)</span></code></pre></div>
 <pre><code>## Compiling Stan program...
 ## Chain 2 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:
 ## Chain 2 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/var/folders/n0/td0mphcj6w99jbbq4p9s5xf40000gn/T/Rtmpdj1T5J/model-100ab3fc5fda4.stan&#39;, line 15, column 4 to column 29)
@@ -2594,20 +2594,20 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 ## Trajectories that are prematurely terminated due to this limit will result in slow exploration.
 ## Increasing the max_treedepth limit can avoid this at the expense of more computation.
 ## If increasing max_treedepth does not remove warnings, try to reparameterize the model.</code></pre>
-<div class="sourceCode" id="cb1232"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1232-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm non-linear formula with non-identifiable a1+a2</span></span>
-<span id="cb1232-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
-<span id="cb1232-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-3" tabindex="-1"></a>m9<span class="fl">.4</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb1232-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-4" tabindex="-1"></a>  <span class="fu">bf</span>(y <span class="sc">~</span> a1 <span class="sc">+</span> a2, a1 <span class="sc">~</span> <span class="dv">1</span>, a2 <span class="sc">~</span> <span class="dv">1</span>, <span class="at">nl =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb1232-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-5" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
-<span id="cb1232-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-6" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
-<span id="cb1232-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">1000</span>), <span class="at">nlpar =</span> a1),</span>
-<span id="cb1232-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">1000</span>), <span class="at">nlpar =</span> a2),</span>
-<span id="cb1232-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>),  <span class="at">class =</span> sigma)</span>
-<span id="cb1232-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-10" tabindex="-1"></a>  ),</span>
-<span id="cb1232-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-11" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">384</span>,</span>
-<span id="cb1232-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-12" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.4_brm&quot;</span></span>
-<span id="cb1232-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-13" tabindex="-1"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb1233"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1233-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1233-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.4</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1221"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1221-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm non-linear formula with non-identifiable a1+a2</span></span>
+<span id="cb1221-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
+<span id="cb1221-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-3" tabindex="-1"></a>m9<span class="fl">.4</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb1221-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-4" tabindex="-1"></a>  <span class="fu">bf</span>(y <span class="sc">~</span> a1 <span class="sc">+</span> a2, a1 <span class="sc">~</span> <span class="dv">1</span>, a2 <span class="sc">~</span> <span class="dv">1</span>, <span class="at">nl =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb1221-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-5" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
+<span id="cb1221-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-6" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
+<span id="cb1221-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">1000</span>), <span class="at">nlpar =</span> a1),</span>
+<span id="cb1221-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">1000</span>), <span class="at">nlpar =</span> a2),</span>
+<span id="cb1221-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>),  <span class="at">class =</span> sigma)</span>
+<span id="cb1221-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-10" tabindex="-1"></a>  ),</span>
+<span id="cb1221-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-11" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">384</span>,</span>
+<span id="cb1221-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-12" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.4_brm&quot;</span></span>
+<span id="cb1221-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1221-13" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1222"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1222-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1222-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.4</span>_brm))</span></code></pre></div>
 <pre><code>## Warning: Parts of the model have not converged (some Rhats are &gt; 1.05). Be careful when analysing
 ## the results! We recommend running more iterations and/or setting stronger priors.</code></pre>
 <pre><code>##  Family: gaussian 
@@ -2632,16 +2632,16 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 ## and Tail_ESS are effective sample size measures, and Rhat is the potential
 ## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <p>看上面的模型給出的估計是多麼的可怕。有效樣本量竟然只有個位數。<span class="math inline">\(\hat{R}\)</span> 的估計值也是大得驚人。<code>a1, a2</code> 的取值距離0都十分遙遠，標準差也大得驚人，且它們之和十分接近 0 。這就是兩個參數之和可求，但是他們各自卻有無窮解的實例。你觀察一下上述模型的軌跡圖：</p>
-<div class="sourceCode" id="cb1236"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1236-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1236-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
-<span id="cb1236-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1236-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.4</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1225"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1225-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1225-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
+<span id="cb1225-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1225-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.4</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig09"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig09-1.png" alt="Diagnosing trace plot from three trains by model m9.4. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples." width="960" />
 <p class="caption">
 圖 55.9: Diagnosing trace plot from three trains by model m9.4. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples.
 </p>
 </div>
-<div class="sourceCode" id="cb1237"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1237-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1237-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
-<span id="cb1237-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1237-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.4</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1226"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1226-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1226-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
+<span id="cb1226-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1226-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.4</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig10"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig10-1.png" alt="Diagnosing trank plot from three trains by model m9.5. These chains are unhealthy, and wandering between different values and unstable. You cannot use these samples." width="960" />
 <p class="caption">
@@ -2649,32 +2649,32 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 </p>
 </div>
 <p>同樣地，對先驗概率分佈加以調整之後，有助於我們的模型事後樣本的採集。</p>
-<div class="sourceCode" id="cb1238"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1238-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
-<span id="cb1238-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
-<span id="cb1238-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-3" tabindex="-1"></a>m9<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
-<span id="cb1238-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-4" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
-<span id="cb1238-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-5" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ),</span>
-<span id="cb1238-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-6" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a1 <span class="sc">+</span> a2, </span>
-<span id="cb1238-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-7" tabindex="-1"></a>    a1 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> ),</span>
-<span id="cb1238-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-8" tabindex="-1"></a>    a2 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> ), </span>
-<span id="cb1238-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-9" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
-<span id="cb1238-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-10" tabindex="-1"></a>  ), <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
-<span id="cb1238-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-11" tabindex="-1"></a>)</span>
-<span id="cb1238-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1238-12" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.5</span>, <span class="st">&quot;../Stanfits/m9_5.rds&quot;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb1239"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1239-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm non-linear formula with tighter priors</span></span>
-<span id="cb1239-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
-<span id="cb1239-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-3" tabindex="-1"></a>m9<span class="fl">.5</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb1239-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-4" tabindex="-1"></a>  <span class="fu">bf</span>(y <span class="sc">~</span> a1 <span class="sc">+</span> a2, a1 <span class="sc">~</span> <span class="dv">1</span>, a2 <span class="sc">~</span> <span class="dv">1</span>, <span class="at">nl =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb1239-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-5" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
-<span id="cb1239-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-6" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
-<span id="cb1239-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">10</span>), <span class="at">nlpar =</span> a1),</span>
-<span id="cb1239-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">10</span>), <span class="at">nlpar =</span> a2),</span>
-<span id="cb1239-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
-<span id="cb1239-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-10" tabindex="-1"></a>  ),</span>
-<span id="cb1239-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-11" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">384</span>,</span>
-<span id="cb1239-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-12" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.5_brm&quot;</span></span>
-<span id="cb1239-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1239-13" tabindex="-1"></a>)</span></code></pre></div>
-<div class="sourceCode" id="cb1240"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1240-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1240-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.5</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1227"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1227-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-1" tabindex="-1"></a><span class="co"># [LEGACY rethinking — preserved for reference]</span></span>
+<span id="cb1227-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
+<span id="cb1227-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-3" tabindex="-1"></a>m9<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">ulam</span>(</span>
+<span id="cb1227-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-4" tabindex="-1"></a>  <span class="fu">alist</span>(</span>
+<span id="cb1227-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-5" tabindex="-1"></a>    y <span class="sc">~</span> <span class="fu">dnorm</span>( mu, sigma ),</span>
+<span id="cb1227-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-6" tabindex="-1"></a>    mu <span class="ot">&lt;-</span> a1 <span class="sc">+</span> a2, </span>
+<span id="cb1227-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-7" tabindex="-1"></a>    a1 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> ),</span>
+<span id="cb1227-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-8" tabindex="-1"></a>    a2 <span class="sc">~</span> <span class="fu">dnorm</span>( <span class="dv">0</span>, <span class="dv">10</span> ), </span>
+<span id="cb1227-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-9" tabindex="-1"></a>    sigma <span class="sc">~</span> <span class="fu">dexp</span>(<span class="dv">1</span>)</span>
+<span id="cb1227-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-10" tabindex="-1"></a>  ), <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y), <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cmdstan =</span> <span class="cn">TRUE</span></span>
+<span id="cb1227-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-11" tabindex="-1"></a>)</span>
+<span id="cb1227-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1227-12" tabindex="-1"></a><span class="fu">saveRDS</span>(m9<span class="fl">.5</span>, <span class="st">&quot;../Stanfits/m9_5.rds&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1228"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1228-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] ulam readRDS → brm non-linear formula with tighter priors</span></span>
+<span id="cb1228-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">384</span>)</span>
+<span id="cb1228-3"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-3" tabindex="-1"></a>m9<span class="fl">.5</span>_brm <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb1228-4"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-4" tabindex="-1"></a>  <span class="fu">bf</span>(y <span class="sc">~</span> a1 <span class="sc">+</span> a2, a1 <span class="sc">~</span> <span class="dv">1</span>, a2 <span class="sc">~</span> <span class="dv">1</span>, <span class="at">nl =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb1228-5"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-5" tabindex="-1"></a>  <span class="at">data =</span> <span class="fu">list</span>(<span class="at">y =</span> y),</span>
+<span id="cb1228-6"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-6" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(</span>
+<span id="cb1228-7"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-7" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">10</span>), <span class="at">nlpar =</span> a1),</span>
+<span id="cb1228-8"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-8" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">10</span>), <span class="at">nlpar =</span> a2),</span>
+<span id="cb1228-9"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-9" tabindex="-1"></a>    <span class="fu">prior</span>(<span class="fu">exponential</span>(<span class="dv">1</span>), <span class="at">class =</span> sigma)</span>
+<span id="cb1228-10"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-10" tabindex="-1"></a>  ),</span>
+<span id="cb1228-11"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-11" tabindex="-1"></a>  <span class="at">chains =</span> <span class="dv">3</span>, <span class="at">cores =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">384</span>,</span>
+<span id="cb1228-12"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-12" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;Stanfits/m9.5_brm&quot;</span></span>
+<span id="cb1228-13"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1228-13" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb1229"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1229-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1229-1" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">summary</span>(m9<span class="fl">.5</span>_brm))</span></code></pre></div>
 <pre><code>##  Family: gaussian 
 ##   Links: mu = identity 
 ## Formula: y ~ a1 + a2 
@@ -2697,16 +2697,16 @@ y_i &amp; \sim \text{Normal}(\mu, \sigma) \\
 ## and Tail_ESS are effective sample size measures, and Rhat is the potential
 ## scale reduction factor on split chains (at convergence, Rhat = 1).</code></pre>
 <p>這時 <code>m9.5</code> 運行的速度提升了很多，且 <code>a1, a2</code> 的事後樣本估計比之前的 <code>m9.4</code> 要良好得多。軌跡圖和軌跡排序圖也要改善了很多：</p>
-<div class="sourceCode" id="cb1242"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1242-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1242-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
-<span id="cb1242-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1242-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.5</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1231"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1231-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1231-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] traceplot() → bayesplot::mcmc_trace()</span></span>
+<span id="cb1231-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1231-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_trace</span>(<span class="fu">as.array</span>(m9<span class="fl">.5</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig11"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig11-1.png" alt="Diagnosing trace plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors" width="960" />
 <p class="caption">
 圖 55.11: Diagnosing trace plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors
 </p>
 </div>
-<div class="sourceCode" id="cb1243"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1243-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1243-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
-<span id="cb1243-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1243-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.5</span>_brm))</span></code></pre></div>
+<div class="sourceCode" id="cb1232"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1232-1"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-1" tabindex="-1"></a><span class="co"># [MIGRATED 2026-04] trankplot() → bayesplot::mcmc_rank_overlay()</span></span>
+<span id="cb1232-2"><a href="馬可夫鏈蒙地卡羅-mcmc.html#cb1232-2" tabindex="-1"></a>bayesplot<span class="sc">::</span><span class="fu">mcmc_rank_overlay</span>(<span class="fu">as.array</span>(m9<span class="fl">.5</span>_brm))</span></code></pre></div>
 <div class="figure" style="text-align: center"><span style="display:block;" id="fig:introBayes12-fig12"></span>
 <img src="bookdown_files/figure-html/introBayes12-fig12-1.png" alt="Diagnosing trank plot from three trains by model m9.5. These chains are much better with the same model but weakly informative priors" width="960" />
 <p class="caption">

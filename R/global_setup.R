@@ -230,6 +230,15 @@ set_stata_path <- function() {
 .statapath <- set_stata_path()
 if (!is.na(.statapath)) {
   knitr::opts_chunk$set(engine.path = list(stata = .statapath))
+} else {
+  # Stata not installed: register a no-op engine so chunks render gracefully
+  message("Stata not found — registering no-op engine; Stata chunks will be skipped.")
+  knitr::knit_engines$set(stata = function(options) {
+    if (isFALSE(options$echo)) return("")
+    # Show the code but note it was not evaluated
+    paste0("```stata\n", paste(options$code, collapse = "\n"),
+           "\n```\n\n*(Stata output omitted — Stata not available on this machine)*\n")
+  })
 }
 
 # 7. Define bugpath (project root) consistently
