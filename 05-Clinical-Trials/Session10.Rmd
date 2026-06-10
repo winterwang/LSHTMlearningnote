@@ -1,0 +1,111 @@
+## 系統綜述與 meta-analysis Systematic Review and Meta-Analysis {#CT-s10-systematic-review}
+
+單一 clinical trial 很少能獨自回答所有問題。它可能樣本量有限、族群特定、結局定義有限，甚至因偶然或設計問題產生誤導。Systematic review 的目標是用透明、可重現的方法找出、選擇、評估並整理所有相關研究。Meta-analysis 則是在合適時用統計方法合併多個研究的 effect estimates。
+
+Systematic review 不等於 narrative review。它應該事先定義 question、eligibility criteria、search strategy、study selection、data extraction、risk of bias assessment 和 synthesis plan。Meta-analysis 也不等於把所有數字平均起來；只有當研究在 population、intervention、comparator、outcome 和 design 上足夠可比時，pooled estimate 才有臨床意義。
+
+不難注意到，forest plot 畫得再清楚，也不能修復原始 trials 的偏倚。如果納入的研究 randomisation 不清、allocation concealment 不清、outcome assessment 不盲、或 publication bias 嚴重，pooled estimate 只是把有問題的資訊合併在一起。也就是說，meta-analysis 的可信度先取決於 systematic review 的品質，再取決於統計模型。
+
+## 森林圖的判讀 Forest Plot {#CT-s10-forest-plot}
+
+Forest plot 通常每一行是一個 study 的 effect estimate 和 confidence interval，方塊大小反映權重，菱形表示 pooled estimate。垂直線代表 null effect，例如 risk ratio = 1 或 mean difference = 0。若 confidence interval 穿過 null line，該 study 在常規 5% 水準下不顯著；但不顯著不等於沒有作用，也不等於和其他研究不同。
+
+```{r CT-s10-forest-demo, echo=TRUE, fig.width=7, fig.height=4}
+studies <- data.frame(
+  study = paste("Study", 1:6),
+  log_rr = log(c(0.72, 0.95, 0.68, 1.05, 0.80, 0.60)),
+  se = c(0.18, 0.22, 0.15, 0.30, 0.20, 0.25)
+)
+studies$lower <- exp(studies$log_rr - 1.96 * studies$se)
+studies$upper <- exp(studies$log_rr + 1.96 * studies$se)
+studies$rr <- exp(studies$log_rr)
+
+plot(studies$rr, seq_len(nrow(studies)), xlim = c(0.3, 1.6), yaxt = "n",
+     xlab = "Risk ratio", ylab = "", pch = 15)
+segments(studies$lower, seq_len(nrow(studies)), studies$upper, seq_len(nrow(studies)))
+abline(v = 1, lty = 2)
+axis(2, at = seq_len(nrow(studies)), labels = studies$study, las = 1)
+
+# pooled estimate (inline calculation; formal function defined below)
+w <- 1 / studies$se^2
+pooled_log <- sum(w * studies$log_rr) / sum(w)
+pooled_se <- sqrt(1 / sum(w))
+pooled_rr <- exp(pooled_log)
+pooled_lo <- exp(pooled_log - 1.96 * pooled_se)
+pooled_hi <- exp(pooled_log + 1.96 * pooled_se)
+points(pooled_rr, 0, pch = 18, cex = 1.5)
+segments(pooled_lo, 0, pooled_hi, 0, lwd = 2)
+text(pooled_rr, 0, "Pooled", pos = 2, cex = 0.8)
+```
+
+Forest plot 要同時看方向、大小、精確度和一致性。如果大多數 study 都在同一方向，但 CI 寬，可能是資訊不足；如果方向和大小差異很大，則要考慮 heterogeneity。也就是說，pooled estimate 是總結，不是替代逐項閱讀。
+
+## 固定效應、隨機效應與異質性 Fixed Effect, Random Effects and Heterogeneity {#CT-s10-heterogeneity}
+
+Fixed effect model 假設所有 studies 估計的是同一個 true effect，差異主要來自抽樣誤差。Random effects model 則允許不同 studies 有不同 true effects，並把 between-study heterogeneity 納入不確定性。若 intervention、population 或 outcome 差異明顯，random effects 可能比 fixed effect 更合理；但 random effects 也會給小 study 相對更高權重，因此在 publication bias 或 small-study effects 存在時要小心。
+
+常見 heterogeneity 指標包括 Cochran's Q 和 $I^2$。$I^2$ 表示總變異中有多少比例可能來自 study 間真實差異，而不是抽樣誤差。但 $I^2$ 也受 study 數、精確度和 effect scale 影響，不能機械解讀。
+
+```{r CT-s10-fixed-effect, echo=TRUE}
+fixed_effect_meta <- function(log_effect, se) {
+  w <- 1 / se^2
+  pooled <- sum(w * log_effect) / sum(w)
+  pooled_se <- sqrt(1 / sum(w))
+  data.frame(
+    pooled_log_effect = pooled,
+    pooled_effect = exp(pooled),
+    lower = exp(pooled - 1.96 * pooled_se),
+    upper = exp(pooled + 1.96 * pooled_se)
+  )
+}
+
+fixed_effect_meta(studies$log_rr, studies$se)
+```
+
+不難注意到，fixed effect model 假設只有一個 true effect，所有差異來自抽樣誤差。若 studies 之間的 true effects 可能不同，random effects model 會更合適。以下是 DerSimonian-Laird random effects meta-analysis 的簡易實作，同時計算 Cochran's Q 和 $I^2$：
+
+```{r CT-s10-random-effects, echo=TRUE}
+random_effects_meta <- function(log_effect, se) {
+  w <- 1 / se^2
+  pooled_fe <- sum(w * log_effect) / sum(w)
+  Q <- sum(w * (log_effect - pooled_fe)^2)
+  k <- length(log_effect)
+  df <- k - 1
+  C <- sum(w) - sum(w^2) / sum(w)
+  tau2 <- max(0, (Q - df) / C)
+  I2 <- ifelse(Q > df, (Q - df) / Q * 100, 0)
+  w_re <- 1 / (se^2 + tau2)
+  pooled_re <- sum(w_re * log_effect) / sum(w_re)
+  pooled_se_re <- sqrt(1 / sum(w_re))
+  data.frame(
+    tau2 = round(tau2, 4),
+    I2 = round(I2, 1),
+    Q = round(Q, 2),
+    Q_p_value = round(1 - pchisq(Q, df), 3),
+    pooled_effect = exp(pooled_re),
+    lower = exp(pooled_re - 1.96 * pooled_se_re),
+    upper = exp(pooled_re + 1.96 * pooled_se_re)
+  )
+}
+
+random_effects_meta(studies$log_rr, studies$se)
+```
+
+## 漏斗圖與發表偏倚 Funnel Plot and Publication Bias {#CT-s10-publication-bias}
+
+Publication bias 指研究是否被發表與其結果有關，尤其小型、陰性或不顯著研究更容易消失。Funnel plot 把 effect estimate 對 precision 或 standard error 作圖；若沒有 bias 且 heterogeneity 不大，點應大致對稱。若小研究中只看到強烈有益結果，而缺少小型陰性研究，就可能出現不對稱。
+
+```{r CT-s10-funnel-demo, echo=TRUE, fig.width=6, fig.height=4}
+plot(studies$log_rr, studies$se, pch = 16,
+     xlab = "Log risk ratio", ylab = "Standard error",
+     ylim = c(max(studies$se) + 0.02, 0))
+abline(v = fixed_effect_meta(studies$log_rr, studies$se)$pooled_log_effect, lty = 2)
+```
+
+Funnel plot 不對稱不一定就是 publication bias，也可能來自 clinical heterogeneity、methodological quality、不同研究大小對應不同族群等。但它提醒我們不要只看 pooled p value。也就是說，meta-analysis 最怕的不是沒有模型，而是把缺失和偏倚當作不存在。
+
+## 從綜述到政策建議 From Review to Policy {#CT-s10-policy}
+
+把 systematic review 轉成政策建議時，至少要問三件事。第一，review 方法是否可靠：search 是否完整、selection/extraction 是否獨立、risk of bias 是否評估、protocol 是否預先存在。第二，原始 trials 品質如何：randomisation、allocation concealment、blinding、follow-up、outcome measurement 是否可信。第三，generalisation 是否合理：研究族群、intervention delivery、control condition、baseline risk 和醫療環境是否接近本地情境。
+
+因此，一個 review 即使 pooled estimate 顯著，也不一定能直接變成本地政策；反過來，一個結果不夠確定但風險低、成本低、符合患者 preference 的 intervention，也可能支持 shared decision-making 或進一步本地試驗。也就是說，systematic review 給的是整理過的證據，仍然需要放回具體臨床情境裡判斷。

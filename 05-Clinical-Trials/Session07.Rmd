@@ -1,0 +1,53 @@
+## 非劣效與等效試驗 Non-Inferiority and Equivalence Trials {#CT-s07-noninferiority}
+
+多數 RCT 問的是 superiority：新治療是否比對照更好。但有些試驗真正想知道的是，新治療是否不比既有有效治療差太多，因為它可能更便宜、更安全、更容易給藥、或副作用較少。這就是 non-inferiority trial。Equivalence trial 則更強，要求兩個方向都足夠接近；臨床試驗中更常見的是 non-inferiority。
+
+Non-inferiority trial 最危險的誤解，是把「沒有顯著差異」當成「兩者差不多」。標準 superiority test 的 non-significant result 只表示資料不足以排除 no difference，並不表示新治療保留了足夠療效。Non-inferiority 必須事先指定 margin $\Delta$，也就是新治療最多可以差多少仍可接受，然後用 confidence interval 判斷是否排除超過 margin 的 inferiority。
+
+```{r CT-s07-ni-interpretation, echo=FALSE}
+ni_examples <- data.frame(
+  scenario = LETTERS[1:5],
+  estimate = c(-0.02, 0.01, 0.03, 0.06, -0.04),
+  lower = c(-0.06, -0.03, -0.01, 0.02, -0.10),
+  upper = c(0.02, 0.05, 0.07, 0.10, 0.02)
+)
+ni_examples$noninferior_if_margin_0.05 <- ni_examples$lower > -0.05
+knitr::kable(ni_examples, caption = "Illustrative non-inferiority decisions when larger values favour new treatment")
+```
+
+這個表假設較大的 treatment difference 有利於新治療，non-inferiority margin 是 -0.05。若整個 CI 都在 -0.05 右側，就可 claim non-inferiority；若 CI 穿過 -0.05，就不能 claim，即使 p 值不顯著也一樣。不難注意到，non-inferiority 的判斷中心不是「p 是否小於 0.05」，而是信賴區間是否排除了臨床上不可接受的損失。
+
+## 活性對照與檢定敏感性 Active Control and Assay Sensitivity {#CT-s07-active-control}
+
+Non-inferiority trial 通常需要 active control，而不是 placebo alone。原因很直接：我們想證明新治療不比一個已知有效治療差太多，如果對照本身是否有效都不清楚，那麼一個無效新治療也可能看起來 non-inferior。這就是 assay sensitivity 的問題：試驗設計必須有能力分辨有效與無效治療。
+
+Active control 的選擇必須有清楚證據支持，且新試驗的病人、結局、給藥方式與先前建立 active control 療效的研究足夠相似。若 historical evidence 來自不同族群或不同 outcome，margin 的合理性會變弱。某些 non-inferiority trials 會加入 placebo arm，尤其當 active control 的效果證據不夠穩時，這能同時檢查 assay sensitivity；但倫理上只有在 placebo 可接受時才行。
+
+## 非劣效界值與樣本量 Non-Inferiority Margin and Sample Size {#CT-s07-margin-size}
+
+Margin $\Delta$ 是 non-inferiority trial 最重要、也最容易被操弄的設計選擇。Margin 太寬，可能讓臨床上明顯較差的新治療被接受；margin 太窄，樣本量會變得非常大。它應該來自臨床判斷、既有 active control 相對 placebo 的效果大小、以及希望保留多少既有效果，而不是事後為了讓試驗可行而放寬。
+
+若以二元結局的 absolute difference 來近似，當兩組真實效果相同，而我們希望 95% CI 排除 5% inferiority 時，樣本量會非常大。這也解釋了為什麼 non-inferiority trial 往往比 superiority trial 更吃樣本量：我們不是要證明有很大的差異，而是要把可能的壞差異壓到很小。
+
+```{r CT-s07-ni-sample-size, echo=TRUE}
+ni_size_equal_props <- function(p, margin, alpha = 0.05, power = 0.9) {
+  # alpha = 0.05 採 two-sided 慣例，對應 NI 檢定的 one-sided alpha = 0.025
+  f <- (qnorm(1 - alpha / 2) + qnorm(power))^2
+  n <- f * 2 * p * (1 - p) / margin^2
+  data.frame(p = p, margin = margin, n_per_group = n, total_n = 2 * n)
+}
+
+rbind(
+  survival_85_margin_5 = ni_size_equal_props(0.85, 0.05),
+  dfs_70_margin_5 = ni_size_equal_props(0.70, 0.05),
+  dfs_70_margin_10 = ni_size_equal_props(0.70, 0.10)
+)
+```
+
+## 適應性設計 Adaptive Designs {#CT-s07-adaptive}
+
+Adaptive design 指試驗的某些特徵可以根據累積資料修改，例如 sample size re-estimation、dropping treatment arms、response-adaptive randomisation、seamless phase II/III design 等。Adaptive design 的吸引力在於效率：若早期資料顯示原本假設過於樂觀，可以調整樣本量；若某些治療臂顯然不好，可以停止該 arm；若 phase II 訊號清楚，可以更平滑地進入 confirmatory phase。
+
+但 adaptive design 的風險也很明顯。若修改依賴 unblinded interim results，必須保護 Type I error、避免 operational bias，並事先寫清楚 adaptation rules。臨時看到資料後再改 endpoint、改 subgroup、改 margin，會讓試驗可信度大幅下降。也就是說，adaptive 不等於隨機應變；真正好的 adaptive design 是把「如何應變」預先設計好。
+
+在實務上，adaptive design 需要更強的 trial governance、資料清理速度、統計模擬、DMC/IDMC 機制與監管溝通。若這些基礎不穩，adaptive design 可能只是增加複雜度，而不是真的提高效率。

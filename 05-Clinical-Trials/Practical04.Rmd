@@ -1,0 +1,224 @@
+## 背景 Background {#CT-prac04-background}
+
+這份 practical 對應 Week 4 的樣本量計算。題目沒有病人層級數據，核心工作是把臨床假設轉成公式中的參數，然後檢查不同選擇會如何改變所需樣本量。我們會刻意保留 R 計算過程，因為手算公式很容易讓人把「每組樣本量」和「總樣本量」混在一起，也容易忘記 power、顯著水準、失訪和不等比例分配其實都只是不同形式的資訊量折損。
+
+```{r CT-p04-helpers, echo=TRUE}
+f_alpha_beta <- function(alpha = 0.05, power = 0.8) {
+  (qnorm(1 - alpha / 2) + qnorm(power))^2
+}
+
+ss_proportion <- function(p1, p2, alpha = 0.05, power = 0.8) {
+  f <- f_alpha_beta(alpha, power)
+  n <- f * (p1 * (1 - p1) + p2 * (1 - p2)) / (p1 - p2)^2
+  data.frame(
+    p1 = p1,
+    p2 = p2,
+    alpha = alpha,
+    power = power,
+    f = f,
+    n_per_group = n,
+    n_per_group_round = round(n),
+    total_round = 2 * round(n),
+    n_per_group_ceiling = ceiling(n),
+    total_ceiling = 2 * ceiling(n)
+  )
+}
+
+ss_mean <- function(delta, sd, alpha = 0.05, power = 0.8) {
+  f <- f_alpha_beta(alpha, power)
+  n <- f * 2 * sd^2 / delta^2
+  data.frame(
+    delta = delta,
+    sd = sd,
+    alpha = alpha,
+    power = power,
+    f = f,
+    n_per_group = n,
+    n_per_group_round = round(n),
+    total_round = 2 * round(n),
+    n_per_group_ceiling = ceiling(n),
+    total_ceiling = 2 * ceiling(n)
+  )
+}
+```
+
+
+## 問題 1：Pethidine 與 diamorphine 的分娩鎮痛試驗 {#CT-prac04-q1}
+
+**問題**：一項 double-blind randomised controlled trial 計畫比較 pethidine 與 diamorphine 對分娩女性的鎮痛效果。兩個主要關心的結果是：(i) 女性自覺 pain relief poor；(ii) 新生兒需要 resuscitation。觀察性研究提示 pethidine 組約 40% 女性覺得鎮痛效果差，約 6% 新生兒需要 resuscitation。臨床團隊認為任一結果若能達到 25% proportionate reduction，就足以影響實務。
+
+### 1a：80% power、5% 顯著水準，檢出 poor pain relief 25% 相對下降
+
+Pethidine 組 poor pain relief 風險設為 0.40，diamorphine 若有 25% 相對下降，風險為 $0.40 \times 0.75 = 0.30$。這裡的絕對差異是 10 個百分點。
+
+```{r CT-p04-q1a-pain-25pct, echo=TRUE}
+q1a <- ss_proportion(p1 = 0.40, p2 = 0.30, alpha = 0.05, power = 0.8)
+knitr::kable(q1a, digits = 3, caption = "Q1a: poor pain relief 40% vs 30%")
+```
+
+先用公式手算。查表得 $z_{0.025} = 1.96$，$z_{0.80} = 0.84$：
+
+$$f(0.05, 0.80) = (1.96 + 0.84)^2 = 2.80^2 = 7.84$$
+
+$$n = 7.84 \times \frac{0.40 \times 0.60 + 0.30 \times 0.70}{(0.40 - 0.30)^2} = 7.84 \times \frac{0.45}{0.01} = 352.8$$
+
+每組取整為 353，總樣本量 $2 \times 353 = 706$。R 用精確的 $z$ 值（$f \approx$ `r round(q1a$f, 2)`）得到每組約 `r q1a$n_per_group_round` 人，總樣本量約 `r q1a$total_round` 人，和手算結果一致。若實際寫 protocol，通常會再把小數與奇偶數處理得更保守一些，但 practical 的重點是重現公式邏輯。
+
+### 1b：若只要求檢出 5% 絕對下降
+
+現在 poor pain relief 從 40% 降到 35%，絕對差異只有 5 個百分點，power 和顯著水準保持不變。
+
+```{r CT-p04-q1b-pain-absolute-5pct, echo=TRUE}
+q1b <- ss_proportion(p1 = 0.40, p2 = 0.35, alpha = 0.05, power = 0.8)
+knitr::kable(q1b, digits = 3, caption = "Q1b: poor pain relief 40% vs 35%")
+```
+
+手算若用課堂表格中的 $f \approx 7.85$，
+
+$$n = 7.85 \times \frac{0.40 \times 0.60 + 0.35 \times 0.65}{(0.40 - 0.35)^2} = 7.85 \times \frac{0.4675}{0.0025} = 7.85 \times 187 = 1468.0$$
+
+每組約 1468 人，總樣本量約 $2 \times 1468 = 2936$。R 用精確 $z$ 值得到每組約 `r q1b$n_per_group_round` 人，總共約 `r q1b$total_round` 人，比 Q1a 超過四倍。原因非常直接：差異從 0.10 變成 0.05，分母中的差異平方從 0.01 變成 0.0025。也就是說，臨床上「5% 也重要」這句話可能是真的，但它同時意味著一個非常大的試驗。
+
+### 1c：若 power 提高到 90%
+
+```{r CT-p04-q1c-pain-90power, echo=TRUE}
+q1c <- ss_proportion(p1 = 0.40, p2 = 0.30, alpha = 0.05, power = 0.9)
+knitr::kable(q1c, digits = 3, caption = "Q1c: poor pain relief, 90% power")
+```
+
+手算：$z_{0.025} = 1.96$，$z_{0.90} = 1.28$：
+
+$$f(0.05, 0.90) = (1.96 + 1.28)^2 = 3.24^2 = 10.50$$
+
+$$n = 10.50 \times \frac{0.45}{0.01} = 472.5$$
+
+不取整直接算總樣本量 $2 \times 472.5 = 945$，這就是課堂答案保留的數字。若實際招募時要求每組整數，則通常會取到每組 473 人，總共 946 人。R 用精確的 $z$ 值得到 $f \approx$ `r round(q1c$f, 2)`，每組約 `r q1c$n_per_group_round` 人，按整數組別計算總共約 `r q1c$total_round` 人。
+
+### 1d：若顯著水準改為 1%
+
+```{r CT-p04-q1d-pain-1pct-alpha, echo=TRUE}
+q1d <- ss_proportion(p1 = 0.40, p2 = 0.30, alpha = 0.01, power = 0.8)
+knitr::kable(q1d, digits = 3, caption = "Q1d: poor pain relief, 1% significance level")
+```
+
+手算：$z_{0.005} = 2.58$，$z_{0.80} = 0.84$：
+
+$$f(0.01, 0.80) = (2.58 + 0.84)^2 = 3.42^2 = 11.70$$
+
+$$n = 11.70 \times \frac{0.45}{0.01} = 526.5$$
+
+用課堂表格的 $f=11.70$ 時，每組約 527 人，總樣本量 $2 \times 527 = 1054$。R 用精確 $z$ 值得到每組約 `r q1d$n_per_group_round` 人，按整數組別計算總共約 `r q1d$total_round` 人；兩者差異只來自 $z$ 值與中間步驟的 rounding。顯著水準從 5% 改為 1%，等於要求更強的統計證據才宣稱 treatment difference。
+
+### 1e：新生兒 resuscitation 25% 相對下降
+
+新生兒 resuscitation 的基準風險只有 6%，25% 相對下降後是 $0.06 \times 0.75 = 0.045$，絕對差異只有 1.5 個百分點。
+
+```{r CT-p04-q1e-neonatal-resuscitation, echo=TRUE}
+q1e <- ss_proportion(p1 = 0.06, p2 = 0.045, alpha = 0.05, power = 0.8)
+knitr::kable(q1e, digits = 3, caption = "Q1e: neonatal resuscitation 6% vs 4.5%")
+```
+
+手算若用 $f \approx 7.85$，
+
+$$n = 7.85 \times \frac{0.06 \times 0.94 + 0.045 \times 0.955}{(0.06 - 0.045)^2} = 7.85 \times \frac{0.0994}{0.000225} = 7.85 \times 441.7 = 3467.3$$
+
+每組約 3467 人，總樣本量約 $2 \times 3467 = 6934$。R 用精確 $z$ 值得到每組約 `r q1e$n_per_group_round` 人，總共約 `r q1e$total_round` 人。這個數字遠大於 maternal pain relief outcome，主要不是因為 25% 相對下降變了，而是因為 event rate 很低，絕對差異只有 0.015。
+
+### 1f–1g：給臨床團隊的建議
+
+如果主要結局是 maternal pain relief，那麼單中心或少數中心試驗仍可能有可行性，尤其是在 80% power、5% 顯著水準、25% 相對下降這種設定下。可是如果主要結局是 neonatal resuscitation，所需樣本量接近 7000，這已經不是一般單中心試驗能承擔的規模，除非團隊願意做大型 multi-centre collaboration，而且認為 neonatal outcome 的臨床價值足以支持這個成本。
+
+若團隊說最多只能招募 500 人，我會很直接地說：這個試驗幾乎無法提供 neonatal outcome 的有用資訊，對 maternal outcome 也未必有足夠 power 檢出原本設定的差異。可以重新討論主要結局、可接受的 effect size、是否擴大中心數，或是否先做 pilot/feasibility study；但不應把 500 人寫成足以回答原問題的 definitive trial。也就是說，資源上限可以改變研究問題，不能偷偷改變統計事實。
+
+
+## 問題 2：REPAIR trial 的 GFR 連續結局 {#CT-prac04-q2}
+
+**問題**：REPAIR trial [@MacAllister2015] 比較 remote ischaemic pre-conditioning (RIPC) 與 sham RIPC，用於 living-donor kidney transplantation。主要結局是 12 個月 transplanted kidney GFR。Sham RIPC 組第一年平均 GFR 估計為 47.3 ml/min/1.73m2，標準差 13.9；研究者認為 10% 增加，也就是 4.73 ml/min/1.73m2，是重要差異。顯著水準 5%，power 80%。
+
+### 2a：重現 notes 中的主要樣本量計算，並改成 90% power
+
+```{r CT-p04-q2a-repair-base, echo=TRUE}
+q2a_80 <- ss_mean(delta = 4.73, sd = 13.9, alpha = 0.05, power = 0.8)
+q2a_90 <- ss_mean(delta = 4.73, sd = 13.9, alpha = 0.05, power = 0.9)
+
+q2a <- rbind(`80% power` = q2a_80, `90% power` = q2a_90)
+knitr::kable(q2a, digits = 3, caption = "Q2a: REPAIR trial sample size for GFR")
+```
+
+手算（80% power）：$f \approx 7.85$，
+
+$$n = 7.85 \times \frac{2 \times 13.9^2}{4.73^2} = 7.85 \times \frac{386.42}{22.37} = 7.85 \times 17.27 = 135.6$$
+
+每組取整為 136，總樣本量 $2 \times 136 = 272$。手算（90% power）：$f = 10.50$，$n = 10.50 \times 17.27 = 181.3$；若按保守整數取整，通常寫每組 182，總共 $2 \times 182 = 364$。R 用精確 $z$ 值：80% power 時每組約 `r q2a_80$n_per_group_round` 人，總共 `r q2a_80$total_round` 人；90% power 時 nearest integer 為每組 `r q2a_90$n_per_group_round` 人，若採用向上取整則為每組 `r q2a_90$n_per_group_ceiling` 人、總共 `r q2a_90$total_ceiling` 人。Power 提高帶來的不是觀念上的小修正，而是很具體的招募壓力。
+
+### 2b：標準差不同時，樣本量如何變化
+
+```{r CT-p04-q2b-sd-sensitivity, echo=TRUE}
+sd_grid <- seq(11, 17, by = 1)
+q2b <- do.call(rbind, lapply(sd_grid, function(s) {
+  ss_mean(delta = 4.73, sd = s, alpha = 0.05, power = 0.8)
+}))
+
+knitr::kable(
+  q2b[, c("sd", "n_per_group_round", "total_round")],
+  caption = "Q2b: sensitivity analysis over plausible standard deviations"
+)
+```
+
+答案中舉例：若 SD = 13，每組約 119 人，總共 238；若 SD = 15，每組約 158 人，總共 316。上面的表把這件事展開來看。不難注意到，SD 每增加一點，樣本量不是線性地小幅增加，而是跟 $\sigma^2$ 走。也就是說，若標準差估計來自有限資料，protocol 裡最好不要只報一個單點計算，而要報一組合理情境。
+
+### 2c：15% 病人沒有 12 個月 GFR
+
+```{r CT-p04-q2c-loss-to-follow-up, echo=TRUE}
+base_total <- q2a_80$total_round
+loss_adjusted <- base_total / (1 - 0.15)
+
+data.frame(
+  base_total = base_total,
+  missing_fraction = 0.15,
+  adjusted_total = loss_adjusted,
+  adjusted_total_round = round(loss_adjusted)
+) |>
+  knitr::kable(digits = 3, caption = "Q2c: adjusting for 15% missing GFR")
+```
+
+15% 沒有主要結局資料時，總樣本量從 `r base_total` 增加到約 `r round(loss_adjusted)`。這裡用的是 $1/(1-Q)$，因為問題是主要結局資料缺失，而不是治療效果被 treatment switching 稀釋。
+
+### 2d：若採用 2:1 分配到 RIPC
+
+```{r CT-p04-q2d-unequal-allocation, echo=TRUE}
+r <- 2
+unequal_total <- base_total * (r + 1)^2 / (4 * r)
+
+data.frame(
+  base_total = base_total,
+  allocation_ratio = "2:1",
+  multiplier = (r + 1)^2 / (4 * r),
+  adjusted_total = unequal_total,
+  ripc = unequal_total * 2 / 3,
+  sham = unequal_total / 3
+) |>
+  knitr::kable(digits = 3, caption = "Q2d: 2:1 unequal allocation")
+```
+
+2:1 分配會把總樣本量乘以 `r round((r + 1)^2 / (4 * r), 3)`，從 `r base_total` 增加到約 `r round(unequal_total)` 人，其中約 `r round(unequal_total * 2 / 3)` 人在 RIPC 組，`r round(unequal_total / 3)` 人在 sham RIPC 組。這樣可以累積更多 RIPC 暴露經驗，但在比較兩組均值的效率上不如 1:1。
+
+### 2e：若每組 5% 病人接受 alternative procedure
+
+```{r CT-p04-q2e-treatment-switching, echo=TRUE}
+q1 <- 0.05
+q2 <- 0.05
+switch_adjusted <- base_total / (1 - q1 - q2)^2
+
+data.frame(
+  base_total = base_total,
+  q1 = q1,
+  q2 = q2,
+  multiplier = 1 / (1 - q1 - q2)^2,
+  adjusted_total = switch_adjusted,
+  per_group = switch_adjusted / 2
+) |>
+  knitr::kable(digits = 3, caption = "Q2e: treatment switching adjustment")
+```
+
+每組 5% 的人接受 alternative procedure，代表兩組真實接受的治療變得更相似，觀察到的 treatment difference 被稀釋。調整後總樣本量約 `r round(switch_adjusted)` 人，也就是每組約 `r round(switch_adjusted / 2)` 人。也就是說，protocol 裡降低 treatment switching 不是只為了流程乾淨，而是直接保護試驗的 power。

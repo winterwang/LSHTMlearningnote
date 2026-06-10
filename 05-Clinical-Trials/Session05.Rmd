@@ -1,0 +1,62 @@
+## 資料監測的倫理張力 Data Monitoring {#CT-s05-ethics}
+
+一項臨床試驗開始招募後，資料不是到最後一天才突然出現，而是隨著病人入組、追蹤、事件發生而逐步累積。這件事帶來一個很難的倫理問題：如果早期資料看起來新治療明顯有益，是否應該停止試驗，讓後續病人不要再被分配到較差治療？反過來，如果早期資料暗示新治療有害，是否應該立刻停止，避免更多病人暴露於風險？但若太早停止，試驗可能只留下不精確、甚至被偶然波動誇大的結果，反而誤導未來更多病人。
+
+這裡的張力常被說成 individual ethics 與 collective ethics 的平衡。Individual ethics 問的是下一位病人現在進入試驗是否合理；collective ethics 問的是整個社會是否需要可靠證據來決定未來治療政策。資料監測 (data monitoring) 不是隨意查看結果，而是在這兩種倫理責任之間建立一套可辯護的程序。也就是說，DMC 的任務不是追求最早的顯著結果，而是判斷累積證據是否已經足以改變試驗本身。
+
+試驗可能因幾種原因停止或修改：新治療顯示明確 efficacy，顯示 harm 或 safety concern，顯示 futility，也可能因外部證據、資料品質、招募問題或 protocol compliance 問題而需要調整。不難注意到，這些理由的證據門檻不完全對稱。若看到明顯 harm，DMC 通常較願意早停；若看到 benefit，則要特別小心，因為 early benefit 往往更容易被高估。
+
+## 獨立資料監測委員會 Data Monitoring Committee {#CT-s05-dmc}
+
+Data Monitoring Committee (DMC，也常稱 DSMB/DSMC) 是獨立於日常試驗管理的委員會，負責定期審查累積的 unblinded data，並向 trial steering committee 或 sponsor 建議試驗是否應繼續、修改或停止。DMC 的獨立性很重要，因為一旦研究團隊、臨床醫師或 sponsor 過早知道中期結果，可能影響招募、治療執行、資料收集和結果解釋。
+
+DMC 成員通常包括熟悉疾病與治療領域的臨床專家、臨床試驗統計師，以及有試驗監測經驗的人。理想上，成員不應和試驗結果有直接利益衝突。DMC 的工作也不是只看一個 p 值，而是同時看主要結局、安全性、secondary outcomes、資料完整性、外部證據與試驗可行性。也就是說，DMC 是一個科學與倫理判斷機制，不是把 p 值輸入後自動給出停試驗命令的裝置。
+
+一份好的 DMC charter 會事先寫清楚委員會組成、會議頻率、open/closed session 的安排、資料報告格式、保密規則、stopping guideline、溝通路徑與 recommendation 的處理方式。這些程序看似行政，但實際上保護的是試驗的可信度：當早期結果令人激動或令人不安時，大家仍然知道該由誰看、看什麼、如何決策、如何留下紀錄。
+
+## 重複中期分析與第一類錯誤 Type I Error {#CT-s05-interim-error}
+
+若一項試驗原本設計用 5% 顯著水準做一次最終分析，但中途反覆看資料，每一次都用 $p<0.05$ 作為停止標準，整體 false positive 風險會上升。原因很直接：即使沒有真實治療效果，反覆抽樣波動也可能在某一次看起來碰巧顯著。
+
+```{r CT-s05-multiple-looks, echo=TRUE}
+prob_any_false_positive <- function(k, alpha = 0.05) {
+  1 - (1 - alpha)^k
+}
+
+looks <- 1:10
+data.frame(
+  analyses = looks,
+  probability_at_least_one_p_lt_005 = round(prob_any_false_positive(looks), 3)
+)
+```
+
+上面的計算假設各次分析獨立，實際 interim analyses 之間高度相關，所以數值不是正式設計用的答案；但它足以提醒我們，反覆使用同一個 0.05 門檻並不合理。因此中期分析需要 stopping rules 或 alpha-spending functions 來控制整體 Type I error。
+
+## 常見停止規則 Stopping Rules {#CT-s05-stopping-rules}
+
+最簡單的 fixed nominal rule 會在每次 interim analysis 使用同一個較嚴格的 p 值門檻，例如每次都要求 $p<0.01$。這比每次 $p<0.05$ 好，但仍然不夠細緻，因為它沒有反映早期資料少、估計不穩的問題。Peto-Haybittle rule 通常要求中期分析達到非常小的 p 值，例如 $p<0.001$，最終分析仍接近傳統 0.05。這種規則直觀、保守，也常被大型試驗採用。
+
+O'Brien-Fleming rule 的精神是：早期若要停，證據必須極強；越接近最終分析，門檻逐漸接近常規顯著水準。Lan-DeMets alpha-spending function 則更彈性，允許中期分析時間不完全固定，只要事先定義「花掉」Type I error 的方式。這些方法的共同點是，它們不讓試驗因早期不穩定訊號輕易停止。
+
+```{r CT-s05-obf-illustration, echo=TRUE}
+obf_like_boundary <- function(look, total_looks = 5, alpha = 0.05) {
+  z_final <- qnorm(1 - alpha / 2)
+  information_fraction <- look / total_looks
+  z_boundary <- z_final / sqrt(information_fraction)
+  2 * (1 - pnorm(z_boundary))
+}
+
+data.frame(
+  look = 1:5,
+  information_fraction = (1:5) / 5,
+  approximate_two_sided_p_boundary = signif(obf_like_boundary(1:5), 3)
+)
+```
+
+這段程式只是用 O'Brien-Fleming 的直觀近似展示門檻如何變化，不取代正式 group sequential design 軟體。不難注意到，第一次 interim look 的 p 值要極小才會建議停止；到了最後，門檻才接近 0.05。也就是說，早停規則不是阻止 DMC 行動，而是要求早期行動必須有相稱的證據重量。
+
+## 因獲益而早停的代價 Early Stopping for Benefit {#CT-s05-early-stop-cost}
+
+為 benefit 早停常見的問題有三個。第一是 credibility：結果可能看起來太好，和既有生物學或外部證據不一致，臨床社群不一定接受。第二是 imprecision：早停時事件數少，信賴區間通常很寬，對實際效果大小仍不確定。第三是 bias：達到早停門檻的那一刻，估計值常常是被隨機高估後的結果，最後若繼續追蹤，效果可能回落。
+
+因此 DMC 即使看到 boundary crossed，也不一定立即建議停止。它會問：事件數是否足夠？primary endpoint 和 safety 是否一致？subgroups 是否有警訊？外部證據是否支持？治療效果是否大到足以改變 practice？繼續試驗是否會不合理地傷害病人？也就是說，stopping rule 是幫助判斷的工具，不是替代判斷的規則。

@@ -1,0 +1,56 @@
+## 多重性為什麼危險 Multiplicity {#CT-s08-multiplicity}
+
+臨床試驗通常收集大量資料：多個 outcomes、多個 time points、多個 subgroups、多個 treatment comparisons，有時還有 interim analyses。Multiplicity 指的就是這些多重分析帶來的解釋問題。若我們在很多地方都尋找 $p<0.05$，即使沒有任何真實差異，也很容易碰巧找到一兩個看起來「陽性」的結果。
+
+```{r CT-s08-false-positive, echo=TRUE}
+k <- c(1, 5, 10, 20, 50)
+data.frame(
+  number_of_independent_tests = k,
+  probability_at_least_one_false_positive = round(1 - 0.95^k, 3)
+)
+```
+
+上面是假設 tests independent 的簡化計算；真實 trial 裡各分析往往相關，但方向不變：分析越多，選擇性強調最有利結果的風險越高。這和 Session 5 (\@ref(CT-s05-interim-error)) 討論 interim analysis 的邏輯相同，但這裡的脈絡是 multiple endpoints 和 subgroups。不難注意到，multiplicity 和小樣本、不精確估計、過度依賴 p 值會互相放大。也就是說，問題不只是「p 值要不要校正」，而是整個分析策略是否事先定義、是否誠實呈現。
+
+## 亞組分析的常見錯誤 Subgroup Analysis {#CT-s08-subgroups}
+
+Subgroup analysis 很有吸引力，因為臨床上我們總想知道哪些病人最受益。但最常見錯誤是分別在每個 subgroup 內看 p 值，然後說「這組顯著、那組不顯著，所以 treatment effect 不同」。這是錯的。Subgroup p 值會受到 subgroup size 和事件數影響；小 subgroup 即使 effect estimate 類似，也可能不顯著。
+
+正確問題應該是 treatment effect 是否在 subgroups 之間不同，這需要 interaction test。若 treatment effect 在男性和女性中估計值不同，我們檢定的是 treatment-by-sex interaction，而不是男性 p 值是否小於 0.05、女性 p 值是否大於 0.05。
+
+```{r CT-s08-interaction-demo, echo=TRUE}
+subgroups <- data.frame(
+  subgroup = c("A", "B"),
+  rr = c(0.80, 0.78),
+  se_log_rr = c(0.08, 0.20)
+)
+subgroups$z_vs_null <- log(subgroups$rr) / subgroups$se_log_rr
+subgroups$p_vs_null <- 2 * pnorm(-abs(subgroups$z_vs_null))
+subgroups
+
+z_interaction <- (log(subgroups$rr[1]) - log(subgroups$rr[2])) /
+  sqrt(subgroups$se_log_rr[1]^2 + subgroups$se_log_rr[2]^2)
+2 * pnorm(-abs(z_interaction))
+```
+
+這個小例子裡，兩個 subgroup 的效果估計幾乎一樣，但因標準誤不同，within-subgroup p 值可能不同。Interaction test 才回答「效果是否不同」。也就是說，subgroup analysis 應被視為探索性或 hypothesis-generating，除非它事先明確定義、數量有限、有強生物學理由、且 interaction evidence 足夠清楚。
+
+## 基於基線風險的亞組分析 Underlying Risk-Based Subgroup Analysis {#CT-s08-risk-subgroups}
+
+一種比逐一看風險因素更穩的方式，是先建立 baseline risk model，把病人按 underlying risk 分層，再看 treatment effect 是否隨風險改變。這能避免一次測很多單一 subgroup，也更貼近臨床決策，因為病人常同時具有多個 risk factors。
+
+需要注意 effect scale。Hazard ratio 或 relative risk 可能在不同 risk groups 類似，但 absolute risk reduction 會在高風險組更大。因此「哪一組最受益」可能要看 absolute scale，而不是只看 relative scale。也就是說，subgroup analysis 不只問 interaction p 值，也要問我們在什麼 scale 上做臨床決策。
+
+## 多重結局與複合終點 Multiple Outcomes and Combined Endpoints {#CT-s08-outcomes}
+
+多個 outcomes 會帶來另一種 multiplicity。若 trial 同時報告死亡、MI、stroke、hospitalisation、quality of life，每一項都做 0.05 檢定，總 false positive 風險會上升。Bonferroni correction 是最直觀方法：若有 $m$ 個主要檢定，使用 $\alpha/m$ 作為單一檢定門檻。但它可能太保守，尤其 outcomes 相關時。
+
+更好的策略通常是事先定義 primary outcome、少數 key secondary outcomes、hierarchical testing order，並把 exploratory outcomes 明確標出。Combined endpoint 可以增加事件數、提高 power，但它也有代價：組成項目必須臨床意義相近、方向一致、且不能讓較輕微但頻繁的事件主導結論。
+
+不難注意到，combined endpoint 的名稱可能聽起來很嚴重，例如 death/MI/refractory angina，但如果主要差異來自 refractory angina，而 death 和 MI 沒有一致改善，臨床解釋就要謹慎。也就是說，combined endpoint 不能只看 composite p value，還要拆開看 components。
+
+## 處理多重性的實務策略 Strategies for Multiplicity {#CT-s08-strategy}
+
+處理 multiplicity 的第一步是事前策略。Protocol 和 statistical analysis plan 應明確寫出 primary endpoint、主要 comparison、subgroups、interim analyses、secondary endpoints 的優先順序，以及哪些分析是 exploratory。發表時也應完整呈現預先指定與事後分析的區別，不要只挑最有利的結果。
+
+Multiplicity 不能完全靠數學校正解決，因為臨床試驗本來就需要多面向理解。真正要避免的是 post hoc emphasis：看完資料後才把偶然發現寫成主要結論。也就是說，多重資料本身不是錯，錯的是沒有策略地尋找、選擇和宣稱。

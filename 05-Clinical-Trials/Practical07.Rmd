@@ -1,0 +1,47 @@
+## 背景 Background {#CT-prac07-background}
+
+Practical 7 接在 alternative designs II 後，重點是 non-inferiority/equivalence 與 factorial design 的交疊，以及如何設計一個可能不容易被病人接受的 non-inferiority trial。這些題目特別適合用「margin 是否合理」「active comparator 是否有效」「sample size 是否可行」「consent 是否誠實」來判讀。
+
+## 問題 1：米非司酮析因等效試驗 Mifepristone Factorial Equivalence Trial {#CT-prac07-q1}
+
+@VonHertzen2009 是 factorial equivalence trial，研究對象是要求 medical abortion 的早孕女性。它同時比較兩個因素：mifepristone 劑量 100 mg vs 200 mg，以及 misoprostol 給藥間隔 24 小時 vs 48 小時，因此是 $2 \times 2$ design。
+
+```{r CT-p07-q1-factorial-equivalence, echo=FALSE}
+vh_layout <- expand.grid(
+  `Mifepristone dose` = c("100 mg", "200 mg"),
+  `Misoprostol interval` = c("24 hours", "48 hours")
+)
+knitr::kable(vh_layout, caption = "Mifepristone dose and misoprostol interval: factorial equivalence design")
+```
+
+Equivalence design 在這裡大致合理，因為兩種劑量與兩種間隔都已有臨床使用或研究基礎，問題不是 placebo 對照下是否有效，而是低劑量或較短間隔是否足夠相似。也可以把它理解成 non-inferiority：100 mg 若不比 200 mg 差太多，可能因成本或副作用而更可取；24 小時若不比 48 小時差太多，則更方便。
+
+題目答案指出 equivalence margin 是 5%，但文章沒有充分說明 margin 如何選出。這是 critical issue：margin 應該來自臨床判斷、既有療效證據、患者與臨床服務可接受的損失，而不是只因為樣本量可行。研究沒有發現 dose-by-interval interaction，因此作者分析 main effects；若 interaction 存在，這種 main-effect equivalence claim 就會變得不穩。
+
+不難注意到，factorial design 和 equivalence design 疊在一起時，樣本量與解釋都更敏感。沒有 interaction 時，factorial trial 很有效率；但若存在 moderate interaction，即使 interaction test 不顯著，也可能稀釋或扭曲 main effect。也就是說，作者結論可以接受，但必須帶著 margin 與 interaction 的不確定性來讀。
+
+## 問題 2：單獨腫瘤切除的非劣效試驗 Lumpectomy Alone Non-Inferiority Trial {#CT-prac07-q2}
+
+題目要求設計 lumpectomy alone vs lumpectomy plus radiotherapy 的 trial。既有資料顯示 radiotherapy 後 5-year survival 約 85%，5-year cancer-free survival 約 70%。如果目標是證明 lumpectomy alone 不比 radiotherapy 差太多，第一步不是套公式，而是決定 smallest unacceptable difference，也就是 non-inferiority margin。
+
+```{r CT-p07-q2-ni-size, echo=TRUE}
+ni_size <- function(p, margin, f = 10.5) {
+  n <- f * 2 * p * (1 - p) / margin^2
+  data.frame(
+    outcome_rate = p,
+    margin = margin,
+    n_per_group = n,
+    total = 2 * n
+  )
+}
+
+rbind(
+  survival_85_margin_5 = ni_size(0.85, 0.05),
+  cancer_free_70_margin_5 = ni_size(0.70, 0.05),
+  cancer_free_70_margin_10 = ni_size(0.70, 0.10)
+)
+```
+
+用 5% margin 且 90% power 近似時，5-year survival 需要約 `r round(ni_size(0.85, 0.05)$total)` 人，5-year cancer-free survival 需要約 `r round(ni_size(0.70, 0.05)$total)` 人。若把 cancer-free survival margin 放寬到 10%，總數降到約 `r round(ni_size(0.70, 0.10)$total)` 人，但 10% 是否臨床可接受就很值得懷疑。
+
+設置這種 trial 的困難不只是樣本量。許多女性對是否接受 radiotherapy 可能有強烈 preference；radiotherapy 需要長時間、多次治療，也有疲勞、皮膚刺激、疼痛等副作用，因此「少治療」可能很吸引人。但同時，若病人相信 radiotherapy 必然有效，randomisation 到 lumpectomy alone 會很難接受。也就是說，這個 trial 的 feasibility 取決於清楚、誠實的 equipoise 溝通，以及 margin 是否能被患者和臨床團隊共同接受。

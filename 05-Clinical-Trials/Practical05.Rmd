@@ -1,0 +1,63 @@
+## 背景 Background {#CT-prac05-background}
+
+這份 practical 用三個真實風格的 DMC 情境訓練我們做 interim data interpretation。題目刻意只給很有限的中期資料，因為 DMC 的難點本來就不是算出一個 p 值，而是判斷這個 p 值在追蹤時間、事件數、外部證據、primary endpoint、safety 與可接受不確定性裡到底代表什麼。
+
+## 情境 1：慢性致命疾病中的早期死亡不平衡 Mortality Imbalance {#CT-prac05-situation1}
+
+**情境**：Placebo-controlled trial，慢性且致命疾病，新 indication for an established drug。原計畫 4400 人，平均 21 個月追蹤，all-cause mortality 為 primary outcome。第二次 DSMB meeting 時，1639 人已隨機分配，active drug 有 37 deaths，placebo 有 20 deaths，$p=0.024$。
+
+```{r CT-p05-s1-risk, echo=TRUE}
+s1 <- data.frame(
+  group = c("Active drug", "Placebo"),
+  deaths = c(37, 20),
+  randomised = c(800, 839)
+)
+s1$risk <- s1$deaths / s1$randomised
+s1
+
+prop.test(s1$deaths, s1$randomised, correct = FALSE)
+```
+
+不難注意到，active arm 的死亡風險約為 `r round(100 * s1$risk[1], 1)`%，placebo 約為 `r round(100 * s1$risk[2], 1)`%。這個方向對 active drug 不利，而且 p 值已低於 0.05；但這不是自動停試驗的全部理由。DMC 還需要看死因是否有共同 pattern、死亡資料是否完整、secondary outcomes 是否已有足夠資訊、追蹤是否太短、以及這個藥在目標疾病中預期是短期還是長期起效。
+
+我的建議會偏向非常嚴肅地要求更多安全性審查，並準備停止或暫停招募；若沒有明確可解釋的偶然或資料品質原因，繼續讓病人暴露於 active drug 很難辯護。答案背景指出這是 MOXCON trial [@Cohn2003]，DSMB 曾建議停止但 executive committee 起初不同意，之後 sponsor 停止試驗。也就是說，DMC recommendation 與 trial leadership 的判斷可能不同，但 mortality harm 的訊號不能被「只是中期」輕輕帶過。
+
+## 情境 2：急性重症試驗中的邊界性傷害訊號 Borderline Harm {#CT-prac05-situation2}
+
+**情境**：Multi-national trial，potentially fatal acute condition，active drug vs placebo。原計畫 20,000 人，primary endpoints 包括 2-week all-cause death 與 6-month death/disability。2003 年 interim analysis 顯示 active 627/3102 deaths，placebo 562/3091 deaths，$p=0.04$。
+
+```{r CT-p05-s2-risk, echo=TRUE}
+s2 <- data.frame(
+  group = c("Active", "Placebo"),
+  deaths = c(627, 562),
+  randomised = c(3102, 3091)
+)
+s2$risk <- s2$deaths / s2$randomised
+s2
+
+prop.test(s2$deaths, s2$randomised, correct = FALSE)
+```
+
+這裡的困難是急性致命疾病中每多招募一段時間都可能意味著更多 excess deaths；但同時，原計畫是大型試驗，且 $p=0.04$ 對 early stopping 來說並不算「beyond reasonable doubt」。如果很早就停，臨床社群可能仍然認為結果不夠穩，尤其當治療在實務中已被廣泛使用時，過早停止反而可能留下更長期的不確定性。
+
+答案背景指出這是 CRASH trial [@Crash2004] 的 corticosteroids in head injury。DMC 當時沒有在 2003 年 6 月立即停止，之後在 2004 年累積到更強 harm evidence 才停。這個例子很難讀得輕鬆：晚停意味著更多病人暴露於有害治療，但早停可能不足以改變臨床實務。也就是說，DMC 的 ethical dilemma 往往不是「有沒有壞訊號」，而是「壞訊號強到什麼程度時，足以承擔停止試驗和改變 practice 的後果」。
+
+## 情境 3：越過停止界值但仍建議繼續 Crossed Boundary {#CT-prac05-situation3}
+
+**情境**：三個 serious chronic condition patient types 的 program，同一 active drug vs placebo。總共 7599 人，最低追蹤 2 年，program-level primary endpoint 是 all-cause death。Stopping guideline：前 18 個月 $p<0.0001$，之後 $p<0.001$。2001 年 DSMB meeting 顯示 active 260/3803 deaths，placebo 339/3796 deaths，$p=0.0006$。
+
+```{r CT-p05-s3-risk, echo=TRUE}
+s3 <- data.frame(
+  group = c("Active", "Placebo"),
+  deaths = c(260, 339),
+  randomised = c(3803, 3796)
+)
+s3$risk <- s3$deaths / s3$randomised
+s3
+
+prop.test(s3$deaths, s3$randomised, correct = FALSE)
+```
+
+這個結果跨過了題目給定的 stopping guideline，表面看應該停止；但我的判斷會是：不能只靠 program-level all-cause mortality 一項就結束。需要看三個 component trials 是否一致、各 trial 的 primary endpoint 是否已有足夠資料、追蹤是否足夠長、外部證據是否支持 survival benefit，以及早停是否會高估長期效果。
+
+答案背景指出這是 CHARM trial [@Pfeffer2003]。DSMC 儘管看到 mortality boundary crossed，仍建議繼續，理由包括 component trials 不一致、primary endpoint 資料尚不足、目標是長期效果、且早停可能誇大 benefit。最後結果顯示繼續試驗避免了過度宣稱，同時累積到更完整的 primary endpoint evidence。也就是說，crossing a stopping boundary 是一個很強的訊號，但仍不是 DMC 放棄整體判斷的理由。

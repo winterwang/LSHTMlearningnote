@@ -1,0 +1,93 @@
+## 為什麼需要替代性試驗設計 Alternative Trial Designs {#CT-s06-why-alternative}
+
+標準平行組 RCT 通常把個體隨機分到兩個治療組，追蹤一段時間後比較主要結局。這是臨床試驗的基本骨架，但不是所有問題都適合這個骨架。有時我們想在一個試驗中同時回答兩個治療問題，有時 treatment effect 是短期且可逆的，有時 intervention 只能在群體層面提供，不能對同一社區裡的人逐一開關。這時就需要 alternative trial designs。
+
+Session 6 主要處理三種設計：factorial design、crossover design 和 cluster-randomised design。它們不是因為「比較進階」才值得使用，而是在特定臨床問題和執行限制下，用不同方式換取效率、可行性或更自然的 intervention delivery。也就是說，設計的好壞取決於問題，而不是取決於設計名稱是否聽起來高級。
+
+## 析因設計試驗 Factorial Design Trials {#CT-s06-factorial}
+
+Factorial design trial 在同一個試驗中同時評估兩個或多個 intervention。最常見的是 $2 \times 2$ factorial design：每位病人同時被隨機分配到 treatment A vs control A，以及 treatment B vs control B，所以共有四組：A+B、A+control B、control A+B、control A+control B。
+
+```{r CT-s06-factorial-layout, echo=FALSE}
+factorial_layout <- expand.grid(
+  `Treatment A` = c("A", "Control A"),
+  `Treatment B` = c("B", "Control B")
+)
+knitr::kable(factorial_layout, caption = "A 2 by 2 factorial trial layout")
+```
+
+Factorial design 的主要優勢是效率。如果 A 和 B 的效果彼此獨立，也就是沒有 clinically important interaction，我們可以用整個 trial 的一半人比較 A vs control A，再用整個 trial 的一半人比較 B vs control B，等於在同一批病人中回答兩個問題。分析時通常先檢查 interaction，再在合理情況下估計 main effects。
+
+```{r CT-s06-factorial-main-effects, echo=TRUE}
+set.seed(6)
+n <- 800
+dat <- data.frame(
+  A = rbinom(n, 1, 0.5),
+  B = rbinom(n, 1, 0.5)
+)
+dat$outcome <- rbinom(n, 1, plogis(-1.2 - 0.35 * dat$A - 0.25 * dat$B))
+
+fit_main <- glm(outcome ~ A + B, data = dat, family = binomial)
+fit_int <- glm(outcome ~ A * B, data = dat, family = binomial)
+
+summary(fit_main)$coef
+anova(fit_main, fit_int, test = "Chisq")
+```
+
+不難注意到，factorial design 的效率建立在「兩個 intervention 不會強烈互相改變效果」這個前提上。若存在 interaction，main effect 會變得難解，甚至不應單獨報告。實務上也有 compliance 問題：同時接受兩個 intervention 可能讓負擔增加，進而影響 adherence。
+
+## 交叉試驗 Crossover Trials {#CT-s06-crossover}
+
+Crossover trial 讓同一位受試者依序接受不同治療，例如一半人先 A 後 B，另一半人先 B 後 A。它的核心優勢是每個人作為自己的 control，能大幅減少 between-person variability，因而在某些短期、可逆、慢性穩定病況中比 parallel-group trial 更有效率。
+
+```{r CT-s06-crossover-layout, echo=FALSE}
+crossover <- data.frame(
+  sequence = c("AB", "BA"),
+  period_1 = c("Treatment A", "Treatment B"),
+  washout = c("Yes / if needed", "Yes / if needed"),
+  period_2 = c("Treatment B", "Treatment A")
+)
+knitr::kable(crossover, caption = "Two-period crossover design")
+```
+
+Crossover design 的前提很嚴格。疾病狀態應該相對穩定，治療效果應該短期且可逆，period 之間最好有足夠 washout，主要結局不能被第一期治療永久改變。分析時要注意 treatment effect、period effect 和 carry-over effect。Carry-over 指的是前一期治療影響延續到下一期，讓第二期結果不再只反映第二期 treatment。
+
+```{r CT-s06-crossover-sim, echo=TRUE}
+set.seed(7)
+n <- 60
+seq_group <- rep(c("AB", "BA"), each = n / 2)
+subject <- rep(1:n, each = 2)
+period <- rep(1:2, times = n)
+treatment <- ifelse((seq_group[subject] == "AB" & period == 1) |
+                      (seq_group[subject] == "BA" & period == 2), "A", "B")
+subject_effect <- rnorm(n, 0, 8)
+outcome <- 50 + subject_effect[subject] + ifelse(treatment == "A", -4, 0) +
+  ifelse(period == 2, 1.5, 0) + rnorm(2 * n, 0, 5)
+
+cross_dat <- data.frame(subject, period, treatment, outcome)
+summary(lm(outcome ~ treatment + factor(period) + factor(subject), data = cross_dat))$coef[1:3, ]
+```
+
+也就是說，crossover trial 很精巧，但不能濫用。若 outcome 是死亡、治癒、長期 disease progression，或者治療效果可能永久改變病程，crossover design 通常不合適。
+
+## 群集隨機試驗 Cluster-Randomised Trials {#CT-s06-cluster}
+
+Cluster-randomised trial 隨機分配的單位不是個體，而是群體，例如村莊、診所、學校、病房或醫院。這種設計常用於 public health、service delivery、behavioural intervention 或會污染同一群體內其他人的 intervention。若在同一病房裡對一半護理人員做 hand hygiene intervention，另一半不做，實務上很可能 contamination；把病房作為 cluster 隨機化反而更自然。
+
+Cluster design 的統計代價是同一 cluster 內的人彼此相似，資訊量少於相同人數的 individually randomised trial。這種相似性通常用 intracluster correlation coefficient (ICC) 表示。若每個 cluster 平均大小為 $m$，design effect 約為：
+
+$$
+1 + (m - 1)\rho
+$$
+
+其中 $\rho$ 是 ICC。有效樣本量約等於總個體數除以 design effect。
+
+```{r CT-s06-cluster-design-effect, echo=TRUE}
+design_effect <- function(m, icc) 1 + (m - 1) * icc
+grid <- expand.grid(m = c(10, 50, 100), icc = c(0.005, 0.01, 0.05))
+grid$design_effect <- design_effect(grid$m, grid$icc)
+grid$effective_fraction <- 1 / grid$design_effect
+grid
+```
+
+不難注意到，ICC 看起來很小時也可能造成巨大影響，尤其 cluster size 大時更明顯。Cluster trial 還有 informed consent 的特殊問題：誰同意 cluster 被 randomised？個體是否仍需同意接受 treatment 或資料收集？如果 intervention 是社區層面的，個體可能無法選擇不接受整個環境改變，但仍應盡可能保護其資料與追蹤自主權。也就是說，cluster trial 的倫理和分析都不能直接套用 individually randomised trial 的習慣。

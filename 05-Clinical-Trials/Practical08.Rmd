@@ -1,0 +1,51 @@
+## 背景 Background {#CT-prac08-background}
+
+Practical 8 聚焦 subgroup analysis。這類題目的陷阱很固定：看到某 subgroup 顯著、另一 subgroup 不顯著，就急著說效果不同。正確做法是比較 subgroup 之間的 treatment effect，也就是 interaction，而不是比較各自的 p 值。
+
+## 問題 1：Gemfibrozil 亞組分析 Subgroup Analysis {#CT-prac08-q1}
+
+題目來自 gemfibrozil secondary prevention trial [@Rubins1999]。整體上 placebo 有 330 events，gemfibrozil 有 258 events，relative risk reduction 24%，95% CI 11% 到 36%。表中列出多個 pre-defined subgroup analyses。
+
+若只看 subgroup 內 p 值，可能會得到錯誤結論。例如 family history subgroup 中，有家族史者可能因事件數較少而不顯著，無家族史者顯著；但兩者 treatment effect estimate 其實相似。答案指出 family history 的 interaction p 約 0.75，沒有 evidence 顯示效果不同。Smoking 則有較強訊號，interaction p 約 0.004，暗示 non-smokers 中效果可能較大。
+
+不難注意到，即使 smoking interaction 看起來很強，仍要小心：這只是多個 subgroup analyses 之一，而且 endpoint 也不是 trial 的整體 primary endpoint。也就是說，subgroup signal 可以產生假設，但除非事先指定且有強外部支持，不應輕易改寫 treatment policy。
+
+## 問題 2：按基線風險分層的亞組分析 Underlying Risk Subgroup Analysis {#CT-prac08-q2}
+
+FIR Collaboration 把 routine invasive strategy 和 selective invasive strategy 在 non-ST elevation acute coronary syndrome 中比較，並按 baseline risk 分三組 [@Fox2010]。表中 hazard ratios 在三個 risk groups 中相近，但 absolute risk differences 隨 baseline risk 上升而變大。
+
+```{r CT-p08-q2-risk-table, echo=TRUE}
+fir <- data.frame(
+  risk_group = c("Low", "Moderate", "High"),
+  selective_risk = c(10.2, 21.1, 44.1),
+  routine_risk = c(8.2, 17.3, 33.0),
+  hazard_ratio = c(0.80, 0.81, 0.68),
+  risk_difference = c(-2.0, -3.8, -11.1)
+)
+fir
+```
+
+這種方法的優點是避免逐一檢查 age、diabetes、previous MI 等許多 subgroup，改用一個整合的 underlying risk。它更符合臨床現實，因為病人通常不是只帶著單一 risk factor 來看診。缺點是需要建立或採用可靠 risk model，模型選擇、非線性、校準都可能影響結果。
+
+我的結論是：relative scale 上三組 hazard ratio 沒有明顯不同，interaction p=0.10；但 absolute scale 上高風險組獲益大很多，risk-difference interaction p<0.0001。臨床決策往往更關心 absolute benefit，因此 high-risk patients 可能最值得 routine invasive approach。也就是說，「效果是否不同」要同時說清楚是在 relative 還是 absolute scale 上。
+
+## 問題 3：FEV1 試驗中的年齡與性別交互作用 Age/Sex Interaction {#CT-prac08-q3}
+
+題目給出 inhaled steroids vs placebo 在 FEV1 change 上的整體與 subgroup 結果。答案已計算出 treatment effect：所有病人 steroid - placebo 約 414 ml；age <40 約 595 ml；age >=40 約 229 ml；female 約 453 ml；male 約 396 ml。
+
+```{r CT-p08-q3-interaction, echo=TRUE}
+fev <- data.frame(
+  comparison = c("Age >=40 vs <40", "Male vs female"),
+  effect_reference = c(595, 453),
+  effect_comparison = c(229, 396),
+  interaction_estimate = c(229 - 595, 396 - 453),
+  interaction_se = c(131, 125)
+)
+fev$z <- fev$interaction_estimate / fev$interaction_se
+fev$p <- 2 * pnorm(-abs(fev$z))
+fev
+```
+
+Age interaction 的 estimate 是 -366 ml，p 約 `r signif(fev$p[1], 2)`，提示 steroid 的效果在 40 歲以下更大；但兩個 age groups 中都仍有 observed benefit。Sex interaction 的 p 約 `r signif(fev$p[2], 2)`，沒有 evidence 顯示女性與男性 treatment effect 不同。
+
+也就是說，這題要看的不是 subgroup 內各自有沒有顯著，而是 treatment effect 差多少、這個差異的不確定性多大。Interaction estimate 才是 subgroup analysis 的核心數字。
